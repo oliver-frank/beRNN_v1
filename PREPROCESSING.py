@@ -186,7 +186,8 @@ def preprocess_DM(opened_xlsxFile, questionnare_files, list_allSessions, sequenc
                         Input[i][j][k] = float(0)
 
         # Define modulation dictionaries for specific columns
-        mod1Dict = {'lowest': float(0.25), 'low': float(0.5), 'strong': float(0.75), 'strongest': float(1.0)}
+        # mod1Dict = {'lowest': float(0.25), 'low': float(0.5), 'strong': float(0.75), 'strongest': float(1.0)}
+        mod1Dict = {'lowest': float(0.5), 'low': float(1), 'strong': float(1.5), 'strongest': float(2)}
 
         for i in range(0, Input.shape[0]):
             for j in range(0, Input.shape[1]):
@@ -195,7 +196,8 @@ def preprocess_DM(opened_xlsxFile, questionnare_files, list_allSessions, sequenc
                         Input[i][j][k] = mod1Dict[Input[i][j][k].split('_')[0]]
 
         # Define modulation dictionaries for specific columns
-        mod2Dict = {'right.png': float(0.25), 'down.png': float(0.5), 'left.png': float(0.75), 'up.png': float(1.0)}
+        # mod2Dict = {'right.png': float(0.25), 'down.png': float(0.5), 'left.png': float(0.75), 'up.png': float(1.0)}
+        mod2Dict = {'right.png': float(0.5), 'down.png': float(1), 'left.png': float(1.5), 'up.png': float(2)}
 
         for i in range(0, Input.shape[0]):
             for j in range(0, Input.shape[1]):
@@ -487,7 +489,8 @@ def preprocess_EF(opened_xlsxFile, questionnare_files, list_allSessions, sequenc
                         Input[i][j][k] = float(0)
 
         # Define modulation dictionaries for specific columns
-        mod1Dict = {'green': float(0.5), 'red': float(1.0)}
+        # mod1Dict = {'green': float(0.5), 'red': float(1.0)}
+        mod1Dict = {'green': float(1.0), 'red': float(2.0)}
 
         for i in range(0, Input.shape[0]):
             for j in range(0, Input.shape[1]):
@@ -496,7 +499,8 @@ def preprocess_EF(opened_xlsxFile, questionnare_files, list_allSessions, sequenc
                         Input[i][j][k] = mod1Dict[Input[i][j][k].split('_')[0]]
 
         # Define modulation dictionaries for specific columns
-        mod2Dict = {'right.png': float(0.2), 'down.png': float(0.4), 'left.png': float(0.6), 'up.png': float(0.8), 'X.png': float(1.0)}
+        # mod2Dict = {'right.png': float(0.2), 'down.png': float(0.4), 'left.png': float(0.6), 'up.png': float(0.8), 'X.png': float(1.0)}
+        mod2Dict = {'right.png': float(0.4), 'down.png': float(0.8), 'left.png': float(1.2), 'up.png': float(1.6), 'X.png': float(2.0)}
 
         for i in range(0, Input.shape[0]):
             for j in range(0, Input.shape[1]):
@@ -784,8 +788,10 @@ def preprocess_RP(opened_xlsxFile, questionnare_files, list_allSessions, sequenc
                         Input[i][j][k] = float(0)
 
         # Define modulation dictionaries for specific columns
-        mod1Dict = {'red': 0.08, 'rust': 0.17, 'orange': 0.25, 'amber': 0.33, 'yellow': 0.42, 'lime': 0.5, 'green': 0.58, \
-                    'moss': 0.66, 'blue': 0.75, 'violet': 0.83, 'magenta': 0.92, 'purple': 1.0}
+        # mod1Dict = {'red': 0.08, 'rust': 0.17, 'orange': 0.25, 'amber': 0.33, 'yellow': 0.42, 'lime': 0.5, 'green': 0.58, \
+        #             'moss': 0.66, 'blue': 0.75, 'violet': 0.83, 'magenta': 0.92, 'purple': 1.0}
+        mod1Dict = {'red': 0.16, 'rust': 0.32, 'orange': 0.5, 'amber': 0.66, 'yellow': 0.84, 'lime': 1.0,'green': 1.16, \
+                    'moss': 1.32, 'blue': 1.5, 'violet': 1.66, 'magenta': 1.84, 'purple': 2.0}
 
         for i in range(0, Input.shape[0]):
             for j in range(0, Input.shape[1]):
@@ -794,7 +800,8 @@ def preprocess_RP(opened_xlsxFile, questionnare_files, list_allSessions, sequenc
                         Input[i][j][k] = mod1Dict[Input[i][j][k].split('_')[0]]
 
         # Define modulation dictionaries for specific columns
-        mod2Dict = {'triangle.png': float(0.2), 'pentagon.png': float(0.4), 'heptagon.png': float(0.6), 'nonagon.png': float(0.8), 'circle.png': float(1.0)}
+        mod2Dict = {'triangle.png': float(0.4), 'pentagon.png': float(0.8), 'heptagon.png': float(1.2), 'nonagon.png': float(1.6), 'circle.png': float(2.0)}
+        # mod2Dict = {'triangle.png': float(0.2), 'pentagon.png': float(0.4), 'heptagon.png': float(0.6), 'nonagon.png': float(0.8), 'circle.png': float(1.0)}
 
         for i in range(0, Input.shape[0]):
             for j in range(0, Input.shape[1]):
@@ -1090,8 +1097,10 @@ def preprocess_WM(opened_xlsxFile, questionnare_files, list_allSessions, sequenc
                         Input[i][j][k] = float(0)
 
         # Define modulation dictionaries for specific columns
-        mod1Dict = {'red': 0.08, 'rust': 0.17, 'orange': 0.25, 'amber': 0.33, 'yellow': 0.42, 'lime': 0.5, 'green': 0.58, \
-                    'moss': 0.66, 'blue': 0.75, 'violet': 0.83, 'magenta': 0.92, 'purple': 1.0}
+        mod1Dict = {'red': 0.16, 'rust': 0.34, 'orange': 0.5, 'amber': 0.66, 'yellow': 0.84, 'lime': 1.0, 'green': 1.16, \
+                    'moss': 1.34, 'blue': 1.5, 'violet': 1.66, 'magenta': 1.84, 'purple': 2.0}
+        # mod1Dict = {'red': 0.08, 'rust': 0.17, 'orange': 0.25, 'amber': 0.33, 'yellow': 0.42, 'lime': 0.5, 'green': 0.58, \
+        #             'moss': 0.66, 'blue': 0.75, 'violet': 0.83, 'magenta': 0.92, 'purple': 1.0}
 
         for i in range(0, Input.shape[0]):
             for j in range(0, Input.shape[1]):
@@ -1100,7 +1109,8 @@ def preprocess_WM(opened_xlsxFile, questionnare_files, list_allSessions, sequenc
                         Input[i][j][k] = mod1Dict[Input[i][j][k].split('_')[0]]
 
         # Define modulation dictionaries for specific columns
-        mod2Dict = {'triangle.png': float(0.2), 'pentagon.png': float(0.4), 'heptagon.png': float(0.6), 'nonagon.png': float(0.8), 'circle.png': float(1.0)}
+        # mod2Dict = {'triangle.png': float(0.2), 'pentagon.png': float(0.4), 'heptagon.png': float(0.6), 'nonagon.png': float(0.8), 'circle.png': float(1.0)}
+        mod2Dict = {'triangle.png': float(0.4), 'pentagon.png': float(0.8), 'heptagon.png': float(1.2), 'nonagon.png': float(1.6), 'circle.png': float(2.0)}
 
         for i in range(0, Input.shape[0]):
             for j in range(0, Input.shape[1]):
@@ -1282,8 +1292,8 @@ def check_permissions(file_path):
 
 # Create right path - os.getcwd() should be set to PycharmProject mulitask_BeRNN
 dataFolder = "Data"
-participant = 'BeRNN_04'
-main_folder = 'PreprocessedData'
+participant = 'BeRNN_03'
+main_folder = 'PreprocessedData_encodingX2'
 main_path = os.path.join(os.getcwd(),dataFolder, participant, main_folder)
 # Create Folder Structure
 subfolders = ['DM', 'DM_Anti', 'EF', 'EF_Anti', 'RP', 'RP_Anti', 'RP_Ctx1', 'RP_Ctx2',
@@ -1300,7 +1310,7 @@ for folder in subfolders:
 # Processing path allocation
 processing_path = os.path.join(os.getcwd(),dataFolder, participant)
 # Months
-months = ['1','2'] # todo: add here months
+months = ['1','2','3'] # todo: add here months
 # list of task names in each session; very first name is the one of the associated questionare
 list_d4fh = ['d4fh', 'b4ya', 'bert', '7py6', 'bx2n', '2p6f', '9ivx', 'fhgh', 'k1jg', '6x4x', 'aiut', 'ar8p', '627g']
 list_2353 = ['2353', '6vnh', '113d', 'pbq6', 'q4ei', 'u7od', '9qcv', '4lrw', 'u31n', 'jr36', 'hia1', 'odic', 'qkw4']

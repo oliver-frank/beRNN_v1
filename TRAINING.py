@@ -34,9 +34,9 @@ def get_default_hp(ruleset):
     n_input, n_output = 1 + num_ring * n_eachring + n_rule, n_eachring + 1
     hp = {
         # batch size for training
-        'batch_size_train': 40,
+        'batch_size_train': 32,
         # batch_size for testing
-        'batch_size_test': 400,
+        'batch_size_test': 640,
         # input type: normal, multi
         'in_type': 'normal',
         # Type of RNNs: LeakyRNN, LeakyGRU, EILeakyGRU, GRU, LSTM
@@ -71,10 +71,10 @@ def get_default_hp(ruleset):
         'l2_weight': 0,
         # l2 regularization on deviation from initialization
         'l2_weight_init': 0,
-        # proportion of weights to train, None or float between (0, 1) - e.g. .1 won't train a random 10% weight selection (Yang et al. range: .05-.075)
+        # proportion of weights to train, None or float between (0, 1) - e.g. .1 will train a random 10% weight selection, the rest stays fixed (Yang et al. range: .05-.075)
         'p_weight_train': None,
         # Stopping performance
-        'target_perf': .9,
+        'target_perf': 1.0,
         # number of units each ring
         'n_eachring': n_eachring,
         # number of rings
@@ -126,7 +126,7 @@ def do_eval(sess, model, log, trial_dir, rule_train):
 
     for rule_test in hp['rules']:
         n_rep = 16
-        batch_size_test_rep = int(hp['batch_size_test'] / n_rep)
+        batch_size_test_rep = int(hp['batch_size_test']/n_rep)
         clsq_tmp = list()
         creg_tmp = list()
         perf_tmp = list()
@@ -186,7 +186,7 @@ def do_eval(sess, model, log, trial_dir, rule_train):
 #                                title=title)
 #     plt.close('all')
 
-def train(model_dir,trial_dir,hp=None,max_steps=1e7,display_step=400,ruleset='all',rule_trains=None,rule_prob_map=None,seed=0,
+def train(model_dir,trial_dir,hp=None,max_steps=1e7,display_step=1000,ruleset='all',rule_trains=None,rule_prob_map=None,seed=0,
           load_dir=None,trainables=None):
     """Train the network.
 
@@ -250,6 +250,8 @@ def train(model_dir,trial_dir,hp=None,max_steps=1e7,display_step=400,ruleset='al
 
     # Record time
     t_start = time.time()
+    # Count loaded trials/batches
+    trialsLoaded = 0
 
     with tf.Session() as sess:
         if load_dir is not None:
@@ -282,7 +284,7 @@ def train(model_dir,trial_dir,hp=None,max_steps=1e7,display_step=400,ruleset='al
         # partial weight training
         # Explanation: In summary, this code introduces a form of partial weight training by applying L2 regularization
         # only to a subset of the weights. The subset is determined by random masking, controlled by the hyperparameter
-        # 'p_weight_train'.
+        # 'p_weight_train'. All weights below the p_weight_train threshold won't be trained in this iteration.
         if ('p_weight_train' in hp and
                 (hp['p_weight_train'] is not None) and
                 hp['p_weight_train'] < 1.0):
@@ -307,6 +309,11 @@ def train(model_dir,trial_dir,hp=None,max_steps=1e7,display_step=400,ruleset='al
                     log['trials'].append(step * hp['batch_size_train'])
                     log['times'].append(time.time() - t_start)
                     log = do_eval(sess, model, log, trial_dir, hp['rule_trains'])
+                    elapsed_time = time.time() - t_start  # Calculate elapsed time
+                    print(f"Elapsed time after batch number {trialsLoaded}: {elapsed_time:.2f} seconds")
+                    # After training
+                    total_time = time.time() - t_start
+                    print(f"Total training time: {total_time:.2f} seconds")
                     # if log['perf_avg'][-1] > model.hp['target_perf']:
                     # check if minimum performance is above target
                     if log['perf_min'][-1] > model.hp['target_perf']:
@@ -325,6 +332,7 @@ def train(model_dir,trial_dir,hp=None,max_steps=1e7,display_step=400,ruleset='al
                 # rule_train_now = 'DM'
                 mode = 'Training'
                 x,y,y_loc = TOOLS.load_trials(trial_dir,rule_train_now,mode)
+                trialsLoaded += 1
 
                 # Generating feed_dict.
                 feed_dict = TOOLS.gen_feed_dict(model, x, y, hp)
@@ -344,7 +352,8 @@ def train(model_dir,trial_dir,hp=None,max_steps=1e7,display_step=400,ruleset='al
 dataFolder = "Data"
 participant = 'BeRNN_03'
 model_folder = 'Model'
-model_dir = os.path.join(os.getcwd(),dataFolder, participant, model_folder)
+model_number = 'Model_2_' + participant + 'Month_1-2'
+model_dir = os.path.join(os.getcwd(),dataFolder, participant, model_folder, model_number)
 
 if not os.path.exists(model_dir):
     os.makedirs(model_dir)
@@ -354,3 +363,10 @@ preprocessedData_path = os.path.join(os.getcwd(),dataFolder, participant, prepro
 
 train(model_dir=model_dir, trial_dir=preprocessedData_path)
 
+
+# # DEBUG
+# import TOOLS
+# trial_dir = 'Z:\Desktop\ZI\PycharmProjects\BeRNN\Data\BeRNN_03\PreprocessedData_encodingX2'
+# rule_train_now = 'WM_Ctx1'
+# mode = 'Training'
+# x,y,y_loc = TOOLS.load_trials(trial_dir,rule_train_now,mode)

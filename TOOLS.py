@@ -12,6 +12,21 @@ import numpy as np
 rules_dict = {'all' : ['DM', 'DM_Anti', 'EF', 'EF_Anti', 'RP', 'RP_Anti', 'RP_Ctx1', 'RP_Ctx2',
               'WM', 'WM_Anti', 'WM_Ctx1', 'WM_Ctx2']}
 
+rule_name = {
+            'DM': 'Decison Making (DM)',
+            'DM_Anti': 'Decision Making Anti (DM Anti)',
+            'EF': 'Executive Function (EF)',
+            'EF_Anti': 'Executive Function Anti (EF Anti)',
+            'RP': 'Relational Processing (RP)',
+            'RP_Anti': 'Relational Processing Anti (RP Anti)',
+            'RP_Ctx1': 'Relational Processing Context 1 (RP Ctx1)',
+            'RP_Ctx2': 'Relational Processing Context 2 (RP Ctx2)',
+            'WM': 'Working Memory (WM)',
+            'WM_Anti': 'Working Memory Anti (WM Anti)',
+            'WM_Ctx1': 'Working Memory Context 1 (WM Ctx1)',
+            'WM_Ctx2': 'Working Memory Context 2 (WM Ctx2)'
+            }
+
 # Store indices of rules
 rule_index_map = dict()
 for ruleset, rules in rules_dict.items():
