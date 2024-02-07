@@ -9,7 +9,7 @@ with warnings.catch_warnings():
 # todo: TaskAccuracy
 ########################################################################################################################
 # Participant list
-participant_dir = 'Z:\Desktop\ZI\PycharmProjects\multitask_BeRNN\Data'
+participant_dir = 'Z:\Desktop\ZI\PycharmProjects\BeRNN\Data'
 participantList = os.listdir(participant_dir)
 
 participant = participantList[4] # choose which particpant to analyze
@@ -169,7 +169,7 @@ from scipy.stats import linregress
 import matplotlib.dates as mdates
 
 # Participant list
-participant_dir = 'Z:\Desktop\ZI\PycharmProjects\multitask_BeRNN\Data'
+participant_dir = 'Z:\Desktop\ZI\PycharmProjects\BeRNN\Data'
 participantList = os.listdir(participant_dir)
 participant = participantList[4] # choose which particpant to analyze
 month = '3' # choose which month to analyze

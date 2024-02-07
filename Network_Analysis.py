@@ -540,7 +540,7 @@ def plot_performanceprogress_BeRNN(model_dir, rule_plot=None):
 
 # todo: ################################################################################################################
 # todo: ################################################################################################################
-model_dir = os.getcwd() + '\BeRNN_models\Model_2_BeRNN_05_Month_1-2'
+model_dir = os.getcwd() + '\BeRNN_models\Model_14_BeRNN_03_Month_1-2'
 # rule = 'WM'
 # Plot activity of input, recurrent and output layer for one test trial
 # easy_activity_plot_BeRNN(model_dir, rule)

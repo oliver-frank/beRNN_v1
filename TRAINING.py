@@ -40,7 +40,7 @@ def get_default_hp(ruleset):
         # input type: normal, multi
         'in_type': 'normal',
         # Type of RNNs: LeakyRNN, LeakyGRU, EILeakyGRU, GRU, LSTM
-        'rnn_type': 'LeakyRNN',
+        'rnn_type': 'LSTM',
         # whether rule and stimulus inputs are represented separately
         'use_separate_input': False,
         # Type of loss functions
@@ -352,7 +352,7 @@ def train(model_dir,trial_dir,hp=None,max_steps=1e7,display_step=1000,ruleset='a
 dataFolder = "Data"
 participant = 'BeRNN_03'
 model_folder = 'Model'
-model_number = 'Model_2_' + participant + 'Month_1-2'
+model_number = 'Model_12_' + participant + '_Month_1-2'
 model_dir = os.path.join(os.getcwd(),dataFolder, participant, model_folder, model_number)
 
 if not os.path.exists(model_dir):

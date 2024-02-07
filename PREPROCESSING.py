@@ -142,7 +142,7 @@ def preprocess_DM(opened_xlsxFile, questionnare_files, list_allSessions, sequenc
         print('>>>>>>>>>>>>>>>>>>>>>>>>     ', 'sleepingQualityValue:', sleepingQualityValue, 'drugVector:',drugVectorValue)
         print('# DEBUGGING ###########################################################################################')
         # Catch meta data now that you have all the necessary
-        meta_dict = {'date_time': date, 'difficultyLevel': finalTrialsList_array[0, 0, 0],
+        meta_dict = {'date_time': str(finalTrialsList_array[0, 0, 85]), 'difficultyLevel': finalTrialsList_array[0, 0, 0],
                      'timeLimit': finalTrialsList_array[0, 0, 1], 'sleepingQualityQuestion': sleepingQualityQuestion,
                      'sleepingQualityValue': sleepingQualityValue, 'drugVectorQuestion': drugVectorQuestion,
                      'drugVectorValue': drugVectorValue}
@@ -445,7 +445,7 @@ def preprocess_EF(opened_xlsxFile, questionnare_files, list_allSessions, sequenc
         print('>>>>>>>>>>>>>>>>>>>>>>>>     ', 'sleepingQualityValue:', sleepingQualityValue, 'drugVector:',drugVectorValue)
         print('# DEBUGGING ###########################################################################################')
         # Catch meta data now that you have all the necessary
-        meta_dict = {'date_time': date, 'difficultyLevel': finalTrialsList_array[0, 0, 0],
+        meta_dict = {'date_time': str(finalTrialsList_array[0, 0, 85]), 'difficultyLevel': finalTrialsList_array[0, 0, 0],
                      'timeLimit': finalTrialsList_array[0, 0, 1], 'sleepingQualityQuestion': sleepingQualityQuestion,
                      'sleepingQualityValue': sleepingQualityValue, 'drugVectorQuestion': drugVectorQuestion,
                      'drugVectorValue': drugVectorValue}
@@ -744,7 +744,7 @@ def preprocess_RP(opened_xlsxFile, questionnare_files, list_allSessions, sequenc
         print('>>>>>>>>>>>>>>>>>>>>>>>>     ', 'sleepingQualityValue:', sleepingQualityValue, 'drugVector:',drugVectorValue)
         print('# DEBUGGING ###########################################################################################')
         # Catch meta data now that you have all the necessary
-        meta_dict = {'date_time': date, 'difficultyLevel': finalTrialsList_array[0,0,0],
+        meta_dict = {'date_time': str(finalTrialsList_array[0, 0, 85]), 'difficultyLevel': finalTrialsList_array[0,0,0],
                      'timeLimit': finalTrialsList_array[0,0,1], 'sleepingQualityQuestion': sleepingQualityQuestion,
                      'sleepingQualityValue': sleepingQualityValue, 'drugVectorQuestion': drugVectorQuestion,
                      'drugVectorValue': drugVectorValue}
@@ -1053,7 +1053,7 @@ def preprocess_WM(opened_xlsxFile, questionnare_files, list_allSessions, sequenc
         print('>>>>>>>>>>>>>>>>>>>>>>>>     ', 'sleepingQualityValue:', sleepingQualityValue, 'drugVector:',drugVectorValue)
         print('# DEBUGGING ###########################################################################################')
         # Catch meta data now that you have all the necessary
-        meta_dict = {'date_time': date, 'difficultyLevel': finalTrialsList_array[0, 0, 0],
+        meta_dict = {'date_time': str(finalTrialsList_array[0, 0, 85]), 'difficultyLevel': finalTrialsList_array[0, 0, 0],
                      'timeLimit': finalTrialsList_array[0, 0, 1], 'sleepingQualityQuestion': sleepingQualityQuestion,
                      'sleepingQualityValue': sleepingQualityValue, 'drugVectorQuestion': drugVectorQuestion,
                      'drugVectorValue': drugVectorValue}
