@@ -40,7 +40,7 @@ def get_default_hp(ruleset):
         # input type: normal, multi
         'in_type': 'normal',
         # Type of RNNs: LeakyRNN, LeakyGRU, EILeakyGRU, GRU, LSTM
-        'rnn_type': 'LSTM',
+        'rnn_type': 'GRU',
         # whether rule and stimulus inputs are represented separately
         'use_separate_input': False,
         # Type of loss functions
@@ -352,15 +352,19 @@ def train(model_dir,trial_dir,hp=None,max_steps=1e7,display_step=1000,ruleset='a
 dataFolder = "Data"
 participant = 'BeRNN_03'
 model_folder = 'Model'
-model_number = 'Model_12_' + participant + '_Month_1-2'
+model_number = 'Model_33_' + participant + '_Month_1-2'
 model_dir = os.path.join(os.getcwd(),dataFolder, participant, model_folder, model_number)
 
 if not os.path.exists(model_dir):
     os.makedirs(model_dir)
 
-preprocessedData_folder = 'PreprocessedData'
+preprocessedData_folder = 'PreprocessedData_bestPerformance'
 preprocessedData_path = os.path.join(os.getcwd(),dataFolder, participant, preprocessedData_folder)
 
+# Define probability of each task being trained
+# rule_prob_map = {"DM": 5,"DM_Anti": 5,"EF": 1,"EF_Anti": 3,"RP": 5,"RP_Anti": 3,"RP_Ctx1": 5,"RP_Ctx2": 3,"WM": 1,"WM_Anti": 3,"WM_Ctx1": 1,"WM_Ctx2": 1}
+
+# train(model_dir=model_dir, rule_prob_map=rule_prob_map, trial_dir=preprocessedData_path)
 train(model_dir=model_dir, trial_dir=preprocessedData_path)
 
 

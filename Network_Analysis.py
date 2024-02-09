@@ -134,7 +134,7 @@ def plot_performanceprogress_BeRNN(model_dir, rule_plot=None):
     ax.set_xlabel('Total number of trials (/1000)',fontsize=fs, labelpad=2)
     ax.set_ylabel('Performance',fontsize=fs, labelpad=0)
     ax.locator_params(axis='x', nbins=5)
-    ax.set_yticks([0,1])
+    ax.set_yticks([0,.25,.5,.75,1])
     ax.spines["right"].set_visible(False)
     ax.spines["top"].set_visible(False)
     ax.xaxis.set_ticks_position('bottom')
@@ -144,17 +144,17 @@ def plot_performanceprogress_BeRNN(model_dir, rule_plot=None):
     plt.setp(lg.get_title(),fontsize=fs)
     # # Add the randomness thresholds
     # # DM & RP Ctx
-    plt.axhline(y=0.2, color='green', label= 'DM & DM Anti & RP Ctx1 & RP Ctx2', linestyle=':')
-    plt.axhline(y=0.2, color='green', linestyle=':')
-    # # EF
-    plt.axhline(y=0.25, color='black', label= 'EF & EF Anti', linestyle=':')
-    plt.axhline(y=0.25, color='black', linestyle=':')
-    # # RP
-    plt.axhline(y=0.143, color='brown', label= 'RP & RP Anti', linestyle=':')
-    plt.axhline(y=0.143, color='brown', linestyle=':')
-    # # WM
-    plt.axhline(y=0.5, color='blue', label= 'WM & WM Anti & WM Ctx1 & WM Ctx2', linestyle=':')
-    plt.axhline(y=0.5, color='blue', linestyle=':')
+    # plt.axhline(y=0.2, color='green', label= 'DM & DM Anti & RP Ctx1 & RP Ctx2', linestyle=':')
+    # plt.axhline(y=0.2, color='green', linestyle=':')
+    # # # EF
+    # plt.axhline(y=0.25, color='black', label= 'EF & EF Anti', linestyle=':')
+    # plt.axhline(y=0.25, color='black', linestyle=':')
+    # # # RP
+    # plt.axhline(y=0.143, color='brown', label= 'RP & RP Anti', linestyle=':')
+    # plt.axhline(y=0.143, color='brown', linestyle=':')
+    # # # WM
+    # plt.axhline(y=0.5, color='blue', label= 'WM & WM Anti & WM Ctx1 & WM Ctx2', linestyle=':')
+    # plt.axhline(y=0.5, color='blue', linestyle=':')
     # #
     # rt = fig.legend(title='Randomness threshold', bbox_to_anchor=(0.1, 0.35), fontsize=fs, labelspacing=0.3  # co: first value influences length of
     #                 ,loc=6, frameon=False)
@@ -540,7 +540,7 @@ def plot_performanceprogress_BeRNN(model_dir, rule_plot=None):
 
 # todo: ################################################################################################################
 # todo: ################################################################################################################
-model_dir = os.getcwd() + '\BeRNN_models\Model_14_BeRNN_03_Month_1-2'
+model_dir = os.getcwd() + '\BeRNN_models\Model_33_BeRNN_03_Month_1-2'
 # rule = 'WM'
 # Plot activity of input, recurrent and output layer for one test trial
 # easy_activity_plot_BeRNN(model_dir, rule)
@@ -548,7 +548,7 @@ model_dir = os.getcwd() + '\BeRNN_models\Model_14_BeRNN_03_Month_1-2'
 plot_performanceprogress_BeRNN(model_dir)
 plt.savefig(os.path.join(os.getcwd(),'BeRNN_models\Visuals',model_dir.split("\\")[-1]+'.png'), format='png')
 # easy_connectivity_plot_BeRNN(model_dir)
-#
+
 # pretty_inputoutput_plot_BeRNN(model_dir,rule)
 
 # schematic_plot_BeRNN(model_dir, rule)
