@@ -106,8 +106,8 @@ def plot_performanceprogress_BeRNN(model_dir, rule_plot=None):
     trials = log['trials']
 
     fs = 12 # fontsize
-    fig = plt.figure(figsize=(3.5,1.2))
-    ax = fig.add_axes([0.1,0.4,0.6,0.5]) # co: third value influences width of cartoon
+    fig_eval = plt.figure(figsize=(3.5,1.2))
+    ax = fig_eval.add_axes([0.1,0.4,0.6,0.5]) # co: third value influences width of cartoon
     lines = list()
     labels = list()
 
@@ -139,9 +139,10 @@ def plot_performanceprogress_BeRNN(model_dir, rule_plot=None):
     ax.spines["top"].set_visible(False)
     ax.xaxis.set_ticks_position('bottom')
     ax.yaxis.set_ticks_position('left')
-    lg = fig.legend(lines, labels, title='Task',ncol=2,bbox_to_anchor=(0.1,0.15), # co: first value influences horizontal position of legend
+    lg = fig_eval.legend(lines, labels, title='Task',ncol=2,bbox_to_anchor=(0.1,0.15), # co: first value influences horizontal position of legend
                     fontsize=fs,labelspacing=0.3,loc=6,frameon=False)
     plt.setp(lg.get_title(),fontsize=fs)
+    plt.title(model_dir.split("\\")[-1]+'_EVALUATION.png')
     # # Add the randomness thresholds
     # # DM & RP Ctx
     # plt.axhline(y=0.2, color='green', label= 'DM & DM Anti & RP Ctx1 & RP Ctx2', linestyle=':')
@@ -161,6 +162,79 @@ def plot_performanceprogress_BeRNN(model_dir, rule_plot=None):
     # plt.setp(rt.get_title(), fontsize=fs)
 
     plt.show()
+
+def plot_performanceprogress_train_BeRNN(model_dir, rule_plot=None):
+    # Plot Training Progress
+    log = TOOLS.load_log(model_dir)
+    hp = TOOLS.load_hp(model_dir)
+
+    # co: change to [::2] if you want to have only every second validation value
+    # trials = log['trials'][::2]
+    trials = log['trials']
+
+    fs = 12 # fontsize
+    fig_train = plt.figure(figsize=(3.5,1.2))
+    ax = fig_train.add_axes([0.1,0.4,0.6,0.5]) # co: third value influences width of cartoon
+    lines = list()
+    labels = list()
+
+    x_plot = (np.array(trials)/1000)
+    if rule_plot == None:
+        rule_plot = hp['rules']
+
+    for i, rule in enumerate(rule_plot):
+        # line = ax1.plot(x_plot, np.log10(cost_tests[rule]),color=color_rules[i%26])
+        # ax2.plot(x_plot, perf_tests[rule],color=color_rules[i%26])
+        # co: add [::2] if you want to have only every second validation values
+        # line = ax.plot(x_plot, np.log10(log['cost_' + 'WM'][::2]), color=rule_color[rule])
+        y = log['cost_train_' + rule][::int((len(log['cost_train_' + rule])/len(x_plot)))][:313]
+        line = ax.plot(x_plot, np.log10(y), color=rule_color[rule])
+        # co: add [::2] if you want to have only every second validation value
+        # ax.plot(x_plot, log['perf_' + rule][::2], color=rule_color[rule])
+        y = log['perf_train_' + rule][::int((len(log['cost_train_' + rule])/len(x_plot)))][:313]
+        ax.plot(x_plot, y, color=rule_color[rule])
+        lines.append(line[0])
+        labels.append(rule_name[rule])
+
+    ax.tick_params(axis='both', which='major', labelsize=fs)
+
+    ax.set_ylim([0, 1])
+    # ax.set_xlim([0, 80000])
+    ax.set_xlabel('Total number of trials (/1000)',fontsize=fs, labelpad=2)
+    ax.set_ylabel('Performance',fontsize=fs, labelpad=0)
+    ax.locator_params(axis='x', nbins=5)
+    ax.set_yticks([0,.25,.5,.75,1])
+    ax.spines["right"].set_visible(False)
+    ax.spines["top"].set_visible(False)
+    ax.xaxis.set_ticks_position('bottom')
+    ax.yaxis.set_ticks_position('left')
+    lg = fig_train.legend(lines, labels, title='Task',ncol=2,bbox_to_anchor=(0.1,0.15), # co: first value influences horizontal position of legend
+                    fontsize=fs,labelspacing=0.3,loc=6,frameon=False)
+    plt.setp(lg.get_title(),fontsize=fs)
+    plt.title(model_dir.split("\\")[-1] + '_TRAINING.png')
+    # # Add the randomness thresholds
+    # # DM & RP Ctx
+    # plt.axhline(y=0.2, color='green', label= 'DM & DM Anti & RP Ctx1 & RP Ctx2', linestyle=':')
+    # plt.axhline(y=0.2, color='green', linestyle=':')
+    # # # EF
+    # plt.axhline(y=0.25, color='black', label= 'EF & EF Anti', linestyle=':')
+    # plt.axhline(y=0.25, color='black', linestyle=':')
+    # # # RP
+    # plt.axhline(y=0.143, color='brown', label= 'RP & RP Anti', linestyle=':')
+    # plt.axhline(y=0.143, color='brown', linestyle=':')
+    # # # WM
+    # plt.axhline(y=0.5, color='blue', label= 'WM & WM Anti & WM Ctx1 & WM Ctx2', linestyle=':')
+    # plt.axhline(y=0.5, color='blue', linestyle=':')
+    # #
+    # rt = fig.legend(title='Randomness threshold', bbox_to_anchor=(0.1, 0.35), fontsize=fs, labelspacing=0.3  # co: first value influences length of
+    #                 ,loc=6, frameon=False)
+    # plt.setp(rt.get_title(), fontsize=fs)
+
+    plt.show()
+
+# model_dir = os.getcwd() + '\BeRNN_models\Model_62_BeRNN_03_Month_1'
+# log = TOOLS.load_log(model_dir)
+# test = log['cost_train_' + 'WM'][::100]
 
 # Input (>300?) to Hidden; Hidden to Output
 # def easy_connectivity_plot_BeRNN(model_dir):
@@ -540,13 +614,19 @@ def plot_performanceprogress_BeRNN(model_dir, rule_plot=None):
 
 # todo: ################################################################################################################
 # todo: ################################################################################################################
-model_dir = os.getcwd() + '\BeRNN_models\Model_33_BeRNN_03_Month_1-2'
+model_dir = os.getcwd() + '\BeRNN_models\Model_61_BeRNN_01_Month_1'
 # rule = 'WM'
 # Plot activity of input, recurrent and output layer for one test trial
 # easy_activity_plot_BeRNN(model_dir, rule)
 # Plot improvement of performance over iterating training steps
 plot_performanceprogress_BeRNN(model_dir)
-plt.savefig(os.path.join(os.getcwd(),'BeRNN_models\Visuals',model_dir.split("\\")[-1]+'.png'), format='png')
+plt.savefig(os.path.join(os.getcwd(),'BeRNN_models\Visuals',model_dir.split("\\")[-1]+'_EVALUATION.png'), format='png')
+plot_performanceprogress_train_BeRNN(model_dir)
+plt.savefig(os.path.join(os.getcwd(),'BeRNN_models\Visuals',model_dir.split("\\")[-1]+'_TRAINING.png'), format='png')
+
+log = TOOLS.load_log(model_dir)
+# current_nparray = np.array(log['perf_train_WM'])
+
 # easy_connectivity_plot_BeRNN(model_dir)
 
 # pretty_inputoutput_plot_BeRNN(model_dir,rule)

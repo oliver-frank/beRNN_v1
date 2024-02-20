@@ -61,10 +61,10 @@ def get_default_hp(ruleset):
         'sigma_x': 0.01,
         # leaky_rec weight initialization, diag, randortho, randgauss
         'w_rec_init': 'randortho',
-        # a default weak regularization prevents instability
+        # a default weak regularization prevents instability (regularizing with absolute value of magnitude of coefficients, leading to sparse features)
         'l1_h': 0,
-        # l2 regularization on activity
-        'l2_h': 0,
+        # l2 regularization on activity (regularizing with squared value of magnitude of coefficients, decreasing influence of features)
+        'l2_h': 0.00001,
         # l2 regularization on weight
         'l1_weight': 0,
         # l2 regularization on weight
@@ -131,7 +131,7 @@ def do_eval(sess, model, log, trial_dir, rule_train):
         creg_tmp = list()
         perf_tmp = list()
         for i_rep in range(n_rep):
-            x,y,y_loc = TOOLS.load_trials(trial_dir, rule_test, mode)
+            x,y,y_loc = TOOLS.load_trials(trial_dir, monthsConsidered, rule_test, mode)
             feed_dict = TOOLS.gen_feed_dict(model, x, y, hp)
             # print('passed feed_dict Evaluation')
             # print(feed_dict)
@@ -174,6 +174,7 @@ def do_eval(sess, model, log, trial_dir, rule_train):
 
     return log
 
+
 # def display_rich_output(model, sess, step, log, model_dir):
 #     """Display step by step outputs during training."""
 #     variance._compute_variance_bymodel(model, sess)
@@ -186,7 +187,7 @@ def do_eval(sess, model, log, trial_dir, rule_train):
 #                                title=title)
 #     plt.close('all')
 
-def train(model_dir,trial_dir,hp=None,max_steps=1e7,display_step=1000,ruleset='all',rule_trains=None,rule_prob_map=None,seed=0,
+def train(model_dir,trial_dir,monthsConsidered,hp=None,max_steps=1e7,display_step=1000,ruleset='all',rule_trains=None,rule_prob_map=None,seed=0,
           load_dir=None,trainables=None):
     """Train the network.
 
@@ -331,7 +332,7 @@ def train(model_dir,trial_dir,hp=None,max_steps=1e7,display_step=1000,ruleset='a
                 # trial_dir = 'Z:\Desktop\ZI\PycharmProjects\multitask_BeRNN\Data\BeRNN_01\PreprocessedData'
                 # rule_train_now = 'DM'
                 mode = 'Training'
-                x,y,y_loc = TOOLS.load_trials(trial_dir,rule_train_now,mode)
+                x,y,y_loc = TOOLS.load_trials(trial_dir,monthsConsidered,rule_train_now,mode)
                 trialsLoaded += 1
 
                 # Generating feed_dict.
@@ -339,6 +340,25 @@ def train(model_dir,trial_dir,hp=None,max_steps=1e7,display_step=1000,ruleset='a
                 # print('passed feed_dict Training')
                 # print(feed_dict)
                 sess.run(model.train_step, feed_dict=feed_dict)
+
+                # Get Training performance in a similiar fashion as in do_eval
+                clsq_train_tmp = list()
+                creg_train_tmp = list()
+                perf_train_tmp = list()
+                c_lsq_train, c_reg_train, y_hat_train = sess.run([model.cost_lsq, model.cost_reg, model.y_hat], feed_dict=feed_dict)
+                perf_train = np.mean(get_perf(y_hat_train, y_loc))
+                clsq_train_tmp.append(c_lsq_train)
+                creg_train_tmp.append(c_reg_train)
+                perf_train_tmp.append(perf_train)
+
+                log['cost_train_' + rule_train_now].append(np.mean(clsq_train_tmp, dtype=np.float64))
+                log['creg_train_' + rule_train_now].append(np.mean(creg_train_tmp, dtype=np.float64))
+                log['perf_train_' + rule_train_now].append(np.mean(perf_train_tmp, dtype=np.float64))
+
+                print('{:15s}'.format(rule_train_now) +
+                      '| train cost {:0.6f}'.format(np.mean(clsq_train_tmp)) +
+                      '| train c_reg {:0.6f}'.format(np.mean(c_reg_train)) +
+                      '  | train perf {:0.2f}'.format(np.mean(perf_train)))
 
                 step += 1
 
@@ -350,22 +370,23 @@ def train(model_dir,trial_dir,hp=None,max_steps=1e7,display_step=1000,ruleset='a
 
 
 dataFolder = "Data"
-participant = 'BeRNN_03'
+participant = 'BeRNN_01'
 model_folder = 'Model'
-model_number = 'Model_33_' + participant + '_Month_1-2'
+model_number = 'Model_64_' + participant + '_Month_1' # Manually add months considered e.g. 1-7
+monthsConsidered = ['1'] # Add all months you want to take into consideration for training and evaluation
 model_dir = os.path.join(os.getcwd(),dataFolder, participant, model_folder, model_number)
 
 if not os.path.exists(model_dir):
     os.makedirs(model_dir)
 
-preprocessedData_folder = 'PreprocessedData_bestPerformance'
+preprocessedData_folder = 'PreprocessedData'
 preprocessedData_path = os.path.join(os.getcwd(),dataFolder, participant, preprocessedData_folder)
 
 # Define probability of each task being trained
-# rule_prob_map = {"DM": 5,"DM_Anti": 5,"EF": 1,"EF_Anti": 3,"RP": 5,"RP_Anti": 3,"RP_Ctx1": 5,"RP_Ctx2": 3,"WM": 1,"WM_Anti": 3,"WM_Ctx1": 1,"WM_Ctx2": 1}
+rule_prob_map = {"DM": 1,"DM_Anti": 1,"EF": 1,"EF_Anti": 1,"RP": 1,"RP_Anti": 1,"RP_Ctx1": 1,"RP_Ctx2": 1,"WM": 1,"WM_Anti": 1,"WM_Ctx1": 1,"WM_Ctx2": 1}
 
-# train(model_dir=model_dir, rule_prob_map=rule_prob_map, trial_dir=preprocessedData_path)
-train(model_dir=model_dir, trial_dir=preprocessedData_path)
+train(model_dir=model_dir, trial_dir=preprocessedData_path, monthsConsidered = monthsConsidered, rule_prob_map=rule_prob_map)
+# train(model_dir=model_dir, trial_dir=preprocessedData_path)
 
 
 # # DEBUG
@@ -373,4 +394,4 @@ train(model_dir=model_dir, trial_dir=preprocessedData_path)
 # trial_dir = 'Z:\Desktop\ZI\PycharmProjects\BeRNN\Data\BeRNN_03\PreprocessedData_encodingX2'
 # rule_train_now = 'WM_Ctx1'
 # mode = 'Training'
-# x,y,y_loc = TOOLS.load_trials(trial_dir,rule_train_now,mode)
+# x,y,y_loc = TOOLS.load_trials(trial_dir,monthsConsidered,rule_train_now,mode)

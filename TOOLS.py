@@ -50,7 +50,7 @@ def get_dist(original_dist):
     '''Get the distance in periodic boundary conditions'''
     return np.minimum(abs(original_dist),2*np.pi-abs(original_dist))
 
-def load_trials(trial_dir,task,mode):
+def load_trials(trial_dir,monthsConsidered,task,mode):
     '''Load trials from pickle file'''
     # Build-in mechanism to prevent interruption of code as for many .npy files there errors are raised
     max_attempts = 30
@@ -59,6 +59,9 @@ def load_trials(trial_dir,task,mode):
     while attempt < max_attempts:
         # random choose one of the preprocessed files according to the current chosen task
         file_splits = random.choice(os.listdir(os.path.join(trial_dir,task))).split('-')
+        while file_splits[1].split('_')[1] not in monthsConsidered:
+            # randomly choose another file until the one for the right considered month is found
+            file_splits = random.choice(os.listdir(os.path.join(trial_dir, task))).split('-')
         file_stem = file_splits[0]+'-'+file_splits[1]+'-'+file_splits[2]+'-'+file_splits[3]+'-'+file_splits[4]
         try:
             x = np.load(os.path.join(trial_dir, task, file_stem) + '-Input.npy', mmap_mode='r')
@@ -66,14 +69,14 @@ def load_trials(trial_dir,task,mode):
             y_loc = np.load(os.path.join(trial_dir, task, file_stem) + '-yLoc.npy', mmap_mode='r')
             # Select rows for either training or evaluation
             if mode == 'Training': # get the first 32 rows
-                x = x[:32]
-                y = y[:32]
-                y_loc = y_loc[:32]
-            elif mode == 'Evaluation': # get the last 32 rows
-                x = x[32:]
-                y = y[32:]
-                y_loc = y_loc[32:]
-            print(file_stem, ' successfully processed.')
+                x = x[:, :32, :]
+                y = y[:, :32, :]
+                y_loc = y_loc[:, :32]
+            elif mode == 'Evaluation': # get the last 8 rows
+                x = x[:, -8:, :]
+                y = y[:, -8:, :]
+                y_loc = y_loc[:, -8:]
+            # print(file_stem, ' successfully processed.')
             return x,y,y_loc
         except Exception as e:
             print(f"An error occurred with file {file_stem}: {e}. Retrying...")
