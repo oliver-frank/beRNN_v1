@@ -14,10 +14,6 @@ from NETWORK import Model
 import TOOLS
 from TOOLS import rule_name
 
-# co: It doesn't work because somewehere in the pipeline the path is set to OLD folder in BeRNN models, change that
-# model_dir = os.getcwd() + '\BeRNN_models\OLD\MH_500_train-err_validate-acc'
-# variance.compute_variance(model_dir, random_rotation='random_rotation')
-
 ########################################################################################################################
 '''Network analysis'''
 ########################################################################################################################
@@ -187,11 +183,11 @@ def plot_performanceprogress_train_BeRNN(model_dir, rule_plot=None):
         # ax2.plot(x_plot, perf_tests[rule],color=color_rules[i%26])
         # co: add [::2] if you want to have only every second validation values
         # line = ax.plot(x_plot, np.log10(log['cost_' + 'WM'][::2]), color=rule_color[rule])
-        y = log['cost_train_' + rule][::int((len(log['cost_train_' + rule])/len(x_plot)))][:313]
+        y = log['cost_train_' + rule][::int((len(log['cost_train_' + rule])/len(x_plot)))][:len(x_plot)]
         line = ax.plot(x_plot, np.log10(y), color=rule_color[rule])
         # co: add [::2] if you want to have only every second validation value
         # ax.plot(x_plot, log['perf_' + rule][::2], color=rule_color[rule])
-        y = log['perf_train_' + rule][::int((len(log['cost_train_' + rule])/len(x_plot)))][:313]
+        y = log['perf_train_' + rule][::int((len(log['cost_train_' + rule])/len(x_plot)))][:len(x_plot)]
         ax.plot(x_plot, y, color=rule_color[rule])
         lines.append(line[0])
         labels.append(rule_name[rule])
@@ -614,7 +610,7 @@ def plot_performanceprogress_train_BeRNN(model_dir, rule_plot=None):
 
 # todo: ################################################################################################################
 # todo: ################################################################################################################
-model_dir = os.getcwd() + '\BeRNN_models\Model_61_BeRNN_01_Month_1'
+model_dir = os.getcwd() + '\BeRNN_models\Model_81_BeRNN_05_Month_1-3'
 # rule = 'WM'
 # Plot activity of input, recurrent and output layer for one test trial
 # easy_activity_plot_BeRNN(model_dir, rule)
@@ -623,9 +619,11 @@ plot_performanceprogress_BeRNN(model_dir)
 plt.savefig(os.path.join(os.getcwd(),'BeRNN_models\Visuals',model_dir.split("\\")[-1]+'_EVALUATION.png'), format='png')
 plot_performanceprogress_train_BeRNN(model_dir)
 plt.savefig(os.path.join(os.getcwd(),'BeRNN_models\Visuals',model_dir.split("\\")[-1]+'_TRAINING.png'), format='png')
-
+#
 log = TOOLS.load_log(model_dir)
-# current_nparray = np.array(log['perf_train_WM'])
+hp = TOOLS.load_hp(model_dir)
+#
+current_nparray = np.array(log['creg_train_WM'])
 
 # easy_connectivity_plot_BeRNN(model_dir)
 
@@ -636,9 +634,9 @@ log = TOOLS.load_log(model_dir)
 # networkx_illustration_BeRNN(model_dir)
 
 
-#######################################################################################################################
+########################################################################################################################
 # Clustering
-#######################################################################################################################
+########################################################################################################################
 # model_dir = os.getcwd() + '\BeRNN_models\Model_BeRNN_02_Month_1-2'
 # # model_dir = os.getcwd() + '\BeRNN_models\OLD\MH_200_train-err_validate-err'
 # def compute_n_cluster(model_dir):
@@ -676,3 +674,5 @@ log = TOOLS.load_log(model_dir)
 #
 # # Get the bitness of the Python interpreter
 # python_bitness = platform.architecture()[0]
+
+

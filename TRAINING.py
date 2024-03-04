@@ -64,7 +64,7 @@ def get_default_hp(ruleset):
         # a default weak regularization prevents instability (regularizing with absolute value of magnitude of coefficients, leading to sparse features)
         'l1_h': 0,
         # l2 regularization on activity (regularizing with squared value of magnitude of coefficients, decreasing influence of features)
-        'l2_h': 0.00001,
+        'l2_h': 0.00005,
         # l2 regularization on weight
         'l1_weight': 0,
         # l2 regularization on weight
@@ -372,8 +372,8 @@ def train(model_dir,trial_dir,monthsConsidered,hp=None,max_steps=1e7,display_ste
 dataFolder = "Data"
 participant = 'BeRNN_01'
 model_folder = 'Model'
-model_number = 'Model_64_' + participant + '_Month_1' # Manually add months considered e.g. 1-7
-monthsConsidered = ['1'] # Add all months you want to take into consideration for training and evaluation
+model_number = 'Model_76_' + participant + '_Month_1' # Manually add months considered e.g. 1-7
+monthsConsidered = ['1','2','3'] # Add all months you want to take into consideration for training and evaluation
 model_dir = os.path.join(os.getcwd(),dataFolder, participant, model_folder, model_number)
 
 if not os.path.exists(model_dir):
@@ -391,7 +391,7 @@ train(model_dir=model_dir, trial_dir=preprocessedData_path, monthsConsidered = m
 
 # # DEBUG
 # import TOOLS
-# trial_dir = 'Z:\Desktop\ZI\PycharmProjects\BeRNN\Data\BeRNN_03\PreprocessedData_encodingX2'
+# trial_dir = 'Z:\Desktop\ZI\PycharmProjects\BeRNN\Data\BeRNN_01\PreprocessedData'
 # rule_train_now = 'WM_Ctx1'
 # mode = 'Training'
 # x,y,y_loc = TOOLS.load_trials(trial_dir,monthsConsidered,rule_train_now,mode)

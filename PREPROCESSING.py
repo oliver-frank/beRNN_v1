@@ -46,7 +46,8 @@ def find_sleepingQuality_drugVector(opened_questionare, date):
 # todo: DM tasks #######################################################################################################
 ########################################################################################################################
 # For debugging
-# xlsxFile = 'W:\\AG_CSP\\Projekte\\BeRNN\\02_Daten\\BeRNN_main\\BeRNN_01\\1\\data_exp_149474-v2_task-6at8-9621849.xlsx'
+# file_path = 'Z:\\Desktop\\ZI\\PycharmProjects\\BeRNN\\Data\\BeRNN_01\\1\\data_exp_149474-v2_task-6at8-9621849.xlsx'
+# opened_xlsxFile = pd.read_excel(file_path, engine='openpyxl')
 def preprocess_DM(opened_xlsxFile, questionnare_files, list_allSessions, sequence_on, sequence_off, batchLength):
     # Initialize columns with default values
     opened_xlsxFile.loc[:, 'Fixation input'] = 1
@@ -89,8 +90,26 @@ def preprocess_DM(opened_xlsxFile, questionnare_files, list_allSessions, sequenc
          'Spreadsheet: Field 31', 'Spreadsheet: Field 32', 'DM', 'DM Anti', 'EF', 'EF Anti', 'RP', 'RP Anti',
          'RP Ctx1', 'RP Ctx2', 'WM', 'WM Anti', 'WM Ctx1', 'WM Ctx1', 'UTC Date and Time']]
 
-    # Count and create batches
-    incrementList = [i + 1 for i, name in enumerate(opened_xlsxFile_selection['Component Name']) if name == 'Fixation Timing']
+    # Count sequences, save particpant response and ground truth for later error analysis
+    incrementList = []
+    responseParticipantEntries = []
+    responseGroundTruthEntries = []
+
+    for i, name in enumerate(opened_xlsxFile_selection['Component Name']):
+        if name == 'Fixation Timing':
+            incrementList.append(i + 1)
+            # Check if the next row exists to avoid IndexError
+            if i + 1 < len(opened_xlsxFile_selection):
+                responseParticipantEntry = opened_xlsxFile_selection['Response'].iloc[i + 1]
+                responseParticipantEntries.append(responseParticipantEntry)
+                responseGroundTruthEntry = opened_xlsxFile_selection['Spreadsheet: CorrectAnswer'].iloc[i + 1]
+                responseGroundTruthEntries.append(responseGroundTruthEntry)
+            else:
+                # Append None or some placeholder if there is no next row
+                responseParticipantEntries.append(None)
+                responseGroundTruthEntries.append(None)
+
+    concatResponseEntries = np.array((responseParticipantEntries, responseGroundTruthEntries))
     numberBatches = len(incrementList) // batchLength
 
     # Split the data into batches based on the fixation timing component
@@ -99,7 +118,8 @@ def preprocess_DM(opened_xlsxFile, questionnare_files, list_allSessions, sequenc
         batchOff = batchNumber * batchLength + batchLength
         numFixStepsTotal = 0
         numRespStepsTotal = 0
-
+        # Prepare response array for this batch
+        currentConcatResponseEntries = concatResponseEntries[:,batchOn:batchOff]
         # Calculate average fix, resp and total steps for this batch
         for j in incrementList[batchOn:batchOff]:
             # Accumulate step numbers
@@ -116,15 +136,30 @@ def preprocess_DM(opened_xlsxFile, questionnare_files, list_allSessions, sequenc
                 # print(numFixStepsAverage,numRespStepsAverage,totalStepsAverage)
 
         finalSequenceList = []
+        concatedValuesAndOccurrencesList = []
         # Create sequences of every trial in the current batch with the previous calculated time steps
         for j in incrementList[batchOn:batchOff]:
             currentTrial = opened_xlsxFile_selection[j:j + 2].reset_index().drop(columns=['index'])
+            # ----------------------------------------------------------------------------------------------------------
+            # Get the rest of the trial information for later error analysis
+            png_strings = np.array([s for s in currentTrial.loc[0] if isinstance(s, str) and s.endswith('.png')])
+            unique_values, occurrence_counts = np.unique(png_strings, return_counts=True)
+            unique_values, occurrence_counts = unique_values[1:], occurrence_counts[1:] # exclude 000_000.png
+            # Check if values and counts are below 2 and zeropad them, so that all columns have the same length
+            if len(unique_values) == 1:
+                unique_values, occurrence_counts = np.concatenate((unique_values, ['None']),axis=0), np.concatenate((occurrence_counts, [0]),axis=0)
+            concatedValuesAndOccurrences = np.concatenate([unique_values, occurrence_counts], axis=0)
+            concatedValuesAndOccurrencesList.append(concatedValuesAndOccurrences)
+            # ----------------------------------------------------------------------------------------------------------
             currentSequenceList = []
             for k in range(totalStepsAverage):
                 sequence = [currentTrial.iloc[0]]
                 currentSequenceList.append(sequence)
             finalSequenceList.append(currentSequenceList)
-
+        # --------------------------------------------------------------------------------------------------------------
+        # Concatenate trial information for error anaylsis to response entries
+        currentConcatResponseEntriesFinal = np.concatenate([currentConcatResponseEntries,np.array(concatedValuesAndOccurrencesList, dtype=object).T], axis=0)
+        # --------------------------------------------------------------------------------------------------------------
         # Create final df for INPUT and OUPUT
         newOrderSequenceList = []
         # Append all the time steps accordingly to a list
@@ -152,6 +187,7 @@ def preprocess_DM(opened_xlsxFile, questionnare_files, list_allSessions, sequenc
         Output = np.delete(Output, np.s_[0, 1, 2, 4, 5, 6, 7,85], axis=2)
         Output = np.delete(Output, np.s_[34:78], axis=2)
         Input, Output = Input[:, sequence_on:sequence_off, :], Output[:, sequence_on:sequence_off, :]
+        responseEntries = currentConcatResponseEntriesFinal[:,sequence_on:sequence_off]
 
         # INPUT ############################################################################################################
         # float all fixation input values to 1
@@ -259,9 +295,14 @@ def preprocess_DM(opened_xlsxFile, questionnare_files, list_allSessions, sequenc
         input_filename = participant+'-'+'month_'+str(month)+'-' + 'batch_' + str(batchNumber) + '-' + taskShorts + '-' + \
                          xlsxFile.split('_')[3].split('-')[0]+'_'+ xlsxFile.split('_')[3].split('-')[1]+'-'+'Input'
         np.save(input_filename, Input)
+        # Save response information for later error class detection
+        response_filename = participant + '-' + 'month_' + str(month) + '-' + 'batch_' + str(batchNumber) + '-' + taskShorts + '-' + \
+                         xlsxFile.split('_')[3].split('-')[0] + '_' + xlsxFile.split('_')[3].split('-')[1] + '-' + 'Response'
+        np.save(response_filename, responseEntries)
 
         # Sanity check
         print('Input solved: ', opened_xlsxFile_selection['Spreadsheet'][0], ' ', opened_xlsxFile_selection['TimeLimit'][0])
+        print('Response solved: ', opened_xlsxFile_selection['Spreadsheet'][0], ' ', opened_xlsxFile_selection['TimeLimit'][0])
 
         # OUTPUT ###########################################################################################################
         # float all field units during fixation epoch on 0.05
@@ -392,8 +433,26 @@ def preprocess_EF(opened_xlsxFile, questionnare_files, list_allSessions, sequenc
                        'Spreadsheet: Field 31', 'Spreadsheet: Field 32', 'DM', 'DM Anti', 'EF', 'EF Anti', 'RP', 'RP Anti',
                        'RP Ctx1', 'RP Ctx2', 'WM', 'WM Anti', 'WM Ctx1', 'WM Ctx1', 'UTC Date and Time']]
 
-    # Define batch size and create batches
-    incrementList = [i + 1 for i, name in enumerate(opened_xlsxFile_selection['Component Name']) if name == 'Fixation Timing']
+    # Count sequences, save particpant response and ground truth for later error analysis
+    incrementList = []
+    responseParticipantEntries = []
+    responseGroundTruthEntries = []
+
+    for i, name in enumerate(opened_xlsxFile_selection['Component Name']):
+        if name == 'Fixation Timing':
+            incrementList.append(i + 1)
+            # Check if the next row exists to avoid IndexError
+            if i + 1 < len(opened_xlsxFile_selection):
+                responseParticipantEntry = opened_xlsxFile_selection['Response'].iloc[i + 1]
+                responseParticipantEntries.append(responseParticipantEntry)
+                responseGroundTruthEntry = opened_xlsxFile_selection['Spreadsheet: CorrectAnswer'].iloc[i + 1]
+                responseGroundTruthEntries.append(responseGroundTruthEntry)
+            else:
+                # Append None or some placeholder if there is no next row
+                responseParticipantEntries.append(None)
+                responseGroundTruthEntries.append(None)
+
+    concatResponseEntries = np.array((responseParticipantEntries, responseGroundTruthEntries))
     numberBatches = len(incrementList) // batchLength
 
     # Split the data into batches based on the fixation timing component
@@ -402,7 +461,8 @@ def preprocess_EF(opened_xlsxFile, questionnare_files, list_allSessions, sequenc
         batchOff = batchNumber * batchLength + batchLength
         numFixStepsTotal = 0
         numRespStepsTotal = 0
-
+        # Prepare response array for this batch
+        currentConcatResponseEntries = concatResponseEntries[:, batchOn:batchOff]
         # Calculate average fix, resp and total steps for this batch
         for j in incrementList[batchOn:batchOff]:
             # Accumulate step numbers
@@ -419,14 +479,30 @@ def preprocess_EF(opened_xlsxFile, questionnare_files, list_allSessions, sequenc
                 # print(numFixStepsAverage,numRespStepsAverage,totalStepsAverage)
 
         finalSequenceList = []
+        concatedValuesAndOccurrencesList = []
         # Create sequences of every trial in the current batch with the previous calculated time steps
         for j in incrementList[batchOn:batchOff]:
             currentTrial = opened_xlsxFile_selection[j:j + 2].reset_index().drop(columns=['index'])
+            # ----------------------------------------------------------------------------------------------------------
+            # Get the rest of the trial information for later error analysis
+            png_strings = np.array([s for s in currentTrial.loc[0] if isinstance(s, str) and s.endswith('.png')])
+            unique_values, occurrence_counts = np.unique(png_strings, return_counts=True)
+            unique_values, occurrence_counts = unique_values[1:], occurrence_counts[1:]  # exclude 000_000.png
+            # Check if values and counts are below 2 and zeropad them, so that all columns have the same length
+            if len(unique_values) == 1:
+                unique_values, occurrence_counts = np.concatenate((unique_values, ['None']), axis=0), np.concatenate((occurrence_counts, [0]), axis=0)
+            concatedValuesAndOccurrences = np.concatenate([unique_values, occurrence_counts], axis=0)
+            concatedValuesAndOccurrencesList.append(concatedValuesAndOccurrences)
+            # ----------------------------------------------------------------------------------------------------------
             currentSequenceList = []
             for k in range(totalStepsAverage):
                 sequence = [currentTrial.iloc[0]]
                 currentSequenceList.append(sequence)
             finalSequenceList.append(currentSequenceList)
+        # --------------------------------------------------------------------------------------------------------------
+        # Concatenate trial information for error anaylsis to response entries
+        currentConcatResponseEntriesFinal = np.concatenate([currentConcatResponseEntries, np.array(concatedValuesAndOccurrencesList, dtype=object).T], axis=0)
+        # --------------------------------------------------------------------------------------------------------------
 
         # Create final df for INPUT and OUPUT
         newOrderSequenceList = []
@@ -455,6 +531,7 @@ def preprocess_EF(opened_xlsxFile, questionnare_files, list_allSessions, sequenc
         Output = np.delete(Output, np.s_[0, 1, 2, 4, 5, 6, 7,85], axis=2)
         Output = np.delete(Output, np.s_[34:78], axis=2)
         Input, Output = Input[:, sequence_on:sequence_off, :], Output[:, sequence_on:sequence_off, :]
+        responseEntries = currentConcatResponseEntriesFinal[:, sequence_on:sequence_off]
 
         # INPUT ############################################################################################################
         # float all fixation input values to 1
@@ -562,9 +639,14 @@ def preprocess_EF(opened_xlsxFile, questionnare_files, list_allSessions, sequenc
         input_filename = (participant + '-' + 'month_' + str(month) + '-' + 'batch_' + str(batchNumber) + '-' + taskShorts + '-' + \
                           xlsxFile.split('_')[3].split('-')[0] + '_' + xlsxFile.split('_')[3].split('-')[1] + '-' + 'Input')
         np.save(input_filename, Input)
+        # Save response information for later error class detection
+        response_filename = participant + '-' + 'month_' + str(month) + '-' + 'batch_' + str(batchNumber) + '-' + taskShorts + '-' + \
+                            xlsxFile.split('_')[3].split('-')[0] + '_' + xlsxFile.split('_')[3].split('-')[1] + '-' + 'Response'
+        np.save(response_filename, responseEntries)
 
         # Sanity check
         print('Input solved: ', opened_xlsxFile_selection['Spreadsheet'][0], ' ', opened_xlsxFile_selection['TimeLimit'][0])
+        print('Response solved: ', opened_xlsxFile_selection['Spreadsheet'][0], ' ', opened_xlsxFile_selection['TimeLimit'][0])
 
         # OUTPUT ###########################################################################################################
         # float all field units during fixation epoch on 0.05
@@ -689,10 +771,28 @@ def preprocess_RP(opened_xlsxFile, questionnare_files, list_allSessions, sequenc
                            'Spreadsheet: Field 20', 'Spreadsheet: Field 21', 'Spreadsheet: Field 22', 'Spreadsheet: Field 23',\
                            'Spreadsheet: Field 24', 'Spreadsheet: Field 25', 'Spreadsheet: Field 26', 'Spreadsheet: Field 27', 'Spreadsheet: Field 28',\
                            'Spreadsheet: Field 29', 'Spreadsheet: Field 30', 'Spreadsheet: Field 31', 'Spreadsheet: Field 32', 'DM',\
-                           'DM Anti', 'EF', 'EF Anti', 'RP', 'RP Anti', 'RP Ctx1', 'RP Ctx2', 'WM', 'WM Anti', 'WM Ctx1', 'WM Ctx1', 'Spreadsheet: display', 'UTC Date and Time']]
+                           'DM Anti', 'EF', 'EF Anti', 'RP', 'RP Anti', 'RP Ctx1', 'RP Ctx2', 'WM', 'WM Anti', 'WM Ctx1', 'WM Ctx1', 'Spreadsheet: display', 'UTC Date and Time', 'Response']]
 
-    # Define batch size and create batches
-    incrementList = [i + 1 for i, name in enumerate(opened_xlsxFile_selection['Component Name']) if name == 'Fixation Timing']
+    # Count sequences, save particpant response and ground truth for later error analysis
+    incrementList = []
+    responseParticipantEntries = []
+    responseGroundTruthEntries = []
+
+    for i, name in enumerate(opened_xlsxFile_selection['Component Name']):
+        if name == 'Fixation Timing':
+            incrementList.append(i + 1)
+            # Check if the next row exists to avoid IndexError
+            if i + 1 < len(opened_xlsxFile_selection):
+                responseParticipantEntry = opened_xlsxFile_selection['Response'].iloc[i + 1]
+                responseParticipantEntries.append(responseParticipantEntry)
+                responseGroundTruthEntry = opened_xlsxFile_selection['Spreadsheet: CorrectAnswer1'].iloc[i + 1]
+                responseGroundTruthEntries.append(responseGroundTruthEntry)
+            else:
+                # Append None or some placeholder if there is no next row
+                responseParticipantEntries.append(None)
+                responseGroundTruthEntries.append(None)
+
+    concatResponseEntries = np.array((responseParticipantEntries, responseGroundTruthEntries))
     numberBatches = len(incrementList) // batchLength
 
     # Split the data into batches based on the fixation timing component
@@ -701,7 +801,8 @@ def preprocess_RP(opened_xlsxFile, questionnare_files, list_allSessions, sequenc
         batchOff = batchNumber * batchLength + batchLength
         numFixStepsTotal = 0
         numRespStepsTotal = 0
-
+        # Prepare response array for this batch
+        currentConcatResponseEntries = concatResponseEntries[:, batchOn:batchOff]
         # Calculate average fix, resp and total steps for this batch
         for j in incrementList[batchOn:batchOff]:
             # Accumulate step numbers
@@ -718,14 +819,31 @@ def preprocess_RP(opened_xlsxFile, questionnare_files, list_allSessions, sequenc
                 # print(numFixStepsAverage,numRespStepsAverage,totalStepsAverage)
 
         finalSequenceList = []
+        concatedValuesAndOccurrencesList = []
         # Create sequences of every trial in the current batch with the previous calculated time steps
         for j in incrementList[batchOn:batchOff]:
             currentTrial = opened_xlsxFile_selection[j:j + 2].reset_index().drop(columns=['index'])
+            # ----------------------------------------------------------------------------------------------------------
+            # Get the rest of the trial information for later error analysis
+            png_strings = np.array([s for s in currentTrial.loc[0][9:73] if isinstance(s, str) and s.endswith('.png')])
+            unique_values, occurrence_counts = np.unique(png_strings, return_counts=True)
+            unique_values, occurrence_counts = unique_values[1:], occurrence_counts[1:]  # exclude 000_000.png
+            # Check if values and counts are equal/below 4 and zeropad them, so that all columns have the same length
+            if len(unique_values) <= 4:
+                for i in range(5-len(unique_values)):
+                    unique_values, occurrence_counts = np.concatenate((unique_values,['None']),axis=0), np.concatenate((occurrence_counts,[0]),axis=0)
+            concatedValuesAndOccurrences = np.concatenate([unique_values, occurrence_counts], axis=0)
+            concatedValuesAndOccurrencesList.append(concatedValuesAndOccurrences)
+            # ----------------------------------------------------------------------------------------------------------
             currentSequenceList = []
             for k in range(totalStepsAverage):
                 sequence = [currentTrial.iloc[0]]
                 currentSequenceList.append(sequence)
             finalSequenceList.append(currentSequenceList)
+        # --------------------------------------------------------------------------------------------------------------
+        # Concatenate trial information for error anaylsis to response entries
+        currentConcatResponseEntriesFinal = np.concatenate([currentConcatResponseEntries, np.array(concatedValuesAndOccurrencesList, dtype=object).T],axis=0)
+        # --------------------------------------------------------------------------------------------------------------
 
         # Create final df for INPUT and OUPUT
         newOrderSequenceList = []
@@ -735,7 +853,7 @@ def preprocess_RP(opened_xlsxFile, questionnare_files, list_allSessions, sequenc
                 newOrderSequenceList.append(finalSequenceList[i][j])
 
         # Create Yang form
-        finalTrialsList_array = np.array(newOrderSequenceList).reshape((len(finalSequenceList[0]), len(finalSequenceList), 87))
+        finalTrialsList_array = np.array(newOrderSequenceList).reshape((len(finalSequenceList[0]), len(finalSequenceList), 88))
         # Create meta dict before deleting necessary information from current trials List
         date = str(finalTrialsList_array[0,0,86]).split(' ')[0]
         sleepingQualityQuestion, sleepingQualityValue, drugVectorQuestion, drugVectorValue = find_sleepingQuality_drugVector(opened_questionare, date)
@@ -750,10 +868,11 @@ def preprocess_RP(opened_xlsxFile, questionnare_files, list_allSessions, sequenc
                      'drugVectorValue': drugVectorValue}
         # Create one input file and one output file
         Input, Output = finalTrialsList_array, finalTrialsList_array
-        Input = np.delete(Input, [0, 1, 2, 3, 4, 5, 6, 8, 85,86], axis=2) # todo: 77 statt 85 ????
-        Output = np.delete(Output, np.s_[0, 1, 2, 4, 5, 6, 7,86], axis=2)
+        Input = np.delete(Input, [0, 1, 2, 3, 4, 5, 6, 8, 85,86,87], axis=2) # todo: 77 statt 85 ????
+        Output = np.delete(Output, np.s_[0, 1, 2, 4, 5, 6, 7,86,87], axis=2)
         Output = np.delete(Output, np.s_[34:78], axis=2)
         Input, Output = Input[:, sequence_on:sequence_off, :], Output[:, sequence_on:sequence_off, :]
+        responseEntries = currentConcatResponseEntriesFinal[:, sequence_on:sequence_off]
 
         # INPUT ############################################################################################################
         # float all fixation input values to 1
@@ -862,9 +981,14 @@ def preprocess_RP(opened_xlsxFile, questionnare_files, list_allSessions, sequenc
         input_filename = (participant + '-' + 'month_' + str(month) + '-' + 'batch_' + str(batchNumber) + '-' + taskShorts + '-' + \
                           xlsxFile.split('_')[3].split('-')[0] + '_' + xlsxFile.split('_')[3].split('-')[1] + '-' + 'Input')
         np.save(input_filename, Input)
+        # Save response information for later error class detection
+        response_filename = participant + '-' + 'month_' + str(month) + '-' + 'batch_' + str(batchNumber) + '-' + taskShorts + '-' + \
+                            xlsxFile.split('_')[3].split('-')[0] + '_' + xlsxFile.split('_')[3].split('-')[1] + '-' + 'Response'
+        np.save(response_filename, responseEntries)
 
         # Sanity check
         print('Input solved: ', opened_xlsxFile_selection['Spreadsheet'][0], ' ', opened_xlsxFile_selection['TimeLimit'][0])
+        print('Response solved: ', opened_xlsxFile_selection['Spreadsheet'][0], ' ', opened_xlsxFile_selection['TimeLimit'][0])
 
         # OUTPUT ###########################################################################################################
         # float all field units during fixation epoch on 0.05
@@ -999,10 +1123,28 @@ def preprocess_WM(opened_xlsxFile, questionnare_files, list_allSessions, sequenc
                        'Spreadsheet: Field 20', 'Spreadsheet: Field 21', 'Spreadsheet: Field 22', 'Spreadsheet: Field 23',\
                        'Spreadsheet: Field 24', 'Spreadsheet: Field 25', 'Spreadsheet: Field 26', 'Spreadsheet: Field 27', 'Spreadsheet: Field 28',\
                        'Spreadsheet: Field 29', 'Spreadsheet: Field 30', 'Spreadsheet: Field 31', 'Spreadsheet: Field 32', 'DM',\
-                       'DM Anti', 'EF', 'EF Anti', 'RP', 'RP Anti', 'RP Ctx1', 'RP Ctx2', 'WM', 'WM Anti', 'WM Ctx1', 'WM Ctx1', 'Spreadsheet: display', 'UTC Date and Time']]
+                       'DM Anti', 'EF', 'EF Anti', 'RP', 'RP Anti', 'RP Ctx1', 'RP Ctx2', 'WM', 'WM Anti', 'WM Ctx1', 'WM Ctx1', 'Spreadsheet: display', 'UTC Date and Time', 'Response']]
 
-    # Define batch size and create batches
-    incrementList = [i + 1 for i, name in enumerate(opened_xlsxFile_selection['Component Name']) if name == 'Fixation Timing']
+    # Count sequences, save particpant response and ground truth for later error analysis
+    incrementList = []
+    responseParticipantEntries = []
+    responseGroundTruthEntries = []
+
+    for i, name in enumerate(opened_xlsxFile_selection['Component Name']):
+        if name == 'Fixation Timing':
+            incrementList.append(i + 1)
+            # Check if the next row exists to avoid IndexError
+            if i + 1 < len(opened_xlsxFile_selection):
+                responseParticipantEntry = opened_xlsxFile_selection['Response'].iloc[i + 1]
+                responseParticipantEntries.append(responseParticipantEntry)
+                responseGroundTruthEntry = opened_xlsxFile_selection['Spreadsheet: CorrectAnswer'].iloc[i + 1]
+                responseGroundTruthEntries.append(responseGroundTruthEntry)
+            else:
+                # Append None or some placeholder if there is no next row
+                responseParticipantEntries.append(None)
+                responseGroundTruthEntries.append(None)
+
+    concatResponseEntries = np.array((responseParticipantEntries, responseGroundTruthEntries))
     numberBatches = len(incrementList) // batchLength
 
     # Split the data into batches based on the fixation timing component
@@ -1011,7 +1153,8 @@ def preprocess_WM(opened_xlsxFile, questionnare_files, list_allSessions, sequenc
         batchOff = batchNumber * batchLength + batchLength
         numFixStepsTotal = 0
         numRespStepsTotal = 0
-
+        # Prepare response array for this batch
+        currentConcatResponseEntries = concatResponseEntries[:, batchOn:batchOff]
         # Calculate average fix, resp and total steps for this batch
         for j in incrementList[batchOn:batchOff]:
             # Accumulate step numbers
@@ -1027,14 +1170,30 @@ def preprocess_WM(opened_xlsxFile, questionnare_files, list_allSessions, sequenc
                 # print(numFixStepsAverage,numRespStepsAverage,totalStepsAverage)
 
         finalSequenceList = []
+        concatedValuesAndOccurrencesList = []
         # Create sequences of every trial in the current batch with the previous calculated time steps
         for j in incrementList[batchOn:batchOff]:
             currentTrial = opened_xlsxFile_selection[j:j + 2].reset_index().drop(columns=['index'])
+            # ----------------------------------------------------------------------------------------------------------
+            # Get the rest of the trial information for later error analysis
+            png_strings = np.array([s for s in currentTrial.loc[0][10:74] if isinstance(s, str) and s.endswith('.png')])
+            unique_values, occurrence_counts = np.unique(png_strings, return_counts=True)
+            unique_values, occurrence_counts = unique_values[1:], occurrence_counts[1:]  # exclude 000_000.png
+            # Check if values and counts are below 2 and zeropad them, so that all columns have the same length
+            if len(unique_values) == 1:
+                unique_values, occurrence_counts = np.concatenate((unique_values, ['None']), axis=0), np.concatenate((occurrence_counts, [0]), axis=0)
+            concatedValuesAndOccurrences = np.concatenate([unique_values, occurrence_counts], axis=0)
+            concatedValuesAndOccurrencesList.append(concatedValuesAndOccurrences)
+            # ----------------------------------------------------------------------------------------------------------
             currentSequenceList = []
             for k in range(totalStepsAverage):
                 sequence = [currentTrial.iloc[0]]
                 currentSequenceList.append(sequence)
             finalSequenceList.append(currentSequenceList)
+        # --------------------------------------------------------------------------------------------------------------
+        # Concatenate trial information for error anaylsis to response entries
+        currentConcatResponseEntriesFinal = np.concatenate([currentConcatResponseEntries, np.array(concatedValuesAndOccurrencesList, dtype=object).T],axis=0)
+        # --------------------------------------------------------------------------------------------------------------
 
         # Create final df for INPUT and OUPUT
         newOrderSequenceList = []
@@ -1044,7 +1203,7 @@ def preprocess_WM(opened_xlsxFile, questionnare_files, list_allSessions, sequenc
                 newOrderSequenceList.append(finalSequenceList[i][j])
 
         # Create Yang form
-        finalTrialsList_array = np.array(newOrderSequenceList).reshape((len(finalSequenceList[0]), len(finalSequenceList), 88))
+        finalTrialsList_array = np.array(newOrderSequenceList).reshape((len(finalSequenceList[0]), len(finalSequenceList), 89))
         # Create meta dict before deleting necessary information from current trials List
         date = str(finalTrialsList_array[0, 0, 87]).split(' ')[0]
         sleepingQualityQuestion, sleepingQualityValue, drugVectorQuestion, drugVectorValue = find_sleepingQuality_drugVector(opened_questionare, date)
@@ -1059,10 +1218,11 @@ def preprocess_WM(opened_xlsxFile, questionnare_files, list_allSessions, sequenc
                      'drugVectorValue': drugVectorValue}
         # Create one input file and one output file
         Input, Output = finalTrialsList_array, finalTrialsList_array
-        Input = np.delete(Input, [0,1,2,3,4,5,6,7,8,86,87], axis=2)
-        Output = np.delete(Output, np.s_[0,1,2,5,6,7,8,87], axis=2)
+        Input = np.delete(Input, [0,1,2,3,4,5,6,7,8,86,87,88], axis=2)
+        Output = np.delete(Output, np.s_[0,1,2,5,6,7,8,87,88], axis=2)
         Output = np.delete(Output, np.s_[34:78], axis=2)
         Input, Output = Input[:, sequence_on:sequence_off, :], Output[:, sequence_on:sequence_off, :]
+        responseEntries = currentConcatResponseEntriesFinal[:, sequence_on:sequence_off]
 
         # INPUT ############################################################################################################
         # float all fixation input values to 1
@@ -1172,9 +1332,14 @@ def preprocess_WM(opened_xlsxFile, questionnare_files, list_allSessions, sequenc
         input_filename = (participant + '-' + 'month_' + str(month) + '-' + 'batch_' + str(batchNumber) + '-' + taskShorts + '-' + \
                     xlsxFile.split('_')[3].split('-')[0] + '_' + xlsxFile.split('_')[3].split('-')[1] + '-' + 'Input')
         np.save(input_filename, Input)
+        # Save response information for later error class detection
+        response_filename = participant + '-' + 'month_' + str(month) + '-' + 'batch_' + str(batchNumber) + '-' + taskShorts + '-' + \
+                            xlsxFile.split('_')[3].split('-')[0] + '_' + xlsxFile.split('_')[3].split('-')[1] + '-' + 'Response'
+        np.save(response_filename, responseEntries)
 
         # Sanity check
         print('Input solved: ', opened_xlsxFile_selection['Spreadsheet'][0], ' ', opened_xlsxFile_selection['TimeLimit'][0])
+        print('Response solved: ', opened_xlsxFile_selection['Spreadsheet'][0], ' ', opened_xlsxFile_selection['TimeLimit'][0])
 
         # OUTPUT ###########################################################################################################
         # float all field units during fixation epoch on 0.05
@@ -1292,8 +1457,8 @@ def check_permissions(file_path):
 
 # Create right path - os.getcwd() should be set to PycharmProject mulitask_BeRNN
 dataFolder = "Data"
-participant = 'BeRNN_05'
-main_folder = 'PreprocessedData'
+participant = 'BeRNN_04'
+main_folder = 'PreprocessedData_new'
 main_path = os.path.join(os.getcwd(),dataFolder, participant, main_folder)
 # Create Folder Structure
 subfolders = ['DM', 'DM_Anti', 'EF', 'EF_Anti', 'RP', 'RP_Anti', 'RP_Ctx1', 'RP_Ctx2',
@@ -1329,12 +1494,15 @@ for month in months:
         # Iterate through all .xlsx files in current month folder
         for xlsxFile in task_files:
             file_path = os.path.join(processing_path_month, xlsxFile)
+            print(' ')
+            print(' NEW FILE ')
+            print(' ')
             print(f"Processing file: {file_path}")
             permissions = check_permissions(file_path)
 
-            print(f"Read: {'Yes' if permissions['read'] else 'No'}")
-            print(f"Write: {'Yes' if permissions['write'] else 'No'}")
-            print(f"Execute: {'Yes' if permissions['execute'] else 'No'}")
+            # print(f"Read: {'Yes' if permissions['read'] else 'No'}")
+            # print(f"Write: {'Yes' if permissions['write'] else 'No'}")
+            # print(f"Execute: {'Yes' if permissions['execute'] else 'No'}")
             if permissions['read']:
                 if os.path.isfile(file_path):
                     try:
@@ -1363,16 +1531,37 @@ for month in months:
         print(f"Month directory not found: {processing_path_month}")
 
 
-
 # todo: ################################################################################################################
 # todo: DEBUG ZONE #####################################################################################################
 # todo: ################################################################################################################
-
-# Input = np.load(os.path.join('Z:\\Desktop\\ZI\\PycharmProjects\\multitask_BeRNN\\Data\\BeRNN_01\\PreprocessedData\\RP_Ctx1',\
-#                                    'BeRNN_01-month_1-batch_0-RP_Ctx1-task_113d-Input.npy'))
-# Output = np.load(os.path.join('Z:\\Desktop\\ZI\\PycharmProjects\\multitask_BeRNN\\Data\\BeRNN_01\\PreprocessedData\\RP_Ctx1',\
-#                                     'BeRNN_01-month_1-batch_0-RP_Ctx1-task_113d-Output.npy'))
+# import pandas as pd
+# import os
+# import numpy as np
 #
+# xlsxFile = 'data_exp_149474-v2_task-6at8-9621849.xlsx'
+# month = '1'
+# processing_path_month = os.path.join('Z:\\Desktop\\ZI\\PycharmProjects\\BeRNN\Data\\BeRNN_01\\', month)
+# file_path = os.path.join(processing_path_month, xlsxFile)
+# opened_xlsxFile_selection = pd.read_excel(file_path, engine='openpyxl')
+#
+# j = 10
+# currentTrial = opened_xlsxFile_selection[j:j + 2].reset_index().drop(columns=['index'])
+# png_strings = np.array([s for s in currentTrial.loc[0] if isinstance(s, str) and s.endswith('.png')])
+# unique_values, occurrence_counts = np.unique(png_strings,return_counts=True)
+#
+#
+# # Input = np.load(os.path.join('Z:\\Desktop\\ZI\\PycharmProjects\\BeRNN\\Data\\BeRNN_01\\PreprocessedData\\DM',\
+# #                                    'BeRNN_01-month_1-batch_0-DM-task_9ivx-Input.npy'))
+# #
+# # Output = np.load(os.path.join('Z:\\Desktop\\ZI\\PycharmProjects\\BeRNN\\Data\\BeRNN_01\\PreprocessedData\\RP_Ctx1',\
+# #                                     'BeRNN_01-month_1-batch_0-RP_Ctx1-task_113d-Output.npy'))
+# #
+
+# Response = np.load(os.path.join('Z:\\Desktop\\ZI\\PycharmProjects\\BeRNN\\Data\\BeRNN_05\\PreprocessedData_new\\WM_Ctx1',\
+#                                     'BeRNN_05-month_1-batch_0-WM_Ctx1-task_7l94-Response.npy'), allow_pickle=True)
+
+
+
 # filename = os.path.join('Z:\\Desktop\\ZI\\PycharmProjects\\multitask_BeRNN\\Data\\BeRNN_01\\PreprocessedData\\RP_Ctx1',\
 #                                    'BeRNN_01-month_1-batch_0-RP_Ctx1-task_113d-Meta.json')
 # with open(filename, 'r') as json_file:
