@@ -1,20 +1,18 @@
 import os
 import pandas as pd
-# future pands version wants to have datetime columns in df be specified or sth like that
 import warnings
 with warnings.catch_warnings():
     warnings.filterwarnings("ignore", category=FutureWarning)
 
 ########################################################################################################################
-# todo: TaskAccuracy
+# TaskAccuracy
 ########################################################################################################################
 # Participant list
 participant_dir = 'Z:\Desktop\ZI\PycharmProjects\BeRNN\Data'
 participantList = os.listdir(participant_dir)
 
-participant = participantList[3] # choose which particpant to analyze
-month = '3' # choose which month to analyze
-# currentFile = pd.read_excel('W:/AG_CSP/Projekte/BeRNN/02_Daten/BeRNN_main/' + participant + month + 'data_exp_152443-v5_task-627g-9761628.xlsx', engine='openpyxl')
+participant = participantList[4] # choose which particpant to analyze
+month = '4' # choose which month to analyze
 
 percentCorrect_DM, count_DM = 0, 0
 percentCorrect_DM_Anti, count_DM_Anti = 0, 0
@@ -159,12 +157,10 @@ acc_RP_Anti = percentCorrect_RP_Anti/count_RP_Anti
 acc_RP_Ctx1 = percentCorrect_RP_Ctx1/count_RP_Ctx1
 acc_RP_Ctx2 = percentCorrect_RP_Ctx2/count_RP_Ctx2
 
-
 # pd.DataFrame(data={'acc_WM_Ctx2':[acc_WM_Ctx2]})
 
-
 ########################################################################################################################
-# todo: Plot training effect
+# Plot training effect
 ########################################################################################################################
 import os
 import pandas as pd
@@ -176,8 +172,8 @@ import matplotlib.dates as mdates
 # Participant list
 participant_dir = 'Z:\Desktop\ZI\PycharmProjects\BeRNN\Data'
 participantList = os.listdir(participant_dir)
-participant = participantList[4] # choose which particpant to analyze
-month = '3' # choose which month to analyze
+participant = participantList[0] # choose which particpant to analyze
+month = '4' # choose which month to analyze
 
 # Specify the folder containing the .xlsx files
 folder_path = os.path.join(participant_dir,participant,month)
