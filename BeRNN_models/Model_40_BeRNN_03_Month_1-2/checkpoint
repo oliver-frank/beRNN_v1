@@ -1,2 +1,0 @@
-model_checkpoint_path: "/pandora/home/oliver.frank/01_Projects/RNN/multitask_BeRNN-main/Data/BeRNN_03/Model/Model_40_BeRNN_03_Month_1-2/model.ckpt"
-all_model_checkpoint_paths: "/pandora/home/oliver.frank/01_Projects/RNN/multitask_BeRNN-main/Data/BeRNN_03/Model/Model_40_BeRNN_03_Month_1-2/model.ckpt"
