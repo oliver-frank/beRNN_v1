@@ -146,6 +146,10 @@ class LeakyRNNCell(RNNCell):
             self._activation = lambda x: tf.tanh(tf.nn.relu(x))
             self._w_in_start = 1.0
             self._w_rec_start = 0.5
+        elif activation == 'linear':  # Adding the linear activation option
+            self._activation = tf.identity
+            self._w_in_start = 1.0
+            self._w_rec_start = 1.0
         else:
             raise ValueError('Unknown activation')
         self._alpha = alpha
@@ -160,14 +164,14 @@ class LeakyRNNCell(RNNCell):
         w_in0 = (self.rng.randn(n_input, n_hidden) /
                  np.sqrt(n_input) * self._w_in_start)
 
+        testMatrix = rng.randn(77, 256) / np.sqrt(77)
+
         if self._w_rec_init == 'diag':
             w_rec0 = self._w_rec_start*np.eye(n_hidden)
         elif self._w_rec_init == 'randortho':
-            w_rec0 = self._w_rec_start*Tools.gen_ortho_matrix(n_hidden,
-                                                              rng=self.rng)
+            w_rec0 = self._w_rec_start*Tools.gen_ortho_matrix(n_hidden, rng=self.rng)
         elif self._w_rec_init == 'randgauss':
-            w_rec0 = (self._w_rec_start *
-                      self.rng.randn(n_hidden, n_hidden)/np.sqrt(n_hidden))
+            w_rec0 = (self._w_rec_start * self.rng.randn(n_hidden, n_hidden)/np.sqrt(n_hidden))
 
         matrix0 = np.concatenate((w_in0, w_rec0), axis=0)
 
@@ -534,6 +538,8 @@ class Model(object):
             f_act = lambda x: tf.tanh(tf.nn.relu(x))
         elif hp['activation'] == 'relu+':
             f_act = lambda x: tf.nn.relu(x + tf.constant(1.))
+        elif hp['activation'] == 'linear':
+            f_act = tf.identity  # or f_act = lambda x: x
         else:
             f_act = getattr(tf.nn, hp['activation'])
 

@@ -40,15 +40,15 @@ def get_default_hp(ruleset):
         # input type: normal, multi
         'in_type': 'normal',
         # Type of RNNs: LeakyRNN, LeakyGRU, EILeakyGRU, GRU, LSTM
-        'rnn_type': 'GRU',
+        'rnn_type': 'LeakyRNN',
         # whether rule and stimulus inputs are represented separately
         'use_separate_input': False,
         # Type of loss functions
         'loss_type': 'lsq',
         # Optimizer
         'optimizer': 'adam',
-        # Type of activation runctions, relu, softplus, tanh, elu
-        'activation': 'relu',
+        # Type of activation runctions, relu, softplus, tanh, elu, linear
+        'activation': 'linear',
         # Time constant (ms)
         'tau': 100,
         # discretization time step (ms)
@@ -358,14 +358,14 @@ def train(model_dir,trial_dir,monthsConsidered,hp=None,max_steps=1e7,display_ste
 dataFolder = "Data"
 participant = 'BeRNN_01'
 model_folder = 'Model'
-model_number = 'Model_76_' + participant + '_Month_1' # Manually add months considered e.g. 1-7
-monthsConsidered = ['1','2','3'] # Add all months you want to take into consideration for training and evaluation
+model_number = 'Model_133_' + participant + '_Month_2-4' # Manually add months considered e.g. 1-7
+monthsConsidered = ['2','3','4'] # Add all months you want to take into consideration for training and evaluation
 model_dir = os.path.join(os.getcwd(),dataFolder, participant, model_folder, model_number)
 
 if not os.path.exists(model_dir):
     os.makedirs(model_dir)
 
-preprocessedData_folder = 'PreprocessedData'
+preprocessedData_folder = 'PreprocessedData_wResp_ALL'
 preprocessedData_path = os.path.join(os.getcwd(),dataFolder, participant, preprocessedData_folder)
 
 # Define probability of each task being trained
@@ -373,6 +373,5 @@ rule_prob_map = {"DM": 1,"DM_Anti": 1,"EF": 1,"EF_Anti": 1,"RP": 1,"RP_Anti": 1,
 
 train(model_dir=model_dir, trial_dir=preprocessedData_path, monthsConsidered = monthsConsidered, rule_prob_map=rule_prob_map)
 # train(model_dir=model_dir, trial_dir=preprocessedData_path)
-
 
 
