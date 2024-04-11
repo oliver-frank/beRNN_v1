@@ -39,8 +39,8 @@ def get_default_hp(ruleset):
         'batch_size_test': 640,
         # input type: normal, multi
         'in_type': 'normal',
-        # Type of RNNs: LeakyRNN, LeakyGRU, EILeakyGRU, GRU, LSTM
-        'rnn_type': 'LeakyRNN',
+        # Type of RNNs: NonRecurrent, LeakyRNN, LeakyGRU, EILeakyGRU, GRU, LSTM
+        'rnn_type': 'NonRecurrent',
         # whether rule and stimulus inputs are represented separately
         'use_separate_input': False,
         # Type of loss functions
@@ -55,7 +55,7 @@ def get_default_hp(ruleset):
         'dt': 20,
         # discretization time step/time constant
         'alpha': 0.2,
-        # recurrent noise
+        # recurrent noise - directly influencing the noise added to the network; can prevent over-fitting especially when learning time sequences
         'sigma_rec': 0.05,
         # input noise
         'sigma_x': 0.01,
@@ -358,7 +358,7 @@ def train(model_dir,trial_dir,monthsConsidered,hp=None,max_steps=1e7,display_ste
 dataFolder = "Data"
 participant = 'BeRNN_01'
 model_folder = 'Model'
-model_number = 'Model_133_' + participant + '_Month_2-4' # Manually add months considered e.g. 1-7
+model_number = 'Model_136_' + participant + '_Month_2-4' # Manually add months considered e.g. 1-7
 monthsConsidered = ['2','3','4'] # Add all months you want to take into consideration for training and evaluation
 model_dir = os.path.join(os.getcwd(),dataFolder, participant, model_folder, model_number)
 

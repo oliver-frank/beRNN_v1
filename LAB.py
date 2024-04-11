@@ -619,59 +619,38 @@ class Model(object):
         n_output = hp['n_output']
 
         for v in self.var_list:
-            if hp['rnn_type'] == 'NonRecurrent':
-                if 'output' not in v.name:
-                    if 'kernel' in v.name:
-                        # This could be input or output weights depending on layer naming
-                        self.w_in = v if 'dense' in v.name else self.w_in
-                    elif 'bias' in v.name:
-                        self.b_rec = v if 'dense' in v.name else self.b_rec
-                elif 'rnn' in v.name and hp['rnn_type'] != 'NonRecurrent':
-                    # Recurrent weight handling for RNN types
-                    if 'kernel' in v.name or 'weight' in v.name:
-                        self.w_rec = v[n_input:, :]
-                        self.w_in = v[:n_input, :]
-                    else:
-                        self.b_rec = v
-                if 'output' in v.name:
-                    if 'kernel' in v.name or 'weight' in v.name:
-                        self.w_out = v
-                    else:
-                        self.b_out = v
-            else: # for all other rnn_types
-                if 'rnn' in v.name:
-                    if 'kernel' in v.name or 'weight' in v.name:
-                        # TODO(gryang): For GRU, fix
-                        self.w_rec = v[n_input:, :]
-                        self.w_in = v[:n_input, :]
-                    else:
-                        self.b_rec = v
+            if 'rnn' in v.name:
+                if 'kernel' in v.name or 'weight' in v.name:
+                    # TODO(gryang): For GRU, fix
+                    self.w_rec = v[n_input:, :]
+                    self.w_in = v[:n_input, :]
                 else:
-                    assert 'output' in v.name
-                    if 'kernel' in v.name or 'weight' in v.name:
-                        self.w_out = v
-                    else:
-                        self.b_out = v
-
-        if hp['rnn_type'] != 'NonRecurrent':
-            # check if the recurrent and output connection has the correct shape
-            if self.w_out.shape != (n_rnn, n_output):
-                raise ValueError('Shape of w_out should be ' +
-                                 str((n_rnn, n_output)) + ', but found ' +
-                                 str(self.w_out.shape))
-            if hp['rnn_type'] == 'LSTM': # todo: The factor of 4 comes from the LSTM cell having four sets of weights for each of its components (input gate, forget gate, cell state, and output gate), hence a single LSTM cell's weight matrix quadruples in size compared to a simple RNN cell.
-                # Special handling for LSTM because it uses a different weight structure
-                if self.w_rec.shape != (n_rnn, n_rnn * 4):
-                    raise ValueError(f'Expected LSTM w_rec shape to be {(n_rnn, n_rnn * 4)}, but got {self.w_rec.shape}')
-                if self.w_in.shape != (n_input, n_rnn * 4):
-                    raise ValueError(f'Expected LSTM w_in shape to be {(n_input, n_rnn * 4)}, but got {self.w_in.shape}')
-                # LSTM specific code here
+                    self.b_rec = v
             else:
-                # Handling for other RNN types (GRU, SimpleRNN, etc.)
-                if self.w_rec.shape != (n_rnn, n_rnn):
-                    raise ValueError(f'Expected w_rec shape to be {(n_rnn, n_rnn)}, but got {self.w_rec.shape}')
-                if self.w_in.shape != (n_input, n_rnn):
-                    raise ValueError(f'Expected w_in shape to be {(n_input, n_rnn)}, but got {self.w_in.shape}')
+                assert 'output' in v.name
+                if 'kernel' in v.name or 'weight' in v.name:
+                    self.w_out = v
+                else:
+                    self.b_out = v
+
+        # check if the recurrent and output connection has the correct shape
+        if self.w_out.shape != (n_rnn, n_output):
+            raise ValueError('Shape of w_out should be ' +
+                             str((n_rnn, n_output)) + ', but found ' +
+                             str(self.w_out.shape))
+        if hp['rnn_type'] == 'LSTM': # todo: The factor of 4 comes from the LSTM cell having four sets of weights for each of its components (input gate, forget gate, cell state, and output gate), hence a single LSTM cell's weight matrix quadruples in size compared to a simple RNN cell.
+            # Special handling for LSTM because it uses a different weight structure
+            if self.w_rec.shape != (n_rnn, n_rnn * 4):
+                raise ValueError(f'Expected LSTM w_rec shape to be {(n_rnn, n_rnn * 4)}, but got {self.w_rec.shape}')
+            if self.w_in.shape != (n_input, n_rnn * 4):
+                raise ValueError(f'Expected LSTM w_in shape to be {(n_input, n_rnn * 4)}, but got {self.w_in.shape}')
+            # LSTM specific code here
+        else:
+            # Handling for other RNN types (GRU, SimpleRNN, etc.)
+            if self.w_rec.shape != (n_rnn, n_rnn):
+                raise ValueError(f'Expected w_rec shape to be {(n_rnn, n_rnn)}, but got {self.w_rec.shape}')
+            if self.w_in.shape != (n_input, n_rnn):
+                raise ValueError(f'Expected w_in shape to be {(n_input, n_rnn)}, but got {self.w_in.shape}')
 
     def _build_seperate(self, hp):
         # Input, target output, and cost mask

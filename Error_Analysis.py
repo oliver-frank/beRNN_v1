@@ -38,6 +38,40 @@ def plot_errorDistribution(errors_dict,directory,task,grainity):
     # Save plot
     plt.savefig(os.path.join(directory.split('PreprocessedData')[0],'ErrorGraphics' ,participant+task+'.png'), dpi=100)
 
+def plot_errorDistribution_relative(errors_dict, directory, task, grainity):
+    # Prepare data for plotting
+    categories = list(errors_dict.keys())
+    total_occurrences = sum(
+        len(values) for values in errors_dict.values())  # Total occurrences across all categories
+    # Calculate relative occurrences (percentages)
+    occurrences = [(len(values) / total_occurrences) * 100 for values in errors_dict.values()]
+    # Filter out categories with no occurrences for labeling
+    labels = [cat if len(errors_dict[cat]) > 0 else '' for cat in categories]
+
+    participant = directory.split('\\')[6] + ' '
+
+    # Create a bar chart
+    fig, ax = plt.subplots(figsize=(50, len(categories) * 0.5))  # Adjust the figure size as needed
+    ax.barh(categories, occurrences, color='firebrick')
+    # Set labels and titles
+    ax.set_xlabel('Percentage of Total Occurrences (%)')
+    ax.set_ylabel('Error Categories')
+    ax.set_title('Relative Error Category Occurrences: ' + participant + task)
+    # Set y-ticks to all categories but only label those with occurrences
+    ax.set_yticks(range(len(categories)))  # Ensure there's a tick for each category
+    ax.set_yticklabels(labels)  # Apply the labels (with blanks for no occurrences)
+    plt.xticks(rotation=45)
+    if grainity == 'rough':
+        plt.xlim([0, 100])  # Adjusted for percentage
+    elif grainity == 'fine':
+        plt.xlim([0, 100])  # Adjusted for percentage
+    plt.tight_layout()  # Adjust layout to make room for the rotated x-axis labels
+    plt.subplots_adjust(left=0.4, right=0.95, bottom=0.05, top=0.95)
+    plt.show()
+    # Save plot
+    plt.savefig(os.path.join(directory.split('PreprocessedData')[0], 'ErrorGraphics', participant + task + '.png'),
+                dpi=100)
+
 def sort_rows_descending(array): # Higher value on 4th
     for col in range(array.shape[1]):
         if array[4, col] < array[5, col]:  # If value in 5th row is higher than in 4th row
@@ -155,7 +189,6 @@ focusedMonths = ['month_1','month_2','month_3','month_4']
 directory = 'Z:\\Desktop\\ZI\\PycharmProjects\\BeRNN\\Data\\BeRNN_05\\PreprocessedData_wResp_ALL\\'
 
 
-
 ########################################################################################################################
 # Decision Making ------------------------------------------------------------------------------------------------------
 ########################################################################################################################
@@ -210,7 +243,8 @@ for npy_file in selected_months_files:
     sortedResponse = sort_rows_descending(Response)
     errors_dict_DM = get_errors_DM(sortedResponse, errors_dict_DM, distract_dict, opposite_dict, strength_dict)
 # Visualize results
-plot_errorDistribution(errors_dict_DM,participantDirectory,'DM', 'rough')
+# plot_errorDistribution(errors_dict_DM,participantDirectory,'DM', 'rough')
+plot_errorDistribution_relative(errors_dict_DM,participantDirectory,'DM', 'rough')
 
 # DM - Fine Graining ---------------------------------------------------------------------------------------------------
 list1 = ['distractLeft', 'distractRight', 'distractUp', 'distractDown']
@@ -229,7 +263,8 @@ for j in list_error_keys:
     # Creating dict with created names
     errors_dict_fineGrained = {name: [] for name in categorical_names_fineGrained}
     errors_dict_fineGrained = get_fine_grained_error(sortedResponse, errors_dict_fineGrained, 'DM')
-    plot_errorDistribution(errors_dict_fineGrained, participantDirectory, 'DM_fineGrained ' + j, 'fine')
+    # plot_errorDistribution(errors_dict_fineGrained, participantDirectory, 'DM_fineGrained ' + j, 'fine')
+    plot_errorDistribution_relative(errors_dict_fineGrained, participantDirectory, 'DM_fineGrained ' + j, 'fine')
 
 
 # DM Anti --------------------------------------------------------------------------------------------------------------
@@ -245,7 +280,8 @@ for npy_file in selected_months_files:
     sortedResponse = sort_rows_ascending(Response)
     errors_dict_DM_Anti = get_errors_DM(sortedResponse, errors_dict_DM_Anti, distract_dict, opposite_dict, strength_dict)
 # Visualize results
-plot_errorDistribution(errors_dict_DM_Anti,participantDirectory,'DM_Anti', grainity='rough')
+# plot_errorDistribution(errors_dict_DM_Anti,participantDirectory,'DM_Anti', grainity='rough')
+plot_errorDistribution_relative(errors_dict_DM_Anti,participantDirectory,'DM_Anti', grainity='rough')
 
 # DM Anti - Fine Graining ----------------------------------------------------------------------------------------------
 list1 = ['distractLeft', 'distractRight', 'distractUp', 'distractDown']
@@ -264,7 +300,8 @@ for j in list_error_keys:
     # Creating dict with created names
     errors_dict_fineGrained = {name: [] for name in categorical_names_fineGrained}
     errors_dict_fineGrained = get_fine_grained_error(sortedResponse, errors_dict_fineGrained, 'DM_Anti')
-    plot_errorDistribution(errors_dict_fineGrained, participantDirectory, 'DM_Anti_fineGrained ' + j, 'fine')
+    # plot_errorDistribution(errors_dict_fineGrained, participantDirectory, 'DM_Anti_fineGrained ' + j, 'fine')
+    plot_errorDistribution_relative(errors_dict_fineGrained, participantDirectory, 'DM_Anti_fineGrained ' + j, 'fine')
 
 
 
@@ -327,7 +364,8 @@ for npy_file in selected_months_files:
     sortedResponse = sort_rows_ascending(Response)
     errors_dict_EF = get_errors_EF(sortedResponse, errors_dict_EF, distract_dict, opposite_dict)
 # Visualize results
-plot_errorDistribution(errors_dict_EF,participantDirectory,'EF', grainity='rough')
+# plot_errorDistribution(errors_dict_EF,participantDirectory,'EF', grainity='rough')
+plot_errorDistribution_relative(errors_dict_EF,participantDirectory,'EF', grainity='rough')
 
 # EF - Fine Graining ---------------------------------------------------------------------------------------------------
 list1 = ['distractX', 'distractLeft', 'distractRight', 'distractUp', 'distractDown']
@@ -346,7 +384,8 @@ for j in list_error_keys:
     # Creating dict with created names
     errors_dict_fineGrained = {name: [] for name in categorical_names_fineGrained}
     errors_dict_fineGrained = get_fine_grained_error(sortedResponse, errors_dict_fineGrained, 'EF')
-    plot_errorDistribution(errors_dict_fineGrained, participantDirectory, 'EF_fineGrained ' + j, 'fine')
+    # plot_errorDistribution(errors_dict_fineGrained, participantDirectory, 'EF_fineGrained ' + j, 'fine')
+    plot_errorDistribution_relative(errors_dict_fineGrained, participantDirectory, 'EF_fineGrained ' + j, 'fine')
 
 
 # EF Anti --------------------------------------------------------------------------------------------------------------
@@ -363,7 +402,8 @@ for npy_file in selected_months_files:
     sortedResponse = sort_rows_ascending(Response)
     errors_dict_EF_Anti = get_errors_EF(Response, errors_dict_EF_Anti, distract_dict, opposite_dict)
 # Visualize results
-plot_errorDistribution(errors_dict_EF_Anti,participantDirectory,'EF_Anti', grainity='rough')
+# plot_errorDistribution(errors_dict_EF_Anti,participantDirectory,'EF_Anti', grainity='rough')
+plot_errorDistribution_relative(errors_dict_EF_Anti,participantDirectory,'EF_Anti', grainity='rough')
 
 # EF Anti - Fine Graining ----------------------------------------------------------------------------------------------
 list1 = ['distractX', 'distractLeft', 'distractRight', 'distractUp', 'distractDown']
@@ -383,7 +423,8 @@ for j in list_error_keys:
     # Creating dict with created names
     errors_dict_fineGrained = {name: [] for name in categorical_names_fineGrained}
     errors_dict_fineGrained = get_fine_grained_error(sortedResponse, errors_dict_fineGrained, 'EF_Anti')
-    plot_errorDistribution(errors_dict_fineGrained, participantDirectory, 'EF_Anti_fineGrained ' + j, 'fine')
+    # plot_errorDistribution(errors_dict_fineGrained, participantDirectory, 'EF_Anti_fineGrained ' + j, 'fine')
+    plot_errorDistribution_relative(errors_dict_fineGrained, participantDirectory, 'EF_Anti_fineGrained ' + j, 'fine')
 
 
 
@@ -448,7 +489,8 @@ for npy_file, meta_file in zip(selected_months_files, selected_meta_files):
     Response = np.load(npy_file, allow_pickle=True)
     errors_dict_RP = get_errors_RP(Response, errors_dict_RP, opened_meta_file)
 # Visualize results
-plot_errorDistribution(errors_dict_RP,participantDirectory,'RP', grainity='rough')
+# plot_errorDistribution(errors_dict_RP,participantDirectory,'RP', grainity='rough')
+plot_errorDistribution_relative(errors_dict_RP,participantDirectory,'RP', grainity='rough')
 
 # RP - Fine Graining ---------------------------------------------------------------------------------------------------
 list1 = ['distractCircle', 'distractNonagon', 'distractHeptagon', 'distractPentagon', 'distractTriangle', 'distractNoResponse']
@@ -467,7 +509,8 @@ for j in list_error_keys:
     # Creating dict with created names
     errors_dict_fineGrained = {name: [] for name in categorical_names_fineGrained}
     errors_dict_fineGrained = get_fine_grained_error(sortedResponse, errors_dict_fineGrained, 'RP')
-    plot_errorDistribution(errors_dict_fineGrained, participantDirectory, 'RP_fineGrained ' + j, 'fine')
+    # plot_errorDistribution(errors_dict_fineGrained, participantDirectory, 'RP_fineGrained ' + j, 'fine')
+    plot_errorDistribution_relative(errors_dict_fineGrained, participantDirectory, 'RP_fineGrained ' + j, 'fine')
 
 
 # RP Anti --------------------------------------------------------------------------------------------------------------
@@ -487,7 +530,8 @@ for npy_file, meta_file in zip(selected_months_files, selected_meta_files):
     Response = np.load(npy_file, allow_pickle=True)
     errors_dict_RP_Anti = get_errors_RP(Response, errors_dict_RP_Anti, opened_meta_file)
 # Visualize results
-plot_errorDistribution(errors_dict_RP_Anti,participantDirectory,'RP_Anti', grainity='rough')
+# plot_errorDistribution(errors_dict_RP_Anti,participantDirectory,'RP_Anti', grainity='rough')
+plot_errorDistribution_relative(errors_dict_RP_Anti,participantDirectory,'RP_Anti', grainity='rough')
 
 # RP Anti - Fine Graining ----------------------------------------------------------------------------------------------
 list1 = ['distractCircle', 'distractNonagon', 'distractHeptagon', 'distractPentagon', 'distractTriangle', 'distractNoResponse']
@@ -505,7 +549,8 @@ for j in list_error_keys:
     # Creating dict with created names
     errors_dict_fineGrained = {name: [] for name in categorical_names_fineGrained}
     errors_dict_fineGrained = get_fine_grained_error(sortedResponse, errors_dict_fineGrained, 'RP_Anti')
-    plot_errorDistribution(errors_dict_fineGrained, participantDirectory, 'RP_Anti_fineGrained ' + j, 'fine')
+    # plot_errorDistribution(errors_dict_fineGrained, participantDirectory, 'RP_Anti_fineGrained ' + j, 'fine')
+    plot_errorDistribution_relative(errors_dict_fineGrained, participantDirectory, 'RP_Anti_fineGrained ' + j, 'fine')
 
 
 # RP Ctx1 --------------------------------------------------------------------------------------------------------------
@@ -525,7 +570,8 @@ for npy_file, meta_file in zip(selected_months_files, selected_meta_files):
     Response = np.load(npy_file, allow_pickle=True)
     errors_dict_RP_Ctx1 = get_errors_RP(Response, errors_dict_RP_Ctx1, opened_meta_file)
 # Visualize results
-plot_errorDistribution(errors_dict_RP_Ctx1,participantDirectory,'RP_Ctx1', grainity='rough')
+# plot_errorDistribution(errors_dict_RP_Ctx1,participantDirectory,'RP_Ctx1', grainity='rough')
+plot_errorDistribution_relative(errors_dict_RP_Ctx1,participantDirectory,'RP_Ctx1', grainity='rough')
 
 # RP Ctx1 - Fine Graining ----------------------------------------------------------------------------------------------
 list1 = ['distractCircle', 'distractNonagon', 'distractHeptagon', 'distractPentagon', 'distractTriangle', 'distractNoResponse']
@@ -543,7 +589,8 @@ for j in list_error_keys:
     # Creating dict with created names
     errors_dict_fineGrained = {name: [] for name in categorical_names_fineGrained}
     errors_dict_fineGrained = get_fine_grained_error(sortedResponse, errors_dict_fineGrained, 'RP_Ctx1')
-    plot_errorDistribution(errors_dict_fineGrained, participantDirectory, 'RP_Ctx1_fineGrained ' + j, 'fine')
+    # plot_errorDistribution(errors_dict_fineGrained, participantDirectory, 'RP_Ctx1_fineGrained ' + j, 'fine')
+    plot_errorDistribution_relative(errors_dict_fineGrained, participantDirectory, 'RP_Ctx1_fineGrained ' + j, 'fine')
 
 
 # RP Ctx2 --------------------------------------------------------------------------------------------------------------
@@ -563,7 +610,8 @@ for npy_file, meta_file in zip(selected_months_files, selected_meta_files):
     Response = np.load(npy_file, allow_pickle=True)
     errors_dict_RP_Ctx2 = get_errors_RP(Response, errors_dict_RP_Ctx2, opened_meta_file)
 # Visualize results
-plot_errorDistribution(errors_dict_RP_Ctx2,participantDirectory,'RP_Ctx2 ', grainity='rough')
+# plot_errorDistribution(errors_dict_RP_Ctx2,participantDirectory,'RP_Ctx2 ', grainity='rough')
+plot_errorDistribution_relative(errors_dict_RP_Ctx2,participantDirectory,'RP_Ctx2 ', grainity='rough')
 
 # RP Ctx2 - Fine Graining ----------------------------------------------------------------------------------------------
 list1 = ['distractCircle', 'distractNonagon', 'distractHeptagon', 'distractPentagon', 'distractTriangle', 'distractNoResponse']
@@ -581,7 +629,8 @@ for j in list_error_keys:
     # Creating dict with created names
     errors_dict_fineGrained = {name: [] for name in categorical_names_fineGrained}
     errors_dict_fineGrained = get_fine_grained_error(sortedResponse, errors_dict_fineGrained, 'RP_Ctx2')
-    plot_errorDistribution(errors_dict_fineGrained, participantDirectory, 'RP_Ctx2_fineGrained ' + j, 'fine')
+    # plot_errorDistribution(errors_dict_fineGrained, participantDirectory, 'RP_Ctx2_fineGrained ' + j, 'fine')
+    plot_errorDistribution_relative(errors_dict_fineGrained, participantDirectory, 'RP_Ctx2_fineGrained ' + j, 'fine')
 
 
 
