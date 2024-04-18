@@ -12,7 +12,7 @@ participant_dir = 'Z:\Desktop\ZI\PycharmProjects\BeRNN\Data'
 participantList = os.listdir(participant_dir)
 
 participant = participantList[4] # choose which particpant to analyze
-month = '4' # choose which month to analyze
+month = '5' # choose which month to analyze
 
 percentCorrect_DM, count_DM = 0, 0
 percentCorrect_DM_Anti, count_DM_Anti = 0, 0
@@ -172,8 +172,8 @@ import matplotlib.dates as mdates
 # Participant list
 participant_dir = 'Z:\Desktop\ZI\PycharmProjects\BeRNN\Data'
 participantList = os.listdir(participant_dir)
-participant = participantList[0] # choose which particpant to analyze
-month = '4' # choose which month to analyze
+participant = participantList[1] # choose which particpant to analyze
+month = '5' # choose which month to analyze
 
 # Specify the folder containing the .xlsx files
 folder_path = os.path.join(participant_dir,participant,month)

@@ -40,7 +40,7 @@ def get_default_hp(ruleset):
         # input type: normal, multi
         'in_type': 'normal',
         # Type of RNNs: NonRecurrent, LeakyRNN, LeakyGRU, EILeakyGRU, GRU, LSTM
-        'rnn_type': 'NonRecurrent',
+        'rnn_type': 'LeakyRNN',
         # whether rule and stimulus inputs are represented separately
         'use_separate_input': False,
         # Type of loss functions
