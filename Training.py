@@ -40,7 +40,7 @@ def get_default_hp(ruleset):
         # input type: normal, multi
         'in_type': 'normal',
         # Type of RNNs: NonRecurrent, LeakyRNN, LeakyGRU, EILeakyGRU, GRU, LSTM
-        'rnn_type': 'LeakyRNN',
+        'rnn_type': 'NonRecurrent',
         # whether rule and stimulus inputs are represented separately
         'use_separate_input': False,
         # Type of loss functions
@@ -360,7 +360,7 @@ participant = 'BeRNN_01'
 model_folder = 'Model'
 model_number = 'Model_136_' + participant + '_Month_2-4' # Manually add months considered e.g. 1-7
 monthsConsidered = ['2','3','4'] # Add all months you want to take into consideration for training and evaluation
-model_dir = os.path.join(os.getcwd(),dataFolder, participant, model_folder, model_number)
+model_dir = os.path.join('W:\\group_csp\\analyses\\oliver.frank',dataFolder, participant, model_folder, model_number)
 
 if not os.path.exists(model_dir):
     os.makedirs(model_dir)

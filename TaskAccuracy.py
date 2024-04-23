@@ -8,7 +8,8 @@ with warnings.catch_warnings():
 # TaskAccuracy
 ########################################################################################################################
 # Participant list
-participant_dir = 'Z:\Desktop\ZI\PycharmProjects\BeRNN\Data'
+
+participant_dir = 'W:\\group_csp\\analyses\\oliver.frank\\Data'
 participantList = os.listdir(participant_dir)
 
 participant = participantList[4] # choose which particpant to analyze
@@ -170,7 +171,7 @@ from scipy.stats import linregress
 import matplotlib.dates as mdates
 
 # Participant list
-participant_dir = 'Z:\Desktop\ZI\PycharmProjects\BeRNN\Data'
+participant_dir = 'W:\\group_csp\\analyses\\oliver.frank\\Data'
 participantList = os.listdir(participant_dir)
 participant = participantList[1] # choose which particpant to analyze
 month = '5' # choose which month to analyze

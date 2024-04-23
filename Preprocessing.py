@@ -45,8 +45,7 @@ def find_sleepingQuality_drugVector(opened_questionare, date):
 ########################################################################################################################
 # todo: DM tasks #######################################################################################################
 ########################################################################################################################
-# For debugging
-# file_path = 'Z:\\Desktop\\ZI\\PycharmProjects\\BeRNN\\Data\\BeRNN_01\\1\\data_exp_149474-v2_task-6at8-9621849.xlsx'
+# file_path = 'W:\\group_csp\\analyses\\oliver.frank\\Data\\BeRNN_03\\1\\data_exp_149474-v2_task-6at8-9621849.xlsx'
 # opened_xlsxFile = pd.read_excel(file_path, engine='openpyxl')
 def preprocess_DM(opened_xlsxFile, questionnare_files, list_allSessions, sequence_on, sequence_off, batchLength):
     # Initialize columns with default values
@@ -1457,8 +1456,8 @@ def check_permissions(file_path):
 
 # Create right path - os.getcwd() should be set to PycharmProject mulitask_BeRNN
 dataFolder = "Data"
-participant = 'BeRNN_05'
-months = ['4'] # todo: add months here
+participant = 'BeRNN_01'
+months = ['5'] # todo: add months here
 preprocessing_folder = 'PreprocessedData_wResp_ALL'
 main_path = os.path.join(os.getcwd(),dataFolder, participant, preprocessing_folder)
 # Create Folder Structure

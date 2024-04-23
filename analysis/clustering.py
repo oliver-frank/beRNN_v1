@@ -70,7 +70,8 @@ class Analysis(object):
 
         # First only get active units. Total variance across tasks larger than 1e-3
         # ind_active = np.where(h_var_all_.sum(axis=1) > 1e-2)[0]
-        ind_active = np.where(h_var_all_.sum(axis=1) > 1e-3)[0]
+        # Checks the activity at the end of the respons epch [0]
+        ind_active = np.where(h_var_all_.sum(axis=1) >= 0)[0] # todo: > 1e-3 ----------------------------------------------
         h_var_all  = h_var_all_[ind_active, :]
 
         # Normalize by the total variance across tasks
@@ -91,7 +92,7 @@ class Analysis(object):
         from sklearn.cluster import AgglomerativeClustering, KMeans
 
         # Choose number of clusters that maximize silhouette score
-        n_clusters = range(2, 30)
+        n_clusters = range(2, 10) # todo: 2,30 -------------------------------------------------------------------------
         scores = list()
         labels_list = list()
         for n_cluster in n_clusters:
