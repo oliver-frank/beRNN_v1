@@ -257,8 +257,8 @@ def get_fine_grained_error(sortedResponse, errors_dict_fineGrained, task):
     return errors_dict_fineGrained
 
 # focusedMonths = ['month_1','month_2','month_3','month_4','month_5']
-focusedMonths = ['month_4']
-directory = 'W:\\group_csp\\analyses\\oliver.frank\\Data\\BeRNN_01\\PreprocessedData_wResp_ALL\\'
+focusedMonths = ['month_5']
+directory = 'W:\\group_csp\\analyses\\oliver.frank\\Data\\BeRNN_05\\PreprocessedData_wResp_ALL\\'
 
 
 ########################################################################################################################
