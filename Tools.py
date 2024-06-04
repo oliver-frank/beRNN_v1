@@ -60,7 +60,7 @@ def load_trials(trial_dir,monthsConsidered,task,mode):
         while file_splits[1].split('_')[1] not in monthsConsidered:
             # randomly choose another file until the one for the right considered month is found
             file_splits = random.choice(os.listdir(os.path.join(trial_dir, task))).split('-')
-        file_stem = file_splits[0]+'-'+file_splits[1]+'-'+file_splits[2]+'-'+file_splits[3]+'-'+file_splits[4]
+        file_stem = file_splits[0]+'-'+file_splits[1]+'-'+file_splits[2]+'-'+file_splits[3]+'-'+file_splits[4] # '-'.join(...)
         try:
             x = np.load(os.path.join(trial_dir, task, file_stem) + '-Input.npy', mmap_mode='r')
             y = np.load(os.path.join(trial_dir, task, file_stem) + '-Output.npy', mmap_mode='r')
@@ -75,7 +75,7 @@ def load_trials(trial_dir,monthsConsidered,task,mode):
                 y = y[:, -8:, :]
                 y_loc = y_loc[:, -8:]
             # print(file_stem, ' successfully processed.')
-            return x,y,y_loc
+            return x,y,y_loc     # todo: maybe needed for some debugging somewhere?? -> ,file_splits
         except Exception as e:
             print(f"An error occurred with file {file_stem}: {e}. Retrying...")
             attempt += 1
@@ -89,6 +89,7 @@ def find_epochs(array):
         if (row > 0).sum() > 2:
             epochs = {'fix1':(None,i), 'go1':(i,None)}
             return epochs
+
 
 # todo: ################################################################################################################
 # todo: ################################################################################################################

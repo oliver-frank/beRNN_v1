@@ -50,12 +50,12 @@ def plot_errorDistribution_relative(errors_dict, directory, task, grainity):
     participant = directory.split('\\')[5] + ' '
 
     # Create a bar chart
-    fig, ax = plt.subplots(figsize=(50, len(categories) * 0.5))  # Adjust the figure size as needed
+    fig, ax = plt.subplots(figsize=(20, len(categories) * 0.02))  # Adjust the figure size as needed
     ax.barh(categories, occurrences, color='firebrick')
     # Set labels and titles
-    ax.set_xlabel('Percentage of Total Occurrences (%)')
-    ax.set_ylabel('Error Categories')
-    ax.set_title('Relative Error Category Occurrences: ' + participant + task)
+    ax.set_xlabel('Percentage of Total Occurrences (%)', fontsize = 14)
+    ax.set_ylabel('Error Categories', fontsize = 14)
+    ax.set_title('Relative Error Category Occurrences: ' + participant + task, fontsize = 16)
     # Set y-ticks to all categories but only label those with occurrences
     ax.set_yticks(range(len(categories)))  # Ensure there's a tick for each category
     ax.set_yticklabels(labels)  # Apply the labels (with blanks for no occurrences)
@@ -68,7 +68,7 @@ def plot_errorDistribution_relative(errors_dict, directory, task, grainity):
     plt.subplots_adjust(left=0.4, right=0.95, bottom=0.05, top=0.95)
     plt.show()
     # Save plot
-    plt.savefig(os.path.join(directory.split('PreprocessedData')[0], 'ErrorGraphics', participant + task + '.png'),
+    plt.savefig(os.path.join(directory.split('PreprocessedData')[0], 'ErrorGraphics', participant + task + '_relative' + '.png'),
                 dpi=100)
 
 def sort_rows_descending(array): # Higher value on 4th
@@ -256,9 +256,9 @@ def get_fine_grained_error(sortedResponse, errors_dict_fineGrained, task):
             errors_dict_fineGrained[currentChosenList].append(sortedResponse[:, i])
     return errors_dict_fineGrained
 
-# focusedMonths = ['month_1','month_2','month_3','month_4','month_5']
-focusedMonths = ['month_5']
-directory = 'W:\\group_csp\\analyses\\oliver.frank\\Data\\BeRNN_05\\PreprocessedData_wResp_ALL\\'
+focusedMonths = ['month_2','month_3','month_4','month_5']
+# focusedMonths = ['month_5']
+directory = 'W:\\group_csp\\analyses\\oliver.frank\\Data\\BeRNN_01\\PreprocessedData_wResp_ALL\\'
 
 
 ########################################################################################################################
@@ -315,7 +315,7 @@ for npy_file in selected_months_files:
     sortedResponse = sort_rows_descending(Response)
     errors_dict_DM = get_errors_DM(sortedResponse, errors_dict_DM, distract_dict, opposite_dict, strength_dict)
 # Visualize results
-plot_errorDistribution(errors_dict_DM,participantDirectory,'DM', 'rough')
+# plot_errorDistribution(errors_dict_DM,participantDirectory,'DM', 'rough')
 # plot_errorDistribution_relative(errors_dict_DM,participantDirectory,'DM', 'rough')
 
 # DM - Fine Graining ---------------------------------------------------------------------------------------------------
@@ -448,7 +448,7 @@ list5 = ['responsenoResponse', 'responseL', 'responseR', 'responseU', 'responseD
 # Generating all combinations of categorical names
 categorical_names_fineGrained = ['_'.join(combination) for combination in itertools.product(list1, list2, list3, list4, list5)]
 # todo: DM error key pair - has to be added manually
-list_error_keys = ['distractSame_colorsDiff_responseOpposite']
+list_error_keys = ['distractSame_colorsDiff_responseOrtho', 'distractOpposite_colorsDiff_responseOrtho']
 
 for j in list_error_keys:
     error_key_values = errors_dict_EF[j]

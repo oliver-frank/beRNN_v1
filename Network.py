@@ -84,7 +84,7 @@ def get_perf(y_hat, y_loc):
 
     original_dist = y_loc - y_hat_loc
     dist = np.minimum(abs(original_dist), 2*np.pi-abs(original_dist))
-    corr_loc = dist < 0.2*np.pi
+    corr_loc = dist < 0.2*np.pi # 35 degreee margin around exact correct respond
 
     # Should fixate?
     should_fix = y_loc < 0

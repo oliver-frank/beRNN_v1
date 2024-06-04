@@ -1454,79 +1454,81 @@ def check_permissions(file_path):
     }
     return permissions
 
-# Create right path - os.getcwd() should be set to PycharmProject mulitask_BeRNN
+# Preallocation of variables
 dataFolder = "Data"
-participant = 'BeRNN_01'
-months = ['5'] # todo: add months here
-preprocessing_folder = 'PreprocessedData_wResp_ALL'
-main_path = os.path.join(os.getcwd(),dataFolder, participant, preprocessing_folder)
-# Create Folder Structure
 subfolders = ['DM', 'DM_Anti', 'EF', 'EF_Anti', 'RP', 'RP_Anti', 'RP_Ctx1', 'RP_Ctx2',
               'WM', 'WM_Anti', 'WM_Ctx1', 'WM_Ctx2']
+preprocessing_folder = 'PreprocessedData_wResp_ALL'
+participants = ['BeRNN_01', 'BeRNN_03', 'BeRNN_05']
+months = ['2', '3', '4', '5', '6'] # todo: add months here
 
-if not os.path.exists(main_path):
-    os.makedirs(main_path)
+for participant in participants:
+    # Create current main_path
+    main_path = os.path.join('W:\\group_csp\\analyses\\oliver.frank', dataFolder, participant, preprocessing_folder)
+    # Create Folder Structure
+    if not os.path.exists(main_path):
+        os.makedirs(main_path)
 
-for folder in subfolders:
-    path = os.path.join(main_path, folder)
-    if not os.path.exists(path):
-        os.makedirs(path)
+    for folder in subfolders:
+        path = os.path.join(main_path, folder)
+        if not os.path.exists(path):
+            os.makedirs(path)
 
-# Processing path allocation
-processing_path = os.path.join(os.getcwd(),dataFolder, participant)
-# list of task names in each session; very first name is the one of the associated questionare
-list_d4fh = ['d4fh', 'b4ya', 'bert', '7py6', 'bx2n', '2p6f', '9ivx', 'fhgh', 'k1jg', '6x4x', 'aiut', 'ar8p', '627g']
-list_2353 = ['2353', '6vnh', '113d', 'pbq6', 'q4ei', 'u7od', '9qcv', '4lrw', 'u31n', 'jr36', 'hia1', 'odic', 'qkw4']
-list_sdov = ['sdov', 'ohf2', '7y8y', 'p3op', '715w', 'hbck', '8dc4', 'pfww', 'kid1', 'z84v', 'qfff', 'o9l4', 'fiv9']
-list_h3ph = ['h3ph', 'kvmz', 'gpb4', 'x1mk', 'qxae', '4cnx', '9wpb', 'ujcn', 'o3t1', 'qf8s', 't271', 'lypz', '7l94']
-list_jwd5 = ['jwd5', 'zner', 'fvox', 'qqvk', 'qilu', 'xqal', 'q9wz', 'p7mk', '2kln', 'ifgy', '6at8', 'zolj', '9utw']
-list_allSessions = [list_d4fh, list_2353, list_sdov, list_h3ph, list_jwd5]
-# Go through all .xlsx files in the defined months for one participant and save them in PreprocessedData folder's subfolders
-for month in months:
-    processing_path_month = os.path.join(processing_path, month)
-    if os.path.exists(processing_path_month):
-        pattern = os.path.join(processing_path_month, '*.xlsx')
-        xlsx_files = glob.glob(pattern)
-        task_files = [os.path.basename(file) for file in xlsx_files if 'questionnaire' not in os.path.basename(file).lower()]
-        questionnare_files = [os.path.basename(file) for file in xlsx_files if 'task' not in os.path.basename(file).lower()]
-        # Iterate through all .xlsx files in current month folder
-        for xlsxFile in task_files:
-            file_path = os.path.join(processing_path_month, xlsxFile)
-            print(' ')
-            print(' NEW FILE ')
-            print(' ')
-            print(f"Processing file: {file_path}")
-            permissions = check_permissions(file_path)
+    # Processing path allocation
+    processing_path = os.path.join('W:\\group_csp\\analyses\\oliver.frank',dataFolder, participant)
+    # list of task names in each session; very first name is the one of the associated questionare
+    list_d4fh = ['d4fh', 'b4ya', 'bert', '7py6', 'bx2n', '2p6f', '9ivx', 'fhgh', 'k1jg', '6x4x', 'aiut', 'ar8p', '627g']
+    list_2353 = ['2353', '6vnh', '113d', 'pbq6', 'q4ei', 'u7od', '9qcv', '4lrw', 'u31n', 'jr36', 'hia1', 'odic', 'qkw4']
+    list_sdov = ['sdov', 'ohf2', '7y8y', 'p3op', '715w', 'hbck', '8dc4', 'pfww', 'kid1', 'z84v', 'qfff', 'o9l4', 'fiv9']
+    list_h3ph = ['h3ph', 'kvmz', 'gpb4', 'x1mk', 'qxae', '4cnx', '9wpb', 'ujcn', 'o3t1', 'qf8s', 't271', 'lypz', '7l94']
+    list_jwd5 = ['jwd5', 'zner', 'fvox', 'qqvk', 'qilu', 'xqal', 'q9wz', 'p7mk', '2kln', 'ifgy', '6at8', 'zolj', '9utw']
+    list_allSessions = [list_d4fh, list_2353, list_sdov, list_h3ph, list_jwd5]
+    # Go through all .xlsx files in the defined months for one participant and save them in PreprocessedData folder's subfolders
+    for month in months:
+        processing_path_month = os.path.join(processing_path, month)
+        if os.path.exists(processing_path_month):
+            pattern = os.path.join(processing_path_month, '*.xlsx')
+            xlsx_files = glob.glob(pattern)
+            task_files = [os.path.basename(file) for file in xlsx_files if 'questionnaire' not in os.path.basename(file).lower()]
+            questionnare_files = [os.path.basename(file) for file in xlsx_files if 'task' not in os.path.basename(file).lower()]
+            # Iterate through all .xlsx files in current month folder
+            for xlsxFile in task_files:
+                file_path = os.path.join(processing_path_month, xlsxFile)
+                print(' ')
+                print(' NEW FILE ')
+                print(' ')
+                print(f"Processing file: {file_path}")
+                permissions = check_permissions(file_path)
 
-            # print(f"Read: {'Yes' if permissions['read'] else 'No'}")
-            # print(f"Write: {'Yes' if permissions['write'] else 'No'}")
-            # print(f"Execute: {'Yes' if permissions['execute'] else 'No'}")
-            if permissions['read']:
-                if os.path.isfile(file_path):
-                    try:
-                        opened_xlsxFile = pd.read_excel(file_path, engine='openpyxl')
-                        print(file_path, ' successfully opened')
-                        sequence_on, sequence_off, batchLength = 0, 40, 40
+                # print(f"Read: {'Yes' if permissions['read'] else 'No'}")
+                # print(f"Write: {'Yes' if permissions['write'] else 'No'}")
+                # print(f"Execute: {'Yes' if permissions['execute'] else 'No'}")
+                if permissions['read']:
+                    if os.path.isfile(file_path):
                         try:
-                            # Preprocess the xlsxFile according to its task type and directly save it to the right directory
-                            if opened_xlsxFile['Spreadsheet'][0].split('_')[0] == 'DM':
-                                preprocess_DM(opened_xlsxFile, questionnare_files, list_allSessions, sequence_on, sequence_off, batchLength)
-                            elif opened_xlsxFile['Spreadsheet'][0].split('_')[0] == 'EF':
-                                preprocess_EF(opened_xlsxFile, questionnare_files, list_allSessions, sequence_on, sequence_off, batchLength)
-                            elif opened_xlsxFile['Spreadsheet'][0].split('_')[0] == 'RP':
-                                preprocess_RP(opened_xlsxFile, questionnare_files, list_allSessions, sequence_on, sequence_off, batchLength)
-                            if opened_xlsxFile['Spreadsheet'][0].split('_')[0] == 'WM':
-                                preprocess_WM(opened_xlsxFile, questionnare_files, list_allSessions, sequence_on, sequence_off, batchLength)
+                            opened_xlsxFile = pd.read_excel(file_path, engine='openpyxl')
+                            print(file_path, ' successfully opened')
+                            sequence_on, sequence_off, batchLength = 0, 40, 40
+                            try:
+                                # Preprocess the xlsxFile according to its task type and directly save it to the right directory
+                                if opened_xlsxFile['Spreadsheet'][0].split('_')[0] == 'DM':
+                                    preprocess_DM(opened_xlsxFile, questionnare_files, list_allSessions, sequence_on, sequence_off, batchLength)
+                                elif opened_xlsxFile['Spreadsheet'][0].split('_')[0] == 'EF':
+                                    preprocess_EF(opened_xlsxFile, questionnare_files, list_allSessions, sequence_on, sequence_off, batchLength)
+                                elif opened_xlsxFile['Spreadsheet'][0].split('_')[0] == 'RP':
+                                    preprocess_RP(opened_xlsxFile, questionnare_files, list_allSessions, sequence_on, sequence_off, batchLength)
+                                if opened_xlsxFile['Spreadsheet'][0].split('_')[0] == 'WM':
+                                    preprocess_WM(opened_xlsxFile, questionnare_files, list_allSessions, sequence_on, sequence_off, batchLength)
+                            except Exception as e:
+                                print(f"An error occurred with file {xlsxFile}: {e}")
                         except Exception as e:
                             print(f"An error occurred with file {xlsxFile}: {e}")
-                    except Exception as e:
-                        print(f"An error occurred with file {xlsxFile}: {e}")
+                    else:
+                        print(f"File not found: {file_path}")
                 else:
-                    print(f"File not found: {file_path}")
-            else:
-                print(f"Read permission denied for file: {file_path}")
-    else:
-        print(f"Month directory not found: {processing_path_month}")
+                    print(f"Read permission denied for file: {file_path}")
+        else:
+            print(f"Month directory not found: {processing_path_month}")
 
 
 ########################################################################################################################

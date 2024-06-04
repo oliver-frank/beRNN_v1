@@ -132,7 +132,7 @@ def do_eval(sess, model, log, trial_dir, rule_train):
         perf_tmp = list()
         for i_rep in range(n_rep):
             x,y,y_loc = Tools.load_trials(trial_dir, monthsConsidered, rule_test, mode)
-            feed_dict = Tools.gen_feed_dict(model, x, y, hp)
+            feed_dict = Tools.gen_feed_dict(model, x, y, hp) # y: participnt response, that gives the lable for what the network is trained for
             # print('passed feed_dict Evaluation')
             # print(feed_dict)
             # print('x',type(x),x.shape)
@@ -174,7 +174,7 @@ def do_eval(sess, model, log, trial_dir, rule_train):
 
     return log
 
-def train(model_dir,trial_dir,monthsConsidered,hp=None,max_steps=1e7,display_step=1000,ruleset='all',rule_trains=None,rule_prob_map=None,seed=0,
+def train(model_dir,trial_dir,monthsConsidered,hp=None,max_steps=3e6,display_step=1000,ruleset='all',rule_trains=None,rule_prob_map=None,seed=0,
           load_dir=None,trainables=None):
     """Train the network.
 
@@ -356,17 +356,18 @@ def train(model_dir,trial_dir,monthsConsidered,hp=None,max_steps=1e7,display_ste
         print("Optimization finished!")
 
 dataFolder = "Data"
-participant = 'BeRNN_01'
+participant = 'BeRNN_05'
 model_folder = 'Model'
-model_number = 'Model_136_' + participant + '_Month_2-4' # Manually add months considered e.g. 1-7
-monthsConsidered = ['2','3','4'] # Add all months you want to take into consideration for training and evaluation
-model_dir = os.path.join('W:\\group_csp\\analyses\\oliver.frank',dataFolder, participant, model_folder, model_number)
+strToSave = '2-5'
+model_number = 'Model_144_' + participant + '_Month_' + strToSave # Manually add months considered e.g. 1-7
+monthsConsidered = ['2','3','4','5'] # Add all months you want to take into consideration for training and evaluation
+model_dir = os.path.join('W:\\group_csp\\analyses\\BeRNN_models', model_number)
 
 if not os.path.exists(model_dir):
     os.makedirs(model_dir)
 
 preprocessedData_folder = 'PreprocessedData_wResp_ALL'
-preprocessedData_path = os.path.join(os.getcwd(),dataFolder, participant, preprocessedData_folder)
+preprocessedData_path = os.path.join('W:\\group_csp\\analyses\\oliver.frank', dataFolder, participant, preprocessedData_folder)
 
 # Define probability of each task being trained
 rule_prob_map = {"DM": 1,"DM_Anti": 1,"EF": 1,"EF_Anti": 1,"RP": 1,"RP_Anti": 1,"RP_Ctx1": 1,"RP_Ctx2": 1,"WM": 1,"WM_Anti": 1,"WM_Ctx1": 1,"WM_Ctx2": 1}

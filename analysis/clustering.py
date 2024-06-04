@@ -251,12 +251,12 @@ class Analysis(object):
         #         fig_name = fig_name + save_name
         #     plt.savefig('figure/'+fig_name+'.pdf', transparent=True)
 
-        plt.savefig(os.path.join(os.getcwd(), 'BeRNN_models\\Visuals\\Variance',model_dir.split("\\")[-1] + '_' + mode + '.png'), \
+        plt.savefig(os.path.join('W:\\group_csp\\analyses\\oliver.frank\\BeRNN_models', 'BeRNN_models\\Visuals\\Variance',model_dir.split("\\")[-1] + '_' + mode + '.png'), \
                     format='png', dpi=300, bbox_inches='tight', pad_inches=0.1)
-        if show == True:
-            plt.show()
-        else:
-            plt.close(fig)
+        # if show == True:
+        plt.show()
+        # else:
+            # plt.close(fig)
 
     def plot_similarity_matrix(self):
         labels = self.labels
@@ -322,12 +322,12 @@ class Analysis(object):
         # if save:
         #     plt.savefig(figname, transparent=True)
 
-        plt.savefig(os.path.join(os.getcwd(), 'BeRNN_models\\Visuals\\2D_Clustering',model_dir.split("\\")[-1] + '_' + mode + '.png'), \
+        plt.savefig(os.path.join('W:\\group_csp\\analyses\\oliver.frank\\BeRNN_models', 'BeRNN_models\\Visuals\\2D_Clustering',model_dir.split("\\")[-1] + '_' + mode + '.png'), \
                     format='png', dpi=300, bbox_inches='tight', pad_inches=0.1)
-        if show == True:
-            plt.show()
-        else:
-            plt.close(fig)
+        # if show == True:
+        plt.show()
+        # else:
+        #     plt.close(fig)
 
         # fig = plt.figure(figsize=(3.5, 3.5))
         # ax = fig.add_axes([0.1, 0.1, 0.8, 0.8])

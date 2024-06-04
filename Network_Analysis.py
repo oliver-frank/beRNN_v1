@@ -15,9 +15,9 @@ import Tools
 from Tools import rule_name
 
 model_list = [
-os.getcwd() + '\BeRNN_models\Model_136_BeRNN_01_Month_2-4',
-os.getcwd() + '\BeRNN_models\Model_137_BeRNN_03_Month_2-4',
-os.getcwd() + '\BeRNN_models\Model_138_BeRNN_05_Month_2-4',
+'W:\\group_csp\\analyses\\oliver.frank' + '\BeRNN_models\Model_82_BeRNN_01_Month_1-4',
+'W:\\group_csp\\analyses\\oliver.frank' + '\BeRNN_models\Model_88_BeRNN_03_Month_1-4',
+'W:\\group_csp\\analyses\\oliver.frank' + '\BeRNN_models\Model_92_BeRNN_05_Month_1-4',
 ]
 
 # model_dir = os.getcwd() + '\BeRNN_models\Model_112_BeRNN_01_Month_2-4'
@@ -53,8 +53,8 @@ for model_dir in model_list:
         # trials = log['trials'][::2]
         trials = log['trials']
 
-        fs = 12 # fontsize
-        fig_eval = plt.figure(figsize=(14, 4.8))
+        fs = 14 # fontsize
+        fig_eval = plt.figure(figsize=(14, 6))
         ax = fig_eval.add_axes([0.1,0.4,0.6,0.5]) # co: third value influences width of cartoon
         lines = list()
         labels = list()
@@ -90,7 +90,8 @@ for model_dir in model_list:
         lg = fig_eval.legend(lines, labels, title='Task',ncol=2,bbox_to_anchor=(0.1,0.15), # co: first value influences horizontal position of legend
                         fontsize=fs,labelspacing=0.3,loc=6,frameon=False)
         plt.setp(lg.get_title(),fontsize=fs)
-        plt.title(model_dir.split("\\")[-1]+'_EVALUATION.png')
+        # plt.title(model_dir.split("\\")[-1]+'_EVALUATION.png') # todo: Add title
+        plt.title('_'.join(model_dir.split("\\")[-1].split('_')[2:4])+'_EVALUATION',fontsize=16) # todo: Add title
         # # Add the randomness thresholds
         # # DM & RP Ctx
         # plt.axhline(y=0.2, color='green', label= 'DM & DM Anti & RP Ctx1 & RP Ctx2', linestyle=':')
@@ -109,7 +110,7 @@ for model_dir in model_list:
         #                 ,loc=6, frameon=False)
         # plt.setp(rt.get_title(), fontsize=fs)
 
-        plt.savefig(os.path.join(os.getcwd(), 'BeRNN_models\Visuals\Performance', model_dir.split("\\")[-1] + '_EVALUATION.png'),format='png', dpi=300)
+        plt.savefig(os.path.join('W:\\group_csp\\analyses\\oliver.frank', 'BeRNN_models\\Visuals\\Performance', model_dir.split("\\")[-1] + '_EVALUATION.png'),format='png', dpi=300)
         if show == True:
             plt.show()
         else:
@@ -124,8 +125,8 @@ for model_dir in model_list:
         # trials = log['trials'][::2]
         trials = log['trials']
 
-        fs = 12 # fontsize
-        fig_train = plt.figure(figsize=(14, 4.8))
+        fs = 14 # fontsize
+        fig_train = plt.figure(figsize=(14, 6))
         ax = fig_train.add_axes([0.1,0.4,0.6,0.5]) # co: third value influences width of cartoon
         lines = list()
         labels = list()
@@ -163,7 +164,8 @@ for model_dir in model_list:
         lg = fig_train.legend(lines, labels, title='Task',ncol=2,bbox_to_anchor=(0.1,0.15), # co: first value influences horizontal position of legend
                         fontsize=fs,labelspacing=0.3,loc=6,frameon=False)
         plt.setp(lg.get_title(),fontsize=fs)
-        plt.title(model_dir.split("\\")[-1] + '_TRAINING.png')
+        # plt.title(model_dir.split("\\")[-1] + '_TRAINING.png') # todo: Add title
+        plt.title('_'.join(model_dir.split("\\")[-1].split('_')[2:4]) + '_TRAINING',fontsize=16)
         # # Add the randomness thresholds
         # # DM & RP Ctx
         # plt.axhline(y=0.2, color='green', label= 'DM & DM Anti & RP Ctx1 & RP Ctx2', linestyle=':')
@@ -182,7 +184,7 @@ for model_dir in model_list:
         #                 ,loc=6, frameon=False)
         # plt.setp(rt.get_title(), fontsize=fs)
 
-        plt.savefig(os.path.join(os.getcwd(), 'BeRNN_models\Visuals\Performance', model_dir.split("\\")[-1] + '_TRAINING.png'),format='png',dpi=300)
+        plt.savefig(os.path.join('W:\\group_csp\\analyses\\oliver.frank', 'BeRNN_models\Visuals\Performance', model_dir.split("\\")[-1] + '_TRAINING.png'),format='png',dpi=300)
         if show == True:
             plt.show()
         else:
@@ -197,6 +199,14 @@ for model_dir in model_list:
     ########################################################################################################################
     # Clustering
     ########################################################################################################################
+    # model_list = [
+    #     'W:\\group_csp\\analyses\\oliver.frank' + '\BeRNN_models\Model_82_BeRNN_01_Month_1-4',
+    #     'W:\\group_csp\\analyses\\oliver.frank' + '\BeRNN_models\Model_88_BeRNN_03_Month_1-4',
+    #     'W:\\group_csp\\analyses\\oliver.frank' + '\BeRNN_models\Model_92_BeRNN_05_Month_1-4',
+    # ]
+
+    model_dir = 'W:\\group_csp\\analyses\\oliver.frank\\BeRNN_models\\' + 'Model_82_BeRNN_01_Month_1-4'
+    show = True
     def compute_n_cluster(model_dir, mode, monthsConsidered, show):
     # for model_dir in model_dirs:
     #     print(model_dir)
@@ -225,7 +235,7 @@ for model_dir in model_list:
 
         print("done")
 
-    monthsConsidered = ['2','3','4']
+    monthsConsidered = ['1','2','3','4']
     mode = 'Training'
     compute_n_cluster(model_dir, mode, monthsConsidered, show)
     mode = 'Evaluation'
