@@ -40,3 +40,37 @@
 ########################################################################################################################
 # todo: LAB ############################################################################################################
 ########################################################################################################################
+from sklearn.model_selection import ParameterGrid
+
+param_grid = {
+    'batch_size_train': [16, 32, 64, 128],
+    'batch_size_test': [320, 640, 1280],
+    'in_type': ['normal', 'multi'],
+    'rnn_type': ['NonRecurrent', 'LeakyRNN', 'LeakyGRU', 'EILeakyGRU', 'GRU', 'LSTM'],
+    'use_separate_input': [True, False],
+    'loss_type': ['lsq', 'cross_entropy', 'huber'],
+    'optimizer': ['adam', 'sgd', 'rmsprop', 'adamw'],
+    'activation': ['relu', 'softplus', 'tanh', 'elu', 'linear'],
+    'tau': [50, 100, 200],
+    'dt': [10, 20, 50],
+    'sigma_rec': [0.01, 0.05, 0.1],
+    'sigma_x': [0.001, 0.01, 0.05],
+    'w_rec_init': ['diag', 'randortho', 'randgauss'],
+    'l1_h': [0, 0.0001, 0.001],
+    'l2_h': [0, 0.00001, 0.0001],
+    'l1_weight': [0, 0.0001, 0.001],
+    'l2_weight': [0, 0.0001, 0.001],
+    'l2_weight_init': [0, 0.0001, 0.001],
+    'p_weight_train': [None, 0.05, 0.1],
+    'learning_rate': [0.0001, 0.001, 0.01],
+    'n_rnn': [128, 256, 512]
+}
+
+grid = list(ParameterGrid(param_grid))
+
+# Example iteration through the grid
+for params in grid:
+    # Update your hp dictionary with the current parameters
+    hp.update(params)
+    # Train your model with the current hp
+    train_model(hp)

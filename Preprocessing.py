@@ -1458,8 +1458,8 @@ def check_permissions(file_path):
 dataFolder = "Data"
 subfolders = ['DM', 'DM_Anti', 'EF', 'EF_Anti', 'RP', 'RP_Anti', 'RP_Ctx1', 'RP_Ctx2',
               'WM', 'WM_Anti', 'WM_Ctx1', 'WM_Ctx2']
-preprocessing_folder = 'PreprocessedData_wResp_ALL'
-participants = ['BeRNN_01', 'BeRNN_03', 'BeRNN_05']
+preprocessing_folder = 'PreprocessedData_wResp_ALL_test'
+participants = ['BeRNN_05']
 months = ['2', '3', '4', '5', '6'] # todo: add months here
 
 for participant in participants:

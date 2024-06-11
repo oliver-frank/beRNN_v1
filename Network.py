@@ -525,11 +525,14 @@ class Model(object):
 
         self.x = tf.placeholder("float", [None, None, n_input])
         self.y = tf.placeholder("float", [None, None, n_output])
-        # if hp['loss_type'] == 'lsq':
-        #     self.c_mask = tf.placeholder("float", [None, n_output])
-        # else:
-        #     # Mask on time
-        #     self.c_mask = tf.placeholder("float", [None])
+        # Overall, c_mask allows for flexible and selective application of the cost function during training, enabling the
+        # model to focus on important parts of the output as determined by the mask. This can be particularly useful in
+        # tasks where only certain outputs or time steps are of interest.
+        if hp['loss_type'] == 'lsq':
+            self.c_mask = tf.placeholder("float", [None, n_output])
+        else:
+            # Mask on time
+            self.c_mask = tf.placeholder("float", [None])
 
         # Activation functions
         if hp['activation'] == 'power':
@@ -598,16 +601,15 @@ class Model(object):
         if hp['loss_type'] == 'lsq':
             # Least-square loss
             y_hat = tf.sigmoid(y_hat_)
-            self.cost_lsq = tf.reduce_mean(tf.square((y_shaped - y_hat))) #  * self.c_mask
+            # The c_mask is applied element-wise to the squared difference between the predicted and actual values.
+            # This means the mask controls which parts of the output contribute to the cost calculation.
+            self.cost_lsq = tf.reduce_mean(tf.square((y_shaped - y_hat) * self.c_mask))
         else:
             y_hat = tf.nn.softmax(y_hat_)
             # Cross-entropy loss
-            # self.cost_lsq = tf.reduce_mean(
-            #     self.c_mask * tf.nn.softmax_cross_entropy_with_logits(
-            #         labels=y_shaped, logits=y_hat_))
+            self.cost_lsq = tf.reduce_mean(self.c_mask * tf.nn.softmax_cross_entropy_with_logits(labels=y_shaped, logits=y_hat_))
 
-        self.y_hat = tf.reshape(y_hat,
-                                (-1, tf.shape(self.h)[1], n_output))
+        self.y_hat = tf.reshape(y_hat,(-1, tf.shape(self.h)[1], n_output))
         y_hat_fix, y_hat_ring = tf.split(
             self.y_hat, [1, n_output - 1], axis=-1)
         self.y_hat_loc = tf_popvec(y_hat_ring)
@@ -682,7 +684,7 @@ class Model(object):
 
         self.x = tf.placeholder("float", [None, None, n_input])
         self.y = tf.placeholder("float", [None, None, n_output])
-        # self.c_mask = tf.placeholder("float", [None, n_output])
+        self.c_mask = tf.placeholder("float", [None, n_output])
 
         sensory_inputs, rule_inputs = tf.split(
             self.x, [hp['rule_start'], hp['n_rule']], axis=-1)
@@ -719,7 +721,7 @@ class Model(object):
         # y_hat shape (n_time*n_batch, n_unit)
         y_hat = tf.layers.dense(h_shaped, n_output, activation=tf.nn.sigmoid, name='output')
         # Least-square loss
-        self.cost_lsq = tf.reduce_mean(tf.square((y_shaped - y_hat)))   #  * self.c_mask
+        self.cost_lsq = tf.reduce_mean(tf.square((y_shaped - y_hat) * self.c_mask))
 
         self.y_hat = tf.reshape(y_hat,
                                 (-1, tf.shape(self.h)[1], n_output))

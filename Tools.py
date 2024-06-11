@@ -53,14 +53,13 @@ def load_trials(trial_dir,monthsConsidered,task,mode):
     # Build-in mechanism to prevent interruption of code as for many .npy files there errors are raised
     max_attempts = 30
     attempt = 0
-
     while attempt < max_attempts:
         # random choose one of the preprocessed files according to the current chosen task
         file_splits = random.choice(os.listdir(os.path.join(trial_dir,task))).split('-')
         while file_splits[1].split('_')[1] not in monthsConsidered:
             # randomly choose another file until the one for the right considered month is found
             file_splits = random.choice(os.listdir(os.path.join(trial_dir, task))).split('-')
-        file_stem = file_splits[0]+'-'+file_splits[1]+'-'+file_splits[2]+'-'+file_splits[3]+'-'+file_splits[4] # '-'.join(...)
+        file_stem = '-'.join(file_splits[:-1]) # '-'.join(...)
         try:
             x = np.load(os.path.join(trial_dir, task, file_stem) + '-Input.npy', mmap_mode='r')
             y = np.load(os.path.join(trial_dir, task, file_stem) + '-Output.npy', mmap_mode='r')
@@ -75,7 +74,7 @@ def load_trials(trial_dir,monthsConsidered,task,mode):
                 y = y[:, -8:, :]
                 y_loc = y_loc[:, -8:]
             # print(file_stem, ' successfully processed.')
-            return x,y,y_loc     # todo: maybe needed for some debugging somewhere?? -> ,file_splits
+            return x,y,y_loc, file_stem     # todo: maybe needed for some debugging somewhere?? -> ,file_splits
         except Exception as e:
             print(f"An error occurred with file {file_stem}: {e}. Retrying...")
             attempt += 1
@@ -90,15 +89,36 @@ def find_epochs(array):
             epochs = {'fix1':(None,i), 'go1':(i,None)}
             return epochs
 
+def getEpochSteps(y,file_stem):
+    previous_value = None
+    fixation_steps = None
+    for i in range(y.shape[0]):
+        current_value = y[i, 0, 0]
+        if previous_value == np.float32(0.8) and current_value == np.float32(0.05):
+            # print('Length of fixation epoch: ', i)
+            fixation_steps = i
+            response_steps = y.shape[0] - i
+
+            # fixation = y[:fixation_steps,:,:]
+            # response = y[fixation_steps:,:,:]
+
+        previous_value = current_value
+
+    if fixation_steps is None:  # Unclean fix for fixation_steps not found - has to be improved in the future
+        fixation_steps = int(y.shape[0] / 2)
+        print('fixation_steps artificially created for: ', file_stem)
+
+    return fixation_steps
 
 # todo: ################################################################################################################
 # todo: ################################################################################################################
 
-def gen_feed_dict(model, x, y, hp):
+def gen_feed_dict(model, x, y, c_mask, hp):
     """Generate feed_dict for session run."""
     if hp['in_type'] == 'normal':
         feed_dict = {model.x: x,
-                     model.y: y}
+                     model.y: y,
+                     model.c_mask: c_mask}
     elif hp['in_type'] == 'multi':
         n_time, batch_size = x.shape[:2]
         new_shape = [n_time,
@@ -113,7 +133,8 @@ def gen_feed_dict(model, x, y, hp):
                 x[:, i, :hp['rule_start']]
 
         feed_dict = {model.x: x,
-                     model.y: y}
+                     model.y: y,
+                     model.c_mask: c_mask}
     else:
         raise ValueError()
 

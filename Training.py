@@ -40,7 +40,7 @@ def get_default_hp(ruleset):
         # input type: normal, multi
         'in_type': 'normal',
         # Type of RNNs: NonRecurrent, LeakyRNN, LeakyGRU, EILeakyGRU, GRU, LSTM
-        'rnn_type': 'NonRecurrent',
+        'rnn_type': 'LeakyRNN',
         # whether rule and stimulus inputs are represented separately
         'use_separate_input': False,
         # Type of loss functions
@@ -64,7 +64,7 @@ def get_default_hp(ruleset):
         # a default weak regularization prevents instability (regularizing with absolute value of magnitude of coefficients, leading to sparse features)
         'l1_h': 0,
         # l2 regularization on activity (regularizing with squared value of magnitude of coefficients, decreasing influence of features)
-        'l2_h': 0.00005,
+        'l2_h': 0.00001,
         # l2 regularization on weight
         'l1_weight': 0,
         # l2 regularization on weight
@@ -97,7 +97,7 @@ def get_default_hp(ruleset):
         'save_name': 'test',
         # learning rate
         'learning_rate': 0.001,
-        # intelligent synapses parameters, tuple (c, ksi)
+        # intelligent synapses parameters, tuple (c, ksi) -> Yang et al. only apply these in sequential training
         # 'c_intsyn': 0,
         # 'ksi_intsyn': 0,
     }
@@ -131,8 +131,38 @@ def do_eval(sess, model, log, trial_dir, rule_train):
         creg_tmp = list()
         perf_tmp = list()
         for i_rep in range(n_rep):
-            x,y,y_loc = Tools.load_trials(trial_dir, monthsConsidered, rule_test, mode)
-            feed_dict = Tools.gen_feed_dict(model, x, y, hp) # y: participnt response, that gives the lable for what the network is trained for
+            x,y,y_loc,file_stem = Tools.load_trials(trial_dir, monthsConsidered, rule_test, mode)
+
+            # todo: ################################################################################################
+            fixation_steps = Tools.getEpochSteps(y,file_stem)
+
+            # Creat c_mask for current batch
+            if hp['loss_type'] == 'lsq':
+                c_mask = np.zeros((y.shape[0], y.shape[1], y.shape[2]), dtype='float32')
+                for i in range(y.shape[1]):
+                    # Fixation epoch
+                    c_mask[:fixation_steps, i, :] = 1.
+                    # Response epoch
+                    c_mask[fixation_steps:, i, :] = 5.
+
+                # self.c_mask[:, :, 0] *= self.n_eachring # Fixation is important
+                c_mask[:, :, 0] *= 2.  # Fixation is important
+                c_mask = c_mask.reshape((y.shape[0]*y.shape[1], y.shape[2]))
+
+            else:
+                c_mask = np.zeros((y.shape[0], y.shape[1]), dtype='float32')
+                for i in range(y.shape[1]):
+                    # Fixation epoch
+                    c_mask[:fixation_steps, i, :] = 1.
+                    # Response epoch
+                    c_mask[fixation_steps:, i, :] = 5.
+
+                c_mask = c_mask.reshape((y.shape[0] * y.shape[1],))
+                c_mask /= c_mask.mean()
+
+            # todo: ################################################################################################
+
+            feed_dict = Tools.gen_feed_dict(model, x, y, c_mask, hp) # y: participnt response, that gives the lable for what the network is trained for
             # print('passed feed_dict Evaluation')
             # print(feed_dict)
             # print('x',type(x),x.shape)
@@ -314,16 +344,42 @@ def train(model_dir,trial_dir,monthsConsidered,hp=None,max_steps=3e6,display_ste
 
                 # Training
                 rule_train_now = hp['rng'].choice(hp['rule_trains'], p=hp['rule_probs'])
-                # Generate a random batch of trials.
-                # Each batch has the same trial length
-                # trial_dir = 'Z:\Desktop\ZI\PycharmProjects\multitask_BeRNN\Data\BeRNN_01\PreprocessedData'
-                # rule_train_now = 'DM'
+                # Generate a random batch of trials; each batch has the same trial length
                 mode = 'Training'
-                x,y,y_loc = Tools.load_trials(trial_dir,monthsConsidered,rule_train_now,mode)
+                x,y,y_loc,file_stem = Tools.load_trials(trial_dir,monthsConsidered,rule_train_now,mode)
+
+                # todo: ################################################################################################
+                fixation_steps = Tools.getEpochSteps(y, file_stem)
+                # Creat c_mask for current batch
+                if hp['loss_type'] == 'lsq':
+                    c_mask = np.zeros((y.shape[0], y.shape[1], y.shape[2]), dtype='float32')
+                    for i in range(y.shape[1]):
+                        # Fixation epoch
+                        c_mask[:fixation_steps, i, :] = 1.
+                        # Response epoch
+                        c_mask[fixation_steps:, i, :] = 5.
+
+                    # self.c_mask[:, :, 0] *= self.n_eachring # Fixation is important
+                    c_mask[:, :, 0] *= 2.  # Fixation is important
+                    c_mask = c_mask.reshape((y.shape[0]*y.shape[1], y.shape[2]))
+
+                else:
+                    c_mask = np.zeros((y.shape[0], y.shape[1]), dtype='float32')
+                    for i in range(y.shape[1]):
+                        # Fixation epoch
+                        c_mask[:fixation_steps, i, :] = 1.
+                        # Response epoch
+                        c_mask[fixation_steps:, i, :] = 5.
+
+                    c_mask = c_mask.reshape((y.shape[0] * y.shape[1],))
+                    c_mask /= c_mask.mean()
+
+                # todo: ################################################################################################
+
                 trialsLoaded += 1
 
                 # Generating feed_dict.
-                feed_dict = Tools.gen_feed_dict(model, x, y, hp)
+                feed_dict = Tools.gen_feed_dict(model, x, y, c_mask, hp)
                 # print('passed feed_dict Training')
                 # print(feed_dict)
                 sess.run(model.train_step, feed_dict=feed_dict)
@@ -358,9 +414,9 @@ def train(model_dir,trial_dir,monthsConsidered,hp=None,max_steps=3e6,display_ste
 dataFolder = "Data"
 participant = 'BeRNN_05'
 model_folder = 'Model'
-strToSave = '2-5'
-model_number = 'Model_144_' + participant + '_Month_' + strToSave # Manually add months considered e.g. 1-7
-monthsConsidered = ['2','3','4','5'] # Add all months you want to take into consideration for training and evaluation
+strToSave = '2-6'
+model_number = 'Model_145_' + participant + '_Month_' + strToSave # Manually add months considered e.g. 1-7
+monthsConsidered = ['2','3','4','5','6'] # Add all months you want to take into consideration for training and evaluation
 model_dir = os.path.join('W:\\group_csp\\analyses\\BeRNN_models', model_number)
 
 if not os.path.exists(model_dir):
