@@ -15,9 +15,7 @@ import Tools
 from Tools import rule_name
 
 model_list = [
-'W:\\group_csp\\analyses\\oliver.frank' + '\BeRNN_models\Model_82_BeRNN_01_Month_1-4',
-'W:\\group_csp\\analyses\\oliver.frank' + '\BeRNN_models\Model_88_BeRNN_03_Month_1-4',
-'W:\\group_csp\\analyses\\oliver.frank' + '\BeRNN_models\Model_92_BeRNN_05_Month_1-4',
+'W:\\group_csp\\analyses\\oliver.frank' + '\BeRNN_models\Model_145_BeRNN_05_Month_2-6'
 ]
 
 # model_dir = os.getcwd() + '\BeRNN_models\Model_112_BeRNN_01_Month_2-4'

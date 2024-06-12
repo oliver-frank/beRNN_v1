@@ -125,7 +125,7 @@ def do_eval(sess, model, log, trial_dir, rule_train):
           '  | Now training ' + rule_name_print)
 
     for rule_test in hp['rules']:
-        n_rep = 16
+        n_rep = 16 * 4 # only 8 trials er batch are taken, Yang et al. takes 32 for each n_rep
         batch_size_test_rep = int(hp['batch_size_test']/n_rep)
         clsq_tmp = list()
         creg_tmp = list()
@@ -417,7 +417,7 @@ model_folder = 'Model'
 strToSave = '2-6'
 model_number = 'Model_145_' + participant + '_Month_' + strToSave # Manually add months considered e.g. 1-7
 monthsConsidered = ['2','3','4','5','6'] # Add all months you want to take into consideration for training and evaluation
-model_dir = os.path.join('W:\\group_csp\\analyses\\BeRNN_models', model_number)
+model_dir = os.path.join('W:\\group_csp\\analyses\\oliver.frank\\BeRNN_models', model_number)
 
 if not os.path.exists(model_dir):
     os.makedirs(model_dir)

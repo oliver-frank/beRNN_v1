@@ -610,8 +610,7 @@ class Model(object):
             self.cost_lsq = tf.reduce_mean(self.c_mask * tf.nn.softmax_cross_entropy_with_logits(labels=y_shaped, logits=y_hat_))
 
         self.y_hat = tf.reshape(y_hat,(-1, tf.shape(self.h)[1], n_output))
-        y_hat_fix, y_hat_ring = tf.split(
-            self.y_hat, [1, n_output - 1], axis=-1)
+        y_hat_fix, y_hat_ring = tf.split(self.y_hat, [1, n_output - 1], axis=-1)
         self.y_hat_loc = tf_popvec(y_hat_ring)
 
     def _set_weights_fused(self, hp):

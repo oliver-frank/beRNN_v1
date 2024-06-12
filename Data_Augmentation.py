@@ -10,33 +10,33 @@ import glob
 
 # Choose participant data to augment data from
 dataFolder = "Data"
-participants = ['BeRNN_05']
+participants = ['BeRNN_01','BeRNN_02','BeRNN_03','BeRNN_05']
 preprocessedData_folder = 'PreprocessedData_wResp_ALL'
 for participant in participants:
-    trial_dir = os.path.join("W:\\group_csp\\analyses\\oliver.frank", dataFolder, participant, preprocessedData_folder)
-    # trial_dir = os.path.join("/zi/flstorage/group_csp/analyses/oliver.frank", dataFolder, participant, preprocessedData_folder)
+    # trial_dir = os.path.join("W:\\group_csp\\analyses\\oliver.frank", dataFolder, participant, preprocessedData_folder)
+    trial_dir = os.path.join("/zi/flstorage/group_csp/analyses/oliver.frank", dataFolder, participant, preprocessedData_folder)
 
 
-    # # Delete all augmented files ###########################################################################################
-    # Patterns to search for
-    patterns = ['*Rotation*', '*Mirrored*', '*segmentation*', '*Randomization*']
-    def delete_files(trial_dir, patterns):
-        for pattern in patterns:
-            # Search for files containing "rotation" in their filename
-            filesToDelete = glob.glob(os.path.join(trial_dir, pattern))
-            # Delete each file found
-            for file_path in filesToDelete:
-                try:
-                    os.remove(file_path)
-                    print(f'Deleted: {file_path}')
-                except Exception as e:
-                    print(f'Error deleting {file_path}: {e}')
-
-    # tasks = ['RP', 'RP_Anti']
-    tasks = ['DM', 'DM_Anti', 'EF', 'EF_Anti', 'RP', 'RP_Anti', 'RP_Ctx1', 'RP_Ctx2', 'WM', 'WM_Anti', 'WM_Ctx1', 'WM_Ctx2']
-    for task in tasks:
-        delete_files(os.path.join(trial_dir,task), patterns)
-    # ########################################################################################################################
+    # # # Delete all augmented files ###########################################################################################
+    # # Patterns to search for
+    # patterns = ['*Rotation*', '*Mirrored*', '*Segmentation*', '*Randomization*']
+    # def delete_files(trial_dir, patterns):
+    #     for pattern in patterns:
+    #         # Search for files containing "rotation" in their filename
+    #         filesToDelete = glob.glob(os.path.join(trial_dir, pattern))
+    #         # Delete each file found
+    #         for file_path in filesToDelete:
+    #             try:
+    #                 os.remove(file_path)
+    #                 print(f'Deleted: {file_path}')
+    #             except Exception as e:
+    #                 print(f'Error deleting {file_path}: {e}')
+    #
+    # # tasks = ['RP', 'RP_Anti']
+    # tasks = ['DM', 'DM_Anti', 'EF', 'EF_Anti', 'RP', 'RP_Anti', 'RP_Ctx1', 'RP_Ctx2', 'WM', 'WM_Anti', 'WM_Ctx1', 'WM_Ctx2']
+    # for task in tasks:
+    #     delete_files(os.path.join(trial_dir,task), patterns)
+    # # ########################################################################################################################
 
 
     ########################################################################################################################
@@ -293,10 +293,10 @@ for participant in participants:
     # tasks = ['RP', 'RP_Anti']
     tasks = ['DM', 'DM_Anti', 'EF', 'EF_Anti', 'RP', 'RP_Anti', 'RP_Ctx1', 'RP_Ctx2']
     # Randomize every batch within for three times
-    for l in range(3):
-        for task in tasks:
-            trial_list = glob.glob(os.path.join(trial_dir, task, '*Input.npy')) # Define list of batches to augment on
-            os.chdir(os.path.join(trial_dir, task)) # Define folder to save files in
+    for task in tasks:
+        trial_list = glob.glob(os.path.join(trial_dir, task, '*Input.npy')) # Define list of batches to augment on
+        os.chdir(os.path.join(trial_dir, task)) # Define folder to save files in
+        for l in range(3):
             try:
                 for k in trial_list:
                     if k.split('-')[1] != 'month_1':
