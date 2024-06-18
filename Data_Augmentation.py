@@ -11,7 +11,7 @@ import glob
 
 # Choose participant data to augment data from
 dataFolder = "Data"
-participants = ['BeRNN_02']
+participants = ['BeRNN_01', 'BeRNN_02', 'BeRNN_03', 'BeRNN_05']
 preprocessedData_folder = 'PreprocessedData_wResp_ALL'
 
 # directory = "/zi/flstorage/group_csp/analyses/oliver.frank"
@@ -22,42 +22,47 @@ task_counters = {
     "DM_Anti": "DM_Anti_removedBatches_counter",
     "EF": "EF_removedBatches_counter",
     "EF_Anti": "EF_Anti_removedBatches_counter",
-    "RP": "DM_removedBatches_counter",
-    "RP_Anti": "DM_Anti_removedBatches_counter",
-    "RP_Ctx1": "EF_removedBatches_counter",
-    "RP_Ctx2": "EF_Anti_removedBatches_counter",
-    "WM": "DM_removedBatches_counter",
-    "WM_Anti": "DM_Anti_removedBatches_counter",
-    "WM_Ctx1": "EF_removedBatches_counter",
-    "WM_Ctx2": "EF_Anti_removedBatches_counter"
+    "RP": "RP_removedBatches_counter",
+    "RP_Anti": "RP_Anti_removedBatches_counter",
+    "RP_Ctx1": "RP_Ctx1_removedBatches_counter",
+    "RP_Ctx2": "RP_Ctx2_removedBatches_counter",
+    "WM": "WM_removedBatches_counter",
+    "WM_Anti": "WM_Anti_removedBatches_counter",
+    "WM_Ctx1": "WM_Ctx1_removedBatches_counter",
+    "WM_Ctx2": "WM_Ctx2_removedBatches_counter"
 }
 
 # Initialize counters based on unique values in task_counters
-counters = {counter: 0 for counter in set(task_counters.values())}
+counters = {
+    'counters_01': {counter: 0 for counter in set(task_counters.values())},
+    'counters_02': {counter: 0 for counter in set(task_counters.values())},
+    'counters_03': {counter: 0 for counter in set(task_counters.values())},
+    'counters_04': {counter: 0 for counter in set(task_counters.values())},
+    'counters_05': {counter: 0 for counter in set(task_counters.values())}
+}
 
+# Delete all augmented files ###########################################################################################
+# Patterns to search for
+for participant in participants:
+    trial_dir = os.path.join(directory, dataFolder, participant, preprocessedData_folder)
+    patterns = ['*Rotation*', '*Mirrored*', '*Segmentation*', '*Randomization*']
+    def delete_files(trial_dir, patterns):
+        for pattern in patterns:
+            # Search for files containing "rotation" in their filename
+            filesToDelete = glob.glob(os.path.join(trial_dir, pattern))
+            # Delete each file found
+            for file_path in filesToDelete:
+                try:
+                    os.remove(file_path)
+                    print(f'Deleted: {file_path}')
+                except Exception as e:
+                    print(f'Error deleting {file_path}: {e}')
 
-# # Delete all augmented files ###########################################################################################
-# # Patterns to search for
-# for participant in participants:
-#     trial_dir = os.path.join(directory, dataFolder, participant, preprocessedData_folder)
-#     patterns = ['*Rotation*', '*Mirrored*', '*Segmentation*', '*Randomization*']
-#     def delete_files(trial_dir, patterns):
-#         for pattern in patterns:
-#             # Search for files containing "rotation" in their filename
-#             filesToDelete = glob.glob(os.path.join(trial_dir, pattern))
-#             # Delete each file found
-#             for file_path in filesToDelete:
-#                 try:
-#                     os.remove(file_path)
-#                     print(f'Deleted: {file_path}')
-#                 except Exception as e:
-#                     print(f'Error deleting {file_path}: {e}')
-#
-#     # tasks = ['RP', 'RP_Anti']
-#     tasks = ['DM', 'DM_Anti', 'EF', 'EF_Anti', 'RP', 'RP_Anti', 'RP_Ctx1', 'RP_Ctx2', 'WM', 'WM_Anti', 'WM_Ctx1', 'WM_Ctx2']
-#     for task in tasks:
-#         delete_files(os.path.join(trial_dir,task), patterns)
-# ########################################################################################################################
+    # tasks = ['RP', 'RP_Anti']
+    tasks = ['DM', 'DM_Anti', 'EF', 'EF_Anti', 'RP', 'RP_Anti', 'RP_Ctx1', 'RP_Ctx2', 'WM', 'WM_Anti', 'WM_Ctx1', 'WM_Ctx2']
+    for task in tasks:
+        delete_files(os.path.join(trial_dir,task), patterns)
+########################################################################################################################
 
 
 ########################################################################################################################
@@ -106,12 +111,9 @@ for participant in participants:
                             os.remove(yLoc_file)
                             print('Removed: ', yLoc_file)
 
-                        # Update the counter based on the task
-                        if task in task_counters:
-                            counters[task_counters[task]] += 1
-                            print('One file removed: ', task, ' ', '-'.join(file_stem))
-
-
+                        # Update the individual participant counter based on the task
+                        counter_key = task_counters[task]
+                        counters['counters_' + participant.split('_')[1]][counter_key] += 1
                         print(f"Files for batch {batch} are incomplete or missing. Skipping this batch.")
                         continue
 
@@ -206,9 +208,10 @@ for participant in participants:
                                 print('Removed: ', yLoc_file)
                             print(f"Files for batch {k} are incomplete or missing. Skipping this batch.")
 
-                            # Update the counter based on the task - Representing the number of batches deleted
-                            counters[task_counters[task]] += 1
-                            print('One file removed: ', task, ' ', '-'.join(file_stem))
+                            # Update the individual participant counter based on the task
+                            counter_key = task_counters[task]
+                            counters['counters_' + participant.split('_')[1]][counter_key] += 1
+                            print(f"Files for batch {k} are incomplete or missing. Skipping this batch.")
                             continue
 
                     except FileNotFoundError:
@@ -291,9 +294,10 @@ for participant in participants:
                                 print('Removed: ', yLoc_file)
                             print(f"Files for batch {k} are incomplete or missing. Skipping this batch.")
 
-                            # Update the counter based on the task - Representing the number of batches deleted
-                            counters[task_counters[task]] += 1
-                            print('One file removed: ', task, ' ', '-'.join(file_stem))
+                            # Update the individual participant counter based on the task
+                            counter_key = task_counters[task]
+                            counters['counters_' + participant.split('_')[1]][counter_key] += 1
+                            print(f"Files for batch {k} are incomplete or missing. Skipping this batch.")
                             continue
 
                     except FileNotFoundError:
@@ -377,9 +381,10 @@ for participant in participants:
                                 print('Removed: ', yLoc_file)
                             print(f"Files for batch {k} are incomplete or missing. Skipping this batch.")
 
-                            # Update the counter based on the task - Representing the number of batches deleted
-                            counters[task_counters[task]] += 1
-                            print('One file removed: ', task, ' ', '-'.join(file_stem))
+                            # Update the individual participant counter based on the task
+                            counter_key = task_counters[task]
+                            counters['counters_' + participant.split('_')[1]][counter_key] += 1
+                            print(f"Files for batch {k} are incomplete or missing. Skipping this batch.")
                             continue
 
                     except FileNotFoundError:
@@ -463,9 +468,10 @@ for participant in participants:
                                     print('Removed: ', yLoc_file)
                                 print(f"Files for batch {k} are incomplete or missing. Skipping this batch.")
 
-                                # Update the counter based on the task - Representing the number of batches deleted
-                                counters[task_counters[task]] += 1
-                                print('One file removed: ', task, ' ', '-'.join(file_stem))
+                                # Update the individual participant counter based on the task
+                                counter_key = task_counters[task]
+                                counters['counters_' + participant.split('_')[1]][counter_key] += 1
+                                print(f"Files for batch {k} are incomplete or missing. Skipping this batch.")
                                 continue
 
                         except FileNotFoundError:
@@ -500,17 +506,22 @@ for participant in participants:
             except Exception as e:
                 print(f"An error occurred: {e}")
 
+
+
+# Save all the accumulated counters in the according Preprocessing folder
+for participant in participants:
+    counterDirectory = os.path.join(directory, dataFolder, participant, preprocessedData_folder)
+    currentCounter = 'counters_' + participant.split('_')[1]
     # Define the file path
-    file_path = os.path.join(trial_dir,"task_counters.json")
+    file_path = os.path.join(counterDirectory, f'{currentCounter}_counters.json')
+    with open(file_path, 'w') as f:
+        json.dump(counters[currentCounter], f, indent=4)
+        print(f'Saved counters for {currentCounter} in {file_path}')
 
-    # Write the counters to a JSON file
-    with open(file_path, 'w') as file:
-        json.dump(task_counters, file, indent=4)
-
-    # # Open the json file
-    # participant = 'BeRNN_01'
-    # file = 'task_counters.json'
-    # file_dir = os.path.join(directory, dataFolder, participant, preprocessedData_folder, file)
-    # with open(file_dir, 'r') as file:
-    #     data = json.load(file)
+# # Open the json file
+# participant = 'BeRNN_01'
+# file = 'task_counters.json'
+# file_dir = os.path.join(directory, dataFolder, participant, preprocessedData_folder, file)
+# with open(file_dir, 'r') as file:
+#     data = json.load(file)
 
