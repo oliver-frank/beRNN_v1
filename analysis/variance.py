@@ -48,10 +48,40 @@ def _compute_variance_bymodel(model: object, sess: object, mode: str, monthsCons
 
     for rule in rules:
         print(rule)
-        trial_dir = os.getcwd() + '\Data\BeRNN_' + model_dir.split('BeRNN_')[-1].split('_')[0] + '\PreprocessedData_wResp_ALL'
-        x, y, y_loc = Tools.load_trials(trial_dir, monthsConsidered, rule, mode)
+        trial_dir = 'W:\\group_csp\\analyses\\oliver.frank' + '\\Data\\BeRNN_' + model_dir.split('BeRNN_')[-1].split('_')[0] + '\\PreprocessedData_wResp_ALL'
+        x, y, y_loc, file_stem = Tools.load_trials(trial_dir, monthsConsidered, rule, mode)
         epochs = Tools.find_epochs(x)
-        feed_dict = Tools.gen_feed_dict(model, x, y, hp)
+
+        # todo: ################################################################################################
+        fixation_steps = Tools.getEpochSteps(y, file_stem)
+
+        # Creat c_mask for current batch
+        if hp['loss_type'] == 'lsq':
+            c_mask = np.zeros((y.shape[0], y.shape[1], y.shape[2]), dtype='float32')
+            for i in range(y.shape[1]):
+                # Fixation epoch
+                c_mask[:fixation_steps, i, :] = 1.
+                # Response epoch
+                c_mask[fixation_steps:, i, :] = 5.
+
+            # self.c_mask[:, :, 0] *= self.n_eachring # Fixation is important
+            c_mask[:, :, 0] *= 2.  # Fixation is important
+            c_mask = c_mask.reshape((y.shape[0] * y.shape[1], y.shape[2]))
+
+        else:
+            c_mask = np.zeros((y.shape[0], y.shape[1]), dtype='float32')
+            for i in range(y.shape[1]):
+                # Fixation epoch
+                c_mask[:fixation_steps, i, :] = 1.
+                # Response epoch
+                c_mask[fixation_steps:, i, :] = 5.
+
+            c_mask = c_mask.reshape((y.shape[0] * y.shape[1],))
+            c_mask /= c_mask.mean()
+
+        # todo: ################################################################################################
+
+        feed_dict = Tools.gen_feed_dict(model, x, y, c_mask, hp)
         h = sess.run(model.h, feed_dict=feed_dict)
 
         if random_rotation:

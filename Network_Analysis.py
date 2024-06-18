@@ -15,7 +15,7 @@ import Tools
 from Tools import rule_name
 
 model_list = [
-'W:\\group_csp\\analyses\\oliver.frank' + '\BeRNN_models\Model_145_BeRNN_05_Month_2-6'
+'W:\\group_csp\\analyses\\oliver.frank' + '\BeRNN_models\Model_112_BeRNN_01_Month_2-4'
 ]
 
 # model_dir = os.getcwd() + '\BeRNN_models\Model_112_BeRNN_01_Month_2-4'
@@ -203,7 +203,7 @@ for model_dir in model_list:
     #     'W:\\group_csp\\analyses\\oliver.frank' + '\BeRNN_models\Model_92_BeRNN_05_Month_1-4',
     # ]
 
-    model_dir = 'W:\\group_csp\\analyses\\oliver.frank\\BeRNN_models\\' + 'Model_82_BeRNN_01_Month_1-4'
+    model_dir = 'W:\\group_csp\\analyses\\oliver.frank\\BeRNN_models\\' + '\\Model_112_BeRNN_01_Month_2-4'
     show = True
     def compute_n_cluster(model_dir, mode, monthsConsidered, show):
     # for model_dir in model_dirs:
@@ -218,7 +218,7 @@ for model_dir in model_list:
             # analysis.plot_similarity_matrix()
             analysis.plot_2Dvisualization(model_dir, mode, show)
             # analysis.plot_example_unit()
-            # analysis.plot_connectivity_byclusters()
+            analysis.plot_connectivity_byclusters()
 
             log['n_cluster'] = analysis.n_cluster
             log['model_dir'] = model_dir
@@ -233,7 +233,7 @@ for model_dir in model_list:
 
         print("done")
 
-    monthsConsidered = ['1','2','3','4']
+    monthsConsidered = ['2','3','4']
     mode = 'Training'
     compute_n_cluster(model_dir, mode, monthsConsidered, show)
     mode = 'Evaluation'

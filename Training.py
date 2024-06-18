@@ -250,8 +250,7 @@ def train(model_dir,trial_dir,monthsConsidered,hp=None,max_steps=3e6,display_ste
     hp['rule_probs'] = None
     if hasattr(hp['rule_trains'], '__iter__'):
         # Set default as 1.
-        rule_prob = np.array(
-            [rule_prob_map.get(r, 1.) for r in hp['rule_trains']])
+        rule_prob = np.array([rule_prob_map.get(r, 1.) for r in hp['rule_trains']])
         hp['rule_probs'] = list(rule_prob / np.sum(rule_prob))
     Tools.save_hp(hp, model_dir)
 

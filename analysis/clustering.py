@@ -71,7 +71,7 @@ class Analysis(object):
         # First only get active units. Total variance across tasks larger than 1e-3
         # ind_active = np.where(h_var_all_.sum(axis=1) > 1e-2)[0]
         # Checks the activity at the end of the respons epch [0]
-        ind_active = np.where(h_var_all_.sum(axis=1) >= 0)[0] # todo: > 1e-3 ----------------------------------------------
+        ind_active = np.where(h_var_all_.sum(axis=1) > 1e-3)[0] # todo: > 1e-3 ----------------------------------------------
         h_var_all  = h_var_all_[ind_active, :]
 
         # Normalize by the total variance across tasks
@@ -251,7 +251,7 @@ class Analysis(object):
         #         fig_name = fig_name + save_name
         #     plt.savefig('figure/'+fig_name+'.pdf', transparent=True)
 
-        plt.savefig(os.path.join('W:\\group_csp\\analyses\\oliver.frank\\BeRNN_models', 'BeRNN_models\\Visuals\\Variance',model_dir.split("\\")[-1] + '_' + mode + '.png'), \
+        plt.savefig(os.path.join('W:\\group_csp\\analyses\\oliver.frank', 'BeRNN_models\\Visuals\\Variance',model_dir.split("\\")[-1] + '_' + mode + '.png'), \
                     format='png', dpi=300, bbox_inches='tight', pad_inches=0.1)
         # if show == True:
         plt.show()
@@ -322,7 +322,7 @@ class Analysis(object):
         # if save:
         #     plt.savefig(figname, transparent=True)
 
-        plt.savefig(os.path.join('W:\\group_csp\\analyses\\oliver.frank\\BeRNN_models', 'BeRNN_models\\Visuals\\2D_Clustering',model_dir.split("\\")[-1] + '_' + mode + '.png'), \
+        plt.savefig(os.path.join('W:\\group_csp\\analyses\\oliver.frank', 'BeRNN_models\\Visuals\\2D_Clustering',model_dir.split("\\")[-1] + '_' + mode + '.png'), \
                     format='png', dpi=300, bbox_inches='tight', pad_inches=0.1)
         # if show == True:
         plt.show()
@@ -357,6 +357,97 @@ class Analysis(object):
             if save:
                 plt.savefig('figure/exampleunit_variance.pdf', transparent=True)
             plt.show()
+
+    def plot_connectivity_byclusters(self):
+        """Plot connectivity of the model"""
+
+        ind_active = self.ind_active
+
+        # Sort data by labels and by input connectivity
+        model = Model(self.model_dir)
+        hp = model.hp
+        with tf.Session() as sess:
+            model.restore()
+            w_in = sess.run(model.w_in).T
+            w_rec = sess.run(model.w_rec).T
+            w_out = sess.run(model.w_out).T
+            b_rec = sess.run(model.b_rec)
+            b_out = sess.run(model.b_out)
+
+        w_rec = w_rec[ind_active, :][:, ind_active]
+        w_in = w_in[ind_active, :]
+        w_out = w_out[:, ind_active]
+        b_rec = b_rec[ind_active]
+
+        # nx, nh, ny = hp['shape']
+        nr = hp['n_eachring']
+
+        sort_by = 'w_in'
+        if sort_by == 'w_in':
+            w_in_mod1 = w_in[:, 1:nr+1]
+            w_in_mod2 = w_in[:, nr+1:2*nr+1]
+            w_in_modboth = w_in_mod1 + w_in_mod2
+            w_prefs = np.argmax(w_in_modboth, axis=1)
+        elif sort_by == 'w_out':
+            w_prefs = np.argmax(w_out[1:], axis=0)
+
+        # sort by labels then by prefs
+        ind_sort = np.lexsort((w_prefs, self.labels))
+
+        ######################### Plotting Connectivity ###############################
+        nx = self.hp['n_input']
+        ny = self.hp['n_output']
+        nh = len(self.ind_active)
+        nr = self.hp['n_eachring']
+        nrule = len(self.hp['rules'])
+
+        # Plot active units
+        _w_rec  = w_rec[ind_sort,:][:,ind_sort]
+        _w_in   = w_in[ind_sort,:]
+        _w_out  = w_out[:,ind_sort]
+        _b_rec  = b_rec[ind_sort, np.newaxis]
+        _b_out  = b_out[:, np.newaxis]
+        labels  = self.labels[ind_sort]
+
+        l = 0.3
+        l0 = (1-1.5*l)/nh
+
+        plot_infos = [(_w_rec              , [l               ,l          ,nh*l0    ,nh*l0]),
+                      (_w_in[:,[0]]        , [l-(nx+15)*l0    ,l          ,1*l0     ,nh*l0]), # Fixation input
+                      (_w_in[:,1:nr+1]     , [l-(nx+11)*l0    ,l          ,nr*l0    ,nh*l0]), # Mod 1 stimulus
+                      (_w_in[:,nr+1:2*nr+1], [l-(nx-nr+8)*l0  ,l          ,nr*l0    ,nh*l0]), # Mod 2 stimulus
+                      (_w_in[:,2*nr+1:]    , [l-(nx-2*nr+5)*l0,l          ,nrule*l0 ,nh*l0]), # Rule inputs
+                      (_w_out[[0],:]       , [l               ,l-(4)*l0   ,nh*l0    ,1*l0]),
+                      (_w_out[1:,:]        , [l               ,l-(ny+6)*l0,nh*l0    ,(ny-1)*l0]),
+                      (_b_rec              , [l+(nh+6)*l0     ,l          ,l0       ,nh*l0]),
+                      (_b_out              , [l+(nh+6)*l0     ,l-(ny+6)*l0,l0       ,ny*l0])]
+
+        # cmap = sns.diverging_palette(220, 10, sep=80, as_cmap=True)
+        cmap = 'coolwarm'
+        fig = plt.figure(figsize=(6, 6))
+        for plot_info in plot_infos:
+            ax = fig.add_axes(plot_info[1])
+            vmin, vmid, vmax = np.percentile(plot_info[0].flatten(), [5,50,95])
+            _ = ax.imshow(plot_info[0], interpolation='nearest', cmap=cmap, aspect='auto',
+                          vmin=vmid-(vmax-vmin)/2, vmax=vmid+(vmax-vmin)/2)
+            ax.axis('off')
+
+        ax1 = fig.add_axes([l     , l+nh*l0, nh*l0, 6*l0])
+        ax2 = fig.add_axes([l-6*l0, l      , 6*l0 , nh*l0])
+        for il, l in enumerate(self.unique_labels):
+            ind_l = np.where(labels==l)[0][[0, -1]]+np.array([0,1])
+            ax1.plot(ind_l, [0,0], linewidth=2, solid_capstyle='butt',
+                    color=kelly_colors[il+1])
+            ax2.plot([0,0], len(labels)-ind_l, linewidth=2, solid_capstyle='butt',
+                    color=kelly_colors[il+1])
+        ax1.set_xlim([0, len(labels)])
+        ax2.set_ylim([0, len(labels)])
+        ax1.axis('off')
+        ax2.axis('off')
+        # if save:
+        #     plt.savefig('figure/connectivity_by'+self.data_type+'.pdf', transparent=True)
+        plt.show()
+
 
 
 if __name__ == '__main__':
