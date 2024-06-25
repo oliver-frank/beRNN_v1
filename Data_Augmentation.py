@@ -7,11 +7,14 @@ import random
 import json
 import glob
 
+import Tools
+
 # todo: Delete all files from which not all three necessary files exist
 
 # Choose participant data to augment data from
 dataFolder = "Data"
-participants = ['BeRNN_01', 'BeRNN_02', 'BeRNN_03', 'BeRNN_05']
+participants = ['BeRNN_01']
+# participants = ['BeRNN_01', 'BeRNN_02', 'BeRNN_03', 'BeRNN_05']
 preprocessedData_folder = 'PreprocessedData_wResp_ALL'
 
 # directory = "/zi/flstorage/group_csp/analyses/oliver.frank"
@@ -22,14 +25,14 @@ task_counters = {
     "DM_Anti": "DM_Anti_removedBatches_counter",
     "EF": "EF_removedBatches_counter",
     "EF_Anti": "EF_Anti_removedBatches_counter",
-    "RP": "RP_removedBatches_counter",
-    "RP_Anti": "RP_Anti_removedBatches_counter",
-    "RP_Ctx1": "RP_Ctx1_removedBatches_counter",
-    "RP_Ctx2": "RP_Ctx2_removedBatches_counter",
-    "WM": "WM_removedBatches_counter",
-    "WM_Anti": "WM_Anti_removedBatches_counter",
-    "WM_Ctx1": "WM_Ctx1_removedBatches_counter",
-    "WM_Ctx2": "WM_Ctx2_removedBatches_counter"
+    "RP": "DM_removedBatches_counter",
+    "RP_Anti": "DM_Anti_removedBatches_counter",
+    "RP_Ctx1": "EF_removedBatches_counter",
+    "RP_Ctx2": "EF_Anti_removedBatches_counter",
+    "WM": "DM_removedBatches_counter",
+    "WM_Anti": "DM_Anti_removedBatches_counter",
+    "WM_Ctx1": "EF_removedBatches_counter",
+    "WM_Ctx2": "EF_Anti_removedBatches_counter"
 }
 
 # Initialize counters based on unique values in task_counters
@@ -40,6 +43,7 @@ counters = {
     'counters_04': {counter: 0 for counter in set(task_counters.values())},
     'counters_05': {counter: 0 for counter in set(task_counters.values())}
 }
+
 
 # Delete all augmented files ###########################################################################################
 # Patterns to search for
@@ -114,6 +118,10 @@ for participant in participants:
                         # Update the individual participant counter based on the task
                         counter_key = task_counters[task]
                         counters['counters_' + participant.split('_')[1]][counter_key] += 1
+                        print(f"Files for batch {batch} are incomplete or missing. Skipping this batch.")
+                        continue
+
+
                         print(f"Files for batch {batch} are incomplete or missing. Skipping this batch.")
                         continue
 
@@ -507,7 +515,6 @@ for participant in participants:
                 print(f"An error occurred: {e}")
 
 
-
 # Save all the accumulated counters in the according Preprocessing folder
 for participant in participants:
     counterDirectory = os.path.join(directory, dataFolder, participant, preprocessedData_folder)
@@ -518,6 +525,27 @@ for participant in participants:
         json.dump(counters[currentCounter], f, indent=4)
         print(f'Saved counters for {currentCounter} in {file_path}')
 
+
+
+########################################################################################################################
+# Split the files into training and evaluation set (e.g. with ratio: .8)
+for participant in participants:
+    source_folder = os.path.join(directory, dataFolder, participant, preprocessedData_folder)
+
+    train_folder = os.path.join(source_folder, '_Training_Data')
+    eval_folder = os.path.join(source_folder, '_Evaluation_Data')
+
+    Tools.split_files(source_folder,train_folder,eval_folder)
+
+
+
+
+
+
+
+
+
+
 # # Open the json file
 # participant = 'BeRNN_01'
 # file = 'task_counters.json'
@@ -525,3 +553,40 @@ for participant in participants:
 # with open(file_dir, 'r') as file:
 #     data = json.load(file)
 
+
+
+
+# todo: LAB ############################################################################################################
+# # Function for sorting out already augmented files #####################################################################
+# import os
+# import datetime
+#
+# def get_creation_time(file_path):
+#     # Get the creation time of the file
+#     if os.name == 'nt':  # For Windows
+#         creation_time = os.path.getctime(file_path)
+#     else:  # For Unix-like systems
+#         stat = os.stat(file_path)
+#         try:
+#             creation_time = stat.st_birthtime
+#         except AttributeError:
+#             # For Linux, use last metadata change time as creation time is not available
+#             creation_time = stat.st_mtime
+#     return datetime.datetime.fromtimestamp(creation_time)
+#
+# def is_file_newer_than(file_path, date_time):
+#     creation_time = get_creation_time(file_path)
+#     return creation_time > date_time
+#
+# # Example usage
+# file_path = 'path/to/your/file.txt'
+# date_time = datetime.datetime(2023, 5, 1, 12, 0, 0)  # Replace with your specific date and time
+#
+# if is_file_newer_than(file_path, date_time):
+#     print(f"The file {file_path} is newer than {date_time}.")
+#     # Your commands here
+# else:
+#     print(f"The file {file_path} is older than {date_time}.")
+#     # Your other commands here
+#
+#

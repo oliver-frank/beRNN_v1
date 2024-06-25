@@ -676,7 +676,7 @@ def preprocess_EF(opened_xlsxFile, questionnare_files, list_allSessions, sequenc
 
         # Drop unnecessary first column
         Output = np.delete(Output, [0], axis=2)
-        # Pre-allocate y-loc matrix; needed for later validation
+        # Pre-allocate y-loc matrix; needed for later validation - Ground Truth
         y_loc = np.zeros((Output.shape[0], Output.shape[1]))
 
         # Add output gradient activation
@@ -1534,3 +1534,9 @@ for participant in participants:
 ########################################################################################################################
 # LAB
 ########################################################################################################################
+import numpy as np
+import os
+Input = np.load(os.path.join('W://group_csp//analyses//oliver.frank//Data//BeRNN_01//PreprocessedData_wResp_ALL//DM', 'BeRNN_01-month_2-batch_0-DM-task_9ivx-Input.npy'), allow_pickle=True)
+Output = np.load(os.path.join('W://group_csp//analyses//oliver.frank//Data//BeRNN_01//PreprocessedData_wResp_ALL//DM', 'BeRNN_01-month_2-batch_0-DM-task_9ivx-Output.npy'), allow_pickle=True)
+Response = np.load(os.path.join('W://group_csp//analyses//oliver.frank//Data//BeRNN_01//PreprocessedData_wResp_ALL//DM', 'BeRNN_01-month_2-batch_0-DM-task_9ivx-Response.npy'), allow_pickle=True)
+yLoc = np.load(os.path.join('W://group_csp//analyses//oliver.frank//Data//BeRNN_01//PreprocessedData_wResp_ALL//DM', 'BeRNN_01-month_2-batch_0-DM-task_9ivx-yLoc.npy'), allow_pickle=True)

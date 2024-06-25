@@ -33,10 +33,10 @@ def get_default_hp(ruleset):
     n_eachring = 32
     n_input, n_output = 1 + num_ring * n_eachring + n_rule, n_eachring + 1
     hp = {
-        # batch size for training
-        'batch_size_train': 32,
+        # batch size for training and evaluation
+        'batch_size': 32,
         # batch_size for testing
-        'batch_size_test': 640,
+        # 'batch_size_test': 640,
         # input type: normal, multi
         'in_type': 'normal',
         # Type of RNNs: NonRecurrent, LeakyRNN, LeakyGRU, EILeakyGRU, GRU, LSTM
@@ -104,7 +104,7 @@ def get_default_hp(ruleset):
 
     return hp
 
-def do_eval(sess, model, log, trial_dir, rule_train):
+def do_eval(sess, model, log, trial_dir, rule_train, monthsConsidered):
     """Do evaluation.
 
     Args:
@@ -125,13 +125,13 @@ def do_eval(sess, model, log, trial_dir, rule_train):
           '  | Now training ' + rule_name_print)
 
     for rule_test in hp['rules']:
-        n_rep = 16 * 4 # only 8 trials er batch are taken, Yang et al. takes 32 for each n_rep
-        batch_size_test_rep = int(hp['batch_size_test']/n_rep)
+        n_rep = 20 # 20 * 32 or 20 * 16 trials per evaluation are taken, depending on batch_size
+        # batch_size_test_rep = int(hp['batch_size_test']/n_rep)
         clsq_tmp = list()
         creg_tmp = list()
         perf_tmp = list()
         for i_rep in range(n_rep):
-            x,y,y_loc,file_stem = Tools.load_trials(trial_dir, monthsConsidered, rule_test, mode)
+            x,y,y_loc,file_stem = Tools.load_trials(trial_dir, monthsConsidered, rule_test, mode, hp['batch_size'])
 
             # todo: ################################################################################################
             fixation_steps = Tools.getEpochSteps(y,file_stem)
@@ -173,7 +173,7 @@ def do_eval(sess, model, log, trial_dir, rule_train):
             # Cost is first summed over time,
             # and averaged across batch and units
             # We did the averaging over time through c_mask
-            perf_test = np.mean(get_perf(y_hat_test, y_loc))
+            perf_test = np.mean(get_perf(y_hat_test, y_loc)) # todo: y_loc is participant response as groundTruth
             clsq_tmp.append(c_lsq)
             creg_tmp.append(c_reg)
             perf_tmp.append(perf_test)
@@ -319,13 +319,13 @@ def train(model_dir,trial_dir,monthsConsidered,hp=None,max_steps=3e6,display_ste
             model.set_optimizer(var_list=var_list)
 
         step = 0
-        while step * hp['batch_size_train'] <= max_steps:
+        while step * hp['batch_size'] <= max_steps:
             try:
                 # Validation
                 if step % display_step == 0:
-                    log['trials'].append(step * hp['batch_size_train'])
+                    log['trials'].append(step * hp['batch_size'])
                     log['times'].append(time.time() - t_start)
-                    log = do_eval(sess, model, log, trial_dir, hp['rule_trains'])
+                    log = do_eval(sess, model, log, trial_dir, hp['rule_trains'],monthsConsidered)
                     elapsed_time = time.time() - t_start  # Calculate elapsed time
                     print(f"Elapsed time after batch number {trialsLoaded}: {elapsed_time:.2f} seconds")
                     # After training
@@ -345,7 +345,7 @@ def train(model_dir,trial_dir,monthsConsidered,hp=None,max_steps=3e6,display_ste
                 rule_train_now = hp['rng'].choice(hp['rule_trains'], p=hp['rule_probs'])
                 # Generate a random batch of trials; each batch has the same trial length
                 mode = 'Training'
-                x,y,y_loc,file_stem = Tools.load_trials(trial_dir,monthsConsidered,rule_train_now,mode)
+                x,y,y_loc,file_stem = Tools.load_trials(trial_dir,monthsConsidered,rule_train_now,mode,hp['batch_size'])
 
                 # todo: ################################################################################################
                 fixation_steps = Tools.getEpochSteps(y, file_stem)
@@ -388,7 +388,7 @@ def train(model_dir,trial_dir,monthsConsidered,hp=None,max_steps=3e6,display_ste
                 creg_train_tmp = list()
                 perf_train_tmp = list()
                 c_lsq_train, c_reg_train, y_hat_train = sess.run([model.cost_lsq, model.cost_reg, model.y_hat], feed_dict=feed_dict)
-                perf_train = np.mean(get_perf(y_hat_train, y_loc))
+                perf_train = np.mean(get_perf(y_hat_train, y_loc)) # todo: y_loc is participant response as groundTruth
                 clsq_train_tmp.append(c_lsq_train)
                 creg_train_tmp.append(c_reg_train)
                 perf_train_tmp.append(perf_train)
@@ -410,24 +410,26 @@ def train(model_dir,trial_dir,monthsConsidered,hp=None,max_steps=3e6,display_ste
 
         print("Optimization finished!")
 
-dataFolder = "Data"
-participant = 'BeRNN_05'
-model_folder = 'Model'
-strToSave = '2-6'
-model_number = 'Model_145_' + participant + '_Month_' + strToSave # Manually add months considered e.g. 1-7
-monthsConsidered = ['2','3','4','5','6'] # Add all months you want to take into consideration for training and evaluation
-model_dir = os.path.join('W:\\group_csp\\analyses\\oliver.frank\\BeRNN_models', model_number)
-
-if not os.path.exists(model_dir):
-    os.makedirs(model_dir)
-
-preprocessedData_folder = 'PreprocessedData_wResp_ALL'
-preprocessedData_path = os.path.join('W:\\group_csp\\analyses\\oliver.frank', dataFolder, participant, preprocessedData_folder)
-
-# Define probability of each task being trained
-rule_prob_map = {"DM": 1,"DM_Anti": 1,"EF": 1,"EF_Anti": 1,"RP": 1,"RP_Anti": 1,"RP_Ctx1": 1,"RP_Ctx2": 1,"WM": 1,"WM_Anti": 1,"WM_Ctx1": 1,"WM_Ctx2": 1}
-
-train(model_dir=model_dir, trial_dir=preprocessedData_path, monthsConsidered = monthsConsidered, rule_prob_map=rule_prob_map)
-# train(model_dir=model_dir, trial_dir=preprocessedData_path)
+#
+# if __name__ == '__main__':
+    # dataFolder = "Data"
+    # participant = 'BeRNN_05'
+    # model_folder = 'Model'
+    # strToSave = '2-6'
+    # model_number = 'Model_Test_' + participant + '_Month_' + strToSave # Manually add months considered e.g. 1-7
+    # monthsConsidered = ['2','3','4','5','6'] # Add all months you want to take into consideration for training and evaluation
+    # model_dir = os.path.join('W:\\group_csp\\analyses\\oliver.frank\\BeRNN_models', model_number)
+    #
+    # if not os.path.exists(model_dir):
+    #     os.makedirs(model_dir)
+    #
+    # preprocessedData_folder = 'PreprocessedData_wResp_ALL'
+    # preprocessedData_path = os.path.join('W:\\group_csp\\analyses\\oliver.frank', dataFolder, participant, preprocessedData_folder)
+    #
+    # # Define probability of each task being trained
+    # rule_prob_map = {"DM": 1,"DM_Anti": 1,"EF": 1,"EF_Anti": 1,"RP": 1,"RP_Anti": 1,"RP_Ctx1": 1,"RP_Ctx2": 1,"WM": 1,"WM_Anti": 1,"WM_Ctx1": 1,"WM_Ctx2": 1}
+    #
+    # train(model_dir=model_dir, trial_dir=preprocessedData_path, monthsConsidered = monthsConsidered, rule_prob_map=rule_prob_map)
+    # # train(model_dir=model_dir, trial_dir=preprocessedData_path)
 
 

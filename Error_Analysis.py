@@ -310,7 +310,7 @@ selected_months_files = [file for file in npy_files if any(month in file for mon
 
 for npy_file in selected_months_files:
     # Use the function
-    Response = np.load(npy_file, allow_pickle=True)
+    Response = np.load(npy_files[0], allow_pickle=True)
     # Sort the 4th and 5th row, so that HIGHER value is on 4th row. Sort 2nd and 3rd accordingly
     sortedResponse = sort_rows_descending(Response)
     errors_dict_DM = get_errors_DM(sortedResponse, errors_dict_DM, distract_dict, opposite_dict, strength_dict)
