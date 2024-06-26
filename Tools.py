@@ -168,9 +168,9 @@ def split_files(source_folder, train_folder, eval_folder, train_ratio=0.8):
     - train_ratio (float): The ratio of files to be used for training (default is 0.8).
     """
     # Ensure the target folders exist
-    # subfolders = ['DM', 'DM_Anti', 'EF', 'EF_Anti', 'RP', 'RP_Anti', 'RP_Ctx1', 'RP_Ctx2',
-    #               'WM', 'WM_Anti', 'WM_Ctx1', 'WM_Ctx2']
-    subfolders = ['RP_Ctx2', 'WM', 'WM_Anti', 'WM_Ctx1', 'WM_Ctx2']
+    subfolders = ['DM', 'DM_Anti', 'EF', 'EF_Anti', 'RP', 'RP_Anti', 'RP_Ctx1', 'RP_Ctx2',
+                  'WM', 'WM_Anti', 'WM_Ctx1', 'WM_Ctx2']
+    # subfolders = ['RP_Ctx2', 'WM', 'WM_Anti', 'WM_Ctx1', 'WM_Ctx2']
 
     os.makedirs(train_folder, exist_ok=True)
     os.makedirs(eval_folder, exist_ok=True)
@@ -198,11 +198,22 @@ def split_files(source_folder, train_folder, eval_folder, train_ratio=0.8):
         # Move the files to the respective folders
         for file_path in train_files:
             shutil.move(file_path, os.path.join(train_folder,folder,os.path.basename(file_path)))
+            shutil.move('-'.join(file_path.split('-')[:-1])+'-Output.npy', os.path.join(train_folder,folder,os.path.basename('-'.join(file_path.split('-')[:-1])+'-Output.npy')))
+            shutil.move('-'.join(file_path.split('-')[:-1])+'-yLoc.npy', os.path.join(train_folder,folder,os.path.basename('-'.join(file_path.split('-')[:-1])+'-yLoc.npy')))
+            shutil.copy('\\'.join(file_path.split('\\')[:7]) + '\\' + '-'.join(file_path.split('\\')[-1].split('-')[:5]) + '-Meta.json', os.path.join(train_folder,folder,\
+                                    os.path.basename('\\'.join(file_path.split('\\')[:7]) + '\\' + '-'.join(file_path.split('\\')[-1].split('-')[:5]) + '-Meta.json')))
             print(f"Moved {len(train_files)} files to {train_folder}")
         for file_path in eval_files:
             shutil.move(file_path, os.path.join(eval_folder,folder,os.path.basename(file_path)))
+            shutil.move('-'.join(file_path.split('-')[:-1]) + '-Output.npy', os.path.join(eval_folder, folder,os.path.basename('-'.join(file_path.split('-')[:-1]) + '-Output.npy')))
+            shutil.move('-'.join(file_path.split('-')[:-1]) + '-yLoc.npy', os.path.join(eval_folder, folder,os.path.basename('-'.join(file_path.split('-')[:-1]) + '-yLoc.npy')))
+            shutil.copy('\\'.join(file_path.split('\\')[:7]) + '\\' + '-'.join(file_path.split('\\')[-1].split('-')[:5]) + '-Meta.json', os.path.join(eval_folder, folder, \
+                                    os.path.basename('\\'.join(file_path.split('\\')[:7]) + '\\' + '-'.join(file_path.split('\\')[-1].split('-')[:5]) + '-Meta.json')))
             print(f"Moved {len(eval_files)} files to {eval_folder}")
 
+
+# file_path = 'W:\\group_csp\\analyses\\oliver.frank\\Data\\BeRNN_02\\PreprocessedData_wResp_ALL\\DM\\BeRNN_02-month_2-batch_0-DM-task_9ivx-Mirrored-Input.npy'
+# '\\'.join(file_path.split('\\')[:7]) + '\\' + '-'.join(file_path.split('\\')[-1].split('-')[:5]) + '-Meta'
 
 # todo: ################################################################################################################
 # todo: ################################################################################################################
