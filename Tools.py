@@ -73,53 +73,55 @@ def load_trials(trial_dir,monthsConsidered,task,mode,batchSize):
             # Debug
             # trial_dir = 'W:\\group_csp\\analyses\\oliver.frank\\Data\\BeRNN_03\\PreprocessedData_wResp_ALL\\DM\\BeRNN_03-month_2-batch_0-DM-task_9ivx-Input.npy'
             # x = np.load(trial_dir, mmap_mode='r')
-            # batchSize = 32
+            # batchSize = 40
             if mode == 'Training':
-                x = np.load(os.path.join(trial_dir,'_Training_Data',task, file_stem) + '-Input.npy', mmap_mode='r')
-                y = np.load(os.path.join(trial_dir,'_Training_Data', task, file_stem) + '-Output.npy', mmap_mode='r')   # todo: y findet das Programm nicht
-                y_loc = np.load(os.path.join(trial_dir,'_Training_Data', task, file_stem) + '-yLoc.npy', mmap_mode='r')
-                # randomly choose ratio for part of batch to take
-                choice = np.random.choice(['first', 'last', 'middle'])
-                if choice == 'first':
-                    # Select rows for either training
-                    x = x[:, :batchSize, :]
-                    y = y[:, :batchSize, :]
-                    y_loc = y_loc[:, :batchSize]
-                elif choice == 'last':
-                    # Select rows for either training
-                    x = x[:, 40-batchSize:, :]
-                    y = y[:, 40-batchSize:, :]
-                    y_loc = y_loc[:, 40-batchSize:]
-                elif choice == 'middle':
-                    # Select the middle batchSize rows
-                    mid_start = (x.shape[1] - batchSize) // 2
-                    mid_end = mid_start + batchSize
-                    x = x[:, mid_start:mid_end, :]
-                    y = y[:, mid_start:mid_end, :]
-                    y_loc = y_loc[:, mid_start:mid_end]
+                x = np.load(os.path.join(trial_dir,'_Training_Data',task, file_stem) + '-Input.npy', mmap_mode='r') # Input
+                y = np.load(os.path.join(trial_dir,'_Training_Data', task, file_stem) + '-Output.npy', mmap_mode='r') # Participant Response
+                y_loc = np.load(os.path.join(trial_dir,'_Training_Data', task, file_stem) + '-yLoc.npy', mmap_mode='r') # Ground Truth
+                if batchSize < 40:
+                    # randomly choose ratio for part of batch to take
+                    choice = np.random.choice(['first', 'last', 'middle'])
+                    if choice == 'first':
+                        # Select rows for either training
+                        x = x[:, :batchSize, :]
+                        y = y[:, :batchSize, :]
+                        y_loc = y_loc[:, :batchSize]
+                    elif choice == 'last':
+                        # Select rows for either training
+                        x = x[:, 40-batchSize:, :]
+                        y = y[:, 40-batchSize:, :]
+                        y_loc = y_loc[:, 40-batchSize:]
+                    elif choice == 'middle':
+                        # Select the middle batchSize rows
+                        mid_start = (x.shape[1] - batchSize) // 2
+                        mid_end = mid_start + batchSize
+                        x = x[:, mid_start:mid_end, :]
+                        y = y[:, mid_start:mid_end, :]
+                        y_loc = y_loc[:, mid_start:mid_end]
             elif mode == 'Evaluation':
                 x = np.load(os.path.join(trial_dir, '_Evaluation_Data', task, file_stem) + '-Input.npy', mmap_mode='r')
                 y = np.load(os.path.join(trial_dir, '_Evaluation_Data', task, file_stem) + '-Output.npy', mmap_mode='r')
                 y_loc = np.load(os.path.join(trial_dir, '_Evaluation_Data', task, file_stem) + '-yLoc.npy', mmap_mode='r')
-                # randomly choose ratio for part of batch to take
-                choice = np.random.choice(['first', 'last', 'middle'])
-                if choice == 'first':
-                    # Select rows for evaluation
-                    x = x[:, :batchSize, :]
-                    y = y[:, :batchSize, :]
-                    y_loc = y_loc[:, :batchSize]
-                elif choice == 'last':
-                    # Select rows for evaluation
-                    x = x[:, 40 - batchSize:, :]
-                    y = y[:, 40 - batchSize:, :]
-                    y_loc = y_loc[:, 40 - batchSize:]
-                elif choice == 'middle':
-                    # Select the middle batchSize rows
-                    mid_start = (x.shape[1] - batchSize) // 2
-                    mid_end = mid_start + batchSize
-                    x = x[:, mid_start:mid_end, :]
-                    y = y[:, mid_start:mid_end, :]
-                    y_loc = y_loc[:, mid_start:mid_end]
+                if batchSize < 40:
+                    # randomly choose ratio for part of batch to take
+                    choice = np.random.choice(['first', 'last', 'middle'])
+                    if choice == 'first':
+                        # Select rows for evaluation
+                        x = x[:, :batchSize, :]
+                        y = y[:, :batchSize, :]
+                        y_loc = y_loc[:, :batchSize]
+                    elif choice == 'last':
+                        # Select rows for evaluation
+                        x = x[:, 40 - batchSize:, :]
+                        y = y[:, 40 - batchSize:, :]
+                        y_loc = y_loc[:, 40 - batchSize:]
+                    elif choice == 'middle':
+                        # Select the middle batchSize rows
+                        mid_start = (x.shape[1] - batchSize) // 2
+                        mid_end = mid_start + batchSize
+                        x = x[:, mid_start:mid_end, :]
+                        y = y[:, mid_start:mid_end, :]
+                        y_loc = y_loc[:, mid_start:mid_end]
 
             return x,y,y_loc, file_stem     # todo: maybe needed for some debugging somewhere?? -> ,file_splits
         except Exception as e:

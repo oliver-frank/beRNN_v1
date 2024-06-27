@@ -11,7 +11,7 @@ from sklearn.model_selection import ParameterGrid
 import Training
 
 param_grid = {
-    'batch_size': [16, 32],
+    'batch_size': [20, 40],
     'in_type': ['normal'],
     'rnn_type': ['LeakyRNN', 'LeakyGRU', 'GRU', 'LSTM'],
     'use_separate_input': [True, False],

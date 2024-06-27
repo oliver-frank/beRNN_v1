@@ -256,9 +256,9 @@ def get_fine_grained_error(sortedResponse, errors_dict_fineGrained, task):
             errors_dict_fineGrained[currentChosenList].append(sortedResponse[:, i])
     return errors_dict_fineGrained
 
-focusedMonths = ['month_2','month_3','month_4','month_5']
+focusedMonths = ['month_2','month_3','month_4','month_5','month_6']
 # focusedMonths = ['month_5']
-directory = 'W:\\group_csp\\analyses\\oliver.frank\\Data\\BeRNN_01\\PreprocessedData_wResp_ALL\\'
+directory = 'W:\\group_csp\\analyses\\oliver.frank\\Data\\BeRNN_03\\PreprocessedData_wResp_ALL\\'
 
 
 ########################################################################################################################
@@ -310,14 +310,14 @@ selected_months_files = [file for file in npy_files if any(month in file for mon
 
 for npy_file in selected_months_files:
     # Use the function
-    Response = np.load(npy_files[0], allow_pickle=True)
+    Response = np.load(npy_file, allow_pickle=True)
     # Sort the 4th and 5th row, so that HIGHER value is on 4th row. Sort 2nd and 3rd accordingly
     sortedResponse = sort_rows_descending(Response)
     errors_dict_DM = get_errors_DM(sortedResponse, errors_dict_DM, distract_dict, opposite_dict, strength_dict)
 # Visualize results
 # plot_errorDistribution(errors_dict_DM,participantDirectory,'DM', 'rough')
 # plot_errorDistribution_relative(errors_dict_DM,participantDirectory,'DM', 'rough')
-
+Response = np.load(npy_files[0], allow_pickle=True)
 # DM - Fine Graining ---------------------------------------------------------------------------------------------------
 list1 = ['distractLeft', 'distractRight', 'distractUp', 'distractDown']
 list2 = ['Lowest', 'Low', 'Strong', 'Strongest']

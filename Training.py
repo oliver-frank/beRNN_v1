@@ -34,7 +34,7 @@ def get_default_hp(ruleset):
     n_input, n_output = 1 + num_ring * n_eachring + n_rule, n_eachring + 1
     hp = {
         # batch size for training and evaluation
-        'batch_size': 32,
+        'batch_size': 40,
         # batch_size for testing
         # 'batch_size_test': 640,
         # input type: normal, multi
@@ -125,13 +125,13 @@ def do_eval(sess, model, log, trial_dir, rule_train, monthsConsidered):
           '  | Now training ' + rule_name_print)
 
     for rule_test in hp['rules']:
-        n_rep = 20 # 20 * 32 or 20 * 16 trials per evaluation are taken, depending on batch_size
+        n_rep = 20 # 20 * 40 or 20 * 20 trials per evaluation are taken, depending on batch_size
         # batch_size_test_rep = int(hp['batch_size_test']/n_rep)
         clsq_tmp = list()
         creg_tmp = list()
         perf_tmp = list()
         for i_rep in range(n_rep):
-            x,y,y_loc,file_stem = Tools.load_trials(trial_dir, monthsConsidered, rule_test, mode, hp['batch_size'])
+            x,y,y_loc,file_stem = Tools.load_trials(trial_dir, monthsConsidered, rule_test, mode, hp['batch_size'])  # y_loc is participantResponse_perfEvalForm
 
             # todo: ################################################################################################
             fixation_steps = Tools.getEpochSteps(y,file_stem)
@@ -345,7 +345,7 @@ def train(model_dir,trial_dir,monthsConsidered,hp=None,max_steps=3e6,display_ste
                 rule_train_now = hp['rng'].choice(hp['rule_trains'], p=hp['rule_probs'])
                 # Generate a random batch of trials; each batch has the same trial length
                 mode = 'Training'
-                x,y,y_loc,file_stem = Tools.load_trials(trial_dir,monthsConsidered,rule_train_now,mode,hp['batch_size'])
+                x,y,y_loc,file_stem = Tools.load_trials(trial_dir,monthsConsidered,rule_train_now,mode,hp['batch_size']) # y_loc is participantResponse_perfEvalForm
 
                 # todo: ################################################################################################
                 fixation_steps = Tools.getEpochSteps(y, file_stem)

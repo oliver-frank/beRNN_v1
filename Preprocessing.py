@@ -1534,9 +1534,9 @@ for participant in participants:
 ########################################################################################################################
 # LAB
 ########################################################################################################################
-import numpy as np
-import os
-Input = np.load(os.path.join('W://group_csp//analyses//oliver.frank//Data//BeRNN_01//PreprocessedData_wResp_ALL//DM', 'BeRNN_01-month_2-batch_0-DM-task_9ivx-Input.npy'), allow_pickle=True)
-Output = np.load(os.path.join('W://group_csp//analyses//oliver.frank//Data//BeRNN_01//PreprocessedData_wResp_ALL//DM', 'BeRNN_01-month_2-batch_0-DM-task_9ivx-Output.npy'), allow_pickle=True)
-Response = np.load(os.path.join('W://group_csp//analyses//oliver.frank//Data//BeRNN_01//PreprocessedData_wResp_ALL//DM', 'BeRNN_01-month_2-batch_0-DM-task_9ivx-Response.npy'), allow_pickle=True)
-yLoc = np.load(os.path.join('W://group_csp//analyses//oliver.frank//Data//BeRNN_01//PreprocessedData_wResp_ALL//DM', 'BeRNN_01-month_2-batch_0-DM-task_9ivx-yLoc.npy'), allow_pickle=True)
+# import numpy as np
+# import os
+# Input = np.load(os.path.join('W://group_csp//analyses//oliver.frank//Data//BeRNN_01//PreprocessedData_wResp_ALL//DM', 'BeRNN_01-month_2-batch_0-DM-task_9ivx-Input.npy'), allow_pickle=True)
+# Output = np.load(os.path.join('W://group_csp//analyses//oliver.frank//Data//BeRNN_01//PreprocessedData_wResp_ALL//DM', 'BeRNN_01-month_2-batch_0-DM-task_9ivx-Output.npy'), allow_pickle=True)
+# Response = np.load(os.path.join('W://group_csp//analyses//oliver.frank//Data//BeRNN_01//PreprocessedData_wResp_ALL//DM', 'BeRNN_01-month_2-batch_0-DM-task_9ivx-Response.npy'), allow_pickle=True)
+# yLoc = np.load(os.path.join('W://group_csp//analyses//oliver.frank//Data//BeRNN_01//PreprocessedData_wResp_ALL//DM', 'BeRNN_01-month_2-batch_0-DM-task_9ivx-yLoc.npy'), allow_pickle=True)
