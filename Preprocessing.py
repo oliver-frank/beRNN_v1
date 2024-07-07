@@ -1,5 +1,6 @@
 import numpy as np
 import pandas as pd
+import Tools
 import glob
 import json
 import os
@@ -34,7 +35,10 @@ def find_sleepingQuality_drugVector(opened_questionare, date):
     for index, row in opened_questionare.iterrows():
         if str(row['UTC Date and Time']).split(' ')[0] == date:
             sleepingQ = opened_questionare.at[index + 1, 'Question']
-            sleepingR = opened_questionare.at[index + 1, 'Response']
+            if opened_questionare.at[index + 1, 'Key'] == 'value':
+                sleepingR = opened_questionare.at[index + 1, 'Response']
+            else:
+                sleepingR = opened_questionare.at[index + 2, 'Response']
             drugQ = opened_questionare.loc[index + 2:index + 18, 'Key'].to_list()
             drugR = opened_questionare.loc[index + 2:index + 18, 'Response'].to_list()
             # print(sleepingQ, sleepingR, drugQ, drugR)
@@ -45,8 +49,7 @@ def find_sleepingQuality_drugVector(opened_questionare, date):
 ########################################################################################################################
 # todo: DM tasks #######################################################################################################
 ########################################################################################################################
-# file_path = 'W:\\group_csp\\analyses\\oliver.frank\\Data\\BeRNN_03\\1\\data_exp_149474-v2_task-6at8-9621849.xlsx'
-# opened_xlsxFile = pd.read_excel(file_path, engine='openpyxl')
+
 def preprocess_DM(opened_xlsxFile, questionnare_files, list_allSessions, sequence_on, sequence_off, batchLength):
     # Initialize columns with default values
     opened_xlsxFile.loc[:, 'Fixation input'] = 1
@@ -171,10 +174,10 @@ def preprocess_DM(opened_xlsxFile, questionnare_files, list_allSessions, sequenc
         # Create meta dict before deleting necessary information from current trials List
         date = str(finalTrialsList_array[0, 0, 85]).split(' ')[0]
         sleepingQualityQuestion, sleepingQualityValue, drugVectorQuestion, drugVectorValue = find_sleepingQuality_drugVector(opened_questionare, date)
-        print('# DEBUGGING ###########################################################################################')
-        print('>>>>>>>>>>>>>>>>>>>>>>>>     ', taskString, final_questionaire, date)
-        print('>>>>>>>>>>>>>>>>>>>>>>>>     ', 'sleepingQualityValue:', sleepingQualityValue, 'drugVector:',drugVectorValue)
-        print('# DEBUGGING ###########################################################################################')
+        # print('# DEBUGGING ###########################################################################################')
+        # print('>>>>>>>>>>>>>>>>>>>>>>>>     ', taskString, final_questionaire, date)
+        # print('>>>>>>>>>>>>>>>>>>>>>>>>     ', 'sleepingQualityValue:', sleepingQualityValue, 'drugVector:',drugVectorValue)
+        # print('# DEBUGGING ###########################################################################################')
         # Catch meta data now that you have all the necessary
         meta_dict = {'date_time': str(finalTrialsList_array[0, 0, 85]), 'difficultyLevel': finalTrialsList_array[0, 0, 0],
                      'timeLimit': finalTrialsList_array[0, 0, 1], 'sleepingQualityQuestion': sleepingQualityQuestion,
@@ -324,7 +327,7 @@ def preprocess_DM(opened_xlsxFile, questionnare_files, list_allSessions, sequenc
 
         for i in range(numFixStepsAverage, totalStepsAverage):
             for j in range(0, Output.shape[1]):
-                if Output[i][j][0] != 'noResponse' and Output[i][j][0] != 'NoResponse':
+                if isinstance(Output[i][j][0], str) and Output[i][j][0] != 'noResponse' and Output[i][j][0] != 'NoResponse':
                     Output[i][j][outputDict[Output[i][j][0]]] = float(0.85)
                 else:
                     for k in range(2, 34):
@@ -515,10 +518,10 @@ def preprocess_EF(opened_xlsxFile, questionnare_files, list_allSessions, sequenc
         # Create meta dict before deleting necessary information from current trials List
         date = str(finalTrialsList_array[0, 0, 85]).split(' ')[0]
         sleepingQualityQuestion, sleepingQualityValue, drugVectorQuestion, drugVectorValue = find_sleepingQuality_drugVector(opened_questionare, date)
-        print('# DEBUGGING ###########################################################################################')
-        print('>>>>>>>>>>>>>>>>>>>>>>>>     ', taskString, final_questionaire, date)
-        print('>>>>>>>>>>>>>>>>>>>>>>>>     ', 'sleepingQualityValue:', sleepingQualityValue, 'drugVector:',drugVectorValue)
-        print('# DEBUGGING ###########################################################################################')
+        # print('# DEBUGGING ###########################################################################################')
+        # print('>>>>>>>>>>>>>>>>>>>>>>>>     ', taskString, final_questionaire, date)
+        # print('>>>>>>>>>>>>>>>>>>>>>>>>     ', 'sleepingQualityValue:', sleepingQualityValue, 'drugVector:',drugVectorValue)
+        # print('# DEBUGGING ###########################################################################################')
         # Catch meta data now that you have all the necessary
         meta_dict = {'date_time': str(finalTrialsList_array[0, 0, 85]), 'difficultyLevel': finalTrialsList_array[0, 0, 0],
                      'timeLimit': finalTrialsList_array[0, 0, 1], 'sleepingQualityQuestion': sleepingQualityQuestion,
@@ -668,7 +671,7 @@ def preprocess_EF(opened_xlsxFile, questionnare_files, list_allSessions, sequenc
 
         for i in range(numFixStepsAverage, totalStepsAverage):
             for j in range(0, Output.shape[1]):
-                if Output[i][j][0] != 'noResponse' and Output[i][j][0] != 'NoResponse':
+                if isinstance(Output[i][j][0], str) and Output[i][j][0] != 'noResponse' and Output[i][j][0] != 'NoResponse':
                     Output[i][j][outputDict[Output[i][j][0]]] = float(0.85)
                 else:
                     for k in range(2, 34):
@@ -732,8 +735,9 @@ def preprocess_EF(opened_xlsxFile, questionnare_files, list_allSessions, sequenc
 ########################################################################################################################
 # todo: RP tasks #######################################################################################################
 ########################################################################################################################
-# For debugging
-# xlsxFile = 'W:\\AG_CSP\\Projekte\\BeRNN\\02_Daten\\BeRNN_main\\BeRNN_01\\1\\data_exp_149474-v2_task-bert-9621849.xlsx'
+# # For debugging
+# file_path = 'W:\\group_csp\\analyses\\oliver.frank\\Data\\BeRNN_01\\7\\data_exp_149474-v16_task-7py6-11139854.xlsx'
+# opened_xlsxFile = pd.read_excel(file_path, engine='openpyxl')
 def preprocess_RP(opened_xlsxFile, questionnare_files, list_allSessions, sequence_on, sequence_off, batchLength):
     # Initialize columns with default values
     opened_xlsxFile.loc[:, 'Fixation input'] = 1
@@ -856,10 +860,10 @@ def preprocess_RP(opened_xlsxFile, questionnare_files, list_allSessions, sequenc
         # Create meta dict before deleting necessary information from current trials List
         date = str(finalTrialsList_array[0,0,86]).split(' ')[0]
         sleepingQualityQuestion, sleepingQualityValue, drugVectorQuestion, drugVectorValue = find_sleepingQuality_drugVector(opened_questionare, date)
-        print('# DEBUGGING ###########################################################################################')
-        print('>>>>>>>>>>>>>>>>>>>>>>>>     ', taskString, final_questionaire, date)
-        print('>>>>>>>>>>>>>>>>>>>>>>>>     ', 'sleepingQualityValue:', sleepingQualityValue, 'drugVector:',drugVectorValue)
-        print('# DEBUGGING ###########################################################################################')
+        # print('# DEBUGGING ###########################################################################################')
+        # print('>>>>>>>>>>>>>>>>>>>>>>>>     ', taskString, final_questionaire, date)
+        # print('>>>>>>>>>>>>>>>>>>>>>>>>     ', 'sleepingQualityValue:', sleepingQualityValue, 'drugVector:',drugVectorValue)
+        # print('# DEBUGGING ###########################################################################################')
         # Catch meta data now that you have all the necessary
         meta_dict = {'date_time': str(finalTrialsList_array[0, 0, 85]), 'difficultyLevel': finalTrialsList_array[0,0,0],
                      'timeLimit': finalTrialsList_array[0,0,1], 'sleepingQualityQuestion': sleepingQualityQuestion,
@@ -1004,23 +1008,43 @@ def preprocess_RP(opened_xlsxFile, questionnare_files, list_allSessions, sequenc
         for i in range(numFixStepsAverage, totalStepsAverage):
             for j in range(0, Output.shape[1]):
                 Output[i][j][1] = float(0.05)
+        # # Until 6 month there are only two different displays, afterwards they are divided into 4
+        # if int(month) <= 6:
+        #     # Assign field units to their according participant response value after fixation period
+        #     outputDict_RP_1 = {'Image 2': 2, 'Image 4': 4, 'Image 6': 6, 'Image 8': 8, 'Image 10': 10, 'Image 12': 12, 'Image 14': 14,\
+        #         'Image 16': 16, 'Image 18': 18, 'Image 20': 20, 'Image 22': 22, 'Image 24': 24, 'Image 26': 26, 'Image 28': 28, 'Image 30': 30, 'Image 32': 32}
+        #
+        #     outputDict_RP_2 = {'Image 1': 1, 'Image 3': 3, 'Image 5': 5, 'Image 7': 7, 'Image 9': 9, 'Image 11': 11, 'Image 13': 13, 'Image 15': 15, 'Image 17': 17, 'Image 19': 19, 'Image 21': 21,
+        #                        'Image 23': 23, 'Image 25': 25, 'Image 27': 27, 'Image 29': 29, 'Image 31': 31}
+        #
+        # else:
+        #     outputDict_RP_1 = {'Image 2': 2, 'Image 6': 6, 'Image 10': 10, 'Image 14': 14, 'Image 18': 18, 'Image 22': 22, 'Image 26': 26, 'Image 30': 30}
+        #
+        #     outputDict_RP_2 = {'Image 1': 1, 'Image 5': 5, 'Image 9': 9, 'Image 13': 13, 'Image 17': 17, 'Image 21': 21, 'Image 25': 25, 'Image 29': 29}
+        #
+        #     outputDict_RP_3 = {'Image 4': 4, 'Image 8': 8, 'Image 12': 12, 'Image 16': 16, 'Image 20': 20, 'Image 24': 24, 'Image 28': 28, 'Image 32': 32}
+        #
+        #     outputDict_RP_4 = {'Image 3': 3, 'Image 7': 7, 'Image 11': 11, 'Image 15': 15, 'Image 19': 19, 'Image 23': 23, 'Image 27': 27, 'Image 31': 31}
 
-        # Assign field units to their according participant response value after fixation period
-        outputDict_RP_1 = {'Image 2': 2, 'Image 4': 4, 'Image 6': 6, 'Image 8': 8, 'Image 10': 10, 'Image 12': 12, 'Image 14': 14,\
-            'Image 16': 16, 'Image 18': 18, 'Image 20': 20, 'Image 22': 22, 'Image 24': 24, 'Image 26': 26, 'Image 28': 28, 'Image 30': 30, 'Image 32': 32}
+        outputDict = {'Image 2': 2, 'Image 4': 4, 'Image 6': 6, 'Image 8': 8, 'Image 10': 10, 'Image 12': 12, 'Image 14': 14,\
+                'Image 16': 16, 'Image 18': 18, 'Image 20': 20, 'Image 22': 22, 'Image 24': 24, 'Image 26': 26, 'Image 28': 28, 'Image 30': 30, 'Image 32': 32, \
+                'Image 1': 1, 'Image 3': 3, 'Image 5': 5, 'Image 7': 7, 'Image 9': 9, 'Image 11': 11,'Image 13': 13, 'Image 15': 15, 'Image 17': 17, 'Image 19': 19, 'Image 21': 21,
+                'Image 23': 23, 'Image 25': 25, 'Image 27': 27, 'Image 29': 29, 'Image 31': 31}
 
-        outputDict_RP_2 = {'Image 1': 1, 'Image 3': 3, 'Image 5': 5, 'Image 7': 7, 'Image 9': 9, 'Image 11': 11, 'Image 13': 13, 'Image 15': 15,\
-            'Image 17': 17, 'Image 19': 19, 'Image 21': 21, 'Image 23': 23, 'Image 25': 25, 'Image 27': 27, 'Image 29': 29, 'Image 31': 31}
 
         for i in range(numFixStepsAverage, totalStepsAverage):
             for j in range(0, Output.shape[1]):
-                # Get the right dictionary
-                if Output[i][j][34].split(' RP')[0] == 'Display 1':
-                    outputDict = outputDict_RP_1
-                elif Output[i][j][34].split(' RP')[0] == 'Display 2':
-                    outputDict = outputDict_RP_2
+                # # Get the right dictionary
+                # if Output[i][j]['Display'].split(' RP')[0] == 'Display 1':
+                #     outputDict = outputDict_RP_1
+                # elif Output[i][j]['Display'].split(' RP')[0] == 'Display 2':
+                #     outputDict = outputDict_RP_2
+                # if Output[i][j]['Display'].split(' RP')[0] == 'Display 3':
+                #     outputDict = outputDict_RP_3
+                # elif Output[i][j]['Display'].split(' RP')[0] == 'Display 4':
+                #     outputDict = outputDict_RP_4
 
-                if Output[i][j][0] != 'screen' and Output[i][j][0] != 'noResponse' and Output[i][j][0] != 'NoResponse':
+                if Output[i][j][0] != 'screen' and Output[i][j][0] != 'noResponse' and Output[i][j][0] != 'NoResponse' and Output[i][j][0] != 'Fixation Cross':
                     Output[i][j][outputDict[Output[i][j][0]]] = np.float32(0.85)
                 else:
                     for k in range(2, 34):
@@ -1147,7 +1171,7 @@ def preprocess_WM(opened_xlsxFile, questionnare_files, list_allSessions, sequenc
     numberBatches = len(incrementList) // batchLength
 
     # Split the data into batches based on the fixation timing component
-    for batchNumber in range(numberBatches):
+    for batchNumber in range(numberBatches): # todo: here moregen weitermachen mit debugging
         batchOn = batchNumber * batchLength
         batchOff = batchNumber * batchLength + batchLength
         numFixStepsTotal = 0
@@ -1190,9 +1214,14 @@ def preprocess_WM(opened_xlsxFile, questionnare_files, list_allSessions, sequenc
                 currentSequenceList.append(sequence)
             finalSequenceList.append(currentSequenceList)
         # --------------------------------------------------------------------------------------------------------------
-        # Concatenate trial information for error anaylsis to response entries
-        currentConcatResponseEntriesFinal = np.concatenate([currentConcatResponseEntries, np.array(concatedValuesAndOccurrencesList, dtype=object).T],axis=0)
+        # Concatenate trial information for error anaylsis to response entries # todo: Where the error is happening
+        # currentConcatResponseEntriesFinal = np.concatenate([currentConcatResponseEntries, np.array(concatedValuesAndOccurrencesList, dtype=object).T.reshape((40, 1))],axis=0)
+        adjusted_concatedValuesAndOccurrencesList = [Tools.adjust_ndarray_size(arr) for arr in concatedValuesAndOccurrencesList]
+        currentConcatResponseEntriesFinal = np.concatenate([currentConcatResponseEntries, np.array(adjusted_concatedValuesAndOccurrencesList, dtype=object).reshape((40,6)).T],axis=0)
         # --------------------------------------------------------------------------------------------------------------
+
+        # print(currentConcatResponseEntries.shape)  # Should print (2, 40)
+        # print(np.array(concatedValuesAndOccurrencesList).T.shape)  # Should print (6, 40)
 
         # Create final df for INPUT and OUPUT
         newOrderSequenceList = []
@@ -1206,10 +1235,10 @@ def preprocess_WM(opened_xlsxFile, questionnare_files, list_allSessions, sequenc
         # Create meta dict before deleting necessary information from current trials List
         date = str(finalTrialsList_array[0, 0, 87]).split(' ')[0]
         sleepingQualityQuestion, sleepingQualityValue, drugVectorQuestion, drugVectorValue = find_sleepingQuality_drugVector(opened_questionare, date)
-        print('# DEBUGGING ###########################################################################################')
-        print('>>>>>>>>>>>>>>>>>>>>>>>>     ', taskString, final_questionaire, date)
-        print('>>>>>>>>>>>>>>>>>>>>>>>>     ', 'sleepingQualityValue:', sleepingQualityValue, 'drugVector:',drugVectorValue)
-        print('# DEBUGGING ###########################################################################################')
+        # print('# DEBUGGING ###########################################################################################')
+        # print('>>>>>>>>>>>>>>>>>>>>>>>>     ', taskString, final_questionaire, date)
+        # print('>>>>>>>>>>>>>>>>>>>>>>>>     ', 'sleepingQualityValue:', sleepingQualityValue, 'drugVector:',drugVectorValue)
+        # print('# DEBUGGING ###########################################################################################')
         # Catch meta data now that you have all the necessary
         meta_dict = {'date_time': str(finalTrialsList_array[0, 0, 85]), 'difficultyLevel': finalTrialsList_array[0, 0, 0],
                      'timeLimit': finalTrialsList_array[0, 0, 1], 'sleepingQualityQuestion': sleepingQualityQuestion,
@@ -1241,7 +1270,8 @@ def preprocess_WM(opened_xlsxFile, questionnare_files, list_allSessions, sequenc
         # float all task values to 1
         for i in range(0, Input.shape[0]):
             for j in range(0, Input.shape[1]):
-                if len(opened_xlsxFile_selection['Spreadsheet'][0].split('_')) == 4:
+                if len(opened_xlsxFile_selection['Spreadsheet'][0].split('_')) == 4 or len(opened_xlsxFile_selection['Spreadsheet'][0].split('_')) == 5 and \
+                        opened_xlsxFile_selection['Spreadsheet'][0].split('_')[2] == '3stim': # That is actually for WM, but on 3stim spreadsheets it will result in 5 entities after splitting
                     Input[i][j][taskDict[opened_xlsxFile_selection['Spreadsheet'][0].split('_')[0]]] = float(1)
                     taskShorts = opened_xlsxFile_selection['Spreadsheet'][0].split('_')[0]
                 else:
@@ -1363,14 +1393,15 @@ def preprocess_WM(opened_xlsxFile, questionnare_files, list_allSessions, sequenc
             'Image 22': 22, 'Image 23': 23, 'Image 24': 24, 'Image 25': 25, 'Image 26': 26, 'Image 27': 27, 'Image 28': 28,\
             'Image 29': 29, 'Image 30': 30, 'Image 31': 31, 'Image 32': 32}
 
-        outputDict_WM_Ctx = {'object-1591': 8, 'object-1593': 8, 'object-1595': 8, 'object-1597': 8, 'object-1592': 24,\
-            'object-1594': 24, 'object-1596': 24, 'object-1598': 24}
+        outputDict_WM_Ctx = {'object-1591': 8, 'object-1593': 8, 'object-1595': 8, 'object-1597': 8, 'object-2365': 8, 'object-2313': 8, 'object-2391': 8, 'object-2339': 8,
+                             'object-1592': 24, 'object-1594': 24, 'object-1596': 24, 'object-1598': 24, 'object-2366': 24, 'object-2314': 24, 'object-2392': 24, 'object-2340': 24}
 
         for i in range(numFixStepsAverage, totalStepsAverage):
             for j in range(0, Output.shape[1]):
                 if isinstance(Output[i][j][35], str):
                     # Get the right dictionary
-                    if len(opened_xlsxFile_selection['Spreadsheet'][0].split('_')) == 4 or opened_xlsxFile_selection['Spreadsheet'][0].split('_')[1] == 'Anti':
+                    if len(opened_xlsxFile_selection['Spreadsheet'][0].split('_')) == 4 or opened_xlsxFile_selection['Spreadsheet'][0].split('_')[1] == 'Anti' or \
+                            len(opened_xlsxFile_selection['Spreadsheet'][0].split('_')) == 5 and opened_xlsxFile_selection['Spreadsheet'][0].split('_')[2] == '3stim':
                         outputDict = outputDict_WM
                         chosenColumn = 0
                     else:
@@ -1456,15 +1487,16 @@ def check_permissions(file_path):
 
 # Preallocation of variables
 dataFolder = "Data"
-subfolders = ['DM', 'DM_Anti', 'EF', 'EF_Anti', 'RP', 'RP_Anti', 'RP_Ctx1', 'RP_Ctx2',
-              'WM', 'WM_Anti', 'WM_Ctx1', 'WM_Ctx2']
+subfolders = ['DM', 'DM_Anti', 'EF', 'EF_Anti', 'RP', 'RP_Anti', 'RP_Ctx1', 'RP_Ctx2', 'WM', 'WM_Anti', 'WM_Ctx1', 'WM_Ctx2']
 preprocessing_folder = 'PreprocessedData_wResp_ALL'
-participants = ['BeRNN_02']
-months = ['2', '3', '4', '5', '6'] # todo: add months here
+participants = ['BeRNN_01']
+months = ['2', '3', '4', '5', '6', '7'] # todo: add months here
+# months = ['5', '6'] # todo: add months here
 
 for participant in participants:
     # Create current main_path
-    main_path = os.path.join('W:\\group_csp\\analyses\\oliver.frank', dataFolder, participant, preprocessing_folder)
+    # main_path = os.path.join('W:\\group_csp\\analyses\\oliver.frank', dataFolder, participant, preprocessing_folder)
+    main_path = os.path.join("/zi/flstorage/group_csp/analyses/oliver.frank", dataFolder, participant,preprocessing_folder)
     # Create Folder Structure
     if not os.path.exists(main_path):
         os.makedirs(main_path)
@@ -1475,7 +1507,8 @@ for participant in participants:
             os.makedirs(path)
 
     # Processing path allocation
-    processing_path = os.path.join('W:\\group_csp\\analyses\\oliver.frank',dataFolder, participant)
+    # processing_path = os.path.join('W:\\group_csp\\analyses\\oliver.frank',dataFolder, participant)
+    processing_path = os.path.join("/zi/flstorage/group_csp/analyses/oliver.frank", dataFolder, participant)
     # list of task names in each session; very first name is the one of the associated questionare
     list_d4fh = ['d4fh', 'b4ya', 'bert', '7py6', 'bx2n', '2p6f', '9ivx', 'fhgh', 'k1jg', '6x4x', 'aiut', 'ar8p', '627g']
     list_2353 = ['2353', '6vnh', '113d', 'pbq6', 'q4ei', 'u7od', '9qcv', '4lrw', 'u31n', 'jr36', 'hia1', 'odic', 'qkw4']
@@ -1489,15 +1522,26 @@ for participant in participants:
         if os.path.exists(processing_path_month):
             pattern = os.path.join(processing_path_month, '*.xlsx')
             xlsx_files = glob.glob(pattern)
-            task_files = [os.path.basename(file) for file in xlsx_files if 'questionnaire' not in os.path.basename(file).lower()]
+
+            # remove session_completion and monthly_feedback files
+            for file in xlsx_files:
+                try:
+                    file_path = os.path.join(processing_path_month, file)
+                    opened_xlsxFile = pd.read_excel(file_path, engine='openpyxl')
+                    if opened_xlsxFile['Task Name'].iloc[0] == '000_session_completion' or opened_xlsxFile['Task Name'].iloc[0] == '000_monthly_feedback':
+                        xlsx_files.remove(file)
+                except Exception as e:
+                    xlsx_files.remove(file)
+                    print(f"An error occurred with file {file}: {e}. File was removed")
+
+            task_files = [os.path.basename(file) for file in xlsx_files if 'questionnaire' not in os.path.basename(file).lower()] # remove questionaire files
             questionnare_files = [os.path.basename(file) for file in xlsx_files if 'task' not in os.path.basename(file).lower()]
             # Iterate through all .xlsx files in current month folder
             for xlsxFile in task_files:
                 file_path = os.path.join(processing_path_month, xlsxFile)
                 print(' ')
-                print(' NEW FILE ')
+                print(' NEW FILE ---------------------------------------------------------------------------------------')
                 print(' ')
-                print(f"Processing file: {file_path}")
                 permissions = check_permissions(file_path)
 
                 # print(f"Read: {'Yes' if permissions['read'] else 'No'}")
@@ -1507,7 +1551,9 @@ for participant in participants:
                     if os.path.isfile(file_path):
                         try:
                             opened_xlsxFile = pd.read_excel(file_path, engine='openpyxl')
-                            print(file_path, ' successfully opened')
+                            file = file_path.split('\\')[-1]
+                            print(f"Processing file: {file}")
+                            print(' ')
                             sequence_on, sequence_off, batchLength = 0, 40, 40
                             try:
                                 # Preprocess the xlsxFile according to its task type and directly save it to the right directory
@@ -1540,3 +1586,8 @@ for participant in participants:
 # Output = np.load(os.path.join('W://group_csp//analyses//oliver.frank//Data//BeRNN_01//PreprocessedData_wResp_ALL//DM', 'BeRNN_01-month_2-batch_0-DM-task_9ivx-Output.npy'), allow_pickle=True)
 # Response = np.load(os.path.join('W://group_csp//analyses//oliver.frank//Data//BeRNN_01//PreprocessedData_wResp_ALL//DM', 'BeRNN_01-month_2-batch_0-DM-task_9ivx-Response.npy'), allow_pickle=True)
 # yLoc = np.load(os.path.join('W://group_csp//analyses//oliver.frank//Data//BeRNN_01//PreprocessedData_wResp_ALL//DM', 'BeRNN_01-month_2-batch_0-DM-task_9ivx-yLoc.npy'), allow_pickle=True)
+
+# file_path = 'W:\\group_csp\\analyses\\oliver.frank\\Data\\BeRNN_01\\7' +
+# opened_xlsxFile = pd.read_excel(file_path, engine='openpyxl')
+# opened_xlsxFile['Spreadsheet'][0].split('_')[0]
+

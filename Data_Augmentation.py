@@ -18,7 +18,7 @@ import Tools
 # Choose participant data to augment data from
 dataFolder = "Data"
 # participants = ['BeRNN_01']
-participants = ['BeRNN_02', 'BeRNN_03', 'BeRNN_05']
+participants = ['BeRNN_01', 'BeRNN_02', 'BeRNN_03', 'BeRNN_04', 'BeRNN_05']
 preprocessedData_folder = 'PreprocessedData_wResp_ALL'
 
 directory = "/zi/flstorage/group_csp/analyses/oliver.frank"
@@ -49,30 +49,30 @@ counters = {
 }
 
 
-# Delete all augmented files ###########################################################################################
-# Patterns to search for
-for participant in participants:
-    trial_dir = os.path.join(directory, dataFolder, participant, preprocessedData_folder)
-    patterns = ['*Segmentation*']
-    # patterns = ['*Rotation*', '*Mirrored*', '*Segmentation*', '*Randomization*']
-    def delete_files(trial_dir, patterns):
-        for pattern in patterns:
-            # Search for files containing "rotation" in their filename
-            filesToDelete = glob.glob(os.path.join(trial_dir, pattern))
-            # Delete each file found
-            for file_path in filesToDelete:
-                try:
-                    os.remove(file_path)
-                    print(f'Deleted: {file_path}')
-                except Exception as e:
-                    print(f'Error deleting {file_path}: {e}')
-
-    # tasks = ['RP', 'RP_Anti']
-    tasks = ['DM', 'DM_Anti', 'EF', 'EF_Anti', 'RP', 'RP_Anti', 'RP_Ctx1', 'RP_Ctx2']
-    # tasks = ['DM', 'DM_Anti', 'EF', 'EF_Anti', 'RP', 'RP_Anti', 'RP_Ctx1', 'RP_Ctx2', 'WM', 'WM_Anti', 'WM_Ctx1', 'WM_Ctx2']
-    for task in tasks:
-        delete_files(os.path.join(trial_dir,task), patterns)
-########################################################################################################################
+# # Delete all augmented files ###########################################################################################
+# # Patterns to search for
+# for participant in participants:
+#     trial_dir = os.path.join(directory, dataFolder, participant, preprocessedData_folder)
+#     # patterns = ['*BeRNN*']
+#     patterns = ['*Rotation*', '*Mirrored*', '*Segmentation*', '*Randomization*']
+#     def delete_files(trial_dir, patterns):
+#         for pattern in patterns:
+#             # Search for files containing "rotation" in their filename
+#             filesToDelete = glob.glob(os.path.join(trial_dir, pattern))
+#             # Delete each file found
+#             for file_path in filesToDelete:
+#                 try:
+#                     os.remove(file_path)
+#                     print(f'Deleted: {file_path}')
+#                 except Exception as e:
+#                     print(f'Error deleting {file_path}: {e}')
+#
+#     # tasks = ['RP', 'RP_Anti']
+#     # tasks = ['DM', 'DM_Anti', 'EF', 'EF_Anti', 'RP', 'RP_Anti', 'RP_Ctx1', 'RP_Ctx2']
+#     tasks = ['DM', 'DM_Anti', 'EF', 'EF_Anti', 'RP', 'RP_Anti', 'RP_Ctx1', 'RP_Ctx2', 'WM', 'WM_Anti', 'WM_Ctx1', 'WM_Ctx2']
+#     for task in tasks:
+#         delete_files(os.path.join(trial_dir,task), patterns)
+# ########################################################################################################################
 
 
 ########################################################################################################################
@@ -116,6 +116,7 @@ for participant in participants:
                             if os.path.exists(yLoc_file):
                                 os.remove(yLoc_file)
                                 print('Removed: ', yLoc_file)
+
                             print(f"Files for batch {k} are incomplete or missing. Skipping this batch.")
 
                             # Update the individual participant counter based on the task
@@ -252,169 +253,169 @@ for participant in participants:
             print(f"An error occurred: {e}")
 
 
-# # 2: Geometric Mirroring ###############################################################################################
-# # AllTask: Factor 2
-# for participant in participants:
-#     trial_dir = os.path.join(directory, dataFolder, participant, preprocessedData_folder)
-#     # tasks = ['RP', 'RP_Anti']
-#     tasks = ['DM', 'DM_Anti', 'EF', 'EF_Anti', 'RP', 'RP_Anti', 'RP_Ctx1', 'RP_Ctx2', 'WM', 'WM_Anti', 'WM_Ctx1', 'WM_Ctx2']
-#     for task in tasks:
-#         trial_list = glob.glob(os.path.join(trial_dir, task, '*Input.npy'))  # Define list of batches to augment on
-#         os.chdir(os.path.join(trial_dir, task))  # Define folder to save files in
-#         try:
-#             for k in trial_list:
-#                 if k.split('-')[1] != 'month_1':
-#                     # Split every drawn file from defined folder
-#                     file_stem = k.split('-')[:-1]
-#
-#                     # todo: ############################################################################################
-#                     try:  # As it is prone to error if one of the file is actually missing
-#                         input_file = os.path.join(trial_dir, task, '-'.join(file_stem) + '-Input.npy')
-#                         output_file = os.path.join(trial_dir, task, '-'.join(file_stem) + '-Output.npy')
-#                         yLoc_file = os.path.join(trial_dir, task, '-'.join(file_stem) + '-yLoc.npy')
-#                         # Check if all required files exist
-#                         if os.path.exists(input_file) and os.path.exists(output_file) and os.path.exists(yLoc_file):
-#                             # Load Input, Output and Response for every batch in defined folder
-#                             loadedBatch_x = np.load(input_file)  # Trial Activity
-#                             loadedBatch_y = np.load(output_file)  # Participant Response
-#                             loadedBatch_y_loc = np.load(yLoc_file)  # Ground Truth
-#                         else:
-#                             # If any of the files are missing, delete the existing files for this batch
-#                             if os.path.exists(input_file):
-#                                 os.remove(input_file)
-#                                 print('Removed: ', input_file)
-#                             if os.path.exists(output_file):
-#                                 os.remove(output_file)
-#                                 print('Removed: ', output_file)
-#                             if os.path.exists(yLoc_file):
-#                                 os.remove(yLoc_file)
-#                                 print('Removed: ', yLoc_file)
-#                             print(f"Files for batch {k} are incomplete or missing. Skipping this batch.")
-#
-#                             # Update the individual participant counter based on the task
-#                             counter_key = task_counters[task]
-#                             counters['counters_' + participant.split('_')[1]][counter_key] += 1
-#                             print(f"Files for batch {k} are incomplete or missing. Skipping this batch.")
-#                             continue
-#
-#                     except FileNotFoundError:
-#                         # If the file doesn't exist, skip this batch
-#                         print(f"Files for batch {k} not found. Skipping this batch.")
-#                         continue
-#                     # todo: ############################################################################################
-#
-#                     # Load Input, Output and Response for every batch in defined folder; mmap_mode='r' : potentially necessary
-#                     new_x = np.copy(loadedBatch_x)
-#                     new_y = np.copy(loadedBatch_y)
-#                     new_y_loc = np.copy(loadedBatch_y_loc)
-#
-#                     # Iterate over all trials in the batch
-#                     for j in range(0, np.size(new_x, 0)):
-#                         for i in range(0, np.size(new_x, 1)):
-#                             # Mirror the modality rings/vectors
-#                             mirrored_slices_mod1 = np.flip(new_x[j, i, 1:33])
-#                             mirrored_slices_mod2 = np.flip(new_x[j, i, 33:65])
-#                             # Replace the original portion with the mirrored slices
-#                             new_x[j, i, 1:33] = np.array(mirrored_slices_mod1)
-#                             new_x[j, i, 33:65] = np.array(mirrored_slices_mod2)
-#                             # Mirror the output participant response ring
-#                             mirrored_slices_y = np.flip(new_y[j, i, 1:33])
-#                             # Replace the original portion with the mirrored slices
-#                             new_y[j, i, 1:33] = np.array(mirrored_slices_y)
-#
-#                         input_filename = ('-'.join(file_stem) + '-' + 'Mirrored' + '-Input')
-#                         output_filename = ('-'.join(file_stem) + '-' + 'Mirrored' + '-Output')
-#                         response_filename = ('-'.join(file_stem) + '-' + 'Mirrored' + '-yLoc')
-#                         np.save(input_filename, new_x)
-#                         np.save(output_filename, new_y)
-#                         np.save(response_filename, new_y_loc)
-#
-#                         print(f'Mirrored batch augmented for task {task} and file {k}')
-#
-#         except ValueError as err:
-#             print(f"ValueError occurred: {err.args}")
-#         except Exception as e:
-#             print(f"An error occurred: {e}")
-#
-#
-# # 3: Randomization of trials within batch ##############################################################################
-# # DM/EF/RP-Tasks: Factor 3
-# for participant in participants:
-#     trial_dir = os.path.join(directory, dataFolder, participant, preprocessedData_folder)
-#     # tasks = ['RP', 'RP_Anti']
-#     tasks = ['DM', 'DM_Anti', 'EF', 'EF_Anti', 'RP', 'RP_Anti', 'RP_Ctx1', 'RP_Ctx2']
-#     # Randomize every batch within for three times
-#     for task in tasks:
-#         trial_list = glob.glob(os.path.join(trial_dir, task, '*Input.npy')) # Define list of batches to augment on
-#         os.chdir(os.path.join(trial_dir, task)) # Define folder to save files in
-#         for l in range(3):
-#             try:
-#                 for k in trial_list:
-#                     if k.split('-')[1] != 'month_1':
-#                         # Split every drawn file from defined folder
-#                         file_stem = k.split('-')[:-1]
-#
-#                         # todo: ############################################################################################
-#                         try:  # As it is prone to error if one of the file is actually missing
-#                             input_file = os.path.join(trial_dir, task, '-'.join(file_stem) + '-Input.npy')
-#                             output_file = os.path.join(trial_dir, task, '-'.join(file_stem) + '-Output.npy')
-#                             yLoc_file = os.path.join(trial_dir, task, '-'.join(file_stem) + '-yLoc.npy')
-#                             # Check if all required files exist
-#                             if os.path.exists(input_file) and os.path.exists(output_file) and os.path.exists(yLoc_file):
-#                                 # Load Input, Output and Response for every batch in defined folder
-#                                 loadedBatch_x = np.load(input_file)  # Trial Activity
-#                                 loadedBatch_y = np.load(output_file)  # Participant Response
-#                                 loadedBatch_y_loc = np.load(yLoc_file)  # Ground Truth
-#                             else:
-#                                 # If any of the files are missing, delete the existing files for this batch
-#                                 if os.path.exists(input_file):
-#                                     os.remove(input_file)
-#                                     print('Removed: ', input_file)
-#                                 if os.path.exists(output_file):
-#                                     os.remove(output_file)
-#                                     print('Removed: ', output_file)
-#                                 if os.path.exists(yLoc_file):
-#                                     os.remove(yLoc_file)
-#                                     print('Removed: ', yLoc_file)
-#                                 print(f"Files for batch {k} are incomplete or missing. Skipping this batch.")
-#
-#                                 # Update the individual participant counter based on the task
-#                                 counter_key = task_counters[task]
-#                                 counters['counters_' + participant.split('_')[1]][counter_key] += 1
-#                                 print(f"Files for batch {k} are incomplete or missing. Skipping this batch.")
-#                                 continue
-#
-#                         except FileNotFoundError:
-#                             # If the file doesn't exist, skip this batch
-#                             print(f"Files for batch {k} not found. Skipping this batch.")
-#                             continue
-#                         # todo: ############################################################################################
-#
-#                         # Load Input, Output and Response for every batch in defined folder; mmap_mode='r' : potentially necessary
-#                         new_x = np.copy(loadedBatch_x)
-#                         new_y = np.copy(loadedBatch_y)
-#                         new_y_loc = np.copy(loadedBatch_y_loc)
-#                         # Randomize trials within each batch with a permutation of the original order
-#                         shape_new_x = new_x.shape
-#                         permutation = np.random.permutation(shape_new_x[1])
-#                         # Apply the permutation to the array along the second dimension
-#                         shuffled_new_x = new_x[:, permutation, :]
-#                         shuffled_new_y = new_y[:, permutation, :]
-#                         shuffled_new_y_loc = new_y_loc[:, permutation]
-#
-#                         input_filename = ('-'.join(file_stem) + '-' + 'Randomization_' + str(l) + '-Input')
-#                         output_filename = ('-'.join(file_stem) + '-' + 'Randomization_' + str(l) + '-Output')
-#                         response_filename = ('-'.join(file_stem) + '-' + 'Randomization_' + str(l) + '-yLoc')
-#                         np.save(input_filename, new_x)
-#                         np.save(output_filename, new_y)
-#                         np.save(response_filename, new_y_loc)
-#
-#                         print(f'Randomized batch augmented for task {task}, file {k} and iteration {l}')
-#
-#             except ValueError as err:
-#                 print(f"ValueError occurred: {err.args}")
-#             except Exception as e:
-#                 print(f"An error occurred: {e}")
+# 2: Geometric Mirroring ###############################################################################################
+# AllTask: Factor 2
+for participant in participants:
+    trial_dir = os.path.join(directory, dataFolder, participant, preprocessedData_folder)
+    # tasks = ['RP', 'RP_Anti']
+    tasks = ['DM', 'DM_Anti', 'EF', 'EF_Anti', 'RP', 'RP_Anti', 'RP_Ctx1', 'RP_Ctx2', 'WM', 'WM_Anti', 'WM_Ctx1', 'WM_Ctx2']
+    for task in tasks:
+        trial_list = glob.glob(os.path.join(trial_dir, task, '*Input.npy'))  # Define list of batches to augment on
+        os.chdir(os.path.join(trial_dir, task))  # Define folder to save files in
+        try:
+            for k in trial_list:
+                if k.split('-')[1] != 'month_1':
+                    # Split every drawn file from defined folder
+                    file_stem = k.split('-')[:-1]
+
+                    # todo: ############################################################################################
+                    try:  # As it is prone to error if one of the file is actually missing
+                        input_file = os.path.join(trial_dir, task, '-'.join(file_stem) + '-Input.npy')
+                        output_file = os.path.join(trial_dir, task, '-'.join(file_stem) + '-Output.npy')
+                        yLoc_file = os.path.join(trial_dir, task, '-'.join(file_stem) + '-yLoc.npy')
+                        # Check if all required files exist
+                        if os.path.exists(input_file) and os.path.exists(output_file) and os.path.exists(yLoc_file):
+                            # Load Input, Output and Response for every batch in defined folder
+                            loadedBatch_x = np.load(input_file)  # Trial Activity
+                            loadedBatch_y = np.load(output_file)  # Participant Response
+                            loadedBatch_y_loc = np.load(yLoc_file)  # Ground Truth
+                        else:
+                            # If any of the files are missing, delete the existing files for this batch
+                            if os.path.exists(input_file):
+                                os.remove(input_file)
+                                print('Removed: ', input_file)
+                            if os.path.exists(output_file):
+                                os.remove(output_file)
+                                print('Removed: ', output_file)
+                            if os.path.exists(yLoc_file):
+                                os.remove(yLoc_file)
+                                print('Removed: ', yLoc_file)
+                            print(f"Files for batch {k} are incomplete or missing. Skipping this batch.")
+
+                            # Update the individual participant counter based on the task
+                            counter_key = task_counters[task]
+                            counters['counters_' + participant.split('_')[1]][counter_key] += 1
+                            print(f"Files for batch {k} are incomplete or missing. Skipping this batch.")
+                            continue
+
+                    except FileNotFoundError:
+                        # If the file doesn't exist, skip this batch
+                        print(f"Files for batch {k} not found. Skipping this batch.")
+                        continue
+                    # todo: ############################################################################################
+
+                    # Load Input, Output and Response for every batch in defined folder; mmap_mode='r' : potentially necessary
+                    new_x = np.copy(loadedBatch_x)
+                    new_y = np.copy(loadedBatch_y)
+                    new_y_loc = np.copy(loadedBatch_y_loc)
+
+                    # Iterate over all trials in the batch
+                    for j in range(0, np.size(new_x, 0)):
+                        for i in range(0, np.size(new_x, 1)):
+                            # Mirror the modality rings/vectors
+                            mirrored_slices_mod1 = np.flip(new_x[j, i, 1:33])
+                            mirrored_slices_mod2 = np.flip(new_x[j, i, 33:65])
+                            # Replace the original portion with the mirrored slices
+                            new_x[j, i, 1:33] = np.array(mirrored_slices_mod1)
+                            new_x[j, i, 33:65] = np.array(mirrored_slices_mod2)
+                            # Mirror the output participant response ring
+                            mirrored_slices_y = np.flip(new_y[j, i, 1:33])
+                            # Replace the original portion with the mirrored slices
+                            new_y[j, i, 1:33] = np.array(mirrored_slices_y)
+
+                        input_filename = ('-'.join(file_stem) + '-' + 'Mirrored' + '-Input')
+                        output_filename = ('-'.join(file_stem) + '-' + 'Mirrored' + '-Output')
+                        response_filename = ('-'.join(file_stem) + '-' + 'Mirrored' + '-yLoc')
+                        np.save(input_filename, new_x)
+                        np.save(output_filename, new_y)
+                        np.save(response_filename, new_y_loc)
+
+                        print(f'Mirrored batch augmented for task {task} and file {k}')
+
+        except ValueError as err:
+            print(f"ValueError occurred: {err.args}")
+        except Exception as e:
+            print(f"An error occurred: {e}")
+
+
+# 3: Randomization of trials within batch ##############################################################################
+# DM/EF/RP-Tasks: Factor 3
+for participant in participants:
+    trial_dir = os.path.join(directory, dataFolder, participant, preprocessedData_folder)
+    # tasks = ['RP', 'RP_Anti']
+    tasks = ['DM', 'DM_Anti', 'EF', 'EF_Anti', 'RP', 'RP_Anti', 'RP_Ctx1', 'RP_Ctx2']
+    # Randomize every batch within for three times
+    for task in tasks:
+        trial_list = glob.glob(os.path.join(trial_dir, task, '*Input.npy')) # Define list of batches to augment on
+        os.chdir(os.path.join(trial_dir, task)) # Define folder to save files in
+        for l in range(3):
+            try:
+                for k in trial_list:
+                    if k.split('-')[1] != 'month_1':
+                        # Split every drawn file from defined folder
+                        file_stem = k.split('-')[:-1]
+
+                        # todo: ############################################################################################
+                        try:  # As it is prone to error if one of the file is actually missing
+                            input_file = os.path.join(trial_dir, task, '-'.join(file_stem) + '-Input.npy')
+                            output_file = os.path.join(trial_dir, task, '-'.join(file_stem) + '-Output.npy')
+                            yLoc_file = os.path.join(trial_dir, task, '-'.join(file_stem) + '-yLoc.npy')
+                            # Check if all required files exist
+                            if os.path.exists(input_file) and os.path.exists(output_file) and os.path.exists(yLoc_file):
+                                # Load Input, Output and Response for every batch in defined folder
+                                loadedBatch_x = np.load(input_file)  # Trial Activity
+                                loadedBatch_y = np.load(output_file)  # Participant Response
+                                loadedBatch_y_loc = np.load(yLoc_file)  # Ground Truth
+                            else:
+                                # If any of the files are missing, delete the existing files for this batch
+                                if os.path.exists(input_file):
+                                    os.remove(input_file)
+                                    print('Removed: ', input_file)
+                                if os.path.exists(output_file):
+                                    os.remove(output_file)
+                                    print('Removed: ', output_file)
+                                if os.path.exists(yLoc_file):
+                                    os.remove(yLoc_file)
+                                    print('Removed: ', yLoc_file)
+                                print(f"Files for batch {k} are incomplete or missing. Skipping this batch.")
+
+                                # Update the individual participant counter based on the task
+                                counter_key = task_counters[task]
+                                counters['counters_' + participant.split('_')[1]][counter_key] += 1
+                                print(f"Files for batch {k} are incomplete or missing. Skipping this batch.")
+                                continue
+
+                        except FileNotFoundError:
+                            # If the file doesn't exist, skip this batch
+                            print(f"Files for batch {k} not found. Skipping this batch.")
+                            continue
+                        # todo: ############################################################################################
+
+                        # Load Input, Output and Response for every batch in defined folder; mmap_mode='r' : potentially necessary
+                        new_x = np.copy(loadedBatch_x)
+                        new_y = np.copy(loadedBatch_y)
+                        new_y_loc = np.copy(loadedBatch_y_loc)
+                        # Randomize trials within each batch with a permutation of the original order
+                        shape_new_x = new_x.shape
+                        permutation = np.random.permutation(shape_new_x[1])
+                        # Apply the permutation to the array along the second dimension
+                        shuffled_new_x = new_x[:, permutation, :]
+                        shuffled_new_y = new_y[:, permutation, :]
+                        shuffled_new_y_loc = new_y_loc[:, permutation]
+
+                        input_filename = ('-'.join(file_stem) + '-' + 'Randomization_' + str(l) + '-Input')
+                        output_filename = ('-'.join(file_stem) + '-' + 'Randomization_' + str(l) + '-Output')
+                        response_filename = ('-'.join(file_stem) + '-' + 'Randomization_' + str(l) + '-yLoc')
+                        np.save(input_filename, new_x)
+                        np.save(output_filename, new_y)
+                        np.save(response_filename, new_y_loc)
+
+                        print(f'Randomized batch augmented for task {task}, file {k} and iteration {l}')
+
+            except ValueError as err:
+                print(f"ValueError occurred: {err.args}")
+            except Exception as e:
+                print(f"An error occurred: {e}")
 
 
 # 4: Segmental Pertubation Between #####################################################################################
@@ -522,35 +523,30 @@ for participant in participants:
             print(f"An error occurred: {e}")
 
 
-# # Save all the accumulated counters in the according Preprocessing folder
-# for participant in participants:
-#     counterDirectory = os.path.join(directory, dataFolder, participant, preprocessedData_folder)
-#     currentCounter = 'counters_' + participant.split('_')[1]
-#     # Define the file path
-#     file_path = os.path.join(counterDirectory, f'{currentCounter}_counters.json')
-#     with open(file_path, 'w') as f:
-#         json.dump(counters[currentCounter], f, indent=4)
-#         print(f'Saved counters for {currentCounter} in {file_path}')
+# Save all the accumulated counters in the according Preprocessing folder
+for participant in participants:
+    counterDirectory = os.path.join(directory, dataFolder, participant, preprocessedData_folder)
+    currentCounter = 'counters_' + participant.split('_')[1]
+    # Define the file path
+    file_path = os.path.join(counterDirectory, f'{currentCounter}_counters.json')
+    with open(file_path, 'w') as f:
+        json.dump(counters[currentCounter], f, indent=4)
+        print(f'Saved counters for {currentCounter} in {file_path}')
 
 
-# ########################################################################################################################
-# # Split the files into training and evaluation set (e.g. with ratio: .8)
-# for participant in participants:
-#     source_folder = os.path.join(directory, dataFolder, participant, preprocessedData_folder)
-#
-#     train_folder = os.path.join(source_folder, '_Training_Data')
-#     eval_folder = os.path.join(source_folder, '_Evaluation_Data')
-#
-#     Tools.split_files(source_folder,train_folder,eval_folder)
+########################################################################################################################
+# Split the files into training and evaluation set (e.g. with ratio: .8)
+for participant in participants:
+    source_folder = os.path.join(directory, dataFolder, participant, preprocessedData_folder)
 
+    train_folder = os.path.join(source_folder, '_Training_Data')
+    eval_folder = os.path.join(source_folder, '_Evaluation_Data')
 
-
+    Tools.split_files(source_folder,train_folder,eval_folder)
 
 
 
-
-
-
+# todo: LAB ############################################################################################################
 
 # # Open the json file
 # participant = 'BeRNN_01'
@@ -559,10 +555,6 @@ for participant in participants:
 # with open(file_dir, 'r') as file:
 #     data = json.load(file)
 
-
-
-
-# todo: LAB ############################################################################################################
 # # Function for sorting out already augmented files #####################################################################
 # import os
 # import datetime

@@ -213,6 +213,14 @@ def split_files(source_folder, train_folder, eval_folder, train_ratio=0.8):
                                     os.path.basename('\\'.join(file_path.split('\\')[:7]) + '\\' + '-'.join(file_path.split('\\')[-1].split('-')[:5]) + '-Meta.json')))
             print(f"Moved {len(eval_files)} files to {eval_folder}")
 
+# Function to adjust the size of the ndarrays
+def adjust_ndarray_size(arr):
+    if arr.size == 4:
+        arr_list = arr.tolist()
+        arr_list.insert(2, None)  # Insert None at position 3 (index 2)
+        arr_list.append(None)     # Insert None at position 6 (end of the list)
+        return np.array(arr_list, dtype=object)
+    return arr
 
 # file_path = 'W:\\group_csp\\analyses\\oliver.frank\\Data\\BeRNN_02\\PreprocessedData_wResp_ALL\\DM\\BeRNN_02-month_2-batch_0-DM-task_9ivx-Mirrored-Input.npy'
 # '\\'.join(file_path.split('\\')[:7]) + '\\' + '-'.join(file_path.split('\\')[-1].split('-')[:5]) + '-Meta'

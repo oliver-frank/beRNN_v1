@@ -51,7 +51,6 @@ with tf.Session() as sess:
         participantResponse_perfEvalForm = np.load(os.path.join(trial_dir, task, '-'.join(npy_files_Input[0].split('\\')[-1].split('-')[:-1]) + '-yLoc.npy'),allow_pickle=True)
         groundTruth = np.load(os.path.join(trial_dir, task, '-'.join(npy_files_Input[0].split('\\')[-1].split('-')[0:5]) + '-Response.npy'),allow_pickle=True)
         # todo: sort groundTruth
-
         # c_mask actually not needed, as we won't train the network here
         c_mask = np.zeros((participantResponse.shape[0]*participantResponse.shape[1], participantResponse.shape[2]),dtype='float32')
         # Get model response for current batch
