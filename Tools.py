@@ -50,34 +50,46 @@ def get_dist(original_dist):
     '''Get the distance in periodic boundary conditions'''
     return np.minimum(abs(original_dist),2*np.pi-abs(original_dist))
 
-def load_trials(trial_dir,monthsConsidered,task,mode,batchSize):
+def load_trials(trial_dir,monthsConsidered,task,mode,batchSize, data):
     '''Load trials from pickle file'''
     # Build-in mechanism to prevent interruption of code as for many .npy files there errors are raised
     max_attempts = 30
     attempt = 0
     while attempt < max_attempts:
-        if mode == 'Training':
-            # random choose one of the preprocessed files according to the current chosen task
-            file_splits = random.choice(os.listdir(os.path.join(trial_dir,'_Training_Data',task))).split('-')
-            while file_splits[1].split('_')[1] not in monthsConsidered:
-                # randomly choose another file until the one for the right considered month is found
-                file_splits = random.choice(os.listdir(os.path.join(trial_dir,'_Training_Data', task))).split('-')
-        elif mode == 'Evaluation':
-            # random choose one of the preprocessed files according to the current chosen task
-            file_splits = random.choice(os.listdir(os.path.join(trial_dir, '_Evaluation_Data', task))).split('-')
-            while file_splits[1].split('_')[1] not in monthsConsidered:
-                # randomly choose another file until the one for the right considered month is found
-                file_splits = random.choice(os.listdir(os.path.join(trial_dir, '_Evaluation_Data', task))).split('-')
-        file_stem = '-'.join(file_splits[:-1]) # '-'.join(...)
+        # if mode == 'Training':
+        #     # random choose one of the preprocessed files according to the current chosen task
+        #     file_splits = random.choice(os.listdir(os.path.join(trial_dir,task))).split('-')
+        #     while file_splits[1].split('_')[1] not in monthsConsidered:
+        #         # randomly choose another file until the one for the right considered month is found
+        #         file_splits = random.choice(os.listdir(os.path.join(trial_dir, task))).split('-')
+        # elif mode == 'Evaluation':
+        #     # random choose one of the preprocessed files according to the current chosen task
+        #     file_splits = random.choice(os.listdir(os.path.join(trial_dir, '_Evaluation_Data', task))).split('-')
+        #     while file_splits[1].split('_')[1] not in monthsConsidered:
+        #         # randomly choose another file until the one for the right considered month is found
+        #         file_splits = random.choice(os.listdir(os.path.join(trial_dir, '_Evaluation_Data', task))).split('-')
+        # file_stem = '-'.join(file_splits[:-1]) # '-'.join(...)
         try:
             # Debug
             # trial_dir = 'W:\\group_csp\\analyses\\oliver.frank\\Data\\BeRNN_03\\PreprocessedData_wResp_ALL\\DM\\BeRNN_03-month_2-batch_0-DM-task_9ivx-Input.npy'
             # x = np.load(trial_dir, mmap_mode='r')
             # batchSize = 40
+            # currentTaskDict = {key: value for key, value in train_data.items() if key.endswith('DM')}
+            # currentTaskDict
+
+
+
             if mode == 'Training':
-                x = np.load(os.path.join(trial_dir,'_Training_Data',task, file_stem) + '-Input.npy', mmap_mode='r') # Input
-                y = np.load(os.path.join(trial_dir,'_Training_Data', task, file_stem) + '-Output.npy', mmap_mode='r') # Participant Response
-                y_loc = np.load(os.path.join(trial_dir,'_Training_Data', task, file_stem) + '-yLoc.npy', mmap_mode='r') # Ground Truth
+                # Choose the triplet from the splitted data
+                currenTask_values = []
+                for key, values in data.items():
+                    if key.endswith('DM'):
+                        currenTask_values.extend(values)
+                currentTriplet = random.choice(currenTask_values)
+                # Load the files
+                x = np.load(currentTriplet[0]) # Input
+                y = np.load(currentTriplet[2]) # Participant Response
+                y_loc = np.load(currentTriplet[1]) # Ground Truth # yLoc
                 if batchSize < 40:
                     # randomly choose ratio for part of batch to take
                     choice = np.random.choice(['first', 'last', 'middle'])
@@ -99,9 +111,16 @@ def load_trials(trial_dir,monthsConsidered,task,mode,batchSize):
                         y = y[:, mid_start:mid_end, :]
                         y_loc = y_loc[:, mid_start:mid_end]
             elif mode == 'Evaluation':
-                x = np.load(os.path.join(trial_dir, '_Evaluation_Data', task, file_stem) + '-Input.npy', mmap_mode='r')
-                y = np.load(os.path.join(trial_dir, '_Evaluation_Data', task, file_stem) + '-Output.npy', mmap_mode='r')
-                y_loc = np.load(os.path.join(trial_dir, '_Evaluation_Data', task, file_stem) + '-yLoc.npy', mmap_mode='r')
+                # Choose the triplet from the splitted data
+                currenTask_values = []
+                for key, values in data.items():
+                    if key.endswith('DM'):
+                        currenTask_values.extend(values)
+                currentTriplet = random.choice(currenTask_values)
+                # Load the files
+                x = np.load(currentTriplet[0])  # Input
+                y = np.load(currentTriplet[2])  # Participant Response
+                y_loc = np.load(currentTriplet[1])  # Ground Truth # yLoc
                 if batchSize < 40:
                     # randomly choose ratio for part of batch to take
                     choice = np.random.choice(['first', 'last', 'middle'])
@@ -123,9 +142,9 @@ def load_trials(trial_dir,monthsConsidered,task,mode,batchSize):
                         y = y[:, mid_start:mid_end, :]
                         y_loc = y_loc[:, mid_start:mid_end]
 
-            return x,y,y_loc, file_stem     # todo: maybe needed for some debugging somewhere?? -> ,file_splits
+            return x,y,y_loc #, file_stem     # todo: maybe needed for some debugging somewhere?? -> ,file_splits
         except Exception as e:
-            print(f"An error occurred with file {file_stem}: {e}. Retrying...")
+            print(f"An error occurred: {e}. Retrying...")
             attempt += 1
     if attempt == max_attempts:
         print("Maximum attempts reached. The function failed to execute successfully.")
@@ -138,7 +157,7 @@ def find_epochs(array):
             epochs = {'fix1':(None,i), 'go1':(i,None)}
             return epochs
 
-def getEpochSteps(y,file_stem):
+def getEpochSteps(y):
     previous_value = None
     fixation_steps = None
     for i in range(y.shape[0]):
@@ -155,63 +174,9 @@ def getEpochSteps(y,file_stem):
 
     if fixation_steps is None:  # Unclean fix for fixation_steps not found - has to be improved in the future
         fixation_steps = int(y.shape[0] / 2)
-        print('fixation_steps artificially created for: ', file_stem)
+        # print('fixation_steps artificially created for: ', file_stem)
 
     return fixation_steps
-
-def split_files(source_folder, train_folder, eval_folder, train_ratio=0.8):
-    """
-    Splits .npy files from the source folder into training and evaluation folders.
-
-    Parameters:
-    - source_folder (str): The directory containing the source .npy files.
-    - train_folder (str): The directory where training files will be stored.
-    - eval_folder (str): The directory where evaluation files will be stored.
-    - train_ratio (float): The ratio of files to be used for training (default is 0.8).
-    """
-    # Ensure the target folders exist
-    subfolders = ['DM', 'DM_Anti', 'EF', 'EF_Anti', 'RP', 'RP_Anti', 'RP_Ctx1', 'RP_Ctx2',
-                  'WM', 'WM_Anti', 'WM_Ctx1', 'WM_Ctx2']
-    # subfolders = ['RP_Ctx2', 'WM', 'WM_Anti', 'WM_Ctx1', 'WM_Ctx2']
-
-    os.makedirs(train_folder, exist_ok=True)
-    os.makedirs(eval_folder, exist_ok=True)
-    # create subfolder structure
-    for folder in subfolders:
-        path = os.path.join(train_folder, folder)
-        if not os.path.exists(path):
-            os.makedirs(path)
-        path = os.path.join(eval_folder, folder)
-        if not os.path.exists(path):
-            os.makedirs(path)
-
-    # Move the files of every subfolder to the subfolders of training and evaluation, respectively
-    for folder in subfolders:
-        # Get list of .npy files in the source folder
-        file_paths = glob(os.path.join(source_folder, folder, '*Input.npy'))
-        # Shuffle the files
-        random.shuffle(file_paths)
-        # Determine the split point
-        split_point = int(len(file_paths) * train_ratio)
-        # Split the files into training and evaluation sets
-        train_files = file_paths[:split_point]
-        eval_files = file_paths[split_point:]
-
-        # Move the files to the respective folders
-        for file_path in train_files:
-            shutil.move(file_path, os.path.join(train_folder,folder,os.path.basename(file_path)))
-            shutil.move('-'.join(file_path.split('-')[:-1])+'-Output.npy', os.path.join(train_folder,folder,os.path.basename('-'.join(file_path.split('-')[:-1])+'-Output.npy')))
-            shutil.move('-'.join(file_path.split('-')[:-1])+'-yLoc.npy', os.path.join(train_folder,folder,os.path.basename('-'.join(file_path.split('-')[:-1])+'-yLoc.npy')))
-            shutil.copy('\\'.join(file_path.split('\\')[:7]) + '\\' + '-'.join(file_path.split('\\')[-1].split('-')[:5]) + '-Meta.json', os.path.join(train_folder,folder,\
-                                    os.path.basename('\\'.join(file_path.split('\\')[:7]) + '\\' + '-'.join(file_path.split('\\')[-1].split('-')[:5]) + '-Meta.json')))
-            print(f"Moved {len(train_files)} files to {train_folder}")
-        for file_path in eval_files:
-            shutil.move(file_path, os.path.join(eval_folder,folder,os.path.basename(file_path)))
-            shutil.move('-'.join(file_path.split('-')[:-1]) + '-Output.npy', os.path.join(eval_folder, folder,os.path.basename('-'.join(file_path.split('-')[:-1]) + '-Output.npy')))
-            shutil.move('-'.join(file_path.split('-')[:-1]) + '-yLoc.npy', os.path.join(eval_folder, folder,os.path.basename('-'.join(file_path.split('-')[:-1]) + '-yLoc.npy')))
-            shutil.copy('\\'.join(file_path.split('\\')[:7]) + '\\' + '-'.join(file_path.split('\\')[-1].split('-')[:5]) + '-Meta.json', os.path.join(eval_folder, folder, \
-                                    os.path.basename('\\'.join(file_path.split('\\')[:7]) + '\\' + '-'.join(file_path.split('\\')[-1].split('-')[:5]) + '-Meta.json')))
-            print(f"Moved {len(eval_files)} files to {eval_folder}")
 
 # Function to adjust the size of the ndarrays
 def adjust_ndarray_size(arr):

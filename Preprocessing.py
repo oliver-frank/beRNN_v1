@@ -1487,7 +1487,8 @@ def check_permissions(file_path):
 
 # Preallocation of variables
 dataFolder = "Data"
-subfolders = ['DM', 'DM_Anti', 'EF', 'EF_Anti', 'RP', 'RP_Anti', 'RP_Ctx1', 'RP_Ctx2', 'WM', 'WM_Anti', 'WM_Ctx1', 'WM_Ctx2']
+subfolders = ['RP_Ctx1']
+# subfolders = ['DM', 'DM_Anti', 'EF', 'EF_Anti', 'RP', 'RP_Anti', 'RP_Ctx1', 'RP_Ctx2', 'WM', 'WM_Anti', 'WM_Ctx1', 'WM_Ctx2']
 preprocessing_folder = 'PreprocessedData_wResp_ALL'
 participants = ['BeRNN_01']
 months = ['2', '3', '4', '5', '6', '7'] # todo: add months here
@@ -1495,8 +1496,8 @@ months = ['2', '3', '4', '5', '6', '7'] # todo: add months here
 
 for participant in participants:
     # Create current main_path
-    # main_path = os.path.join('W:\\group_csp\\analyses\\oliver.frank', dataFolder, participant, preprocessing_folder)
-    main_path = os.path.join("/zi/flstorage/group_csp/analyses/oliver.frank", dataFolder, participant,preprocessing_folder)
+    main_path = os.path.join('W:\\group_csp\\analyses\\oliver.frank', dataFolder, participant, preprocessing_folder)
+    # main_path = os.path.join("/zi/flstorage/group_csp/analyses/oliver.frank", dataFolder, participant,preprocessing_folder)
     # Create Folder Structure
     if not os.path.exists(main_path):
         os.makedirs(main_path)
@@ -1507,8 +1508,8 @@ for participant in participants:
             os.makedirs(path)
 
     # Processing path allocation
-    # processing_path = os.path.join('W:\\group_csp\\analyses\\oliver.frank',dataFolder, participant)
-    processing_path = os.path.join("/zi/flstorage/group_csp/analyses/oliver.frank", dataFolder, participant)
+    processing_path = os.path.join('W:\\group_csp\\analyses\\oliver.frank',dataFolder, participant)
+    # processing_path = os.path.join("/zi/flstorage/group_csp/analyses/oliver.frank", dataFolder, participant)
     # list of task names in each session; very first name is the one of the associated questionare
     list_d4fh = ['d4fh', 'b4ya', 'bert', '7py6', 'bx2n', '2p6f', '9ivx', 'fhgh', 'k1jg', '6x4x', 'aiut', 'ar8p', '627g']
     list_2353 = ['2353', '6vnh', '113d', 'pbq6', 'q4ei', 'u7od', '9qcv', '4lrw', 'u31n', 'jr36', 'hia1', 'odic', 'qkw4']
