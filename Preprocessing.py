@@ -1487,10 +1487,10 @@ def check_permissions(file_path):
 
 # Preallocation of variables
 dataFolder = "Data"
-subfolders = ['RP_Ctx1']
-# subfolders = ['DM', 'DM_Anti', 'EF', 'EF_Anti', 'RP', 'RP_Anti', 'RP_Ctx1', 'RP_Ctx2', 'WM', 'WM_Anti', 'WM_Ctx1', 'WM_Ctx2']
+# subfolders = ['RP_Ctx1']
+subfolders = ['DM', 'DM_Anti', 'EF', 'EF_Anti', 'RP', 'RP_Anti', 'RP_Ctx1', 'RP_Ctx2', 'WM', 'WM_Anti', 'WM_Ctx1', 'WM_Ctx2']
 preprocessing_folder = 'PreprocessedData_wResp_ALL'
-participants = ['BeRNN_01']
+participants = ['BeRNN_01', 'BeRNN_02', 'BeRNN_03', 'BeRNN_04', 'BeRNN_05']
 months = ['2', '3', '4', '5', '6', '7'] # todo: add months here
 # months = ['5', '6'] # todo: add months here
 
@@ -1581,12 +1581,12 @@ for participant in participants:
 ########################################################################################################################
 # LAB
 ########################################################################################################################
-# import numpy as np
-# import os
-# Input = np.load(os.path.join('W://group_csp//analyses//oliver.frank//Data//BeRNN_01//PreprocessedData_wResp_ALL//DM', 'BeRNN_01-month_2-batch_0-DM-task_9ivx-Input.npy'), allow_pickle=True)
-# Output = np.load(os.path.join('W://group_csp//analyses//oliver.frank//Data//BeRNN_01//PreprocessedData_wResp_ALL//DM', 'BeRNN_01-month_2-batch_0-DM-task_9ivx-Output.npy'), allow_pickle=True)
-# Response = np.load(os.path.join('W://group_csp//analyses//oliver.frank//Data//BeRNN_01//PreprocessedData_wResp_ALL//DM', 'BeRNN_01-month_2-batch_0-DM-task_9ivx-Response.npy'), allow_pickle=True)
-# yLoc = np.load(os.path.join('W://group_csp//analyses//oliver.frank//Data//BeRNN_01//PreprocessedData_wResp_ALL//DM', 'BeRNN_01-month_2-batch_0-DM-task_9ivx-yLoc.npy'), allow_pickle=True)
+import numpy as np
+import os
+Input = np.load(os.path.join('W://group_csp//analyses//oliver.frank//Data//BeRNN_01//PreprocessedData_wResp_ALL//DM', 'BeRNN_01-month_2-batch_0-DM-task_9ivx-Input.npy'), allow_pickle=True)
+Output = np.load(os.path.join('W://group_csp//analyses//oliver.frank//Data//BeRNN_01//PreprocessedData_wResp_ALL//DM', 'BeRNN_01-month_2-batch_0-DM-task_9ivx-Output.npy'), allow_pickle=True)
+Response = np.load(os.path.join('W://group_csp//analyses//oliver.frank//Data//BeRNN_01//PreprocessedData_wResp_ALL//DM', 'BeRNN_01-month_2-batch_0-DM-task_9ivx-Response.npy'), allow_pickle=True)
+yLoc = np.load(os.path.join('W://group_csp//analyses//oliver.frank//Data//BeRNN_01//PreprocessedData_wResp_ALL//DM', 'BeRNN_01-month_2-batch_0-DM-task_9ivx-yLoc.npy'), allow_pickle=True)
 
 # file_path = 'W:\\group_csp\\analyses\\oliver.frank\\Data\\BeRNN_01\\7' +
 # opened_xlsxFile = pd.read_excel(file_path, engine='openpyxl')

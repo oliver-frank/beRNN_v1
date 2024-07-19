@@ -77,13 +77,11 @@ def load_trials(trial_dir,monthsConsidered,task,mode,batchSize, data):
             # currentTaskDict = {key: value for key, value in train_data.items() if key.endswith('DM')}
             # currentTaskDict
 
-
-
             if mode == 'Training':
                 # Choose the triplet from the splitted data
                 currenTask_values = []
                 for key, values in data.items():
-                    if key.endswith('DM'):
+                    if key.endswith(task):
                         currenTask_values.extend(values)
                 currentTriplet = random.choice(currenTask_values)
                 # Load the files
@@ -114,7 +112,7 @@ def load_trials(trial_dir,monthsConsidered,task,mode,batchSize, data):
                 # Choose the triplet from the splitted data
                 currenTask_values = []
                 for key, values in data.items():
-                    if key.endswith('DM'):
+                    if key.endswith(task):
                         currenTask_values.extend(values)
                 currentTriplet = random.choice(currenTask_values)
                 # Load the files

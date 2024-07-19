@@ -49,7 +49,7 @@ def get_default_hp(ruleset):
         # Optimizer
         'optimizer': 'adam',
         # Type of activation runctions, relu, softplus, tanh, elu, linear
-        'activation': 'linear',
+        'activation': 'relu',
         # Time constant (ms)
         'tau': 100,
         # discretization time step (ms)
@@ -65,7 +65,7 @@ def get_default_hp(ruleset):
         # a default weak regularization prevents instability (regularizing with absolute value of magnitude of coefficients, leading to sparse features)
         'l1_h': 0,
         # l2 regularization on activity (regularizing with squared value of magnitude of coefficients, decreasing influence of features)
-        'l2_h': 0.00001,
+        'l2_h': 0.00005,
         # l2 regularization on weight
         'l1_weight': 0,
         # l2 regularization on weight
@@ -98,6 +98,8 @@ def get_default_hp(ruleset):
         'save_name': 'test',
         # learning rate
         'learning_rate': 0.001,
+        # c_mask response epoch value
+        'c_mask_responseValue': 1.,
         # intelligent synapses parameters, tuple (c, ksi) -> Yang et al. only apply these in sequential training
         # 'c_intsyn': 0,
         # 'ksi_intsyn': 0,
@@ -125,14 +127,14 @@ def do_eval(sess, model, log, trial_dir, rule_train, monthsConsidered, eval_data
           '  | Time {:0.2f} s'.format(log['times'][-1]) +
           '  | Now training ' + rule_name_print)
 
-    for rule_test in hp['rules']:
+    for task in hp['rules']:
         n_rep = 20 # 20 * 40 or 20 * 20 trials per evaluation are taken, depending on batch_size
         # batch_size_test_rep = int(hp['batch_size_test']/n_rep)
         clsq_tmp = list()
         creg_tmp = list()
         perf_tmp = list()
         for i_rep in range(n_rep):
-            x,y,y_loc = Tools.load_trials(trial_dir, monthsConsidered, rule_test, mode, hp['batch_size'], eval_data)  # y_loc is participantResponse_perfEvalForm
+            x,y,y_loc = Tools.load_trials(trial_dir, monthsConsidered, task, mode, hp['batch_size'], eval_data)  # y_loc is participantResponse_perfEvalForm
 
             # todo: ################################################################################################
             fixation_steps = Tools.getEpochSteps(y)
@@ -144,10 +146,10 @@ def do_eval(sess, model, log, trial_dir, rule_train, monthsConsidered, eval_data
                     # Fixation epoch
                     c_mask[:fixation_steps, i, :] = 1.
                     # Response epoch
-                    c_mask[fixation_steps:, i, :] = 5.
+                    c_mask[fixation_steps:, i, :] = hp['c_mask_responseValue'] # todo: 1 or 5
 
                 # self.c_mask[:, :, 0] *= self.n_eachring # Fixation is important
-                c_mask[:, :, 0] *= 2.  # Fixation is important
+                # c_mask[:, :, 0] *= 2.  # Fixation is important
                 c_mask = c_mask.reshape((y.shape[0]*y.shape[1], y.shape[2]))
 
             else:
@@ -156,7 +158,7 @@ def do_eval(sess, model, log, trial_dir, rule_train, monthsConsidered, eval_data
                     # Fixation epoch
                     c_mask[:fixation_steps, i, :] = 1.
                     # Response epoch
-                    c_mask[fixation_steps:, i, :] = 5.
+                    c_mask[fixation_steps:, i, :] = hp['c_mask_responseValue'] # todo: 1 or 5
 
                 c_mask = c_mask.reshape((y.shape[0] * y.shape[1],))
                 c_mask /= c_mask.mean()
@@ -179,10 +181,10 @@ def do_eval(sess, model, log, trial_dir, rule_train, monthsConsidered, eval_data
             creg_tmp.append(c_reg)
             perf_tmp.append(perf_test)
 
-        log['cost_' + rule_test].append(np.mean(clsq_tmp, dtype=np.float64))
-        log['creg_' + rule_test].append(np.mean(creg_tmp, dtype=np.float64))
-        log['perf_' + rule_test].append(np.mean(perf_tmp, dtype=np.float64))
-        print('{:15s}'.format(rule_test) +
+        log['cost_' + task].append(np.mean(clsq_tmp, dtype=np.float64))
+        log['creg_' + task].append(np.mean(creg_tmp, dtype=np.float64))
+        log['perf_' + task].append(np.mean(perf_tmp, dtype=np.float64))
+        print('{:15s}'.format(task) +
               '| cost {:0.6f}'.format(np.mean(clsq_tmp)) +
               '| c_reg {:0.6f}'.format(np.mean(creg_tmp)) +
               '  | perf {:0.2f}'.format(np.mean(perf_tmp)))
@@ -205,7 +207,7 @@ def do_eval(sess, model, log, trial_dir, rule_train, monthsConsidered, eval_data
 
     return log
 
-def train(model_dir,trial_dir,monthsConsidered,train_data ,eval_data,hp=None,max_steps=3e6,display_step=1000,ruleset='all',rule_trains=None,rule_prob_map=None,seed=0,
+def train(model_dir,trial_dir,monthsConsidered,train_data ,eval_data,hp=None,max_steps=1e7,display_step=500,ruleset='all',rule_trains=None,rule_prob_map=None,seed=0,
           load_dir=None,trainables=None):
     """Train the network.
 
@@ -323,7 +325,7 @@ def train(model_dir,trial_dir,monthsConsidered,train_data ,eval_data,hp=None,max
         while step * hp['batch_size'] <= max_steps:
             try:
                 # Validation
-                if step % display_step == 0:
+                if step % display_step == 0: # III: Every 500 steps (20000 trials) do the evaluation
                     log['trials'].append(step * hp['batch_size'])
                     log['times'].append(time.time() - t_start)
                     log = do_eval(sess, model, log, trial_dir, hp['rule_trains'],monthsConsidered, eval_data)
@@ -343,10 +345,10 @@ def train(model_dir,trial_dir,monthsConsidered,train_data ,eval_data,hp=None,max
                     #     display_rich_output(model, sess, step, log, model_dir)
 
                 # Training
-                rule_train_now = hp['rng'].choice(hp['rule_trains'], p=hp['rule_probs'])
+                task = hp['rng'].choice(hp['rule_trains'], p=hp['rule_probs'])
                 # Generate a random batch of trials; each batch has the same trial length
                 mode = 'Training'
-                x,y,y_loc = Tools.load_trials(trial_dir,monthsConsidered,rule_train_now,mode,hp['batch_size'], train_data) # y_loc is participantResponse_perfEvalForm
+                x,y,y_loc = Tools.load_trials(trial_dir,monthsConsidered,task,mode,hp['batch_size'], train_data) # y_loc is participantResponse_perfEvalForm
 
                 # todo: ################################################################################################
                 fixation_steps = Tools.getEpochSteps(y)
@@ -357,10 +359,10 @@ def train(model_dir,trial_dir,monthsConsidered,train_data ,eval_data,hp=None,max
                         # Fixation epoch
                         c_mask[:fixation_steps, i, :] = 1.
                         # Response epoch
-                        c_mask[fixation_steps:, i, :] = 5.
+                        c_mask[fixation_steps:, i, :] = hp['c_mask_responseValue'] # todo: 1 or 5
 
                     # self.c_mask[:, :, 0] *= self.n_eachring # Fixation is important
-                    c_mask[:, :, 0] *= 2.  # Fixation is important
+                    # c_mask[:, :, 0] *= 2.  # Fixation is important # todo: with or without
                     c_mask = c_mask.reshape((y.shape[0]*y.shape[1], y.shape[2]))
 
                 else:
@@ -369,7 +371,7 @@ def train(model_dir,trial_dir,monthsConsidered,train_data ,eval_data,hp=None,max
                         # Fixation epoch
                         c_mask[:fixation_steps, i, :] = 1.
                         # Response epoch
-                        c_mask[fixation_steps:, i, :] = 5.
+                        c_mask[fixation_steps:, i, :] = hp['c_mask_responseValue'] # todo: 1 or 5
 
                     c_mask = c_mask.reshape((y.shape[0] * y.shape[1],))
                     c_mask /= c_mask.mean()
@@ -394,11 +396,11 @@ def train(model_dir,trial_dir,monthsConsidered,train_data ,eval_data,hp=None,max
                 creg_train_tmp.append(c_reg_train)
                 perf_train_tmp.append(perf_train)
 
-                log['cost_train_' + rule_train_now].append(np.mean(clsq_train_tmp, dtype=np.float64))
-                log['creg_train_' + rule_train_now].append(np.mean(creg_train_tmp, dtype=np.float64))
-                log['perf_train_' + rule_train_now].append(np.mean(perf_train_tmp, dtype=np.float64))
+                log['cost_train_' + task].append(np.mean(clsq_train_tmp, dtype=np.float64))
+                log['creg_train_' + task].append(np.mean(creg_train_tmp, dtype=np.float64))
+                log['perf_train_' + task].append(np.mean(perf_train_tmp, dtype=np.float64))
 
-                print('{:15s}'.format(rule_train_now) +
+                print('{:15s}'.format(task) +
                       '| train cost {:0.6f}'.format(np.mean(clsq_train_tmp)) +
                       '| train c_reg {:0.6f}'.format(np.mean(c_reg_train)) +
                       '  | train perf {:0.2f}'.format(np.mean(perf_train)))
@@ -411,58 +413,76 @@ def train(model_dir,trial_dir,monthsConsidered,train_data ,eval_data,hp=None,max
 
         print("Optimization finished!")
 
-# if __name__ == '__main__':
-#     dataFolder = "Data"
-#     participant = 'BeRNN_01'
-#     model_folder = 'Model'
-#     strToSave = '2-6'
-#     number = str(150)
-#     model_number = 'Model_' + number + '_' + participant + '_Month_' + strToSave # Manually add months considered e.g. 1-7
-#     monthsConsidered = ['2','3','4','5','6','7'] # Add all months you want to take into consideration for training and evaluation
-#     model_dir = os.path.join('W:\\group_csp\\analyses\\oliver.frank\\BeRNN_models', model_number)
-#     if not os.path.exists(model_dir):
-#         os.makedirs(model_dir)
-#     # preprocessedData_folder = 'PreprocessedData_wResp_ALL'
-#     # preprocessedData_path = os.path.join('W:\\group_csp\\analyses\\oliver.frank', dataFolder, participant, 'PreprocessedData_wResp_ALL')
-#     preprocessedData_path = os.path.join('/pandora/home/oliver.frank/01_Projects/RNN/multitask_BeRNN-main/Data_070724', participant,'PreprocessedData_wResp_ALL')
-#     # Define probability of each task being trained
-#     rule_prob_map = {"DM": 1,"DM_Anti": 1,"EF": 1,"EF_Anti": 1,"RP": 1,"RP_Anti": 1,"RP_Ctx1": 1,"RP_Ctx2": 1,"WM": 1,"WM_Anti": 1,"WM_Ctx1": 1,"WM_Ctx2": 1}
-#
-#     # III: Split the data ##############################################################################################
-#     # List of the subdirectories
-#     subdirs = [os.path.join(preprocessedData_path, d) for d in os.listdir(preprocessedData_path) if os.path.isdir(os.path.join(preprocessedData_path, d))]
-#
-#     # Initialize dictionaries to store training and evaluation data
-#     train_data = {}
-#     eval_data = {}
-#
-#     # Function to split the files
-#     def split_files(files, split_ratio=0.8):
-#         random.shuffle(files)
-#         split_index = int(len(files) * split_ratio)
-#         return files[:split_index], files[split_index:]
-#
-#     for subdir in subdirs:
-#         # Collect all file triplets in the current subdirectory
-#         file_triplets = []
-#         for file in os.listdir(subdir):
-#             if file.endswith('Input.npy'):
-#                 base_name = file.split('Input')[0]
-#                 # print(base_name)
-#                 input_file = os.path.join(subdir, base_name + 'Input.npy')
-#                 yloc_file = os.path.join(subdir, base_name + 'yLoc.npy')
-#                 output_file = os.path.join(subdir, base_name + 'Output.npy')
-#                 file_triplets.append((input_file, yloc_file, output_file))
-#
-#         # Split the file triplets
-#         train_files, eval_files = split_files(file_triplets)
-#
-#         # Store the results in the dictionaries
-#         train_data[subdir] = train_files
-#         eval_data[subdir] = eval_files
-#     # III: Split the data ##############################################################################################
-#
-#     train(model_dir=model_dir, trial_dir=preprocessedData_path, monthsConsidered = monthsConsidered, rule_prob_map=rule_prob_map, train_data = train_data, eval_data = eval_data)
-#     # train(model_dir=model_dir, trial_dir=preprocessedData_path)
-#
-#
+if __name__ == '__main__':
+    dataFolder = "Data"
+    participant = 'BeRNN_01'
+    model_folder = 'Model'
+    strToSave = '2-4'
+    number = str(22)
+    model_number = 'Model_' + number + '_' + participant + '_Month_' + strToSave # Manually add months considered e.g. 1-7
+    months = model_number.split('_')[-1].split('-')
+    monthsConsidered = []
+    for i in range(int(months[0]), int(months[1]) + 1):
+        monthsConsidered.append(str(i))
+    model_dir = os.path.join('W:\\group_csp\\analyses\\oliver.frank\\BeRNN_models', model_number)
+    # model_dir = os.path.join('/zi/home/oliver.frank/Desktop/RNN/multitask_BeRNN-main/BeRNN_Models', model_number)
+    # model_dir = os.path.join('/pandora/home/oliver.frank/01_Projects/RNN/multitask_BeRNN-main/BeRNN_Models', model_number)
+    if not os.path.exists(model_dir):
+        os.makedirs(model_dir)
+    # preprocessedData_path = os.path.join('W:\\group_csp\\analyses\\oliver.frank', dataFolder, participant, 'PreprocessedData_wResp_ALL_Augmented')
+    preprocessedData_path = os.path.join('W:\\group_csp\\analyses\\oliver.frank', dataFolder, participant, 'PreprocessedData_wResp_ALL_Augmented')
+    # preprocessedData_path = os.path.join('/zi/flstorage/group_csp/analyses/oliver.frank/Data/', participant, 'PreprocessedData_wResp_ALL')
+    # preprocessedData_path = os.path.join('/pandora/home/oliver.frank/01_Projects/RNN/multitask_BeRNN-main/Data', participant,'PreprocessedData_wResp_ALL')
+    # Define probability of each task being trained
+    rule_prob_map = {"DM": 1,"DM_Anti": 1,"EF": 1,"EF_Anti": 1,"RP": 1,"RP_Anti": 1,"RP_Ctx1": 1,"RP_Ctx2": 1,"WM": 1,"WM_Anti": 1,"WM_Ctx1": 1,"WM_Ctx2": 1}
+
+    # III: Split the data ##############################################################################################
+    # List of the subdirectories
+    subdirs = [os.path.join(preprocessedData_path, d) for d in os.listdir(preprocessedData_path) if os.path.isdir(os.path.join(preprocessedData_path, d))]
+
+    # Initialize dictionaries to store training and evaluation data
+    train_data = {}
+    eval_data = {}
+
+    # Function to split the files
+    def split_files(files, split_ratio=0.8):
+        random.shuffle(files)
+        split_index = int(len(files) * split_ratio)
+        return files[:split_index], files[split_index:]
+
+    for subdir in subdirs:
+        # Collect all file triplets in the current subdirectory
+        file_triplets = []
+        for file in os.listdir(subdir):
+            if file.endswith('Input.npy'):
+                # # III: Exclude files with specific substrings in their names
+                if any(exclude in file for exclude in ['Randomization', 'Segmentation', 'Mirrored', 'Rotation']): #
+                    continue
+                base_name = file.split('Input')[0]
+                # print(base_name)
+                input_file = os.path.join(subdir, base_name + 'Input.npy')
+                yloc_file = os.path.join(subdir, base_name + 'yLoc.npy')
+                output_file = os.path.join(subdir, base_name + 'Output.npy')
+                file_triplets.append((input_file, yloc_file, output_file))
+
+        # Split the file triplets
+        train_files, eval_files = split_files(file_triplets)
+
+        # Store the results in the dictionaries
+        train_data[subdir] = train_files
+        eval_data[subdir] = eval_files
+    # III: Split the data ##############################################################################################
+
+    train(model_dir=model_dir, trial_dir=preprocessedData_path, monthsConsidered = monthsConsidered, rule_prob_map=rule_prob_map, train_data = train_data, eval_data = eval_data)
+    # train(model_dir=model_dir, trial_dir=preprocessedData_path)
+
+
+# todo: LAB ############################################################################################################
+# input_file = os.path.join(subdir, base_name + 'Input.npy')
+# yloc_file = os.path.join(subdir, base_name + 'yLoc.npy')
+# output_file = os.path.join(subdir, base_name + 'Output.npy')
+
+
+
+
+

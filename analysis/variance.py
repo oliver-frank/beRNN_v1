@@ -12,6 +12,7 @@ from collections import OrderedDict
 # import matplotlib as mpl
 # import matplotlib.pyplot as plt
 import tensorflow as tf
+import random
 
 # from task import *
 from Network import Model
@@ -46,14 +47,58 @@ def _compute_variance_bymodel(model: object, sess: object, mode: str, monthsCons
         from scipy.stats import ortho_group
         random_ortho_matrix = ortho_group.rvs(dim=n_hidden)
 
-    for rule in rules:
-        print(rule)
-        trial_dir = 'W:\\group_csp\\analyses\\oliver.frank' + '\\Data\\BeRNN_' + model_dir.split('BeRNN_')[-1].split('_')[0] + '\\PreprocessedData_wResp_ALL'
-        x, y, y_loc, file_stem = Tools.load_trials(trial_dir, monthsConsidered, rule, mode)
+    trial_dir = 'W:\\group_csp\\analyses\\oliver.frank' + '\\Data\\BeRNN_' + model_dir.split('BeRNN_')[-1].split('_')[
+        0] + '\\PreprocessedData_wResp_ALL_Augmented'
+
+    # III: Split the data ##############################################################################################
+    # List of the subdirectories
+    subdirs = [os.path.join(trial_dir, d) for d in os.listdir(trial_dir) if
+               os.path.isdir(os.path.join(trial_dir, d))]
+
+    # Initialize dictionaries to store training and evaluation data
+    train_data = {}
+    eval_data = {}
+
+    # Function to split the files
+    def split_files(files, split_ratio=0.8):
+        random.shuffle(files)
+        split_index = int(len(files) * split_ratio)
+        return files[:split_index], files[split_index:]
+
+    for subdir in subdirs:
+        # Collect all file triplets in the current subdirectory
+        file_triplets = []
+        for file in os.listdir(subdir):
+            if file.endswith('Input.npy'):
+                # # III: Exclude files with specific substrings in their names
+                if any(exclude in file for exclude in ['Randomization', 'Segmentation', 'Mirrored', 'Rotation']):
+                    continue
+                base_name = file.split('Input')[0]
+                # print(base_name)
+                input_file = os.path.join(subdir, base_name + 'Input.npy')
+                yloc_file = os.path.join(subdir, base_name + 'yLoc.npy')
+                output_file = os.path.join(subdir, base_name + 'Output.npy')
+                file_triplets.append((input_file, yloc_file, output_file))
+
+        # Split the file triplets
+        train_files, eval_files = split_files(file_triplets)
+
+        # Store the results in the dictionaries
+        train_data[subdir] = train_files
+        eval_data[subdir] = eval_files
+    # III: Split the data ##############################################################################################
+
+    for task in rules:
+        print(task)
+        if mode == 'Training':
+            data = train_data
+        elif mode == 'Evaluation':
+            data = eval_data
+        x, y, y_loc = Tools.load_trials(trial_dir, monthsConsidered, task, mode, hp['batch_size'], data)
         epochs = Tools.find_epochs(x)
 
         # todo: ################################################################################################
-        fixation_steps = Tools.getEpochSteps(y, file_stem)
+        fixation_steps = Tools.getEpochSteps(y)
 
         # Creat c_mask for current batch
         if hp['loss_type'] == 'lsq':
@@ -62,7 +107,7 @@ def _compute_variance_bymodel(model: object, sess: object, mode: str, monthsCons
                 # Fixation epoch
                 c_mask[:fixation_steps, i, :] = 1.
                 # Response epoch
-                c_mask[fixation_steps:, i, :] = 5.
+                c_mask[fixation_steps:, i, :] = 1.
 
             # self.c_mask[:, :, 0] *= self.n_eachring # Fixation is important
             c_mask[:, :, 0] *= 2.  # Fixation is important
@@ -74,7 +119,7 @@ def _compute_variance_bymodel(model: object, sess: object, mode: str, monthsCons
                 # Fixation epoch
                 c_mask[:fixation_steps, i, :] = 1.
                 # Response epoch
-                c_mask[fixation_steps:, i, :] = 5.
+                c_mask[fixation_steps:, i, :] = 1.
 
             c_mask = c_mask.reshape((y.shape[0] * y.shape[1],))
             c_mask /= c_mask.mean()
@@ -89,10 +134,10 @@ def _compute_variance_bymodel(model: object, sess: object, mode: str, monthsCons
 
         for e_name, e_time in epochs.items():
             if 'fix' not in e_name:  # Ignore fixation period
-                h_all_byepoch[(rule, e_name)] = h[e_time[0]:e_time[1], :,:]
+                h_all_byepoch[(task, e_name)] = h[e_time[0]:e_time[1], :,:]
 
         # Ignore fixation period
-        h_all_byrule[rule] = h[epochs['fix1'][1]:, :, :]
+        h_all_byrule[task] = h[epochs['fix1'][1]:, :, :]
 
     # Reorder h_all_byepoch by epoch-first
     keys = list(h_all_byepoch.keys())

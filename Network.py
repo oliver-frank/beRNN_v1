@@ -39,10 +39,10 @@ def popvec(y):
         Readout locations: Numpy array (Batch,)
     """
     pref = np.arange(0, 2*np.pi, 2*np.pi/y.shape[-1])  # preferences
-    temp_sum = y.sum(axis=-1)
-    temp_cos = np.sum(y*np.cos(pref), axis=-1)/temp_sum
-    temp_sin = np.sum(y*np.sin(pref), axis=-1)/temp_sum
-    loc = np.arctan2(temp_sin, temp_cos)
+    temp_sum = y.sum(axis=-1) # Sum of activity at last time point of response epochfor every trial in the batch, respectively
+    temp_cos = np.sum(y*np.cos(pref), axis=-1)/temp_sum # multiplies each unit's activation by the cosine of its preferred direction.
+    temp_sin = np.sum(y*np.sin(pref), axis=-1)/temp_sum # multiplies each unit's activation by the sine of its preferred direction.
+    loc = np.arctan2(temp_sin, temp_cos) # This line computes the arctangent of the normalized sine and cosine components, resulting in the angle (location) in radians for each batch sample
     return np.mod(loc, 2*np.pi)
 
 def tf_popvec(y):
@@ -76,8 +76,8 @@ def get_perf(y_hat, y_loc):
     y_hat = y_hat[-1]
 
     # Fixation and location of y_hat
-    y_hat_fix = y_hat[..., 0]
-    y_hat_loc = popvec(y_hat[..., 1:])
+    y_hat_fix = y_hat[..., 0] # Get only first fixation unit
+    y_hat_loc = popvec(y_hat[..., 1:]) # y_hat[..., 1:] Get all units except for first fixation unit
 
     # Fixating? Correctly saccading?
     fixating = y_hat_fix > 0.5

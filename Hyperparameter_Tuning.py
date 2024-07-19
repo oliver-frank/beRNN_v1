@@ -17,7 +17,7 @@ param_grid = {
     'use_separate_input': [False], # todo: True doesn't work
     'loss_type': ['lsq'],
     'optimizer': ['adam'],
-    'activation': ['relu', 'softplus', 'tanh'],
+    'activation': ['softplus'],
     'tau': [50, 100],
     'dt': [10, 20],
     'sigma_rec': [0.01, 0.05],
@@ -30,7 +30,8 @@ param_grid = {
     'l2_weight_init': [0, 0.0001],
     'p_weight_train': [None, 0.05],
     'learning_rate': [0.0001, 0.001],
-    'n_rnn': [128, 256]
+    'n_rnn': [128, 256, 512],
+    'c_mask_responseValue': [1.]
 }
 # Create all possible combinations
 grid = list(ParameterGrid(param_grid))

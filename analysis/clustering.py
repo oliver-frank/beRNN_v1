@@ -56,13 +56,15 @@ kelly_colors = \
 
 save = True
 
+
 class Analysis(object):
-    def __init__(self, model_dir, mode, monthsConsidered, data_type, normalization_method='max'):
+    def __init__(self, model_dir, mode, monthsConsidered, data_type, normalization_method='sum'):
         hp = Tools.load_hp(model_dir)
 
         # If not computed, use variance.py
-        variance.compute_variance(model_dir, mode, monthsConsidered)
         fname = os.path.join(model_dir, 'variance_' + mode + '_' + data_type + '.pkl')
+        if os.path.exists(os.path.join(model_dir, fname)) == False:
+            variance.compute_variance(model_dir, mode, monthsConsidered)
         res = Tools.load_pickle(fname)
         h_var_all_ = res['h_var_all']
         self.keys  = res['keys']
@@ -70,8 +72,10 @@ class Analysis(object):
 
         # First only get active units. Total variance across tasks larger than 1e-3
         # ind_active = np.where(h_var_all_.sum(axis=1) > 1e-2)[0]
-        # Checks the activity at the end of the respons epch [0]
-        ind_active = np.where(h_var_all_.sum(axis=1) > 1e-3)[0] # todo: > 1e-3 ----------------------------------------------
+        # Checks the activity at the end of the respons epch [0] 
+        # todo: This decides the granularity of summarized nodes that will be taken to create the clusters, also very important in connection with the number of clusters created below,
+        # todo: as they can never overcome this number of summarized nodes
+        ind_active = np.where(h_var_all_.sum(axis=1) > 1e-5)[0] # todo: > 1e-3 ----------------------------------------------
         h_var_all  = h_var_all_[ind_active, :]
 
         # Normalize by the total variance across tasks
@@ -92,7 +96,7 @@ class Analysis(object):
         from sklearn.cluster import AgglomerativeClustering, KMeans
 
         # Choose number of clusters that maximize silhouette score
-        n_clusters = range(2, 10) # todo: 2,30 -------------------------------------------------------------------------
+        n_clusters = range(2, 20) # todo: 2,30 -------------------------------------------------------------------------
         scores = list()
         labels_list = list()
         for n_cluster in n_clusters:
@@ -157,7 +161,7 @@ class Analysis(object):
         self.data_type = data_type
         self.rules = hp['rules']
 
-    def plot_cluster_score(self, save_name=None):
+    def plot_cluster_score(self, show, save_name=None):
         """Plot the score by the number of clusters."""
         fig = plt.figure(figsize=(2, 2))
         ax = fig.add_axes([0.3, 0.3, 0.55, 0.55])
@@ -177,7 +181,10 @@ class Analysis(object):
                 save_name = self.hp['activation']
             fig_name = fig_name + save_name
             plt.savefig('figure/'+fig_name+'.pdf', transparent=True)
+        # if show == True:
         plt.show()
+        # else:
+        #     plt.close(fig)
 
     def plot_variance(self, model_dir, mode, show, save_name=None):
         labels = self.labels
@@ -256,9 +263,9 @@ class Analysis(object):
         # if show == True:
         plt.show()
         # else:
-            # plt.close(fig)
+        #     plt.close(fig)
 
-    def plot_similarity_matrix(self):
+    def plot_similarity_matrix(self, model_dir, mode, show):
         labels = self.labels
         ######################### Plotting Similarity Matrix ##########################
 
@@ -287,9 +294,12 @@ class Analysis(object):
         ax2.set_ylim([0, len(labels)])
         ax1.axis('off')
         ax2.axis('off')
-        if save:
-            plt.savefig('figure/feature_similarity_by'+self.data_type+'.pdf', transparent=True)
+        plt.savefig(os.path.join('W:\\group_csp\\analyses\\oliver.frank', 'BeRNN_models\\Visuals\\Similiarity', \
+                                 model_dir.split("\\")[-1] + '_' + mode + '.png'), format='png', dpi=300, bbox_inches='tight', pad_inches=0.1)
+        # if show == True:
         plt.show()
+        # else:
+        #     plt.close(fig)
 
     def plot_2Dvisualization(self, model_dir, mode, show, method='tSNE'):
         labels = self.labels
@@ -328,13 +338,15 @@ class Analysis(object):
         plt.show()
         # else:
         #     plt.close(fig)
+        # else:
+        #     plt.close(fig)
 
         # fig = plt.figure(figsize=(3.5, 3.5))
         # ax = fig.add_axes([0.1, 0.1, 0.8, 0.8])
         # ax.scatter(Y[:,0], Y[:,1], color='black')
         # ax.axis('off')
 
-    def plot_example_unit(self):
+    def plot_example_unit(self, show):
         ######################## Plotting Variance for example unit ###################
         if self.data_type == 'rule':
             tick_names = [rule_name[r] for r in self.rules]
@@ -356,9 +368,12 @@ class Analysis(object):
             ax.yaxis.set_ticks_position('left')
             if save:
                 plt.savefig('figure/exampleunit_variance.pdf', transparent=True)
+            # if show == True:
             plt.show()
+            # else:
+            #     plt.close(fig)
 
-    def plot_connectivity_byclusters(self):
+    def plot_connectivity_byclusters(self, model_dir, mode, show):
         """Plot connectivity of the model"""
 
         ind_active = self.ind_active
@@ -444,9 +459,12 @@ class Analysis(object):
         ax2.set_ylim([0, len(labels)])
         ax1.axis('off')
         ax2.axis('off')
-        # if save:
-        #     plt.savefig('figure/connectivity_by'+self.data_type+'.pdf', transparent=True)
+        plt.savefig(os.path.join('W:\\group_csp\\analyses\\oliver.frank', 'BeRNN_models\\Visuals\\connectivityByClusters',model_dir.split("\\")[-1] + '_' + mode + '.png'), \
+                    format='png', dpi=300, bbox_inches='tight', pad_inches=0.1)
+        # if show == True:
         plt.show()
+        # else:
+        #     plt.close(fig)
 
 
 
