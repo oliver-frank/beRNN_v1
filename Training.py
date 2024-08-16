@@ -134,7 +134,7 @@ def do_eval(sess, model, log, trial_dir, rule_train, monthsConsidered, eval_data
         creg_tmp = list()
         perf_tmp = list()
         for i_rep in range(n_rep):
-            x,y,y_loc = Tools.load_trials(trial_dir, monthsConsidered, task, mode, hp['batch_size'], eval_data)  # y_loc is participantResponse_perfEvalForm
+            x,y,y_loc = Tools.load_trials(trial_dir, monthsConsidered, task, mode, hp['batch_size'], eval_data, False)  # y_loc is participantResponse_perfEvalForm
 
             # todo: ################################################################################################
             fixation_steps = Tools.getEpochSteps(y)
@@ -177,6 +177,7 @@ def do_eval(sess, model, log, trial_dir, rule_train, monthsConsidered, eval_data
             # and averaged across batch and units
             # We did the averaging over time through c_mask
             perf_test = np.mean(get_perf(y_hat_test, y_loc)) # todo: y_loc is participant response as groundTruth
+            print('perf_test   ', perf_test)
             clsq_tmp.append(c_lsq)
             creg_tmp.append(c_reg)
             perf_tmp.append(perf_test)
@@ -348,7 +349,7 @@ def train(model_dir,trial_dir,monthsConsidered,train_data ,eval_data,hp=None,max
                 task = hp['rng'].choice(hp['rule_trains'], p=hp['rule_probs'])
                 # Generate a random batch of trials; each batch has the same trial length
                 mode = 'Training'
-                x,y,y_loc = Tools.load_trials(trial_dir,monthsConsidered,task,mode,hp['batch_size'], train_data) # y_loc is participantResponse_perfEvalForm
+                x,y,y_loc = Tools.load_trials(trial_dir,monthsConsidered,task,mode,hp['batch_size'], train_data, False) # y_loc is participantResponse_perfEvalForm
 
                 # todo: ################################################################################################
                 fixation_steps = Tools.getEpochSteps(y)
@@ -392,6 +393,7 @@ def train(model_dir,trial_dir,monthsConsidered,train_data ,eval_data,hp=None,max
                 perf_train_tmp = list()
                 c_lsq_train, c_reg_train, y_hat_train = sess.run([model.cost_lsq, model.cost_reg, model.y_hat], feed_dict=feed_dict)
                 perf_train = np.mean(get_perf(y_hat_train, y_loc)) # todo: y_loc is participant response as groundTruth
+                print('perf_train   ', perf_train)
                 clsq_train_tmp.append(c_lsq_train)
                 creg_train_tmp.append(c_reg_train)
                 perf_train_tmp.append(perf_train)
@@ -415,22 +417,22 @@ def train(model_dir,trial_dir,monthsConsidered,train_data ,eval_data,hp=None,max
 
 if __name__ == '__main__':
     dataFolder = "Data"
-    participant = 'BeRNN_01'
+    participant = 'BeRNN_03'
     model_folder = 'Model'
-    strToSave = '2-4'
-    number = str(22)
-    model_number = 'Model_' + number + '_' + participant + '_Month_' + strToSave # Manually add months considered e.g. 1-7
+    strToSave = '5-7'
+    number = str(23)
+    # model_number = 'Model_' + number + '_' + participant + '_Month_' + strToSave # Manually add months considered e.g. 1-7
+    model_number = 'Model_127_BeRNN_01_Month_2-4' # Manually add months considered e.g. 1-7
     months = model_number.split('_')[-1].split('-')
     monthsConsidered = []
     for i in range(int(months[0]), int(months[1]) + 1):
         monthsConsidered.append(str(i))
-    model_dir = os.path.join('W:\\group_csp\\analyses\\oliver.frank\\BeRNN_models', model_number)
+    model_dir = os.path.join('W:\\group_csp\\analyses\\oliver.frank\\BeRNN_models\\OLD', model_number)
     # model_dir = os.path.join('/zi/home/oliver.frank/Desktop/RNN/multitask_BeRNN-main/BeRNN_Models', model_number)
     # model_dir = os.path.join('/pandora/home/oliver.frank/01_Projects/RNN/multitask_BeRNN-main/BeRNN_Models', model_number)
     if not os.path.exists(model_dir):
         os.makedirs(model_dir)
-    # preprocessedData_path = os.path.join('W:\\group_csp\\analyses\\oliver.frank', dataFolder, participant, 'PreprocessedData_wResp_ALL_Augmented')
-    preprocessedData_path = os.path.join('W:\\group_csp\\analyses\\oliver.frank', dataFolder, participant, 'PreprocessedData_wResp_ALL_Augmented')
+    preprocessedData_path = os.path.join('W:\\group_csp\\analyses\\oliver.frank', dataFolder, participant, 'PreprocessedData_wResp_ALL')
     # preprocessedData_path = os.path.join('/zi/flstorage/group_csp/analyses/oliver.frank/Data/', participant, 'PreprocessedData_wResp_ALL')
     # preprocessedData_path = os.path.join('/pandora/home/oliver.frank/01_Projects/RNN/multitask_BeRNN-main/Data', participant,'PreprocessedData_wResp_ALL')
     # Define probability of each task being trained
@@ -455,8 +457,8 @@ if __name__ == '__main__':
         file_triplets = []
         for file in os.listdir(subdir):
             if file.endswith('Input.npy'):
-                # # III: Exclude files with specific substrings in their names
-                if any(exclude in file for exclude in ['Randomization', 'Segmentation', 'Mirrored', 'Rotation']): #
+                # III: Exclude files with specific substrings in their names
+                if any(exclude in file for exclude in ['Randomization', 'Segmentation', 'Mirrored', 'Rotation']):
                     continue
                 base_name = file.split('Input')[0]
                 # print(base_name)
@@ -465,12 +467,12 @@ if __name__ == '__main__':
                 output_file = os.path.join(subdir, base_name + 'Output.npy')
                 file_triplets.append((input_file, yloc_file, output_file))
 
-        # Split the file triplets
-        train_files, eval_files = split_files(file_triplets)
+            # Split the file triplets
+            train_files, eval_files = split_files(file_triplets)
 
-        # Store the results in the dictionaries
-        train_data[subdir] = train_files
-        eval_data[subdir] = eval_files
+            # Store the results in the dictionaries
+            train_data[subdir] = train_files
+            eval_data[subdir] = eval_files
     # III: Split the data ##############################################################################################
 
     train(model_dir=model_dir, trial_dir=preprocessedData_path, monthsConsidered = monthsConsidered, rule_prob_map=rule_prob_map, train_data = train_data, eval_data = eval_data)
@@ -481,8 +483,6 @@ if __name__ == '__main__':
 # input_file = os.path.join(subdir, base_name + 'Input.npy')
 # yloc_file = os.path.join(subdir, base_name + 'yLoc.npy')
 # output_file = os.path.join(subdir, base_name + 'Output.npy')
-
-
 
 
 

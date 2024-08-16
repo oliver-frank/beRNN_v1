@@ -50,7 +50,7 @@ def get_dist(original_dist):
     '''Get the distance in periodic boundary conditions'''
     return np.minimum(abs(original_dist),2*np.pi-abs(original_dist))
 
-def load_trials(trial_dir,monthsConsidered,task,mode,batchSize, data):
+def load_trials(trial_dir,monthsConsidered,task,mode,batchSize, data, errorComparison):
     '''Load trials from pickle file'''
     # Build-in mechanism to prevent interruption of code as for many .npy files there errors are raised
     max_attempts = 30
@@ -110,11 +110,15 @@ def load_trials(trial_dir,monthsConsidered,task,mode,batchSize, data):
                         y_loc = y_loc[:, mid_start:mid_end]
             elif mode == 'Evaluation':
                 # Choose the triplet from the splitted data
-                currenTask_values = []
-                for key, values in data.items():
-                    if key.endswith(task):
-                        currenTask_values.extend(values)
-                currentTriplet = random.choice(currenTask_values)
+                if errorComparison == False:
+                    currenTask_values = []
+                    for key, values in data.items():
+                        if key.endswith(task):
+                            currenTask_values.extend(values)
+                    currentTriplet = random.choice(currenTask_values)
+                elif errorComparison == True:
+                    currentTriplet = random.choice(data) # todo: LAB error comparison
+
                 # Load the files
                 x = np.load(currentTriplet[0])  # Input
                 y = np.load(currentTriplet[2])  # Participant Response
