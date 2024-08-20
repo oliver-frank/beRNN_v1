@@ -1,3 +1,12 @@
+########################################################################################################################
+# info: Clustering analysis
+########################################################################################################################
+# Analyze activity of all involved untis in network
+########################################################################################################################
+
+########################################################################################################################
+# Import necessary libraries and modules
+########################################################################################################################
 from __future__ import division
 
 import warnings
@@ -6,13 +15,13 @@ warnings.simplefilter(action='ignore', category=FutureWarning)
 import tensorflow as tf
 import matplotlib.pyplot as plt
 import numpy as np
-import os
+# import os
 
 import Tools
 from Network import Model
 
-
-
+########################################################################################################################
+# Define functions
 ########################################################################################################################
 def easy_activity_plot(model_dir, rule, monthsConsidered, mode):
     """A simple plot of neural activity from one task.
@@ -32,7 +41,7 @@ def easy_activity_plot(model_dir, rule, monthsConsidered, mode):
 
         x, y, y_loc, file_stem = Tools.load_trials(trial_dir, monthsConsidered, rule, mode)
 
-        # todo: ################################################################################################
+        # info: ################################################################################################
         fixation_steps = Tools.getEpochSteps(y, file_stem)
 
         # Creat c_mask for current batch
@@ -59,7 +68,7 @@ def easy_activity_plot(model_dir, rule, monthsConsidered, mode):
             c_mask = c_mask.reshape((y.shape[0] * y.shape[1],))
             c_mask /= c_mask.mean()
 
-        # todo: ################################################################################################
+        # info: ################################################################################################
 
         feed_dict = Tools.gen_feed_dict(model, x, y, c_mask, hp)
         h, y_hat = sess.run([model.h, model.y_hat], feed_dict=feed_dict)
@@ -79,17 +88,6 @@ def easy_activity_plot(model_dir, rule, monthsConsidered, mode):
         plt.colorbar()
         plt.show()
 
-model_dir = 'W:\\group_csp\\analyses\\oliver.frank' + '\BeRNN_models\Model_112_BeRNN_01_Month_2-4'
-rule = 'DM'
-monthsConsidered = ['2','3','4']
-mode = 'Evaluation'
-
-easy_activity_plot(model_dir, rule, monthsConsidered, mode)
-########################################################################################################################
-
-
-
-########################################################################################################################
 def pretty_inputoutput_plot(model_dir, rule, monthsConsidered, save=False, plot_ylabel=False):
     """Plot the input and output activity for a sample trial from one task.
 
@@ -112,7 +110,7 @@ def pretty_inputoutput_plot(model_dir, rule, monthsConsidered, save=False, plot_
 
         x, y, y_loc, file_stem = Tools.load_trials(trial_dir, monthsConsidered, rule, mode)
 
-        # todo: ################################################################################################
+        # info: ################################################################################################
         fixation_steps = Tools.getEpochSteps(y, file_stem)
 
         # Creat c_mask for current batch
@@ -139,7 +137,7 @@ def pretty_inputoutput_plot(model_dir, rule, monthsConsidered, save=False, plot_
             c_mask = c_mask.reshape((y.shape[0] * y.shape[1],))
             c_mask /= c_mask.mean()
 
-        # todo: ################################################################################################
+        # info: ################################################################################################
 
         feed_dict = Tools.gen_feed_dict(model, x, y, c_mask, hp)
         h, y_hat = sess.run([model.h, model.y_hat], feed_dict=feed_dict)
@@ -234,16 +232,17 @@ def pretty_inputoutput_plot(model_dir, rule, monthsConsidered, save=False, plot_
         # _ = plt.plot(y_sample[:,0,:])
         # plt.show()
 
-model_dir = 'W:\\group_csp\\analyses\\oliver.frank' + '\BeRNN_models\Model_112_BeRNN_01_Month_2-4'
-rule = 'DM'
-monthsConsidered = ['2','3','4']
-mode = 'Evaluation'
-
-pretty_inputoutput_plot(model_dir, rule, monthsConsidered, save=False, plot_ylabel=False)
 ########################################################################################################################
-
-
-
+# Execute
 ########################################################################################################################
-model_dir = 'W:\\group_csp\\analyses\\oliver.frank' + '\BeRNN_models\Model_112_BeRNN_01_Month_2-4'
-plot_connectivity_byclusters(model_dir)
+if __name__ == '__main__':
+    # Pre-allocate necessary variables
+    model_dir = 'W:\\group_csp\\analyses\\oliver.frank' + '\BeRNN_models\Model_112_BeRNN_01_Month_2-4'
+    rule = 'DM'
+    monthsConsidered = ['2', '3', '4']
+    mode = 'Evaluation'
+    # Execute funtions
+    easy_activity_plot(model_dir, rule, monthsConsidered, mode)
+    pretty_inputoutput_plot(model_dir, rule, monthsConsidered, save=False, plot_ylabel=False)
+
+

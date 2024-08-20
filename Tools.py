@@ -1,3 +1,12 @@
+########################################################################################################################
+# info: Tools
+########################################################################################################################
+# Different functions used on the whole project.
+########################################################################################################################
+
+########################################################################################################################
+# Import necessary libraries and modules
+########################################################################################################################
 import os
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 import errno
@@ -50,7 +59,7 @@ def get_dist(original_dist):
     '''Get the distance in periodic boundary conditions'''
     return np.minimum(abs(original_dist),2*np.pi-abs(original_dist))
 
-def load_trials(trial_dir,monthsConsidered,task,mode,batchSize, data, errorComparison):
+def load_trials(task,mode,batchSize, data, errorComparison):
     '''Load trials from pickle file'''
     # Build-in mechanism to prevent interruption of code as for many .npy files there errors are raised
     max_attempts = 30
@@ -117,7 +126,7 @@ def load_trials(trial_dir,monthsConsidered,task,mode,batchSize, data, errorCompa
                             currenTask_values.extend(values)
                     currentTriplet = random.choice(currenTask_values)
                 elif errorComparison == True:
-                    currentTriplet = random.choice(data) # todo: LAB error comparison
+                    currentTriplet = random.choice(data) # info: for Error_Comparison.py
 
                 # Load the files
                 x = np.load(currentTriplet[0])  # Input
@@ -144,7 +153,7 @@ def load_trials(trial_dir,monthsConsidered,task,mode,batchSize, data, errorCompa
                         y = y[:, mid_start:mid_end, :]
                         y_loc = y_loc[:, mid_start:mid_end]
 
-            return x,y,y_loc #, file_stem     # todo: maybe needed for some debugging somewhere?? -> ,file_splits
+            return x,y,y_loc #, file_stem
         except Exception as e:
             print(f"An error occurred: {e}. Retrying...")
             attempt += 1
@@ -180,7 +189,6 @@ def getEpochSteps(y):
 
     return fixation_steps
 
-# Function to adjust the size of the ndarrays
 def adjust_ndarray_size(arr):
     if arr.size == 4:
         arr_list = arr.tolist()
@@ -188,12 +196,6 @@ def adjust_ndarray_size(arr):
         arr_list.append(None)     # Insert None at position 6 (end of the list)
         return np.array(arr_list, dtype=object)
     return arr
-
-# file_path = 'W:\\group_csp\\analyses\\oliver.frank\\Data\\BeRNN_02\\PreprocessedData_wResp_ALL\\DM\\BeRNN_02-month_2-batch_0-DM-task_9ivx-Mirrored-Input.npy'
-# '\\'.join(file_path.split('\\')[:7]) + '\\' + '-'.join(file_path.split('\\')[-1].split('-')[:5]) + '-Meta'
-
-# todo: ################################################################################################################
-# todo: ################################################################################################################
 
 def gen_feed_dict(model, x, y, c_mask, hp):
     """Generate feed_dict for session run."""

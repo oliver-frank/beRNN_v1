@@ -1,3 +1,12 @@
+########################################################################################################################
+# info: Task Accuracy
+########################################################################################################################
+# Monthly evaluation of task performance for individual participant. Training effect plot shows change of pefromance over
+# the whole data collection period.
+
+########################################################################################################################
+# Import necessary libraries and modules
+########################################################################################################################
 import os
 import pandas as pd
 import warnings
@@ -41,7 +50,7 @@ for i in list_testParticipant_month:
                 # percentCorrect_DM += currentFile['Store: PercentCorrectDM'][len(currentFile['Store: PercentCorrectDM'])-3]
                 # count_DM += 1
 
-                filtered_rows = currentFile[currentFile['Event Index'] == 124].copy() # todo: every now and then the 125th event is missing
+                filtered_rows = currentFile[currentFile['Event Index'] == 124].copy() # info: every now and then the 125th event is missing
                 percentCorrect_DM += sum(filtered_rows['Store: PercentCorrectDM'])
                 count_DM += len(filtered_rows)
                 print('currentFile processed')
@@ -50,7 +59,7 @@ for i in list_testParticipant_month:
                 # percentCorrect_DM_Anti += currentFile['Store: PercentCorrectDMAnti'][len(currentFile['Store: PercentCorrectDMAnti'])-3]
                 # count_DM_Anti += 1
 
-                filtered_rows = currentFile[currentFile['Event Index'] == 124].copy() # todo: every now and then the 125th event is missing
+                filtered_rows = currentFile[currentFile['Event Index'] == 124].copy() # info: every now and then the 125th event is missing
                 percentCorrect_DM_Anti += sum(filtered_rows['Store: PercentCorrectDMAnti'])
                 count_DM_Anti += len(filtered_rows)
                 print('currentFile processed')
@@ -77,7 +86,7 @@ for i in list_testParticipant_month:
                 # percentCorrect_RP += currentFile['Store: PercentCorrectRP'][len(currentFile['Store: PercentCorrectRP'])-3]
                 # count_RP += 1
 
-                filtered_rows = currentFile[currentFile['Event Index'] == 124].copy() # todo: every now and then the 125th event is missing
+                filtered_rows = currentFile[currentFile['Event Index'] == 124].copy() # info: every now and then the 125th event is missing
                 percentCorrect_RP += sum(filtered_rows['Store: PercentCorrectRP'])
                 count_RP += len(filtered_rows)
                 print('currentFile processed')
@@ -95,7 +104,7 @@ for i in list_testParticipant_month:
                 # percentCorrect_RP_Ctx1 += currentFile['Store: PercentCorrectRPCtx1'][len(currentFile['Store: PercentCorrectRPCtx1'])-3]
                 # count_RP_Ctx1 += 1
 
-                filtered_rows = currentFile[currentFile['Event Index'] == 124].copy() # todo: every now and then the 125th event is missing
+                filtered_rows = currentFile[currentFile['Event Index'] == 124].copy() # info: every now and then the 125th event is missing
                 percentCorrect_RP_Ctx1 += sum(filtered_rows['Store: PercentCorrectRPCtx1'])
                 count_RP_Ctx1 += len(filtered_rows)
                 print('currentFile processed')
@@ -127,7 +136,7 @@ for i in list_testParticipant_month:
                 count_WM_Anti += len(filtered_rows)
                 print('currentFile processed')
 
-            if currentFile['Spreadsheet'][0].split('_trials_')[0]  == 'WM_Ctx1': # todo: Change to _3stim_trials_ from 8th month again
+            if currentFile['Spreadsheet'][0].split('_trials_')[0]  == 'WM_Ctx1': # info: Change to _3stim_trials_ from 8th month again
                 # percentCorrect_WM_Ctx1 += currentFile['Store: PercentCorrectWMCtx1'][len(currentFile['Store: PercentCorrectWMCtx1'])-3]
                 # count_WM_Ctx1 += 1
 
@@ -136,7 +145,7 @@ for i in list_testParticipant_month:
                 count_WM_Ctx1 += len(filtered_rows)
                 print('currentFile processed')
 
-            if currentFile['Spreadsheet'][0].split('_trials_')[0]  == 'WM_Ctx2': # todo: Change to _3stim_trials_ from 8th month again
+            if currentFile['Spreadsheet'][0].split('_trials_')[0]  == 'WM_Ctx2': # info: Change to _3stim_trials_ from 8th month again
                 # percentCorrect_WM_Ctx2 += currentFile['Store: PercentCorrectWMCtx2'][len(currentFile['Store: PercentCorrectWMCtx2'])-3]
                 # count_WM_Ctx2 += 1
 
@@ -158,142 +167,142 @@ acc_RP_Anti = percentCorrect_RP_Anti/count_RP_Anti
 acc_RP_Ctx1 = percentCorrect_RP_Ctx1/count_RP_Ctx1
 acc_RP_Ctx2 = percentCorrect_RP_Ctx2/count_RP_Ctx2
 
-# pd.DataFrame(data={'acc_WM_Ctx2':[acc_WM_Ctx2]})
-
-# ########################################################################################################################
-# # Plot training effect
-# ########################################################################################################################
-# import os
-# import pandas as pd
-# import numpy as np
-# import matplotlib.pyplot as plt
+########################################################################################################################
+# Plot training effect
+########################################################################################################################
+import os
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
 # from scipy.stats import linregress
 # import matplotlib.dates as mdates
-#
-# # Participant list
-# participant_dir = 'W:\\group_csp\\analyses\\oliver.frank\\Data'
-# # participantList = os.listdir(participant_dir)
-# # participant = participantList[0] # choose which particpant to analyze
-# months = ['2','3','4','5','6','7'] # choose which month to analyze
-# strToSave = '2-7'
-#
-# # newParticpantList = ['BeRNN_03', 'BeRNN_05', 'BeRNN_03', 'BeRNN_05']
-# newParticpantList = ['BeRNN_05']
-#
-# for participant in newParticpantList:
-#     # Create a list of all files in all defined month folders
-#     folder_paths = []
-#     for month in months:
-#         # Specify the folder containing the .xlsx files
-#         folder_paths.append(os.path.join(participant_dir, participant, month))
-#
-#     # Initialize an empty list to hold all file names
-#     all_files = []
-#     # Iterate through each folder
-#     for folder in folder_paths:
-#         # List all files in the current folder
-#         for root, dirs, files in os.walk(folder):
-#             # Append each file to the all_files list
-#             for file in files:
-#                 all_files.append(os.path.join(root, file))
-#
-#     # Define filenames and corresponding colors
-#     _filename_color_dict = {
-#                     'DM': 'green',
-#                     'DM_Anti': 'olive',
-#                     'EF': 'forest green',
-#                     'EF_Anti': 'mustard',
-#                     'RP': 'tan',
-#                     'RP_Anti': 'brown',
-#                     'RP_Ctx1': 'lavender',
-#                     'RP_Ctx2': 'aqua',
-#                     'WM': 'bright purple',
-#                     'WM_Anti': 'green blue',
-#                     'WM_Ctx1': 'blue',
-#                     'WM_Ctx2': 'indigo'
-#                     }
-#     filename_color_dict = {k: 'xkcd:'+v for k, v in _filename_color_dict.items()}
-#
-#     # Initialize empty lists to store combined x and y values
-#     all_x_values = []
-#     all_y_values = []
-#
-#     # Set the figure size with increased y-length
-#     plt.figure(figsize=(15, 8))
-#
-#     for task in filename_color_dict:
-#         print(task, filename_color_dict[task])
-#
-#         # Create right name for ycolumn
-#         ycolumn = 'Store: PercentCorrect' + ''.join(task.split('_'))
-#
-#         # Initialize empty lists to store combined x and y values
-#         all_x_values = []
-#         all_y_values = []
-#
-#
-#         # Iterate over all files in the folder
-#         for filename in all_files:
-#             if filename.endswith(".xlsx"):
-#                 # file_path = os.path.join(folder_path, filename)
-#                 try:
-#                     # Load the Excel file into a DataFrame
-#                     df = pd.read_excel(filename, engine='openpyxl')
-#                     if isinstance(df.iloc[0, 28], float) == False and df.iloc[0, 28].split('_trials_')[0] == task:
-#                         # Filter rows where "Event Index" is 125
-#                         filtered_rows = df[df['Event Index'] == 125].copy()
-#                         print(filename)
-#
-#                         # Convert "Date and Time" to datetime format where possible
-#                         filtered_rows['Local Date and Time'] = pd.to_datetime(filtered_rows['Local Date and Time'], errors='coerce')
-#                         # Extract values from "Date and Time" and "Accuracy" columns
-#                         x_values = pd.to_datetime(filtered_rows['Local Date and Time'].dt.strftime('%d-%m-%Y'))
-#                         y_values = filtered_rows[ycolumn]
-#
-#                         print('x_values: ', x_values)
-#                         print('y_values: ', y_values)
-#
-#                         # Append values to the combined lists
-#                         all_x_values.extend(x_values)
-#                         all_y_values.extend(y_values)
-#                 except Exception as e:
-#                     print(f"Error processing {filename}: {e}")
-#
-#         # Sort the all_x_values
-#         all_x_values.sort()
-#
-#         # Plot the task-related data
-#         plt.scatter(all_x_values, all_y_values, color=filename_color_dict[task], label=task)
-#
-#         # Calculate and plot average performance for each task
-#         if all_y_values:
-#             avg_performance = np.mean(all_y_values)
-#             plt.axhline(avg_performance, color=filename_color_dict[task], linestyle='--', linewidth=1,label=f'{task} Avg: {avg_performance:.2f}%')
-#
-#     plt.ylim(0, 100)
-#     plt.yticks(range(0, 101, 10), [f'{i}%' for i in range(0, 101, 10)])
-#
-#     # Set custom x-axis labels
-#     min_date = min(all_x_values)
-#     max_date = max(all_x_values)
-#     date_range = (max_date - min_date) / 6
-#
-#     x_ticks = [min_date + i * date_range for i in range(7)] # todo: increase with every added month
-#     x_labels = ['Start month 2', 'Start month 3', 'Start month 4', 'Start month 5', 'Start month 6', 'Start month 7', 'End month 7']
-#
-#     fs = 14
-#     plt.legend(loc='center left',fontsize=fs, ncol=2, bbox_to_anchor=(1, 0.5))
-#     plt.xlabel('Time',fontsize=fs)
-#     plt.ylabel('Performance',fontsize=fs)
-#     plt.title(participant, fontsize=16)
-#     plt.xticks(ticks=x_ticks, labels=x_labels)
-#
-#     # Let matplotlib autoscale the x-axis
-#     plt.autoscale(enable=True, axis='x')
-#
-#     # Save the figure to the folder where the data is from
-#     figure_path = os.path.join(participant_dir,participant,participant + '_' + strToSave + '_' + 'PerformanceOverTime.png')
-#     plt.savefig(figure_path, bbox_inches='tight')
-#
-#     plt.tight_layout()
-#     plt.show()
+
+# Participant list
+participant_dir = 'W:\\group_csp\\analyses\\oliver.frank\\Data'
+# participantList = os.listdir(participant_dir)
+# participant = participantList[0] # choose which particpant to analyze
+months = ['2','3','4','5','6','7'] # choose which month to analyze
+strToSave = '2-7'
+
+# newParticpantList = ['BeRNN_03', 'BeRNN_05', 'BeRNN_03', 'BeRNN_05']
+newParticpantList = ['BeRNN_05']
+
+for participant in newParticpantList:
+    # Create a list of all files in all defined month folders
+    folder_paths = []
+    for month in months:
+        # Specify the folder containing the .xlsx files
+        folder_paths.append(os.path.join(participant_dir, participant, month))
+
+    # Initialize an empty list to hold all file names
+    all_files = []
+    # Iterate through each folder
+    for folder in folder_paths:
+        # List all files in the current folder
+        for root, dirs, files in os.walk(folder):
+            # Append each file to the all_files list
+            for file in files:
+                all_files.append(os.path.join(root, file))
+
+    # Define filenames and corresponding colors
+    _filename_color_dict = {
+                    'DM': 'green',
+                    'DM_Anti': 'olive',
+                    'EF': 'forest green',
+                    'EF_Anti': 'mustard',
+                    'RP': 'tan',
+                    'RP_Anti': 'brown',
+                    'RP_Ctx1': 'lavender',
+                    'RP_Ctx2': 'aqua',
+                    'WM': 'bright purple',
+                    'WM_Anti': 'green blue',
+                    'WM_Ctx1': 'blue',
+                    'WM_Ctx2': 'indigo'
+                    }
+    filename_color_dict = {k: 'xkcd:'+v for k, v in _filename_color_dict.items()}
+
+    # Initialize empty lists to store combined x and y values
+    all_x_values = []
+    all_y_values = []
+
+    # Set the figure size with increased y-length
+    plt.figure(figsize=(15, 8))
+
+    for task in filename_color_dict:
+        print(task, filename_color_dict[task])
+
+        # Create right name for ycolumn
+        ycolumn = 'Store: PercentCorrect' + ''.join(task.split('_'))
+
+        # Initialize empty lists to store combined x and y values
+        all_x_values = []
+        all_y_values = []
+
+
+        # Iterate over all files in the folder
+        for filename in all_files:
+            if filename.endswith(".xlsx"):
+                # file_path = os.path.join(folder_path, filename)
+                try:
+                    # Load the Excel file into a DataFrame
+                    df = pd.read_excel(filename, engine='openpyxl')
+                    if isinstance(df.iloc[0, 28], float) == False and df.iloc[0, 28].split('_trials_')[0] == task:
+                        # Filter rows where "Event Index" is 125
+                        filtered_rows = df[df['Event Index'] == 125].copy()
+                        print(filename)
+
+                        # Convert "Date and Time" to datetime format where possible
+                        filtered_rows['Local Date and Time'] = pd.to_datetime(filtered_rows['Local Date and Time'], errors='coerce')
+                        # Extract values from "Date and Time" and "Accuracy" columns
+                        x_values = pd.to_datetime(filtered_rows['Local Date and Time'].dt.strftime('%d-%m-%Y'))
+                        y_values = filtered_rows[ycolumn]
+
+                        print('x_values: ', x_values)
+                        print('y_values: ', y_values)
+
+                        # Append values to the combined lists
+                        all_x_values.extend(x_values)
+                        all_y_values.extend(y_values)
+                except Exception as e:
+                    print(f"Error processing {filename}: {e}")
+
+        # Sort the all_x_values
+        all_x_values.sort()
+
+        # Plot the task-related data
+        plt.scatter(all_x_values, all_y_values, color=filename_color_dict[task], label=task)
+
+        # Calculate and plot average performance for each task
+        if all_y_values:
+            avg_performance = np.mean(all_y_values)
+            plt.axhline(avg_performance, color=filename_color_dict[task], linestyle='--', linewidth=1,label=f'{task} Avg: {avg_performance:.2f}%')
+
+    plt.ylim(0, 100)
+    plt.yticks(range(0, 101, 10), [f'{i}%' for i in range(0, 101, 10)])
+
+    # Set custom x-axis labels
+    min_date = min(all_x_values)
+    max_date = max(all_x_values)
+    date_range = (max_date - min_date) / 6
+
+    x_ticks = [min_date + i * date_range for i in range(7)] # info: increase with every added month
+    x_labels = ['Start month 2', 'Start month 3', 'Start month 4', 'Start month 5', 'Start month 6', 'Start month 7', 'End month 7']
+
+    fs = 14
+    plt.legend(loc='center left',fontsize=fs, ncol=2, bbox_to_anchor=(1, 0.5))
+    plt.xlabel('Time',fontsize=fs)
+    plt.ylabel('Performance',fontsize=fs)
+    plt.title(participant, fontsize=16)
+    plt.xticks(ticks=x_ticks, labels=x_labels)
+
+    # Let matplotlib autoscale the x-axis
+    plt.autoscale(enable=True, axis='x')
+
+    # Save the figure to the folder where the data is from
+    figure_path = os.path.join(participant_dir,participant,participant + '_' + strToSave + '_' + 'PerformanceOverTime.png')
+    plt.savefig(figure_path, bbox_inches='tight')
+
+    plt.tight_layout()
+    plt.show()
+
+

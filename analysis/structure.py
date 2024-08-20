@@ -1,3 +1,12 @@
+########################################################################################################################
+# info: Structure
+########################################################################################################################
+#
+########################################################################################################################
+
+########################################################################################################################
+# Import necessary libraries and modules
+########################################################################################################################
 from __future__ import division
 
 import warnings
@@ -11,8 +20,8 @@ import os
 import Tools
 from Network import Model
 
-
-
+########################################################################################################################
+# Define functions
 ########################################################################################################################
 def easy_connectivity_plot(model_dir):
     """A simple plot of network connectivity."""
@@ -43,12 +52,6 @@ def easy_connectivity_plot(model_dir):
         plt.ylabel('To')
         plt.show()
 
-model_dir = 'W:\\group_csp\\analyses\\oliver.frank' + '\BeRNN_models\Model_112_BeRNN_01_Month_2-4'
-easy_connectivity_plot(model_dir)
-########################################################################################################################
-
-
-########################################################################################################################
 def schematic_plot(model_dir, monthsConsidered, rule, mode):
     fontsize = 6
 
@@ -60,7 +63,7 @@ def schematic_plot(model_dir, monthsConsidered, rule, mode):
         model.restore()
         x, y, y_loc, file_stem = Tools.load_trials(trial_dir, monthsConsidered, rule, mode)
 
-        # todo: ################################################################################################
+        # info: ################################################################################################
         fixation_steps = Tools.getEpochSteps(y, file_stem)
 
         # Creat c_mask for current batch
@@ -87,7 +90,7 @@ def schematic_plot(model_dir, monthsConsidered, rule, mode):
             c_mask = c_mask.reshape((y.shape[0] * y.shape[1],))
             c_mask /= c_mask.mean()
 
-        # todo: ################################################################################################
+        # info: ################################################################################################
 
         feed_dict = Tools.gen_feed_dict(model, x, y, c_mask, hp)
         h, y_hat = sess.run([model.h, model.y_hat], feed_dict=feed_dict)
@@ -227,10 +230,17 @@ def schematic_plot(model_dir, monthsConsidered, rule, mode):
     # plt.savefig('figure/schematic_outputs.pdf',transparent=True)
     plt.show()
 
-model_dir = 'W:\\group_csp\\analyses\\oliver.frank' + '\BeRNN_models\Model_112_BeRNN_01_Month_2-4'
-monthsConsidered = ['2','3','4']
-rule = 'DM'
-mode = 'Evaluation'
-
-schematic_plot(model_dir, monthsConsidered, rule, mode)
 ########################################################################################################################
+# Execute
+########################################################################################################################
+if __name__ == '__main__':
+    # Pre-allocate variables
+    model_dir = 'W:\\group_csp\\analyses\\oliver.frank' + '\BeRNN_models\Model_112_BeRNN_01_Month_2-4'
+    monthsConsidered = ['2','3','4']
+    rule = 'DM'
+    mode = 'Evaluation'
+    # Execute functions
+    easy_connectivity_plot(model_dir)
+    schematic_plot(model_dir, monthsConsidered, rule, mode)
+
+

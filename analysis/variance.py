@@ -1,7 +1,12 @@
-"""
-Compute Variance
-"""
+########################################################################################################################
+# info: Variance
+########################################################################################################################
+#
+########################################################################################################################
 
+########################################################################################################################
+# Import necessary libraries and modules
+########################################################################################################################
 from __future__ import division
 
 import os
@@ -20,7 +25,9 @@ import Tools
 
 save = True
 
-
+########################################################################################################################
+# Define functions
+########################################################################################################################
 def _compute_variance_bymodel(model: object, sess: object, mode: str, monthsConsidered: list, rules: object = None, random_rotation: object = False) -> object:
     """Compute variance for all tasks.
 
@@ -48,7 +55,7 @@ def _compute_variance_bymodel(model: object, sess: object, mode: str, monthsCons
         random_ortho_matrix = ortho_group.rvs(dim=n_hidden)
 
     trial_dir = 'W:\\group_csp\\analyses\\oliver.frank' + '\\Data\\BeRNN_' + model_dir.split('BeRNN_')[-1].split('_')[
-        0] + '\\PreprocessedData_wResp_ALL_Augmented'
+        0] + '\\PreprocessedData_wResp_ALL'
 
     # III: Split the data ##############################################################################################
     # List of the subdirectories
@@ -73,6 +80,9 @@ def _compute_variance_bymodel(model: object, sess: object, mode: str, monthsCons
                 # # III: Exclude files with specific substrings in their names
                 if any(exclude in file for exclude in ['Randomization', 'Segmentation', 'Mirrored', 'Rotation']):
                     continue
+                # Include only files that contain any of the months in monthsConsidered
+                if not any(month in file for month in monthsConsidered):
+                    continue
                 base_name = file.split('Input')[0]
                 # print(base_name)
                 input_file = os.path.join(subdir, base_name + 'Input.npy')
@@ -94,10 +104,10 @@ def _compute_variance_bymodel(model: object, sess: object, mode: str, monthsCons
             data = train_data
         elif mode == 'Evaluation':
             data = eval_data
-        x, y, y_loc = Tools.load_trials(trial_dir, monthsConsidered, task, mode, hp['batch_size'], data)
+        x, y, y_loc = Tools.load_trials(task, mode, hp['batch_size'], data, False)
         epochs = Tools.find_epochs(x)
 
-        # todo: ################################################################################################
+        # info: ################################################################################################
         fixation_steps = Tools.getEpochSteps(y)
 
         # Creat c_mask for current batch
@@ -124,7 +134,7 @@ def _compute_variance_bymodel(model: object, sess: object, mode: str, monthsCons
             c_mask = c_mask.reshape((y.shape[0] * y.shape[1],))
             c_mask /= c_mask.mean()
 
-        # todo: ################################################################################################
+        # info: ################################################################################################
 
         feed_dict = Tools.gen_feed_dict(model, x, y, c_mask, hp)
         h = sess.run(model.h, feed_dict=feed_dict)
@@ -144,8 +154,7 @@ def _compute_variance_bymodel(model: object, sess: object, mode: str, monthsCons
     # ind_key_sort = np.lexsort(zip(*keys))
     # Using mergesort because it is stable
     ind_key_sort = np.argsort(list(zip(*keys))[1], kind='mergesort')
-    h_all_byepoch = OrderedDict(
-        [(keys[i], h_all_byepoch[keys[i]]) for i in ind_key_sort])
+    h_all_byepoch = OrderedDict([(keys[i], h_all_byepoch[keys[i]]) for i in ind_key_sort])
 
     for data_type in ['rule', 'epoch']:
         if data_type == 'rule':
@@ -198,7 +207,7 @@ def compute_variance(model_dir, mode, monthsConsidered, rules=None, random_rotat
     for d in dirs:
         _compute_variance(d, mode, monthsConsidered, rules, random_rotation)
 
-
 if __name__ == '__main__':
     pass
+
 

@@ -1,4 +1,11 @@
-# HP Tuning ############################################################################################################
+########################################################################################################################
+# info: Hyperparameter Tuning
+########################################################################################################################
+# Random Grid Search of different hyperparameter sets for automated accumulated model training.
+
+########################################################################################################################
+# Import necessary libraries and modules
+########################################################################################################################
 from __future__ import division
 import warnings
 warnings.simplefilter(action='ignore', category=FutureWarning)
@@ -11,7 +18,9 @@ import itertools
 
 import Training
 
-
+########################################################################################################################
+# Create HP combinations and randomly choose a selection
+########################################################################################################################
 def create_param_combinations(param_grid, sample_size):
     # Create all possible combinations of parameters
     keys, values = zip(*param_grid.items())
@@ -26,7 +35,7 @@ param_grid = {
     'batch_size': [40],
     'in_type': ['normal'],
     'rnn_type': ['LeakyRNN', 'LeakyGRU'],
-    'use_separate_input': [False], # todo: True doesn't work
+    'use_separate_input': [False], # info: True doesn't work
     'loss_type': ['lsq'],
     'optimizer': ['adam'],
     'activation': ['relu', 'softplus'],
@@ -46,7 +55,8 @@ param_grid = {
     'c_mask_responseValue': [1., 2., 5.],
     'monthsConsidered': [['2', '3', '4'], ['5', '6', '7'], ['2', '3', '4', '5', '6', '7']]
 }
-# Create all possible combinations
+
+# Randomly sample a chosen selection combinations
 sampled_combinations = create_param_combinations(param_grid, 100)
 
 
@@ -56,19 +66,25 @@ model_number = 1
 for params in sampled_combinations:
     print('START TRAINING FOR NEW MODEL')
     print(params) # Double check with model output files
+
     # Predefine certain variables
     participant = 'BeRNN_02'
     monthsConsidered = params['monthsConsidered']
+
+    # Data paths for different server
     # preprocessedData_path = os.path.join('W:\\group_csp\\analyses\\oliver.frank\\Data', participant,'PreprocessedData_wResp_ALL')
     # preprocessedData_path = os.path.join('/pandora/home/oliver.frank/01_Projects/RNN/multitask_BeRNN-main/Data', participant,'PreprocessedData_wResp_ALL')
     preprocessedData_path = os.path.join('/zi/flstorage/group_csp/analyses/oliver.frank/Data/', participant,'PreprocessedData_wResp_ALL')
-    # Define probability of each task being trained
-    rule_prob_map = {"DM": 1, "DM_Anti": 1, "EF": 1, "EF_Anti": 1, "RP": 1, "RP_Anti": 1, "RP_Ctx1": 1, "RP_Ctx2": 1,
-                     "WM": 1, "WM_Anti": 1, "WM_Ctx1": 1, "WM_Ctx2": 1}
+
     model = 'Model_' + str(model_number) + '_' + participant + '_Month_' + monthsConsidered[0] + '-' + monthsConsidered[-1]
+    # Model directories for different server
     # model_dir = os.path.join('W:\\group_csp\\analyses\\oliver.frank\\BeRNN_models\\BeRNN_01_HPT01', model)
     model_dir = os.path.join('/zi/flstorage/group_csp/analyses/oliver.frank/BeRNN_models/BeRNN_02_HPT01', model)
     # model_dir = os.path.join('/pandora/home/oliver.frank/01_Projects/RNN/multitask_BeRNN-main/BeRNN_03_HPT01', model)
+
+    # Define probability of each task being trained
+    rule_prob_map = {"DM": 1, "DM_Anti": 1, "EF": 1, "EF_Anti": 1, "RP": 1, "RP_Anti": 1, "RP_Ctx1": 1, "RP_Ctx2": 1,
+                     "WM": 1, "WM_Anti": 1, "WM_Ctx1": 1, "WM_Ctx2": 1}
 
     if not os.path.exists(model_dir):
         os.makedirs(model_dir)
@@ -77,7 +93,7 @@ for params in sampled_combinations:
     start_time = time.time()
     print(f'START TRAINING MODEL: {model_number}')
 
-    # III: Split the data ##############################################################################################
+    # Split the data ---------------------------------------------------------------------------------------------------
     # List of the subdirectories
     subdirs = [os.path.join(preprocessedData_path, d) for d in os.listdir(preprocessedData_path) if os.path.isdir(os.path.join(preprocessedData_path, d))]
 
@@ -85,13 +101,11 @@ for params in sampled_combinations:
     train_data = {}
     eval_data = {}
 
-
     # Function to split the files
     def split_files(files, split_ratio=0.8):
         random.shuffle(files)
         split_index = int(len(files) * split_ratio)
         return files[:split_index], files[split_index:]
-
 
     for subdir in subdirs:
         # Collect all file triplets in the current subdirectory
@@ -100,6 +114,9 @@ for params in sampled_combinations:
             if file.endswith('Input.npy'):
                 # III: Exclude files with specific substrings in their names
                 if any(exclude in file for exclude in ['Randomization', 'Segmentation', 'Mirrored', 'Rotation']):
+                    continue
+                # Include only files that contain any of the months in monthsConsidered
+                if not any(month in file for month in monthsConsidered):
                     continue
                 base_name = file.split('Input')[0]
                 # print(base_name)
@@ -114,9 +131,9 @@ for params in sampled_combinations:
         # Store the results in the dictionaries
         train_data[subdir] = train_files
         eval_data[subdir] = eval_files
-    # III: Split the data ##############################################################################################
+
     try:
-        Training.train(model_dir=model_dir, trial_dir=preprocessedData_path, monthsConsidered=monthsConsidered, hp=params, rule_prob_map=rule_prob_map, train_data = train_data, eval_data = eval_data)
+        Training.train(model_dir=model_dir, hp=params, rule_prob_map=rule_prob_map, train_data = train_data, eval_data = eval_data)
 
         end_time = time.time()
         elapsed_time_minutes = end_time - start_time / 60

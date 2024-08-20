@@ -1,5 +1,10 @@
 ########################################################################################################################
-# Info: LAB
+# info: Error Comparison
+########################################################################################################################
+# Creates a contingency table that compares and classifies participant and model response as match (particpantResponse ==
+# modelResponse) or mismatch (particpantResponse != modelResponse).
+# The first word of the class represents the particpant's objective success in responding right or wrong to a trial and
+# the second the model's success to reproduce this behavior.
 ########################################################################################################################
 
 ########################################################################################################################
@@ -172,8 +177,10 @@ for task in tasks:
 
         for i in range(0, 100):  # Info: Each iteration represents one batch
             mode = 'Evaluation'
-            x, y, y_loc = Tools.load_trials(task, mode, 40, file_triplets,True)  # Load trials
-            groundTruth = np.load(os.path.join(trial_dir, task, base_name + 'Response.npy'), allow_pickle=True)  # Load ground truth data
+            x, y, y_loc = Tools.load_trials(task, mode, 40, file_triplets,
+                                            True)  # Load trials
+            groundTruth = np.load(os.path.join(trial_dir, task, base_name + 'Response.npy'),
+                                  allow_pickle=True)  # Load ground truth data
 
             # Sort response data
             c_mask = np.zeros((y.shape[0] * y.shape[1], y.shape[2]), dtype='float32')
@@ -224,45 +231,5 @@ for task in tasks:
     data_percentage = np.round(np.array([[percentageOfCorrectMatch, percentageOfCorrectMisMatch],
                                          [percentageOfErrorMatch, percentageOfErrorMisMatch]]), 2)
     visualize_contingencyTable(data_percentage, task, figurePath, model_dir, ratioCorrect, ratioError)
-
-
-
-
-
-########################################################################################################################
-# info: LAB Section - Unused and unfinished code below (for reference)
-########################################################################################################################
-
-# # Fix: Problems with mod1_info and mod2_info, incomplete classification logic.
-# # Unused: Translation in humanForm, now classifying responses in the 4 defined classes.
-
-# # Info: Translate modelResponse_machineForm into modelResponse_humanForm
-# # Define possible directions for response
-# prefDirections_output = np.arange(0, 2 * np.pi, 2 * np.pi / 32)
-
-# popVec_modelResponse_machineForm = popvec(modelResponse_machineForm[..., 1:])
-# popVec_modelResponse_machineForm_compressed = popVec_modelResponse_machineForm[-1]  # Only last time point for evaluation
-
-# for i in range(popVec_modelResponse_machineForm_compressed.shape[0]):
-#     closest_num = min(prefDirections_output, key=lambda x: abs(x - popVec_modelResponse_machineForm_compressed[i]))
-
-#     fieldNumber = np.where(prefDirections_output == closest_num)
-
-#     mod1_info = x[-1, i, fieldNumber[0][0]]  # Get mod infos from the model
-#     mod2_info = x[-1, i, 32 + fieldNumber[0][0]]
-
-#     # Info: Decision Making (DM) Task
-#     if task == 'DM':
-#         # Define modulation dictionaries for specific columns
-#         mod1Dict = {'0.25': 'lowest', '0.5': 'low', '0.75': 'strong', '1.0': 'strongest'}
-#         mod2Dict = {'0.25': 'right.png', '0.5': 'down.png', '0.75': 'left.png', '1.0': 'up.png'}
-#         # Create human-form response
-#         modelResponse_humanForm = mod1Dict.get(str(mod1_info), str(mod1_info)) + '_' + mod2Dict.get(str(mod2_info), str(mod2_info) + '.png')
-#         print(modelResponse_humanForm)
-#     # Info: Executive Function (EF) Task
-
-#     # Info: Response Preparation (RP) Task
-
-#     # Info: Working Memory (WM) Task
 
 

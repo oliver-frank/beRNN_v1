@@ -1,5 +1,11 @@
-"""Definition of the network model and various RNN cells"""
+########################################################################################################################
+# info: Network
+########################################################################################################################
+# All pre-defined network architectures used to train the different models and additional helper functions.
 
+########################################################################################################################
+# Import necessary libraries and modules
+########################################################################################################################
 from __future__ import division
 
 import os
@@ -22,7 +28,9 @@ from tensorflow.python.ops.rnn_cell_impl import RNNCell
 
 import Tools
 
-
+########################################################################################################################
+# Pre-Allocate helper functions
+########################################################################################################################
 def is_weight(v):
     """Check if Tensorflow variable v is a connection weight."""
     return ('kernel' in v.name or 'weight' in v.name)
@@ -93,6 +101,9 @@ def get_perf(y_hat, y_loc):
     perf = should_fix * fixating + (1-should_fix) * corr_loc * (1-fixating)
     return perf
 
+########################################################################################################################
+# Network architectures
+########################################################################################################################
 class LeakyRNNCell(RNNCell):
     """The most basic RNN cell.
 
@@ -261,7 +272,7 @@ class LeakyGRUCell(RNNCell):
     self._alpha = alpha
     self._sigma = np.sqrt(2 / alpha) * sigma_rec
 
-    # TODO(gryang): allow this to use different initialization
+    # info(gryang): allow this to use different initialization
 
   @property
   def state_size(self):
@@ -642,7 +653,7 @@ class Model(object):
             else: # for all other rnn_types
                 if 'rnn' in v.name:
                     if 'kernel' in v.name or 'weight' in v.name:
-                        # TODO(gryang): For GRU, fix
+                        # info(gryang): For GRU, fix
                         self.w_rec = v[n_input:, :]
                         self.w_in = v[:n_input, :]
                     else:
@@ -660,7 +671,7 @@ class Model(object):
                 raise ValueError('Shape of w_out should be ' +
                                  str((n_rnn, n_output)) + ', but found ' +
                                  str(self.w_out.shape))
-            if hp['rnn_type'] == 'LSTM': # todo: The factor of 4 comes from the LSTM cell having four sets of weights for each of its components (input gate, forget gate, cell state, and output gate), hence a single LSTM cell's weight matrix quadruples in size compared to a simple RNN cell.
+            if hp['rnn_type'] == 'LSTM': # info: The factor of 4 comes from the LSTM cell having four sets of weights for each of its components (input gate, forget gate, cell state, and output gate), hence a single LSTM cell's weight matrix quadruples in size compared to a simple RNN cell.
                 # Special handling for LSTM because it uses a different weight structure
                 if self.w_rec.shape != (n_rnn, n_rnn * 4):
                     raise ValueError(f'Expected LSTM w_rec shape to be {(n_rnn, n_rnn * 4)}, but got {self.w_rec.shape}')
@@ -857,4 +868,5 @@ class Model(object):
         if verbose:
             print('Lesioned units:')
             print(units)
+
 

@@ -1,5 +1,12 @@
-"""Main training loop"""
+########################################################################################################################
+# info: Training
+########################################################################################################################
+# Train Models with collected data. Particpant, data and directories have to be adjusted manually.
+########################################################################################################################
 
+########################################################################################################################
+# Import necessary libraries and modules
+########################################################################################################################
 from __future__ import division
 
 import warnings
@@ -19,7 +26,9 @@ from Network import Model, get_perf
 # from analysis import variance
 import Tools
 
-
+########################################################################################################################
+# Predefine functions
+########################################################################################################################
 def get_default_hp(ruleset):
     '''Get a default hp.
 
@@ -107,7 +116,12 @@ def get_default_hp(ruleset):
 
     return hp
 
-def do_eval(sess, model, log, trial_dir, rule_train, monthsConsidered, eval_data):
+def split_files(files, split_ratio=0.8):
+    random.shuffle(files)
+    split_index = int(len(files) * split_ratio)
+    return files[:split_index], files[split_index:]
+
+def do_eval(sess, model, log, rule_train, eval_data):
     """Do evaluation.
 
     Args:
@@ -134,9 +148,9 @@ def do_eval(sess, model, log, trial_dir, rule_train, monthsConsidered, eval_data
         creg_tmp = list()
         perf_tmp = list()
         for i_rep in range(n_rep):
-            x,y,y_loc = Tools.load_trials(trial_dir, monthsConsidered, task, mode, hp['batch_size'], eval_data, False)  # y_loc is participantResponse_perfEvalForm
+            x,y,y_loc = Tools.load_trials(task, mode, hp['batch_size'], eval_data, False)  # y_loc is participantResponse_perfEvalForm
 
-            # todo: ################################################################################################
+            # info: ################################################################################################
             fixation_steps = Tools.getEpochSteps(y)
 
             # Creat c_mask for current batch
@@ -146,7 +160,7 @@ def do_eval(sess, model, log, trial_dir, rule_train, monthsConsidered, eval_data
                     # Fixation epoch
                     c_mask[:fixation_steps, i, :] = 1.
                     # Response epoch
-                    c_mask[fixation_steps:, i, :] = hp['c_mask_responseValue'] # todo: 1 or 5
+                    c_mask[fixation_steps:, i, :] = hp['c_mask_responseValue'] # info: 1 or 5
 
                 # self.c_mask[:, :, 0] *= self.n_eachring # Fixation is important
                 # c_mask[:, :, 0] *= 2.  # Fixation is important
@@ -158,12 +172,12 @@ def do_eval(sess, model, log, trial_dir, rule_train, monthsConsidered, eval_data
                     # Fixation epoch
                     c_mask[:fixation_steps, i, :] = 1.
                     # Response epoch
-                    c_mask[fixation_steps:, i, :] = hp['c_mask_responseValue'] # todo: 1 or 5
+                    c_mask[fixation_steps:, i, :] = hp['c_mask_responseValue'] # info: 1 or 5
 
                 c_mask = c_mask.reshape((y.shape[0] * y.shape[1],))
                 c_mask /= c_mask.mean()
 
-            # todo: ################################################################################################
+            # info: ################################################################################################
 
             feed_dict = Tools.gen_feed_dict(model, x, y, c_mask, hp) # y: participnt response, that gives the lable for what the network is trained for
             # print('passed feed_dict Evaluation')
@@ -176,7 +190,7 @@ def do_eval(sess, model, log, trial_dir, rule_train, monthsConsidered, eval_data
             # Cost is first summed over time,
             # and averaged across batch and units
             # We did the averaging over time through c_mask
-            perf_test = np.mean(get_perf(y_hat_test, y_loc)) # todo: y_loc is participant response as groundTruth
+            perf_test = np.mean(get_perf(y_hat_test, y_loc)) # info: y_loc is participant response as groundTruth
             print('perf_test   ', perf_test)
             clsq_tmp.append(c_lsq)
             creg_tmp.append(c_reg)
@@ -191,7 +205,7 @@ def do_eval(sess, model, log, trial_dir, rule_train, monthsConsidered, eval_data
               '  | perf {:0.2f}'.format(np.mean(perf_tmp)))
         sys.stdout.flush()
 
-    # TODO: This needs to be fixed since now rules are strings
+    # info: This needs to be fixed since now rules are strings
     if hasattr(rule_train, '__iter__'):
         rule_tmp = rule_train
     else:
@@ -208,7 +222,7 @@ def do_eval(sess, model, log, trial_dir, rule_train, monthsConsidered, eval_data
 
     return log
 
-def train(model_dir,trial_dir,monthsConsidered,train_data ,eval_data,hp=None,max_steps=1e7,display_step=500,ruleset='all',rule_trains=None,rule_prob_map=None,seed=0,
+def train(model_dir,train_data ,eval_data,hp=None,max_steps=1e7,display_step=500,ruleset='all',rule_trains=None,rule_prob_map=None,seed=0,
           load_dir=None,trainables=None):
     """Train the network.
 
@@ -329,7 +343,7 @@ def train(model_dir,trial_dir,monthsConsidered,train_data ,eval_data,hp=None,max
                 if step % display_step == 0: # III: Every 500 steps (20000 trials) do the evaluation
                     log['trials'].append(step * hp['batch_size'])
                     log['times'].append(time.time() - t_start)
-                    log = do_eval(sess, model, log, trial_dir, hp['rule_trains'],monthsConsidered, eval_data)
+                    log = do_eval(sess, model, log, hp['rule_trains'],eval_data)
                     elapsed_time = time.time() - t_start  # Calculate elapsed time
                     print(f"Elapsed time after batch number {trialsLoaded}: {elapsed_time:.2f} seconds")
                     # After training
@@ -349,9 +363,9 @@ def train(model_dir,trial_dir,monthsConsidered,train_data ,eval_data,hp=None,max
                 task = hp['rng'].choice(hp['rule_trains'], p=hp['rule_probs'])
                 # Generate a random batch of trials; each batch has the same trial length
                 mode = 'Training'
-                x,y,y_loc = Tools.load_trials(trial_dir,monthsConsidered,task,mode,hp['batch_size'], train_data, False) # y_loc is participantResponse_perfEvalForm
+                x,y,y_loc = Tools.load_trials(task,mode,hp['batch_size'], train_data, False) # y_loc is participantResponse_perfEvalForm
 
-                # todo: ################################################################################################
+                # info: ################################################################################################
                 fixation_steps = Tools.getEpochSteps(y)
                 # Creat c_mask for current batch
                 if hp['loss_type'] == 'lsq':
@@ -360,10 +374,10 @@ def train(model_dir,trial_dir,monthsConsidered,train_data ,eval_data,hp=None,max
                         # Fixation epoch
                         c_mask[:fixation_steps, i, :] = 1.
                         # Response epoch
-                        c_mask[fixation_steps:, i, :] = hp['c_mask_responseValue'] # todo: 1 or 5
+                        c_mask[fixation_steps:, i, :] = hp['c_mask_responseValue'] # info: 1 or 5
 
                     # self.c_mask[:, :, 0] *= self.n_eachring # Fixation is important
-                    # c_mask[:, :, 0] *= 2.  # Fixation is important # todo: with or without
+                    # c_mask[:, :, 0] *= 2.  # Fixation is important # info: with or without
                     c_mask = c_mask.reshape((y.shape[0]*y.shape[1], y.shape[2]))
 
                 else:
@@ -372,12 +386,12 @@ def train(model_dir,trial_dir,monthsConsidered,train_data ,eval_data,hp=None,max
                         # Fixation epoch
                         c_mask[:fixation_steps, i, :] = 1.
                         # Response epoch
-                        c_mask[fixation_steps:, i, :] = hp['c_mask_responseValue'] # todo: 1 or 5
+                        c_mask[fixation_steps:, i, :] = hp['c_mask_responseValue'] # info: 1 or 5
 
                     c_mask = c_mask.reshape((y.shape[0] * y.shape[1],))
                     c_mask /= c_mask.mean()
 
-                # todo: ################################################################################################
+                # info: ################################################################################################
 
                 trialsLoaded += 1
 
@@ -392,7 +406,7 @@ def train(model_dir,trial_dir,monthsConsidered,train_data ,eval_data,hp=None,max
                 creg_train_tmp = list()
                 perf_train_tmp = list()
                 c_lsq_train, c_reg_train, y_hat_train = sess.run([model.cost_lsq, model.cost_reg, model.y_hat], feed_dict=feed_dict)
-                perf_train = np.mean(get_perf(y_hat_train, y_loc)) # todo: y_loc is participant response as groundTruth
+                perf_train = np.mean(get_perf(y_hat_train, y_loc)) # info: y_loc is participant response as groundTruth
                 print('perf_train   ', perf_train)
                 clsq_train_tmp.append(c_lsq_train)
                 creg_train_tmp.append(c_reg_train)
@@ -415,42 +429,44 @@ def train(model_dir,trial_dir,monthsConsidered,train_data ,eval_data,hp=None,max
 
         print("Optimization finished!")
 
+########################################################################################################################
+# Train model
+########################################################################################################################
 if __name__ == '__main__':
+    # Adjust variables manually as needed
     dataFolder = "Data"
-    participant = 'BeRNN_03'
     model_folder = 'Model'
-    strToSave = '5-7'
-    number = str(23)
-    # model_number = 'Model_' + number + '_' + participant + '_Month_' + strToSave # Manually add months considered e.g. 1-7
-    model_number = 'Model_127_BeRNN_01_Month_2-4' # Manually add months considered e.g. 1-7
-    months = model_number.split('_')[-1].split('-')
+    participant = 'BeRNN_03'
+    model_name = 'Model_127_BeRNN_01_Month_2-4' # Manually add months considered e.g. 1-7
+
+    # Define data path for different servers
+    preprocessedData_path = os.path.join('W:\\group_csp\\analyses\\oliver.frank', dataFolder, participant,'PreprocessedData_wResp_ALL')
+    # preprocessedData_path = os.path.join('/zi/flstorage/group_csp/analyses/oliver.frank/Data/', participant, 'PreprocessedData_wResp_ALL')
+    # preprocessedData_path = os.path.join('/pandora/home/oliver.frank/01_Projects/RNN/multitask_BeRNN-main/Data', participant,'PreprocessedData_wResp_ALL')
+
+    # Define model_dir for different servers
+    model_dir = os.path.join('W:\\group_csp\\analyses\\oliver.frank\\BeRNN_models\\OLD', model_name)
+    # model_dir = os.path.join('/zi/home/oliver.frank/Desktop/RNN/multitask_BeRNN-main/BeRNN_Models', model_name)
+    # model_dir = os.path.join('/pandora/home/oliver.frank/01_Projects/RNN/multitask_BeRNN-main/BeRNN_Models', model_name)
+    if not os.path.exists(model_dir):
+        os.makedirs(model_dir)
+
+    # Define months taken into account for model training
+    months = model_name.split('_')[-1].split('-')
     monthsConsidered = []
     for i in range(int(months[0]), int(months[1]) + 1):
         monthsConsidered.append(str(i))
-    model_dir = os.path.join('W:\\group_csp\\analyses\\oliver.frank\\BeRNN_models\\OLD', model_number)
-    # model_dir = os.path.join('/zi/home/oliver.frank/Desktop/RNN/multitask_BeRNN-main/BeRNN_Models', model_number)
-    # model_dir = os.path.join('/pandora/home/oliver.frank/01_Projects/RNN/multitask_BeRNN-main/BeRNN_Models', model_number)
-    if not os.path.exists(model_dir):
-        os.makedirs(model_dir)
-    preprocessedData_path = os.path.join('W:\\group_csp\\analyses\\oliver.frank', dataFolder, participant, 'PreprocessedData_wResp_ALL')
-    # preprocessedData_path = os.path.join('/zi/flstorage/group_csp/analyses/oliver.frank/Data/', participant, 'PreprocessedData_wResp_ALL')
-    # preprocessedData_path = os.path.join('/pandora/home/oliver.frank/01_Projects/RNN/multitask_BeRNN-main/Data', participant,'PreprocessedData_wResp_ALL')
+
     # Define probability of each task being trained
     rule_prob_map = {"DM": 1,"DM_Anti": 1,"EF": 1,"EF_Anti": 1,"RP": 1,"RP_Anti": 1,"RP_Ctx1": 1,"RP_Ctx2": 1,"WM": 1,"WM_Anti": 1,"WM_Ctx1": 1,"WM_Ctx2": 1}
 
-    # III: Split the data ##############################################################################################
+    # Split the data into training and test data -----------------------------------------------------------------------
     # List of the subdirectories
     subdirs = [os.path.join(preprocessedData_path, d) for d in os.listdir(preprocessedData_path) if os.path.isdir(os.path.join(preprocessedData_path, d))]
 
     # Initialize dictionaries to store training and evaluation data
     train_data = {}
     eval_data = {}
-
-    # Function to split the files
-    def split_files(files, split_ratio=0.8):
-        random.shuffle(files)
-        split_index = int(len(files) * split_ratio)
-        return files[:split_index], files[split_index:]
 
     for subdir in subdirs:
         # Collect all file triplets in the current subdirectory
@@ -460,8 +476,11 @@ if __name__ == '__main__':
                 # III: Exclude files with specific substrings in their names
                 if any(exclude in file for exclude in ['Randomization', 'Segmentation', 'Mirrored', 'Rotation']):
                     continue
+                # Include only files that contain any of the months in monthsConsidered
+                if not any(month in file for month in monthsConsidered):
+                    continue
+                # Add all necessary files to triplets
                 base_name = file.split('Input')[0]
-                # print(base_name)
                 input_file = os.path.join(subdir, base_name + 'Input.npy')
                 yloc_file = os.path.join(subdir, base_name + 'yLoc.npy')
                 output_file = os.path.join(subdir, base_name + 'Output.npy')
@@ -473,16 +492,8 @@ if __name__ == '__main__':
             # Store the results in the dictionaries
             train_data[subdir] = train_files
             eval_data[subdir] = eval_files
-    # III: Split the data ##############################################################################################
 
-    train(model_dir=model_dir, trial_dir=preprocessedData_path, monthsConsidered = monthsConsidered, rule_prob_map=rule_prob_map, train_data = train_data, eval_data = eval_data)
-    # train(model_dir=model_dir, trial_dir=preprocessedData_path)
-
-
-# todo: LAB ############################################################################################################
-# input_file = os.path.join(subdir, base_name + 'Input.npy')
-# yloc_file = os.path.join(subdir, base_name + 'yLoc.npy')
-# output_file = os.path.join(subdir, base_name + 'Output.npy')
-
+    # Start Training ---------------------------------------------------------------------------------------------------
+    train(model_dir=model_dir, rule_prob_map=rule_prob_map, train_data = train_data, eval_data = eval_data)
 
 
