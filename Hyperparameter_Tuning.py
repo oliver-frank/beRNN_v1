@@ -31,33 +31,34 @@ def create_param_combinations(param_grid, sample_size):
 
     return sampled_combinations
 
-param_grid = {
-    'batch_size': [40],
-    'in_type': ['normal'],
-    'rnn_type': ['LeakyRNN', 'LeakyGRU'],
-    'use_separate_input': [False], # info: True doesn't work
-    'loss_type': ['lsq'],
-    'optimizer': ['adam'],
-    'activation': ['relu', 'softplus'],
-    'tau': [50, 100],
-    'dt': [10, 20],
-    'sigma_rec': [0.01, 0.05],
-    'sigma_x': [0.001, 0.01],
-    'w_rec_init': ['diag', 'randortho'],
-    'l1_h': [0, 0.0001],
-    'l2_h': [0, 0.00001, 0.00002, 0.00003],
-    'l1_weight': [0, 0.0001],
-    'l2_weight': [0, 0.0001],
-    'l2_weight_init': [0, 0.0001],
-    'p_weight_train': [None],
-    'learning_rate': [0.0001, 0.001],
-    'n_rnn': [64,128,256,512],
-    'c_mask_responseValue': [1., 2., 5.],
-    'monthsConsidered': [['2', '3', '4'], ['5', '6', '7'], ['2', '3', '4', '5', '6', '7']]
+# Info: After first HPs the most probable space inheriting the best solution decreased to the following
+best_params = {
+    'batch_size': 40,
+    'in_type': 'normal',
+    'rnn_type': 'LeakyGRU', # additional gating mechanisms should lead to better performance
+    'use_separate_input': False,
+    'loss_type': 'lsq',
+    'optimizer': 'adam',
+    'activation': 'relu', # fast and effective convergence
+    'tau': 100,
+    'dt': 10,
+    'sigma_rec': 0.01, # good balance between stability and stochasticity
+    'sigma_x': 0.001, # good balance between stability and stochasticity
+    'w_rec_init': 'randortho', # helps maintaining the gradient norm and avoid issues like exploding and vanishing gradient
+    'l1_h': 0,
+    'l2_h': [0.00001, 0.00003, 0.00005], # l2 > l1 regularization as it distributes penalty over all parameters, better for complex behavior to be learned
+    'l1_weight': 0,
+    'l2_weight': [0.0001, 0.0003, 0.0005],
+    'l2_weight_init': [0.0001, 0.0003, 0.0005],
+    'p_weight_train': None,
+    'learning_rate': 0.0001,
+    'n_rnn': [256,512], # good balance between computational costs and size to learn complex behavior (the more parameters the more complex behavior can be learned)
+    'c_mask_responseValue': [2.,3.,5.], # weights the important part of the sequence (resonse epoch) more than the rest (fixation epoch)
+    'monthsConsidered': ['2', '3', '4', '5', '6', '7', '8'] # more data - better generalizability (if data consistent over time)
 }
 
 # Randomly sample a chosen selection combinations
-sampled_combinations = create_param_combinations(param_grid, 100)
+sampled_combinations = create_param_combinations(best_params, 50)
 
 
 # Training #############################################################################################################
@@ -68,7 +69,7 @@ for params in sampled_combinations:
     print(params) # Double check with model output files
 
     # Predefine certain variables
-    participant = 'BeRNN_02'
+    participant = 'BeRNN_01'
     monthsConsidered = params['monthsConsidered']
 
     # Data paths for different server

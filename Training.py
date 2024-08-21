@@ -63,7 +63,7 @@ def get_default_hp(ruleset):
         'tau': 100,
         # discretization time step (ms)
         'dt': 20,
-        # discretization time step/time constant
+        # discretization time step/time constant info: dt/tau = alpha
         'alpha': 0.2,
         # recurrent noise - directly influencing the noise added to the network; can prevent over-fitting especially when learning time sequences
         'sigma_rec': 0.05,
@@ -107,7 +107,7 @@ def get_default_hp(ruleset):
         'save_name': 'test',
         # learning rate
         'learning_rate': 0.001,
-        # c_mask response epoch value
+        # c_mask response epoch value - info: How strong is the response epoch taken into account for caclulating error, the higher the more it influences the costs and therefore the parameter changes
         'c_mask_responseValue': 1.,
         # intelligent synapses parameters, tuple (c, ksi) -> Yang et al. only apply these in sequential training
         # 'c_intsyn': 0,

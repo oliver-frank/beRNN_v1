@@ -12,26 +12,23 @@
 # Import necessary libraries and modules
 ########################################################################################################################
 import os
-# import random
 import numpy as np
-# import matplotlib
-# matplotlib.use('WebAgg')  # Or 'Qt5Agg', 'GTK3Agg', 'wxAgg'
+# import pandas as pd
 import matplotlib.pyplot as plt
+# matplotlib.use('WebAgg')  # Or 'Qt5Agg', 'GTK3Agg', 'wxAgg'
 
 import warnings
 warnings.simplefilter(action='ignore', category=FutureWarning)
-# import tensorflow as tf
 
 from analysis import clustering #, variance
-# from NETWORK import Model
 import Tools
 from Tools import rule_name
 
 ########################################################################################################################
-# Pre-Allocation of variables and models to be examined
+# Pre-Allocation of variables and models to be examined (+ definition of one global function)
 ########################################################################################################################
-folderPath = 'W:\\group_csp\\analyses\\oliver.frank\\BeRNN_models\\BeRNN_05_HPT02'
-figurePath = 'W:\\group_csp\\analyses\\oliver.frank\\BeRNN_models\\Visuals\\Performance\\BeRNN_05_HPT02'
+folderPath = 'W:\\group_csp\\analyses\\oliver.frank\\BeRNN_models\\BeRNN_02_HPT01'
+figurePath = 'W:\\group_csp\\analyses\\oliver.frank\\BeRNN_models\\Visuals\\Performance\\BeRNN_02_HPT01'
 files = os.listdir(folderPath)
 
 selected_hp_keys = ['rnn_type', 'activation', 'tau', 'dt', 'sigma_rec', 'sigma_x', 'w_rec_init', 'l1_h', 'l2_h', \
@@ -42,10 +39,19 @@ for file in files:
     # if any(include in file for include in ['Model_1']):
     model_list.append(os.path.join(folderPath,file))
 
-model_list = ['W:\\group_csp\\analyses\\oliver.frank\\BeRNN_models\\BeRNN_05_HPT02\\Model_1_BeRNN_05_Month_2-7']
+# model_list = ['W:\\group_csp\\analyses\\oliver.frank\\BeRNN_models\\BeRNN_05_HPT02\\Model_1_BeRNN_05_Month_2-7'] # info: If only one network should be examined
+
+def smoothed(data, window_size):
+    smoothed_data = np.convolve(data, np.ones(window_size) / window_size, mode='valid')
+    # Calculate how many points we need to add to match the length of the original data
+    padding_length = len(data) - len(smoothed_data)
+    if padding_length > 0:
+        last_value = smoothed_data[-1]
+        smoothed_data = np.concatenate((smoothed_data, [last_value] * padding_length))
+    return smoothed_data
 
 ########################################################################################################################
-# Performance
+# Performance - Individual network
 ########################################################################################################################
 # Note to visualization of training and test performance: The test data gives for maxsteps of 1e7 5000 performance data
 # points, each representing 800 evaluated trials. The training data gives for maxsteps of 1e7 25000 performance data points,
@@ -60,6 +66,7 @@ def plot_performanceprogress_eval_BeRNN(model_dir, rule_plot=None):
     # co: change to [::2] if you want to have only every second validation value
     # trials = log['trials'][::2]
     trials = log['trials']
+    x_plot = np.array(trials) / 1000  # scale the x-axis right
 
     fs = 14  # fontsize
     fig_eval = plt.figure(figsize=(14, 6))
@@ -67,7 +74,6 @@ def plot_performanceprogress_eval_BeRNN(model_dir, rule_plot=None):
     lines = list()
     labels = list()
 
-    x_plot = np.array(trials) / 1000  # scale the x-axis right
     if rule_plot == None:
         rule_plot = hp['rules']
 
@@ -120,6 +126,7 @@ def plot_performanceprogress_eval_BeRNN(model_dir, rule_plot=None):
     # plt.setp(rt.get_title(), fontsize=fs)
 
     plt.savefig(os.path.join(figurePath, model_dir.split("\\")[-1] + '_EVALUATION.png'), format='png', dpi=300)
+
     plt.show()
 
 def plot_performanceprogress_train_BeRNN(model_dir, rule_plot=None):
@@ -129,35 +136,21 @@ def plot_performanceprogress_train_BeRNN(model_dir, rule_plot=None):
 
     # co: change to [::2] if you want to have only every second validation value
     # trials = log['trials'][::2]
-    trials = log['trials']  # III: There is an entry every 40 trials for each task
+    trials = log['trials']  # info: There is an entry every 40 trials for each task
+    x_plot = (np.array(trials)) / 1000  # scale the x-axis right
 
     fs = 14  # fontsize
     fig_train = plt.figure(figsize=(14, 6))
-    ax = fig_train.add_axes([0.1, 0.4, 0.6, 0.5])  # co: third value influences width of cartoon
+    ax = fig_train.add_axes([0.1, 0.4, 0.6, 0.5])  # info: third value influences width of cartoon
     lines = list()
     labels = list()
 
-    x_plot = (np.array(trials)) / 1000  # scale the x-axis right
     if rule_plot is None:
         rule_plot = hp['rules']
 
-    # def smoothed(data):
-    #     return np.cumsum(data) / np.arange(1, len(data) + 1)
-
-    def smoothed(data, window_size):
-        smoothed_data = np.convolve(data, np.ones(window_size) / window_size, mode='valid')
-        # Calculate how many points we need to add to match the length of the original data
-        padding_length = len(data) - len(smoothed_data)
-        if padding_length > 0:
-            last_value = smoothed_data[-1]
-            smoothed_data = np.concatenate((smoothed_data, [last_value] * padding_length))
-        return smoothed_data
-
     for i, rule in enumerate(rule_plot):
-        # co: add [::2] if you want to have only every second validation values
-        # line = ax.plot(x_plot, np.log10(log['cost_' + 'WM'][::2]), color=rule_color[rule])
         y_cost = log['cost_train_' + rule][::int((len(log['cost_train_' + rule]) / len(x_plot)))][:len(x_plot)]
-        y_perf = log['perf_train_' + rule][::int((len(log['cost_train_' + rule]) / len(x_plot)))][:len(x_plot)]
+        y_perf = log['perf_train_' + rule][::int((len(log['perf_train_' + rule]) / len(x_plot)))][:len(x_plot)]
 
         window_size = 5  # Adjust window_size to smooth less or more, should actually be 20 so that it concolves the same amount of data (800 trials) for one one measure as in evaluation
 
@@ -190,8 +183,7 @@ def plot_performanceprogress_train_BeRNN(model_dir, rule_plot=None):
     plt.figtext(0.75, 0.75, hp_text, fontsize=10, ha='left', va='top', bbox=dict(facecolor='white', alpha=0.5))
 
     lg = fig_train.legend(lines, labels, title='Task', ncol=2, bbox_to_anchor=(0.1, 0.15),
-                          # co: first value influences horizontal position of legend
-                          fontsize=fs, labelspacing=0.3, loc=6, frameon=False)
+                          fontsize=fs, labelspacing=0.3, loc=6, frameon=False) # info: first value influences horizontal position of legend
     plt.setp(lg.get_title(), fontsize=fs)
 
     plt.title('_'.join(model_dir.split("\\")[-1].split('_')[0:4]) + '_TRAINING', fontsize=16)
@@ -200,11 +192,10 @@ def plot_performanceprogress_train_BeRNN(model_dir, rule_plot=None):
 
     plt.show()
 
-
 for model_dir in model_list:
     # Load hp
     currentHP = Tools.load_hp(model_dir)
-
+    # Assign a color to each task
     _rule_color = {
                 'DM': 'green',
                 'DM_Anti': 'olive',
@@ -225,6 +216,124 @@ for model_dir in model_list:
     plot_performanceprogress_eval_BeRNN(model_dir)
     # Plot improvement of performance over iterating training steps
     plot_performanceprogress_train_BeRNN(model_dir)
+
+########################################################################################################################
+# Performance - Group of networks
+########################################################################################################################
+def aggregate_performance_eval_data(model_list, tasks):
+    aggregated_costs = {task: [] for task in tasks}
+    aggregated_performances = {task: [] for task in tasks}
+
+    for model_dir in model_list:
+        log = Tools.load_log(model_dir)
+        hp = Tools.load_hp(model_dir)
+
+        trials = log['trials']
+        x_plot = (np.array(trials)) / 1000  # scale the x-axis right
+
+        for task in tasks:
+            y_cost = log['cost_' + task]
+            y_perf = log['perf_' + task]
+
+            aggregated_costs[task].append(y_cost)
+            aggregated_performances[task].append(y_perf)
+
+    return aggregated_costs, aggregated_performances, x_plot
+
+def aggregate_performance_train_data(model_list, tasks):
+    aggregated_costs = {task: [] for task in tasks}
+    aggregated_performances = {task: [] for task in tasks}
+
+    for model_dir in model_list:
+        log = Tools.load_log(model_dir)
+        hp = Tools.load_hp(model_dir)
+
+        trials = log['trials']
+        x_plot = (np.array(trials)) / 1000  # scale the x-axis right
+
+        for task in tasks:
+            y_cost = log['cost_train_' + task][::int((len(log['cost_train_' + task]) / len(x_plot)))][:len(x_plot)]
+            y_perf = log['perf_train_' + task][::int((len(log['cost_train_' + task]) / len(x_plot)))][:len(x_plot)]
+
+            window_size = 5  # Adjust window_size to smooth less or more, should actually be 20 so that it concolves the same amount of data (800 trials) for one one measure as in evaluation
+
+            y_cost_smoothed = smoothed(y_cost, window_size=window_size)
+            y_perf_smoothed = smoothed(y_perf, window_size=window_size)
+
+            # Ensure the lengths match
+            y_cost_smoothed = y_cost_smoothed[:len(x_plot)]
+            y_perf_smoothed = y_perf_smoothed[:len(x_plot)]
+
+            aggregated_costs[task].append(y_cost_smoothed)
+            aggregated_performances[task].append(y_perf_smoothed)
+
+    return aggregated_costs, aggregated_performances, x_plot
+
+def plot_aggregated_performance(model_list, mode, tasks):
+    if mode == 'train':
+        aggregated_costs, aggregated_performances, x_plot = aggregate_performance_train_data(model_list, tasks)
+    elif mode == 'eval':
+        aggregated_costs, aggregated_performances, x_plot = aggregate_performance_eval_data(model_list, tasks)
+
+    fig, ax = plt.subplots(figsize=(14, 6))
+
+    for task in tasks:
+        # Convert list of arrays to a 2D array for easier mean/std calculation
+        costs_array = np.array(aggregated_costs[task])
+        performances_array = np.array(aggregated_performances[task])
+
+        mean_costs = np.mean(costs_array, axis=0)
+        std_costs = np.std(costs_array, axis=0)
+        mean_performances = np.mean(performances_array, axis=0)
+        std_performances = np.std(performances_array, axis=0)
+
+        # Add costs if wanted
+        # ax.plot(x_plot, np.log10(mean_costs), color=rule_color[task], label=f'Cost {task}')
+        # ax.fill_between(x_plot, np.log10(mean_costs - std_costs), np.log10(mean_costs + std_costs), color=rule_color[task], alpha=0.3)
+        # Add performance if wanted
+        ax.plot(x_plot, mean_performances, color=rule_color[task], linestyle='-', label=f'{task}')
+        ax.fill_between(x_plot, mean_performances - std_performances, mean_performances + std_performances, color=rule_color[task], alpha=0.1)
+
+    ax.set_xlabel('Total number of trials (/1000)', fontsize=14)
+    ax.set_ylabel('Performance', fontsize=14)
+    ax.set_ylim([0, 1])
+    ax.set_title('Average Training Performance Across Networks', fontsize=16)
+    ax.grid(False)
+
+    # Adjust the subplot to make space for the legend below
+    fig.subplots_adjust(bottom=0.25)
+
+    # Place the legend below the plot
+    lg = ax.legend(title='Tasks', ncol=4, loc='upper center', bbox_to_anchor=(0.5, -0.15), fontsize=14,labelspacing=0.3, frameon=False)
+    plt.setp(lg.get_title(), fontsize=14)
+
+    plt.show()
+
+# Assign a color to each task
+_rule_color = {
+                'DM': 'green',
+                'DM_Anti': 'olive',
+                'EF': 'forest green',
+                'EF_Anti': 'mustard',
+                'RP': 'tan',
+                'RP_Anti': 'brown',
+                'RP_Ctx1': 'lavender',
+                'RP_Ctx2': 'aqua',
+                'WM': 'bright purple',
+                'WM_Anti': 'green blue',
+                'WM_Ctx1': 'blue',
+                'WM_Ctx2': 'indigo'
+                }
+rule_color = {k: 'xkcd:'+v for k, v in _rule_color.items()}
+# Define all tasks involved
+tasks = ['DM', 'DM_Anti', 'EF', 'EF_Anti', 'RP', 'RP_Anti', 'RP_Ctx1', 'RP_Ctx2', 'WM', 'WM_Anti', 'WM_Ctx1', 'WM_Ctx2']
+
+# Plot the average performance of models on evaluation data
+mode = 'eval'
+plot_aggregated_performance(model_list, mode, tasks)
+# Plot the average performance of models on training data
+mode = 'train'
+plot_aggregated_performance(model_list, mode, tasks)
 
 ########################################################################################################################
 # Clustering

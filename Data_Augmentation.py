@@ -23,8 +23,8 @@ import glob
 ########################################################################################################################
 # Choose participant data to augment data from
 dataFolder = "Data"
-participants = ['BeRNN_01']
-# participants = ['BeRNN_01', 'BeRNN_02', 'BeRNN_03', 'BeRNN_04', 'BeRNN_05']
+# participants = ['BeRNN_01']
+participants = ['BeRNN_01', 'BeRNN_02', 'BeRNN_03', 'BeRNN_04', 'BeRNN_05']
 preprocessedData_folder = 'PreprocessedData_wResp_ALL'
 
 # directory = "/zi/flstorage/group_csp/analyses/oliver.frank" # hitkip15
