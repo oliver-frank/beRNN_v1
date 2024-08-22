@@ -23,8 +23,7 @@ import glob
 ########################################################################################################################
 # Choose participant data to augment data from
 dataFolder = "Data"
-# participants = ['BeRNN_01']
-participants = ['BeRNN_01', 'BeRNN_02', 'BeRNN_03', 'BeRNN_04', 'BeRNN_05']
+participants = ['BeRNN_03']
 preprocessedData_folder = 'PreprocessedData_wResp_ALL'
 
 # directory = "/zi/flstorage/group_csp/analyses/oliver.frank" # hitkip15
@@ -75,9 +74,8 @@ for participant in participants:
                 except Exception as e:
                     print(f'Error deleting {file_path}: {e}')
 
-    # tasks = ['RP', 'RP_Anti']
-    # tasks = ['DM', 'DM_Anti', 'EF', 'EF_Anti', 'RP', 'RP_Anti', 'RP_Ctx1', 'RP_Ctx2']
-    tasks = ['DM', 'DM_Anti', 'EF', 'EF_Anti', 'RP', 'RP_Anti', 'RP_Ctx1', 'RP_Ctx2', 'WM', 'WM_Anti', 'WM_Ctx1', 'WM_Ctx2']
+    # tasks = ['DM', 'DM_Anti', 'EF', 'EF_Anti', 'RP', 'RP_Anti', 'RP_Ctx1', 'RP_Ctx2', 'WM', 'WM_Anti', 'WM_Ctx1', 'WM_Ctx2']
+    tasks = ['WM_Ctx2']
     for task in tasks:
         delete_files(os.path.join(trial_dir,task), patterns)
 

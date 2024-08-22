@@ -27,8 +27,8 @@ from Tools import rule_name
 ########################################################################################################################
 # Pre-Allocation of variables and models to be examined (+ definition of one global function)
 ########################################################################################################################
-folderPath = 'W:\\group_csp\\analyses\\oliver.frank\\BeRNN_models\\BeRNN_02_HPT01'
-figurePath = 'W:\\group_csp\\analyses\\oliver.frank\\BeRNN_models\\Visuals\\Performance\\BeRNN_02_HPT01'
+folderPath = 'W:\\group_csp\\analyses\\oliver.frank\\BeRNN_models\\BeRNN_03_HPT02'
+figurePath = 'W:\\group_csp\\analyses\\oliver.frank\\BeRNN_models\\Visuals\\Performance\\BeRNN_03_HPT02'
 files = os.listdir(folderPath)
 
 selected_hp_keys = ['rnn_type', 'activation', 'tau', 'dt', 'sigma_rec', 'sigma_x', 'w_rec_init', 'l1_h', 'l2_h', \
@@ -39,7 +39,7 @@ for file in files:
     # if any(include in file for include in ['Model_1']):
     model_list.append(os.path.join(folderPath,file))
 
-# model_list = ['W:\\group_csp\\analyses\\oliver.frank\\BeRNN_models\\BeRNN_05_HPT02\\Model_1_BeRNN_05_Month_2-7'] # info: If only one network should be examined
+model_list = ['W:\\group_csp\\analyses\\oliver.frank\\BeRNN_models\\BeRNN_03_HPT02\\Model_52_BeRNN_03_Month_5-7'] # info: If only one network should be examined
 
 def smoothed(data, window_size):
     smoothed_data = np.convolve(data, np.ones(window_size) / window_size, mode='valid')

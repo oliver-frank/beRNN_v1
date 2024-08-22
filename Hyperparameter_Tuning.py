@@ -41,9 +41,9 @@ best_params = {
     'optimizer': 'adam',
     'activation': 'relu', # fast and effective convergence
     'tau': 100,
-    'dt': 10,
-    'sigma_rec': 0.01, # good balance between stability and stochasticity
-    'sigma_x': 0.001, # good balance between stability and stochasticity
+    'dt': 20,
+    'sigma_rec': [0.01, 0.05], # good balance between stability and stochasticity
+    'sigma_x': [0.001, 0.01], # good balance between stability and stochasticity
     'w_rec_init': 'randortho', # helps maintaining the gradient norm and avoid issues like exploding and vanishing gradient
     'l1_h': 0,
     'l2_h': [0.00001, 0.00003, 0.00005], # l2 > l1 regularization as it distributes penalty over all parameters, better for complex behavior to be learned
@@ -75,13 +75,15 @@ for params in sampled_combinations:
     # Data paths for different server
     # preprocessedData_path = os.path.join('W:\\group_csp\\analyses\\oliver.frank\\Data', participant,'PreprocessedData_wResp_ALL')
     # preprocessedData_path = os.path.join('/pandora/home/oliver.frank/01_Projects/RNN/multitask_BeRNN-main/Data', participant,'PreprocessedData_wResp_ALL')
-    preprocessedData_path = os.path.join('/zi/flstorage/group_csp/analyses/oliver.frank/Data/', participant,'PreprocessedData_wResp_ALL')
+    # preprocessedData_path = os.path.join('/zi/flstorage/group_csp/analyses/oliver.frank/Data/', participant,'PreprocessedData_wResp_ALL')
+    preprocessedData_path = os.path.join('/data/', participant, 'PreprocessedData_wResp_ALL')
 
     model = 'Model_' + str(model_number) + '_' + participant + '_Month_' + monthsConsidered[0] + '-' + monthsConsidered[-1]
     # Model directories for different server
     # model_dir = os.path.join('W:\\group_csp\\analyses\\oliver.frank\\BeRNN_models\\BeRNN_01_HPT01', model)
-    model_dir = os.path.join('/zi/flstorage/group_csp/analyses/oliver.frank/BeRNN_models/BeRNN_02_HPT01', model)
     # model_dir = os.path.join('/pandora/home/oliver.frank/01_Projects/RNN/multitask_BeRNN-main/BeRNN_03_HPT01', model)
+    # model_dir = os.path.join('/zi/flstorage/group_csp/analyses/oliver.frank/BeRNN_models/BeRNN_02_HPT01', model)
+    model_dir = os.path.join('/data/BeRNN_02_HPT01', model)
 
     # Define probability of each task being trained
     rule_prob_map = {"DM": 1, "DM_Anti": 1, "EF": 1, "EF_Anti": 1, "RP": 1, "RP_Anti": 1, "RP_Ctx1": 1, "RP_Ctx2": 1,
