@@ -54,7 +54,7 @@ best_params = {
     'learning_rate': [0.0001],  # Wrap the float in a list
     'n_rnn': [256, 512],
     'c_mask_responseValue': [2., 3., 5.],
-    'monthsConsidered': ['2', '3', '4', '5', '6', '7', '8']  # Already a list
+    'monthsConsidered': [['2', '3', '4', '5', '6', '7', '8']]  # Already a list
 }
 
 # Randomly sample a chosen selection combinations
