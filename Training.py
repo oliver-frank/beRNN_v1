@@ -50,7 +50,7 @@ def get_default_hp(ruleset):
         # input type: normal, multi
         'in_type': 'normal',
         # Type of RNNs: NonRecurrent, LeakyRNN, LeakyGRU, EILeakyGRU, GRU, LSTM
-        'rnn_type': 'LeakyRNN',
+        'rnn_type': 'LeakyGRU',
         # whether rule and stimulus inputs are represented separately
         'use_separate_input': False,
         # Type of loss functions
@@ -74,13 +74,13 @@ def get_default_hp(ruleset):
         # a default weak regularization prevents instability (regularizing with absolute value of magnitude of coefficients, leading to sparse features)
         'l1_h': 0,
         # l2 regularization on activity (regularizing with squared value of magnitude of coefficients, decreasing influence of features)
-        'l2_h': 0.00005,
+        'l2_h': 0.00003,
         # l2 regularization on weight
         'l1_weight': 0,
         # l2 regularization on weight
-        'l2_weight': 0,
+        'l2_weight': 0.00003,
         # l2 regularization on deviation from initialization
-        'l2_weight_init': 0,
+        'l2_weight_init': 0.0003,
         # proportion of weights to train, None or float between (0, 1) - e.g. .1 will train a random 10% weight selection, the rest stays fixed (Yang et al. range: .05-.075)
         'p_weight_train': None,
         # Stopping performance
@@ -106,9 +106,9 @@ def get_default_hp(ruleset):
         # name to save
         'save_name': 'test',
         # learning rate
-        'learning_rate': 0.001,
+        'learning_rate': 0.0001,
         # c_mask response epoch value - info: How strong is the response epoch taken into account for caclulating error, the higher the more it influences the costs and therefore the parameter changes
-        'c_mask_responseValue': 1.,
+        'c_mask_responseValue': 3.,
         # intelligent synapses parameters, tuple (c, ksi) -> Yang et al. only apply these in sequential training
         # 'c_intsyn': 0,
         # 'ksi_intsyn': 0,
@@ -222,7 +222,7 @@ def do_eval(sess, model, log, rule_train, eval_data):
 
     return log
 
-def train(model_dir,train_data ,eval_data,hp=None,max_steps=1e7,display_step=500,ruleset='all',rule_trains=None,rule_prob_map=None,seed=0,
+def train(model_dir,train_data ,eval_data,hp=None,max_steps=3e7,display_step=500,ruleset='all',rule_trains=None,rule_prob_map=None,seed=0,
           load_dir=None,trainables=None):
     """Train the network.
 
@@ -437,17 +437,17 @@ if __name__ == '__main__':
     dataFolder = "Data"
     model_folder = 'Model'
     participant = 'BeRNN_03'
-    model_name = 'Model_127_BeRNN_01_Month_2-4' # Manually add months considered e.g. 1-7
+    model_name = 'Model_1024_BeRNN_03_Month_2-8' # Manually add months considered e.g. 1-7
 
     # Define data path for different servers
-    preprocessedData_path = os.path.join('W:\\group_csp\\analyses\\oliver.frank', dataFolder, participant,'PreprocessedData_wResp_ALL')
+    # preprocessedData_path = os.path.join('W:\\group_csp\\analyses\\oliver.frank', dataFolder, participant,'PreprocessedData_wResp_ALL')
     # preprocessedData_path = os.path.join('/zi/flstorage/group_csp/analyses/oliver.frank/Data/', participant, 'PreprocessedData_wResp_ALL')
-    # preprocessedData_path = os.path.join('/pandora/home/oliver.frank/01_Projects/RNN/multitask_BeRNN-main/Data', participant,'PreprocessedData_wResp_ALL')
+    preprocessedData_path = os.path.join('/pandora/home/oliver.frank/01_Projects/RNN/multitask_BeRNN-main', participant, 'PreprocessedData_wResp_ALL')
 
     # Define model_dir for different servers
-    model_dir = os.path.join('W:\\group_csp\\analyses\\oliver.frank\\BeRNN_models\\OLD', model_name)
+    # model_dir = os.path.join('W:\\group_csp\\analyses\\oliver.frank\\BeRNN_models\\OLD', model_name)
     # model_dir = os.path.join('/zi/home/oliver.frank/Desktop/RNN/multitask_BeRNN-main/BeRNN_Models', model_name)
-    # model_dir = os.path.join('/pandora/home/oliver.frank/01_Projects/RNN/multitask_BeRNN-main/BeRNN_Models', model_name)
+    model_dir = os.path.join('/pandora/home/oliver.frank/01_Projects/RNN/multitask_BeRNN-main/BeRNN_Models', model_name)
     if not os.path.exists(model_dir):
         os.makedirs(model_dir)
 
@@ -473,12 +473,12 @@ if __name__ == '__main__':
         file_triplets = []
         for file in os.listdir(subdir):
             if file.endswith('Input.npy'):
-                # III: Exclude files with specific substrings in their names
-                if any(exclude in file for exclude in ['Randomization', 'Segmentation', 'Mirrored', 'Rotation']):
-                    continue
-                # Include only files that contain any of the months in monthsConsidered
-                if not any(month in file for month in monthsConsidered):
-                    continue
+                # # III: Exclude files with specific substrings in their names
+                # if any(exclude in file for exclude in ['Randomization', 'Segmentation', 'Mirrored', 'Rotation']):
+                #     continue
+                # # Include only files that contain any of the months in monthsConsidered
+                # if not any(month in file for month in monthsConsidered):
+                #     continue
                 # Add all necessary files to triplets
                 base_name = file.split('Input')[0]
                 input_file = os.path.join(subdir, base_name + 'Input.npy')

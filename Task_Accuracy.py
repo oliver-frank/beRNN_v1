@@ -174,6 +174,7 @@ import os
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
+from Tools import rule_name
 # from scipy.stats import linregress
 # import matplotlib.dates as mdates
 
@@ -181,11 +182,11 @@ import matplotlib.pyplot as plt
 participant_dir = 'W:\\group_csp\\analyses\\oliver.frank\\Data'
 # participantList = os.listdir(participant_dir)
 # participant = participantList[0] # choose which particpant to analyze
-months = ['2','3','4','5','6','7'] # choose which month to analyze
-strToSave = '2-7'
+months = ['2','3','4','5','6','7','8'] # choose which month to analyze
+strToSave = '2-8'
 
-# newParticpantList = ['BeRNN_03', 'BeRNN_05', 'BeRNN_03', 'BeRNN_05']
-newParticpantList = ['BeRNN_05']
+newParticpantList = ['BeRNN_01', 'BeRNN_02', 'BeRNN_03', 'BeRNN_05']
+# newParticpantList = ['BeRNN_05']
 
 for participant in newParticpantList:
     # Create a list of all files in all defined month folders
@@ -285,8 +286,8 @@ for participant in newParticpantList:
     max_date = max(all_x_values)
     date_range = (max_date - min_date) / 6
 
-    x_ticks = [min_date + i * date_range for i in range(7)] # info: increase with every added month
-    x_labels = ['Start month 2', 'Start month 3', 'Start month 4', 'Start month 5', 'Start month 6', 'Start month 7', 'End month 7']
+    x_ticks = [min_date + i * date_range for i in range(8)] # attention: increase with every added month
+    x_labels = ['Start month 2', 'Start month 3', 'Start month 4', 'Start month 5', 'Start month 6', 'Start month 7', 'Start month 8', 'End month 8'] # attention: add month
 
     fs = 14
     plt.legend(loc='center left',fontsize=fs, ncol=2, bbox_to_anchor=(1, 0.5))
