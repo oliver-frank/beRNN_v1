@@ -31,6 +31,16 @@ def create_param_combinations(param_grid, sample_size):
 
     return sampled_combinations
 
+def create_repeated_param_combinations(param_grid, sample_size):
+    # Create the single combination of parameters
+    keys, values = zip(*param_grid.items())
+    single_combination = dict(zip(keys, [v[0] for v in values]))
+
+    # Return the same combination 'sample_size' times
+    repeated_combinations = [single_combination for _ in range(sample_size)]
+
+    return repeated_combinations
+
 # Info: After first HPs the most probable space inheriting the best solution decreased to the following
 best_params = {
     'batch_size': [40],  # Wrap the integer in a list
@@ -42,48 +52,49 @@ best_params = {
     'activation': ['relu'],  # Wrap the string in a list
     'tau': [100],  # Wrap the integer in a list
     'dt': [20],  # Wrap the integer in a list
-    'sigma_rec': [0.01, 0.05],
-    'sigma_x': [0.001, 0.01],
+    'sigma_rec': [0.05],
+    'sigma_x': [0.01],
     'w_rec_init': ['randortho'],  # Wrap the string in a list
     'l1_h': [0],  # Wrap the integer in a list
-    'l2_h': [0.00001, 0.00003, 0.00005],
+    'l2_h': [0.00005],
     'l1_weight': [0],  # Wrap the integer in a list
-    'l2_weight': [0.0001, 0.0003, 0.0005],
-    'l2_weight_init': [0.0001, 0.0003, 0.0005],
+    'l2_weight': [0],
+    'l2_weight_init': [0],
     'p_weight_train': [None],  # Wrap None in a list
     'learning_rate': [0.0001],  # Wrap the float in a list
-    'n_rnn': [256, 512],
-    'c_mask_responseValue': [2., 3., 5.],
+    'n_rnn': [512],
+    'c_mask_responseValue': [5.],
     'monthsConsidered': [['2', '3', '4', '5', '6', '7', '8']]  # Already a list
 }
 
+# # Randomly sample a chosen selection combinations
+# sampled_combinations = create_param_combinations(best_params, 20)
+
 # Randomly sample a chosen selection combinations
-sampled_combinations = create_param_combinations(best_params, 20)
+sampled_repeated_combinations = create_repeated_param_combinations(best_params, 5)
 
 
 # Training #############################################################################################################
 model_number = 1
 # Example iteration through the grid
-for params in sampled_combinations:
+for params in sampled_repeated_combinations: # info: either sampled_combinations OR sampled_repeated_combinations
     print('START TRAINING FOR NEW MODEL')
     print(params) # Double check with model output files
 
     # Predefine certain variables
-    participant = 'BeRNN_03'
+    participant = 'BeRNN_01'
     monthsConsidered = params['monthsConsidered']
 
     # Data paths for different server
     # preprocessedData_path = os.path.join('W:\\group_csp\\analyses\\oliver.frank\\Data', participant,'PreprocessedData_wResp_ALL')
-    # preprocessedData_path = os.path.join('/pandora/home/oliver.frank/01_Projects/RNN/multitask_BeRNN-main/Data', participant,'PreprocessedData_wResp_ALL')
-    # preprocessedData_path = os.path.join('/zi/flstorage/group_csp/analyses/oliver.frank/Data/', participant,'PreprocessedData_wResp_ALL')
-    preprocessedData_path = os.path.join('/pandora/home/oliver.frank/01_Projects/RNN/multitask_BeRNN-main', participant, 'PreprocessedData_wResp_ALL')
+    preprocessedData_path = os.path.join('/zi/home/oliver.frank/Desktop/RNN/multitask_BeRNN-main/', participant, 'PreprocessedData_wResp_ALL')
+    # preprocessedData_path = os.path.join('/pandora/home/oliver.frank/01_Projects/RNN/multitask_BeRNN-main', participant, 'PreprocessedData_wResp_ALL')
 
     model = 'Model_' + str(model_number) + '_' + participant + '_Month_' + monthsConsidered[0] + '-' + monthsConsidered[-1]
     # Model directories for different server
     # model_dir = os.path.join('W:\\group_csp\\analyses\\oliver.frank\\BeRNN_models\\BeRNN_01_HPT01', model)
-    # model_dir = os.path.join('/pandora/home/oliver.frank/01_Projects/RNN/multitask_BeRNN-main/BeRNN_03_HPT01', model)
-    # model_dir = os.path.join('/zi/flstorage/group_csp/analyses/oliver.frank/BeRNN_models/BeRNN_02_HPT01', model)
-    model_dir = os.path.join('/pandora/home/oliver.frank/01_Projects/RNN/multitask_BeRNN-main/BeRNN_03_HPT03', model)
+    model_dir = os.path.join('/zi/home/oliver.frank/Desktop/RNN/multitask_BeRNN-main/BeRNN_01_HPT03', model)
+    # model_dir = os.path.join('/pandora/home/oliver.frank/01_Projects/RNN/multitask_BeRNN-main/BeRNN_03_HPT03', model)
 
     # Define probability of each task being trained
     rule_prob_map = {"DM": 1, "DM_Anti": 1, "EF": 1, "EF_Anti": 1, "RP": 1, "RP_Anti": 1, "RP_Ctx1": 1, "RP_Ctx2": 1,
@@ -116,8 +127,8 @@ for params in sampled_combinations:
         for file in os.listdir(subdir):
             if file.endswith('Input.npy'):
                 # III: Exclude files with specific substrings in their names
-                if any(exclude in file for exclude in ['Randomization', 'Segmentation', 'Mirrored', 'Rotation']):
-                    continue
+                # if any(exclude in file for exclude in ['Randomization', 'Segmentation', 'Mirrored', 'Rotation']):
+                #     continue
                 # Include only files that contain any of the months in monthsConsidered
                 if not any(month in file for month in monthsConsidered):
                     continue

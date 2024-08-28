@@ -21,8 +21,8 @@ with warnings.catch_warnings():
 participant_dir = 'W:\\group_csp\\analyses\\oliver.frank\\Data'
 participantList = os.listdir(participant_dir)
 
-participant = participantList[3] # choose which particpant to analyze
-month = '7' # choose which month to analyze
+participant = participantList[4] # choose which particpant to analyze
+month = '9' # choose which month to analyze
 
 percentCorrect_DM, count_DM = 0, 0
 percentCorrect_DM_Anti, count_DM_Anti = 0, 0
