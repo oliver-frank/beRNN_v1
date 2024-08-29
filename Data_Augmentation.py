@@ -60,7 +60,7 @@ counters = {
 # Patterns to search for
 for participant in participants:
     trial_dir = os.path.join(directory, dataFolder, participant, preprocessedData_folder)
-    # patterns = ['*BeRNN*']
+    # patterns = ['*art_BeRNN*']
     patterns = ['*Rotation*', '*Mirrored*', '*Segmentation*', '*Randomization*']
     def delete_files(trial_dir, patterns):
         for pattern in patterns:

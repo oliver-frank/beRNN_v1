@@ -76,7 +76,7 @@ class Analysis(object):
         # info: This decides the granularity of summarized nodes that will be taken to create the clusters, also very
         #  important in connection with the number of clusters created below, as they can never overcome this number of
         #  summarized nodes
-        ind_active = np.where(h_var_all_.sum(axis=1) > 1e-3)[0] # attention: > 1e-3
+        ind_active = np.where(h_var_all_.sum(axis=1) > 0)[0] # attention: > 1e-3 - min > 0
         h_var_all  = h_var_all_[ind_active, :]
 
         # Normalize by the total variance across tasks
@@ -444,6 +444,62 @@ class Analysis(object):
                     format='png', dpi=300, bbox_inches='tight', pad_inches=0.1)
         plt.show()
 
+    def plot_connectivity_byclusters_WrecOnly(self, model_dir, mode):
+        """Plot connectivity of the model's recurrent weights only"""
+
+        ind_active = self.ind_active
+
+        # Sort data by labels
+        model = Model(self.model_dir)
+        with tf.Session() as sess:
+            model.restore()
+            w_rec = sess.run(model.w_rec).T
+
+        # Filter and sort the recurrent weights for active units
+        w_rec = w_rec[ind_active, :][:, ind_active]
+
+        # Sort by labels
+        ind_sort = np.argsort(self.labels)
+
+        # Plotting Connectivity for Recurrent Weights ---------------------------------------------------------------
+        nh = len(self.ind_active)
+
+        # Sort the recurrent weight matrix
+        _w_rec = w_rec[ind_sort, :][:, ind_sort]
+        labels = self.labels[ind_sort]
+
+        # Plotting settings
+        l = 0.3
+        l0 = (1 - 1.5 * l) / nh
+
+        plot_infos = [(_w_rec, [l, l, nh * l0, nh * l0])]
+
+        cmap = 'coolwarm'
+        fig = plt.figure(figsize=(6, 6))
+        for plot_info in plot_infos:
+            ax = fig.add_axes(plot_info[1])
+            vmin, vmid, vmax = np.percentile(plot_info[0].flatten(), [5, 50, 95])
+            _ = ax.imshow(plot_info[0], interpolation='nearest', cmap=cmap, aspect='auto',
+                          vmin=vmid - (vmax - vmin) / 2, vmax=vmid + (vmax - vmin) / 2)
+            ax.axis('off')
+
+        ax1 = fig.add_axes([l, l + nh * l0, nh * l0, 6 * l0])
+        ax2 = fig.add_axes([l - 6 * l0, l, 6 * l0, nh * l0])
+        for il, l in enumerate(self.unique_labels):
+            ind_l = np.where(labels == l)[0][[0, -1]] + np.array([0, 1])
+            ax1.plot(ind_l, [0, 0], linewidth=2, solid_capstyle='butt',
+                     color=kelly_colors[il + 1])
+            ax2.plot([0, 0], len(labels) - ind_l, linewidth=2, solid_capstyle='butt',
+                     color=kelly_colors[il + 1])
+        ax1.set_xlim([0, len(labels)])
+        ax2.set_ylim([0, len(labels)])
+        ax1.axis('off')
+        ax2.axis('off')
+        plt.savefig(
+            os.path.join('W:\\group_csp\\analyses\\oliver.frank', 'BeRNN_models\\Visuals\\connectivityByClustersWrecOnly',
+                         model_dir.split("\\")[-1] + '_' + mode + '.png'), \
+            format='png', dpi=300, bbox_inches='tight', pad_inches=0.1)
+        plt.show()
 
 if __name__ == '__main__':
     pass

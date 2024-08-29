@@ -397,7 +397,7 @@ def preprocess_DM(opened_xlsxFile, questionnare_files, list_allSessions, sequenc
 # info: EF tasks
 ########################################################################################################################
 # For debugging
-# xlsxFile = 'W:\\AG_CSP\\Projekte\\BeRNN\\02_Daten\\BeRNN_main\\BeRNN_01\\1\\data_exp_149474-v2_task-2p6f-9621849.xlsx'
+# xlsxFile = 'W:\\AG_CSP\\Projekte\\art_BeRNN\\02_Daten\\BeRNN_main\\BeRNN_01\\1\\data_exp_149474-v2_task-2p6f-9621849.xlsx'
 def preprocess_EF(opened_xlsxFile, questionnare_files, list_allSessions, sequence_on, sequence_off, batchLength):
     # Initialize columns with default values
     opened_xlsxFile.loc[:, 'Fixation input'] = 1
@@ -1080,7 +1080,7 @@ def preprocess_RP(opened_xlsxFile, questionnare_files, list_allSessions, sequenc
 # info: WM tasks
 ########################################################################################################################
 # For debugging
-# batchfile_location = 'W:\\AG_CSP\\Projekte\\BeRNN\\02_Daten\\BeRNN_main\\BeRNN_01\\1\\data_exp_149474-v2_task-fhgh-9621849.xlsx'
+# batchfile_location = 'W:\\AG_CSP\\Projekte\\art_BeRNN\\02_Daten\\BeRNN_main\\BeRNN_01\\1\\data_exp_149474-v2_task-fhgh-9621849.xlsx'
 def preprocess_WM(opened_xlsxFile, questionnare_files, list_allSessions, sequence_on, sequence_off, batchLength):
     # Initialize columns with default values
     opened_xlsxFile.loc[:, 'Fixation input'] = 1

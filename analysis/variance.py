@@ -54,13 +54,11 @@ def _compute_variance_bymodel(model: object, sess: object, mode: str, monthsCons
         from scipy.stats import ortho_group
         random_ortho_matrix = ortho_group.rvs(dim=n_hidden)
 
-    trial_dir = 'W:\\group_csp\\analyses\\oliver.frank' + '\\Data\\BeRNN_' + model_dir.split('BeRNN_')[-1].split('_')[
-        0] + '\\PreprocessedData_wResp_ALL'
+    trial_dir = 'W:\\group_csp\\analyses\\oliver.frank' + '\\Data\\BeRNN_' + model_dir.split('BeRNN_')[-1].split('_')[0] + '\\PreprocessedData_wResp_ALL'
 
     # III: Split the data ##############################################################################################
     # List of the subdirectories
-    subdirs = [os.path.join(trial_dir, d) for d in os.listdir(trial_dir) if
-               os.path.isdir(os.path.join(trial_dir, d))]
+    subdirs = [os.path.join(trial_dir, d) for d in os.listdir(trial_dir) if os.path.isdir(os.path.join(trial_dir, d))]
 
     # Initialize dictionaries to store training and evaluation data
     train_data = {}
@@ -78,8 +76,8 @@ def _compute_variance_bymodel(model: object, sess: object, mode: str, monthsCons
         for file in os.listdir(subdir):
             if file.endswith('Input.npy'):
                 # # III: Exclude files with specific substrings in their names
-                if any(exclude in file for exclude in ['Randomization', 'Segmentation', 'Mirrored', 'Rotation']):
-                    continue
+                # if any(exclude in file for exclude in ['Randomization', 'Segmentation', 'Mirrored', 'Rotation']):
+                #     continue
                 # Include only files that contain any of the months in monthsConsidered
                 if not any(month in file for month in monthsConsidered):
                     continue
