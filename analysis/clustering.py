@@ -245,7 +245,7 @@ class Analysis(object):
             ax.set_ylim([-1, 1])
             ax.axis('off')
 
-        plt.savefig(os.path.join('W:\\group_csp\\analyses\\oliver.frank', 'BeRNN_models\\Visuals\\Variance',model_dir.split("\\")[-1] + '_' + mode + '.png'), \
+        plt.savefig(os.path.join('W:\\group_csp\\analyses\\oliver.frank', 'BeRNN_models\\Visuals\\Variance\\finalReport',model_dir.split("\\")[-1] + '_' + mode + '.png'), \
                     format='png', dpi=300, bbox_inches='tight', pad_inches=0.1)
         plt.show()
 
@@ -278,7 +278,7 @@ class Analysis(object):
         ax2.set_ylim([0, len(labels)])
         ax1.axis('off')
         ax2.axis('off')
-        plt.savefig(os.path.join('W:\\group_csp\\analyses\\oliver.frank', 'BeRNN_models\\Visuals\\Similiarity', \
+        plt.savefig(os.path.join('W:\\group_csp\\analyses\\oliver.frank', 'BeRNN_models\\Visuals\\Similiarity\\finalReport', \
                                  model_dir.split("\\")[-1] + '_' + mode + '.png'), format='png', dpi=300, bbox_inches='tight', pad_inches=0.1)
         plt.show()
 
@@ -496,7 +496,7 @@ class Analysis(object):
         ax1.axis('off')
         ax2.axis('off')
         plt.savefig(
-            os.path.join('W:\\group_csp\\analyses\\oliver.frank', 'BeRNN_models\\Visuals\\connectivityByClustersWrecOnly',
+            os.path.join('W:\\group_csp\\analyses\\oliver.frank', 'BeRNN_models\\Visuals\\connectivityByClustersWrecOnly\\finalReport',
                          model_dir.split("\\")[-1] + '_' + mode + '.png'), \
             format='png', dpi=300, bbox_inches='tight', pad_inches=0.1)
         plt.show()
