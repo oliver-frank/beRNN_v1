@@ -1,171 +1,171 @@
-########################################################################################################################
-# info: Task Accuracy
-########################################################################################################################
-# Monthly evaluation of task performance for individual participant. Training effect plot shows change of pefromance over
-# the whole data collection period.
-
-########################################################################################################################
-# Import necessary libraries and modules
-########################################################################################################################
-import os
-import pandas as pd
-import warnings
-with warnings.catch_warnings():
-    warnings.filterwarnings("ignore", category=FutureWarning)
+# ########################################################################################################################
+# # info: Task Accuracy
+# ########################################################################################################################
+# # Monthly evaluation of task performance for individual participant. Training effect plot shows change of pefromance over
+# # the whole data collection period.
+#
+# ########################################################################################################################
+# # Import necessary libraries and modules
+# ########################################################################################################################
+# import os
+# import pandas as pd
+# import warnings
+# with warnings.catch_warnings():
+#     warnings.filterwarnings("ignore", category=FutureWarning)
 
 ########################################################################################################################
 # TaskAccuracy
 ########################################################################################################################
-# Participant list
-
-participant_dir = 'W:\\group_csp\\analyses\\oliver.frank\\Data'
-participantList = os.listdir(participant_dir)
-
-participant = participantList[4] # choose which particpant to analyze
-month = '9' # choose which month to analyze
-
-percentCorrect_DM, count_DM = 0, 0
-percentCorrect_DM_Anti, count_DM_Anti = 0, 0
-percentCorrect_EF, count_EF = 0, 0
-percentCorrect_EF_Anti, count_EF_Anti = 0, 0
-percentCorrect_RP, count_RP = 0, 0
-percentCorrect_RP_Anti, count_RP_Anti = 0, 0
-percentCorrect_RP_Ctx1, count_RP_Ctx1 = 0, 0
-percentCorrect_RP_Ctx2, count_RP_Ctx2 = 0, 0
-percentCorrect_WM, count_WM = 0, 0
-percentCorrect_WM_Anti, count_WM_Anti = 0, 0
-percentCorrect_WM_Ctx1, count_WM_Ctx1 = 0, 0
-percentCorrect_WM_Ctx2, count_WM_Ctx2 = 0, 0
-
-# co: Download data as .xlsx long format
-list_testParticipant_month = os.listdir(os.path.join(participant_dir,participant,month))
-for i in list_testParticipant_month:
-    if i.split('.')[1] != 'png':
-        currentFile = pd.read_excel(os.path.join(participant_dir,participant,month,i), engine='openpyxl')
-        # print(currentFile['UTC Date and Time'])
-        if currentFile['Task Name'][0] != '000_state_questions' and currentFile['Task Name'][0] != '000_session_completion': # avoid files with state questions and session completion
-            # print(currentFile.iloc[0,28].split('_trials_')[0])
-            # print('W:/AG_CSP/Projekte/art_BeRNN/02_Daten/BeRNN_main/' + participant + month + i)
-            if currentFile['Spreadsheet'][0].split('_trials_')[0] == 'DM':
-                # percentCorrect_DM += currentFile['Store: PercentCorrectDM'][len(currentFile['Store: PercentCorrectDM'])-3]
-                # count_DM += 1
-
-                filtered_rows = currentFile[currentFile['Event Index'] == 124].copy() # info: every now and then the 125th event is missing
-                percentCorrect_DM += sum(filtered_rows['Store: PercentCorrectDM'])
-                count_DM += len(filtered_rows)
-                print('currentFile processed')
-
-            if currentFile['Spreadsheet'][0].split('_trials_')[0] == 'DM_Anti':
-                # percentCorrect_DM_Anti += currentFile['Store: PercentCorrectDMAnti'][len(currentFile['Store: PercentCorrectDMAnti'])-3]
-                # count_DM_Anti += 1
-
-                filtered_rows = currentFile[currentFile['Event Index'] == 124].copy() # info: every now and then the 125th event is missing
-                percentCorrect_DM_Anti += sum(filtered_rows['Store: PercentCorrectDMAnti'])
-                count_DM_Anti += len(filtered_rows)
-                print('currentFile processed')
-
-            if currentFile['Spreadsheet'][0].split('_trials_')[0] == 'EF':
-                # percentCorrect_EF += currentFile['Store: PercentCorrectEF'][len(currentFile['Store: PercentCorrectEF'])-3]
-                # count_EF += 1
-
-                filtered_rows = currentFile[currentFile['Event Index'] == 125].copy()
-                percentCorrect_EF += sum(filtered_rows['Store: PercentCorrectEF'])
-                count_EF += len(filtered_rows)
-                print('currentFile processed')
-
-            if currentFile['Spreadsheet'][0].split('_trials_')[0] == 'EF_Anti':
-                # percentCorrect_EF_Anti += currentFile['Store: PercentCorrectEFAnti'][len(currentFile['Store: PercentCorrectEFAnti'])-3] # no extra displays for Anti were made
-                # count_EF_Anti += 1
-
-                filtered_rows = currentFile[currentFile['Event Index'] == 125].copy()
-                percentCorrect_EF_Anti += sum(filtered_rows['Store: PercentCorrectEFAnti'])
-                count_EF_Anti += len(filtered_rows)
-                print('currentFile processed')
-
-            if currentFile['Spreadsheet'][0].split('_trials_')[0] == 'RP':
-                # percentCorrect_RP += currentFile['Store: PercentCorrectRP'][len(currentFile['Store: PercentCorrectRP'])-3]
-                # count_RP += 1
-
-                filtered_rows = currentFile[currentFile['Event Index'] == 124].copy() # info: every now and then the 125th event is missing
-                percentCorrect_RP += sum(filtered_rows['Store: PercentCorrectRP'])
-                count_RP += len(filtered_rows)
-                print('currentFile processed')
-
-            if currentFile['Spreadsheet'][0].split('_trials_')[0] == 'RP_Anti':
-                # percentCorrect_RP_Anti += currentFile['Store: PercentCorrectRPAnti'][len(currentFile['Store: PercentCorrectRPAnti'])-3]
-                # count_RP_Anti += 1
-
-                filtered_rows = currentFile[currentFile['Event Index'] == 125].copy()
-                percentCorrect_RP_Anti += sum(filtered_rows['Store: PercentCorrectRPAnti'])
-                count_RP_Anti += len(filtered_rows)
-                print('currentFile processed')
-
-            if currentFile['Spreadsheet'][0].split('_trials_')[0] == 'RP_Ctx1':
-                # percentCorrect_RP_Ctx1 += currentFile['Store: PercentCorrectRPCtx1'][len(currentFile['Store: PercentCorrectRPCtx1'])-3]
-                # count_RP_Ctx1 += 1
-
-                filtered_rows = currentFile[currentFile['Event Index'] == 124].copy() # info: every now and then the 125th event is missing
-                percentCorrect_RP_Ctx1 += sum(filtered_rows['Store: PercentCorrectRPCtx1'])
-                count_RP_Ctx1 += len(filtered_rows)
-                print('currentFile processed')
-
-            if currentFile['Spreadsheet'][0].split('_trials_')[0] == 'RP_Ctx2':
-                # percentCorrect_RP_Ctx2 += currentFile['Store: PercentCorrectRPCtx2'][len(currentFile['Store: PercentCorrectRPCtx2'])-3]
-                # count_RP_Ctx2 += 1
-
-                filtered_rows = currentFile[currentFile['Event Index'] == 125].copy()
-                percentCorrect_RP_Ctx2 += sum(filtered_rows['Store: PercentCorrectRPCtx2'])
-                count_RP_Ctx2 += len(filtered_rows)
-                print('currentFile processed')
-
-            if currentFile['Spreadsheet'][0].split('_trials_')[0] == 'WM':
-                # percentCorrect_WM += currentFile['Store: PercentCorrectWM'][len(currentFile['Store: PercentCorrectWM'])-3]
-                # count_WM += 1
-
-                filtered_rows = currentFile[currentFile['Event Index'] == 125].copy()
-                percentCorrect_WM += sum(filtered_rows['Store: PercentCorrectWM'])
-                count_WM += len(filtered_rows)
-                print('currentFile processed')
-
-            if currentFile['Spreadsheet'][0].split('_trials_')[0] == 'WM_Anti':
-                # percentCorrect_WM_Anti += currentFile['Store: PercentCorrectWMAnti'][len(currentFile['Store: PercentCorrectWMAnti'])-3]
-                # count_WM_Anti += 1
-
-                filtered_rows = currentFile[currentFile['Event Index'] == 125].copy()
-                percentCorrect_WM_Anti += sum(filtered_rows['Store: PercentCorrectWMAnti'])
-                count_WM_Anti += len(filtered_rows)
-                print('currentFile processed')
-
-            if currentFile['Spreadsheet'][0].split('_trials_')[0]  == 'WM_Ctx1': # info: Change to _3stim_trials_ from 8th month again
-                # percentCorrect_WM_Ctx1 += currentFile['Store: PercentCorrectWMCtx1'][len(currentFile['Store: PercentCorrectWMCtx1'])-3]
-                # count_WM_Ctx1 += 1
-
-                filtered_rows = currentFile[currentFile['Event Index'] == 124].copy()
-                percentCorrect_WM_Ctx1 += sum(filtered_rows['Store: PercentCorrectWMCtx1'])
-                count_WM_Ctx1 += len(filtered_rows)
-                print('currentFile processed')
-
-            if currentFile['Spreadsheet'][0].split('_trials_')[0]  == 'WM_Ctx2': # info: Change to _3stim_trials_ from 8th month again
-                # percentCorrect_WM_Ctx2 += currentFile['Store: PercentCorrectWMCtx2'][len(currentFile['Store: PercentCorrectWMCtx2'])-3]
-                # count_WM_Ctx2 += 1
-
-                filtered_rows = currentFile[currentFile['Event Index'] == 124].copy()
-                percentCorrect_WM_Ctx2 += sum(filtered_rows['Store: PercentCorrectWMCtx2'])
-                count_WM_Ctx2 += len(filtered_rows)
-                print('currentFile processed')
-
-acc_DM = percentCorrect_DM/count_DM
-acc_DM_Anti = percentCorrect_DM_Anti/count_DM_Anti
-acc_EF = percentCorrect_EF/count_EF
-acc_EF_Anti = percentCorrect_EF_Anti/count_EF_Anti
-acc_WM = percentCorrect_WM/count_WM
-acc_WM_Anti = percentCorrect_WM_Anti/count_WM_Anti
-acc_WM_Ctx1 = percentCorrect_WM_Ctx1/count_WM_Ctx1
-acc_WM_Ctx2 = percentCorrect_WM_Ctx2/count_WM_Ctx2
-acc_RP = percentCorrect_RP/count_RP
-acc_RP_Anti = percentCorrect_RP_Anti/count_RP_Anti
-acc_RP_Ctx1 = percentCorrect_RP_Ctx1/count_RP_Ctx1
-acc_RP_Ctx2 = percentCorrect_RP_Ctx2/count_RP_Ctx2
+# # Participant list
+#
+# participant_dir = 'W:\\group_csp\\analyses\\oliver.frank\\Data'
+# participantList = os.listdir(participant_dir)
+#
+# participant = participantList[4] # choose which particpant to analyze
+# month = '9' # choose which month to analyze
+#
+# percentCorrect_DM, count_DM = 0, 0
+# percentCorrect_DM_Anti, count_DM_Anti = 0, 0
+# percentCorrect_EF, count_EF = 0, 0
+# percentCorrect_EF_Anti, count_EF_Anti = 0, 0
+# percentCorrect_RP, count_RP = 0, 0
+# percentCorrect_RP_Anti, count_RP_Anti = 0, 0
+# percentCorrect_RP_Ctx1, count_RP_Ctx1 = 0, 0
+# percentCorrect_RP_Ctx2, count_RP_Ctx2 = 0, 0
+# percentCorrect_WM, count_WM = 0, 0
+# percentCorrect_WM_Anti, count_WM_Anti = 0, 0
+# percentCorrect_WM_Ctx1, count_WM_Ctx1 = 0, 0
+# percentCorrect_WM_Ctx2, count_WM_Ctx2 = 0, 0
+#
+# # co: Download data as .xlsx long format
+# list_testParticipant_month = os.listdir(os.path.join(participant_dir,participant,month))
+# for i in list_testParticipant_month:
+#     if i.split('.')[1] != 'png':
+#         currentFile = pd.read_excel(os.path.join(participant_dir,participant,month,i), engine='openpyxl')
+#         # print(currentFile['UTC Date and Time'])
+#         if currentFile['Task Name'][0] != '000_state_questions' and currentFile['Task Name'][0] != '000_session_completion': # avoid files with state questions and session completion
+#             # print(currentFile.iloc[0,28].split('_trials_')[0])
+#             # print('W:/AG_CSP/Projekte/art_BeRNN/02_Daten/BeRNN_main/' + participant + month + i)
+#             if currentFile['Spreadsheet'][0].split('_trials_')[0] == 'DM':
+#                 # percentCorrect_DM += currentFile['Store: PercentCorrectDM'][len(currentFile['Store: PercentCorrectDM'])-3]
+#                 # count_DM += 1
+#
+#                 filtered_rows = currentFile[currentFile['Event Index'] == 124].copy() # info: every now and then the 125th event is missing
+#                 percentCorrect_DM += sum(filtered_rows['Store: PercentCorrectDM'])
+#                 count_DM += len(filtered_rows)
+#                 print('currentFile processed')
+#
+#             if currentFile['Spreadsheet'][0].split('_trials_')[0] == 'DM_Anti':
+#                 # percentCorrect_DM_Anti += currentFile['Store: PercentCorrectDMAnti'][len(currentFile['Store: PercentCorrectDMAnti'])-3]
+#                 # count_DM_Anti += 1
+#
+#                 filtered_rows = currentFile[currentFile['Event Index'] == 124].copy() # info: every now and then the 125th event is missing
+#                 percentCorrect_DM_Anti += sum(filtered_rows['Store: PercentCorrectDMAnti'])
+#                 count_DM_Anti += len(filtered_rows)
+#                 print('currentFile processed')
+#
+#             if currentFile['Spreadsheet'][0].split('_trials_')[0] == 'EF':
+#                 # percentCorrect_EF += currentFile['Store: PercentCorrectEF'][len(currentFile['Store: PercentCorrectEF'])-3]
+#                 # count_EF += 1
+#
+#                 filtered_rows = currentFile[currentFile['Event Index'] == 125].copy()
+#                 percentCorrect_EF += sum(filtered_rows['Store: PercentCorrectEF'])
+#                 count_EF += len(filtered_rows)
+#                 print('currentFile processed')
+#
+#             if currentFile['Spreadsheet'][0].split('_trials_')[0] == 'EF_Anti':
+#                 # percentCorrect_EF_Anti += currentFile['Store: PercentCorrectEFAnti'][len(currentFile['Store: PercentCorrectEFAnti'])-3] # no extra displays for Anti were made
+#                 # count_EF_Anti += 1
+#
+#                 filtered_rows = currentFile[currentFile['Event Index'] == 125].copy()
+#                 percentCorrect_EF_Anti += sum(filtered_rows['Store: PercentCorrectEFAnti'])
+#                 count_EF_Anti += len(filtered_rows)
+#                 print('currentFile processed')
+#
+#             if currentFile['Spreadsheet'][0].split('_trials_')[0] == 'RP':
+#                 # percentCorrect_RP += currentFile['Store: PercentCorrectRP'][len(currentFile['Store: PercentCorrectRP'])-3]
+#                 # count_RP += 1
+#
+#                 filtered_rows = currentFile[currentFile['Event Index'] == 124].copy() # info: every now and then the 125th event is missing
+#                 percentCorrect_RP += sum(filtered_rows['Store: PercentCorrectRP'])
+#                 count_RP += len(filtered_rows)
+#                 print('currentFile processed')
+#
+#             if currentFile['Spreadsheet'][0].split('_trials_')[0] == 'RP_Anti':
+#                 # percentCorrect_RP_Anti += currentFile['Store: PercentCorrectRPAnti'][len(currentFile['Store: PercentCorrectRPAnti'])-3]
+#                 # count_RP_Anti += 1
+#
+#                 filtered_rows = currentFile[currentFile['Event Index'] == 125].copy()
+#                 percentCorrect_RP_Anti += sum(filtered_rows['Store: PercentCorrectRPAnti'])
+#                 count_RP_Anti += len(filtered_rows)
+#                 print('currentFile processed')
+#
+#             if currentFile['Spreadsheet'][0].split('_trials_')[0] == 'RP_Ctx1':
+#                 # percentCorrect_RP_Ctx1 += currentFile['Store: PercentCorrectRPCtx1'][len(currentFile['Store: PercentCorrectRPCtx1'])-3]
+#                 # count_RP_Ctx1 += 1
+#
+#                 filtered_rows = currentFile[currentFile['Event Index'] == 124].copy() # info: every now and then the 125th event is missing
+#                 percentCorrect_RP_Ctx1 += sum(filtered_rows['Store: PercentCorrectRPCtx1'])
+#                 count_RP_Ctx1 += len(filtered_rows)
+#                 print('currentFile processed')
+#
+#             if currentFile['Spreadsheet'][0].split('_trials_')[0] == 'RP_Ctx2':
+#                 # percentCorrect_RP_Ctx2 += currentFile['Store: PercentCorrectRPCtx2'][len(currentFile['Store: PercentCorrectRPCtx2'])-3]
+#                 # count_RP_Ctx2 += 1
+#
+#                 filtered_rows = currentFile[currentFile['Event Index'] == 125].copy()
+#                 percentCorrect_RP_Ctx2 += sum(filtered_rows['Store: PercentCorrectRPCtx2'])
+#                 count_RP_Ctx2 += len(filtered_rows)
+#                 print('currentFile processed')
+#
+#             if currentFile['Spreadsheet'][0].split('_trials_')[0] == 'WM':
+#                 # percentCorrect_WM += currentFile['Store: PercentCorrectWM'][len(currentFile['Store: PercentCorrectWM'])-3]
+#                 # count_WM += 1
+#
+#                 filtered_rows = currentFile[currentFile['Event Index'] == 125].copy()
+#                 percentCorrect_WM += sum(filtered_rows['Store: PercentCorrectWM'])
+#                 count_WM += len(filtered_rows)
+#                 print('currentFile processed')
+#
+#             if currentFile['Spreadsheet'][0].split('_trials_')[0] == 'WM_Anti':
+#                 # percentCorrect_WM_Anti += currentFile['Store: PercentCorrectWMAnti'][len(currentFile['Store: PercentCorrectWMAnti'])-3]
+#                 # count_WM_Anti += 1
+#
+#                 filtered_rows = currentFile[currentFile['Event Index'] == 125].copy()
+#                 percentCorrect_WM_Anti += sum(filtered_rows['Store: PercentCorrectWMAnti'])
+#                 count_WM_Anti += len(filtered_rows)
+#                 print('currentFile processed')
+#
+#             if currentFile['Spreadsheet'][0].split('_trials_')[0]  == 'WM_Ctx1': # info: Change to _3stim_trials_ from 8th month again
+#                 # percentCorrect_WM_Ctx1 += currentFile['Store: PercentCorrectWMCtx1'][len(currentFile['Store: PercentCorrectWMCtx1'])-3]
+#                 # count_WM_Ctx1 += 1
+#
+#                 filtered_rows = currentFile[currentFile['Event Index'] == 124].copy()
+#                 percentCorrect_WM_Ctx1 += sum(filtered_rows['Store: PercentCorrectWMCtx1'])
+#                 count_WM_Ctx1 += len(filtered_rows)
+#                 print('currentFile processed')
+#
+#             if currentFile['Spreadsheet'][0].split('_trials_')[0]  == 'WM_Ctx2': # info: Change to _3stim_trials_ from 8th month again
+#                 # percentCorrect_WM_Ctx2 += currentFile['Store: PercentCorrectWMCtx2'][len(currentFile['Store: PercentCorrectWMCtx2'])-3]
+#                 # count_WM_Ctx2 += 1
+#
+#                 filtered_rows = currentFile[currentFile['Event Index'] == 124].copy()
+#                 percentCorrect_WM_Ctx2 += sum(filtered_rows['Store: PercentCorrectWMCtx2'])
+#                 count_WM_Ctx2 += len(filtered_rows)
+#                 print('currentFile processed')
+#
+# acc_DM = percentCorrect_DM/count_DM
+# acc_DM_Anti = percentCorrect_DM_Anti/count_DM_Anti
+# acc_EF = percentCorrect_EF/count_EF
+# acc_EF_Anti = percentCorrect_EF_Anti/count_EF_Anti
+# acc_WM = percentCorrect_WM/count_WM
+# acc_WM_Anti = percentCorrect_WM_Anti/count_WM_Anti
+# acc_WM_Ctx1 = percentCorrect_WM_Ctx1/count_WM_Ctx1
+# acc_WM_Ctx2 = percentCorrect_WM_Ctx2/count_WM_Ctx2
+# acc_RP = percentCorrect_RP/count_RP
+# acc_RP_Anti = percentCorrect_RP_Anti/count_RP_Anti
+# acc_RP_Ctx1 = percentCorrect_RP_Ctx1/count_RP_Ctx1
+# acc_RP_Ctx2 = percentCorrect_RP_Ctx2/count_RP_Ctx2
 
 ########################################################################################################################
 # Plot training effect
@@ -289,11 +289,11 @@ for participant in newParticpantList:
     x_ticks = [min_date + i * date_range for i in range(8)] # attention: increase with every added month
     x_labels = ['Start month 2', 'Start month 3', 'Start month 4', 'Start month 5', 'Start month 6', 'Start month 7', 'Start month 8', 'End month 8'] # attention: add month
 
-    fs = 14
+    fs = 18
     plt.legend(loc='center left',fontsize=fs, ncol=2, bbox_to_anchor=(1, 0.5))
     plt.xlabel('Time',fontsize=fs)
     plt.ylabel('Performance',fontsize=fs)
-    plt.title(participant, fontsize=16)
+    plt.title(participant, fontsize=18)
     plt.xticks(ticks=x_ticks, labels=x_labels)
 
     # Let matplotlib autoscale the x-axis
