@@ -44,7 +44,7 @@ def get_default_hp(ruleset):
     n_input, n_output = 1 + num_ring * n_eachring + n_rule, n_eachring + 1
     hp = {
         # batch size for training and evaluation
-        'batch_size': 40,
+        'batch_size': 40, # info: Should be smaller than 40 or 40/80/120/160
         # batch_size for testing
         # 'batch_size_test': 640,
         # input type: normal, multi
@@ -66,7 +66,7 @@ def get_default_hp(ruleset):
         # discretization time step/time constant info: dt/tau = alpha
         'alpha': 0.2,
         # recurrent noise - directly influencing the noise added to the network; can prevent over-fitting especially when learning time sequences
-        'sigma_rec': 0.06, # info: Can be increased with higher amount of hidden units
+        'sigma_rec': 0.05, # info: Can be increased with higher amount of hidden units
         # input noise
         'sigma_x': 0.01,
         # leaky_rec weight initialization, diag, randortho, randgauss
@@ -74,11 +74,11 @@ def get_default_hp(ruleset):
         # a default weak regularization prevents instability (regularizing with absolute value of magnitude of coefficients, leading to sparse features)
         'l1_h': 0, # info: The higher the amount of hidden_rnn, the stronger the regularization to prevent overfitting
         # l2 regularization on activity (regularizing with squared value of magnitude of coefficients, decreasing influence of features)
-        'l2_h': 0.0001,
+        'l2_h': 0.00001,
         # l2 regularization on weight
         'l1_weight': 0,
         # l2 regularization on weight
-        'l2_weight': 0.0001,
+        'l2_weight': 0.00001,
         # l2 regularization on deviation from initialization
         'l2_weight_init': 0,
         # proportion of weights to train, None or float between (0, 1) - e.g. .1 will train a random 10% weight selection, the rest stays fixed (Yang et al. range: .05-.075)
@@ -98,7 +98,7 @@ def get_default_hp(ruleset):
         # number of output units
         'n_output': n_output,
         # number of recurrent units
-        'n_rnn': 1024,
+        'n_rnn': 512,
         # random number used for several random initializations
         'rng': np.random.RandomState(seed=0),
         # number of input units
@@ -106,7 +106,7 @@ def get_default_hp(ruleset):
         # name to save
         'save_name': 'test',
         # learning rate
-        'learning_rate': 0.00007, # n_rnn:256 - 0.001; n_rnn:512 - 0.0001; n_rnn:1024 - 0.00007; n_rnn:2048 - 0.00004
+        'learning_rate': 0.0001, # n_rnn:256 - 0.001; n_rnn:512 - 0.0001; n_rnn:1024 - 0.00007; n_rnn:2048 - 0.00004
         # c_mask response epoch value - info: How strong is the response epoch taken into account for caclulating error, the higher the more it influences the costs and therefore the parameter changes
         'c_mask_responseValue': 5.,
         # intelligent synapses parameters, tuple (c, ksi) -> Yang et al. only apply these in sequential training
@@ -436,18 +436,18 @@ if __name__ == '__main__':
     # Adjust variables manually as needed
     dataFolder = "Data"
     model_folder = 'Model'
-    participant = 'BeRNN_01'
-    model_name = 'Model_1024_BeRNN_01_Month_2-8' # Manually add months considered e.g. 1-7
+    participant = 'BeRNN_03'
+    model_name = 'Model_batchSizeTEST5_BeRNN_03_Month_2-8' # Manually add months considered e.g. 1-7
 
     # Define data path for different servers
-    # preprocessedData_path = os.path.join('W:\\group_csp\\analyses\\oliver.frank', dataFolder, participant,'PreprocessedData_wResp_ALL')
+    preprocessedData_path = os.path.join('W:\\group_csp\\analyses\\oliver.frank', dataFolder, participant,'PreprocessedData_wResp_ALL')
     # preprocessedData_path = os.path.join('/zi/flstorage/group_csp/analyses/oliver.frank/Data/', participant, 'PreprocessedData_wResp_ALL')
-    preprocessedData_path = os.path.join('/pandora/home/oliver.frank/01_Projects/RNN/multitask_BeRNN-main', participant, 'PreprocessedData_wResp_ALL')
+    # preprocessedData_path = os.path.join('/pandora/home/oliver.frank/01_Projects/RNN/multitask_BeRNN-main', participant, 'PreprocessedData_wResp_ALL')
 
     # Define model_dir for different servers
-    # model_dir = os.path.join('W:\\group_csp\\analyses\\oliver.frank\\BeRNN_models\\OLD', model_name)
+    model_dir = os.path.join('W:\\group_csp\\analyses\\oliver.frank\\BeRNN_models', model_name)
     # model_dir = os.path.join('/zi/home/oliver.frank/Desktop/RNN/multitask_BeRNN-main/BeRNN_Models', model_name)
-    model_dir = os.path.join('/pandora/home/oliver.frank/01_Projects/RNN/multitask_BeRNN-main/BeRNN_Models', model_name)
+    # model_dir = os.path.join('/pandora/home/oliver.frank/01_Projects/RNN/multitask_BeRNN-main/BeRNN_Models', model_name)
     if not os.path.exists(model_dir):
         os.makedirs(model_dir)
 

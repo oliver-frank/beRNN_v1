@@ -255,7 +255,7 @@ class Analysis(object):
         similarity = cosine_similarity(self.h_normvar_all)  # Compute similarity
 
         # Set up the figure
-        fig = plt.figure(figsize=(6, 6))
+        fig = plt.figure(figsize=(10, 10))
 
         # Create the main similarity matrix plot
         matrix_left = 0.1
@@ -266,33 +266,39 @@ class Analysis(object):
         ax_matrix = fig.add_axes([matrix_left, matrix_bottom, matrix_width, matrix_height])
         im = ax_matrix.imshow(similarity, cmap='coolwarm', interpolation='nearest', vmin=0, vmax=1)
 
+        # Add title
+        ax_matrix.set_title('Average Functional Cosine Similiarity - BeRNN', fontsize=22, pad=20)
+        # Add x-axis and y-axis labels
+        ax_matrix.set_xlabel('Hidden units', fontsize=16, labelpad=15)
+        ax_matrix.set_ylabel('Hidden units', fontsize=16, labelpad=15)
+
         # Remove x and y ticks
         ax_matrix.set_xticks([])  # Disable x-ticks
         ax_matrix.set_yticks([])  # Disable y-ticks
 
-        # Create the cluster bar directly below the matrix
-        bar_bottom = matrix_bottom - 0.07
-        bar_height = 0.05
+        # # # Create the cluster bar directly below the matrix
+        # bar_bottom = matrix_bottom - 0.07
+        # bar_height = 0.05
+        #
+        # ax_color = fig.add_axes([matrix_left, bar_bottom, matrix_width, bar_height], sharex=ax_matrix)
+        # for il, l in enumerate(self.unique_labels):
+        #     ind_l = np.where(labels == l)[0][[0, -1]] + np.array([0, 1])
+        #     ax_color.plot(ind_l, [0, 0], linewidth=4, solid_capstyle='butt',
+        #                   color=kelly_colors[il + 1])
+        #     ax_color.text(np.mean(ind_l), -0.5, str(il + 1), fontsize=8,
+        #                   ha='center', va='top', color=kelly_colors[il + 1])
 
-        ax_color = fig.add_axes([matrix_left, bar_bottom, matrix_width, bar_height], sharex=ax_matrix)
-        for il, l in enumerate(self.unique_labels):
-            ind_l = np.where(labels == l)[0][[0, -1]] + np.array([0, 1])
-            ax_color.plot(ind_l, [0, 0], linewidth=4, solid_capstyle='butt',
-                          color=kelly_colors[il + 1])
-            ax_color.text(np.mean(ind_l), -0.5, str(il + 1), fontsize=8,
-                          ha='center', va='top', color=kelly_colors[il + 1])
-
-        ax_color.set_xlim([0, len(labels)])
-        ax_color.set_ylim([-1, 1])
-        ax_color.axis('off')
-
-        # Create the x-axis label directly below the cluster bar
-        label_bottom = bar_bottom - 0.07
-        label_height = 0.05
-
-        ax_label = fig.add_axes([matrix_left, label_bottom, matrix_width, label_height], sharex=ax_matrix)
-        ax_label.axis('off')
-        ax_label.text(0.5, 0.5, 'Clusters', fontsize=18, ha='center', va='center', transform=ax_label.transAxes)
+        # ax_color.set_xlim([0, len(labels)])
+        # ax_color.set_ylim([-1, 1])
+        # ax_color.axis('off')
+        #
+        # # Create the x-axis label directly below the cluster bar
+        # label_bottom = bar_bottom - 0.07
+        # label_height = 0.05
+        #
+        # ax_label = fig.add_axes([matrix_left, label_bottom, matrix_width, label_height], sharex=ax_matrix)
+        # ax_label.axis('off')
+        # ax_label.text(0.5, 0.5, 'Clusters', fontsize=18, ha='center', va='center', transform=ax_label.transAxes)
 
         # Create the colorbar on the right side, aligned with the matrix
         colorbar_left = matrix_left + matrix_width + 0.02
@@ -304,13 +310,13 @@ class Analysis(object):
         cb.outline.set_linewidth(0.5)
         cb.set_label('Similarity', fontsize=18, labelpad=0)
 
-        # Set the title above the similarity matrix, centered
-        if mode == 'Training':
-            title = '_'.join(model_dir.split("\\")[-1].split('_')[0:4]) + '_TRAINING'
-        elif mode == 'Evaluation':
-            title = '_'.join(model_dir.split("\\")[-1].split('_')[0:4]) + '_TEST'
+        # # Set the title above the similarity matrix, centered
+        # if mode == 'Training':
+        #     title = '_'.join(model_dir.split("\\")[-1].split('_')[0:4]) + '_TRAINING'
+        # elif mode == 'Evaluation':
+        #     title = '_'.join(model_dir.split("\\")[-1].split('_')[0:4]) + '_TEST'
 
-        ax_matrix.set_title(title, fontsize=14, pad=20)
+        # ax_matrix.set_title(title, fontsize=14, pad=20)
         # Save the figure with a tight bounding box to ensure alignment
         save_path = os.path.join('W:\\group_csp\\analyses\\oliver.frank',
                                  'BeRNN_models\\Visuals\\Similiarity\\finalReport',

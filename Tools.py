@@ -59,7 +59,20 @@ def get_dist(original_dist):
     '''Get the distance in periodic boundary conditions'''
     return np.minimum(abs(original_dist),2*np.pi-abs(original_dist))
 
-def load_trials(task,mode,batchSize, data, errorComparison):
+def truncate_to_smallest(arrays):
+    """Truncate each array in the list to the smallest first dimension size."""
+    # Find the smallest first dimension size
+    min_size = min(arr.shape[0] for arr in arrays)
+
+    # Truncate each array to the min_size
+    if arrays[0].ndim == 2:
+        truncated_arrays = [arr[arr.shape[0] - min_size:, :] for arr in arrays]
+    elif arrays[0].ndim == 3:
+        truncated_arrays = [arr[arr.shape[0]-min_size:, :, :] for arr in arrays]
+
+    return truncated_arrays
+
+def load_trials(task,mode,batchSize,data,errorComparison):
     '''Load trials from pickle file'''
     # Build-in mechanism to prevent interruption of code as for many .npy files there errors are raised
     max_attempts = 30
@@ -79,12 +92,8 @@ def load_trials(task,mode,batchSize, data, errorComparison):
         #         file_splits = random.choice(os.listdir(os.path.join(trial_dir, '_Evaluation_Data', task))).split('-')
         # file_stem = '-'.join(file_splits[:-1]) # '-'.join(...)
         try:
-            # Debug
-            # trial_dir = 'W:\\group_csp\\analyses\\oliver.frank\\Data\\BeRNN_03\\PreprocessedData_wResp_ALL\\DM\\BeRNN_03-month_2-batch_0-DM-task_9ivx-Input.npy'
-            # x = np.load(trial_dir, mmap_mode='r')
-            # batchSize = 40
-            # currentTaskDict = {key: value for key, value in train_data.items() if key.endswith('DM')}
-            # currentTaskDict
+            numberOfBatches = int(batchSize / 40) # Choose numberOfBatches for one training step
+            if numberOfBatches < 1: numberOfBatches = 1  # Be sure to load at least one batch and then sample it down if defined by batchSize
 
             if mode == 'Training':
                 # Choose the triplet from the splitted data
@@ -92,31 +101,103 @@ def load_trials(task,mode,batchSize, data, errorComparison):
                 for key, values in data.items():
                     if key.endswith(task):
                         currenTask_values.extend(values)
-                currentTriplet = random.choice(currenTask_values)
+                # Select number of batches according to defined batchSize
+                currentTriplets = random.sample(currenTask_values, numberOfBatches)
+                base_name = currentTriplets[0][0].split('\\')[-1].split('Input')
+
                 # Load the files
-                x = np.load(currentTriplet[0]) # Input
-                y = np.load(currentTriplet[2]) # Participant Response
-                y_loc = np.load(currentTriplet[1]) # Ground Truth # yLoc
-                if batchSize < 40:
-                    # randomly choose ratio for part of batch to take
-                    choice = np.random.choice(['first', 'last', 'middle'])
-                    if choice == 'first':
-                        # Select rows for either training
-                        x = x[:, :batchSize, :]
-                        y = y[:, :batchSize, :]
-                        y_loc = y_loc[:, :batchSize]
-                    elif choice == 'last':
-                        # Select rows for either training
-                        x = x[:, 40-batchSize:, :]
-                        y = y[:, 40-batchSize:, :]
-                        y_loc = y_loc[:, 40-batchSize:]
-                    elif choice == 'middle':
-                        # Select the middle batchSize rows
-                        mid_start = (x.shape[1] - batchSize) // 2
-                        mid_end = mid_start + batchSize
-                        x = x[:, mid_start:mid_end, :]
-                        y = y[:, mid_start:mid_end, :]
-                        y_loc = y_loc[:, mid_start:mid_end]
+                if numberOfBatches <= 1:
+                    x = np.load(currentTriplets[0][0]) # Input
+                    y = np.load(currentTriplets[0][2]) # Participant Response
+                    y_loc = np.load(currentTriplets[0][1]) # Ground Truth # yLoc
+                    if batchSize < 40:
+                        # randomly choose ratio for part of batch to take
+                        choice = np.random.sample(['first', 'last', 'middle'])
+                        if choice == 'first':
+                            # Select rows for either training
+                            x = x[:, :batchSize, :]
+                            y = y[:, :batchSize, :]
+                            y_loc = y_loc[:, :batchSize]
+                        elif choice == 'last':
+                            # Select rows for either training
+                            x = x[:, 40-batchSize:, :]
+                            y = y[:, 40-batchSize:, :]
+                            y_loc = y_loc[:, 40-batchSize:]
+                        elif choice == 'middle':
+                            # Select the middle batchSize rows
+                            mid_start = (x.shape[1] - batchSize) // 2
+                            mid_end = mid_start + batchSize
+                            x = x[:, mid_start:mid_end, :]
+                            y = y[:, mid_start:mid_end, :]
+                            y_loc = y_loc[:, mid_start:mid_end]
+                elif numberOfBatches == 2:
+                    x_0 = np.load(currentTriplets[0][0])  # Input
+                    y_0 = np.load(currentTriplets[0][2])  # Participant Response
+                    y_loc_0 = np.load(currentTriplets[0][1])  # Ground Truth # yLoc
+
+                    x_1 = np.load(currentTriplets[1][0])  # Input
+                    y_1 = np.load(currentTriplets[1][2])  # Participant Response
+                    y_loc_1 = np.load(currentTriplets[1][1])  # Ground Truth # yLoc
+
+                    # Decrease first dimension size of batches to the size of the smallest by truncating first fixation epoch rows
+                    truncated_arrays_x = truncate_to_smallest([x_0, x_1])
+                    truncated_arrays_y = truncate_to_smallest([y_0, y_1])
+                    truncated_arrays_y_loc = truncate_to_smallest([y_loc_0, y_loc_1])
+                    # Concatenate the trauncated batches
+                    x = np.concatenate((truncated_arrays_x[0], truncated_arrays_x[1]))
+                    y = np.concatenate((truncated_arrays_y[0], truncated_arrays_y[1]))
+                    y_loc = np.concatenate((truncated_arrays_y_loc[0], truncated_arrays_y_loc[1]))
+
+                elif numberOfBatches == 3:
+                    x_0 = np.load(currentTriplets[0][0])  # Input
+                    y_0 = np.load(currentTriplets[0][2])  # Participant Response
+                    y_loc_0 = np.load(currentTriplets[0][1])  # Ground Truth # yLoc
+
+                    x_1 = np.load(currentTriplets[1][0])  # Input
+                    y_1 = np.load(currentTriplets[1][2])  # Participant Response
+                    y_loc_1 = np.load(currentTriplets[1][1])  # Ground Truth # yLoc
+
+                    x_2 = np.load(currentTriplets[2][0])  # Input
+                    y_2 = np.load(currentTriplets[2][2])  # Participant Response
+                    y_loc_2 = np.load(currentTriplets[2][1])  # Ground Truth # yLoc
+
+                    # Decrease first dimension size of batches to the size of the smallest by truncating first fixation epoch rows
+                    truncated_arrays_x = truncate_to_smallest([x_0, x_1, x_2])
+                    truncated_arrays_y = truncate_to_smallest([y_0, y_1, y_2])
+                    truncated_arrays_y_loc = truncate_to_smallest([y_loc_0, y_loc_1, y_loc_2])
+                    # Concatenate the trauncated batches
+                    x = np.concatenate((truncated_arrays_x[0], truncated_arrays_x[1], truncated_arrays_x[2]))
+                    y = np.concatenate((truncated_arrays_y[0], truncated_arrays_y[1], truncated_arrays_y[2]))
+                    y_loc = np.concatenate((truncated_arrays_y_loc[0], truncated_arrays_y_loc[1], truncated_arrays_y_loc[2]))
+
+                elif numberOfBatches == 4:
+                    x_0 = np.load(currentTriplets[0][0])  # Input
+                    y_0 = np.load(currentTriplets[0][2])  # Participant Response
+                    y_loc_0 = np.load(currentTriplets[0][1])  # Ground Truth # yLoc
+
+                    x_1 = np.load(currentTriplets[1][0])  # Input
+                    y_1 = np.load(currentTriplets[1][2])  # Participant Response
+                    y_loc_1 = np.load(currentTriplets[1][1])  # Ground Truth # yLoc
+
+                    x_2 = np.load(currentTriplets[2][0])  # Input
+                    y_2 = np.load(currentTriplets[2][2])  # Participant Response
+                    y_loc_2 = np.load(currentTriplets[2][1])  # Ground Truth # yLoc
+
+                    x_3 = np.load(currentTriplets[3][0])  # Input
+                    y_3 = np.load(currentTriplets[3][2])  # Participant Response
+                    y_loc_3 = np.load(currentTriplets[3][1])  # Ground Truth # yLoc
+
+                    # Decrease first dimension size of batches to the size of the smallest by truncating first fixation epoch rows
+                    truncated_arrays_x = truncate_to_smallest([x_0, x_1, x_2, x_3])
+                    truncated_arrays_y = truncate_to_smallest([y_0, y_1, y_2, y_3])
+                    truncated_arrays_y_loc = truncate_to_smallest([y_loc_0, y_loc_1, y_loc_2, y_loc_3])
+                    # Concatenate the trauncated batches
+                    x = np.concatenate((truncated_arrays_x[0], truncated_arrays_x[1], truncated_arrays_x[2], truncated_arrays_x[3]))
+                    y = np.concatenate((truncated_arrays_y[0], truncated_arrays_y[1], truncated_arrays_y[2], truncated_arrays_y[3]))
+                    y_loc = np.concatenate((truncated_arrays_y_loc[0], truncated_arrays_y_loc[1], truncated_arrays_y_loc[2], truncated_arrays_y_loc[3]))
+                else:
+                    raise ValueError(f"batchSize {batchSize} is not valid")
+
             elif mode == 'Evaluation':
                 # Choose the triplet from the splitted data
                 if errorComparison == False:
@@ -124,36 +205,110 @@ def load_trials(task,mode,batchSize, data, errorComparison):
                     for key, values in data.items():
                         if key.endswith(task):
                             currenTask_values.extend(values)
-                    currentTriplet = random.choice(currenTask_values)
+                    currentTriplets = random.sample(currenTask_values, numberOfBatches)
                 elif errorComparison == True:
-                    currentTriplet = random.choice(data) # info: for Error_Comparison.py
+                    currentTriplets = random.sample(data, numberOfBatches) # info: for Error_Comparison.py
+                    base_name = currentTriplets[0][0].split('Input')[0]
 
                 # Load the files
-                x = np.load(currentTriplet[0])  # Input
-                y = np.load(currentTriplet[2])  # Participant Response
-                y_loc = np.load(currentTriplet[1])  # Ground Truth # yLoc
-                if batchSize < 40:
-                    # randomly choose ratio for part of batch to take
-                    choice = np.random.choice(['first', 'last', 'middle'])
-                    if choice == 'first':
-                        # Select rows for evaluation
-                        x = x[:, :batchSize, :]
-                        y = y[:, :batchSize, :]
-                        y_loc = y_loc[:, :batchSize]
-                    elif choice == 'last':
-                        # Select rows for evaluation
-                        x = x[:, 40 - batchSize:, :]
-                        y = y[:, 40 - batchSize:, :]
-                        y_loc = y_loc[:, 40 - batchSize:]
-                    elif choice == 'middle':
-                        # Select the middle batchSize rows
-                        mid_start = (x.shape[1] - batchSize) // 2
-                        mid_end = mid_start + batchSize
-                        x = x[:, mid_start:mid_end, :]
-                        y = y[:, mid_start:mid_end, :]
-                        y_loc = y_loc[:, mid_start:mid_end]
+                if numberOfBatches <= 1:
+                    x = np.load(currentTriplets[0][0])  # Input
+                    y = np.load(currentTriplets[0][2])  # Participant Response
+                    y_loc = np.load(currentTriplets[0][1])  # Ground Truth # yLoc
+                    if batchSize < 40:
+                        # randomly choose ratio for part of batch to take
+                        choice = np.random.sample(['first', 'last', 'middle'])
+                        if choice == 'first':
+                            # Select rows for either training
+                            x = x[:, :batchSize, :]
+                            y = y[:, :batchSize, :]
+                            y_loc = y_loc[:, :batchSize]
+                        elif choice == 'last':
+                            # Select rows for either training
+                            x = x[:, 40 - batchSize:, :]
+                            y = y[:, 40 - batchSize:, :]
+                            y_loc = y_loc[:, 40 - batchSize:]
+                        elif choice == 'middle':
+                            # Select the middle batchSize rows
+                            mid_start = (x.shape[1] - batchSize) // 2
+                            mid_end = mid_start + batchSize
+                            x = x[:, mid_start:mid_end, :]
+                            y = y[:, mid_start:mid_end, :]
+                            y_loc = y_loc[:, mid_start:mid_end]
+                elif numberOfBatches == 2:
+                    x_0 = np.load(currentTriplets[0][0])  # Input
+                    y_0 = np.load(currentTriplets[0][2])  # Participant Response
+                    y_loc_0 = np.load(currentTriplets[0][1])  # Ground Truth # yLoc
 
-            return x,y,y_loc #, file_stem
+                    x_1 = np.load(currentTriplets[1][0])  # Input
+                    y_1 = np.load(currentTriplets[1][2])  # Participant Response
+                    y_loc_1 = np.load(currentTriplets[1][1])  # Ground Truth # yLoc
+
+                    # Decrease first dimension size of batches to the size of the smallest by truncating first fixation epoch rows
+                    truncated_arrays_x = truncate_to_smallest([x_0, x_1])
+                    truncated_arrays_y = truncate_to_smallest([y_0, y_1])
+                    truncated_arrays_y_loc = truncate_to_smallest([y_loc_0, y_loc_1])
+                    # Concatenate the trauncated batches
+                    x = np.concatenate((truncated_arrays_x[0], truncated_arrays_x[1]))
+                    y = np.concatenate((truncated_arrays_y[0], truncated_arrays_y[1]))
+                    y_loc = np.concatenate((truncated_arrays_y_loc[0], truncated_arrays_y_loc[1]))
+
+                elif numberOfBatches == 3:
+                    x_0 = np.load(currentTriplets[0][0])  # Input
+                    y_0 = np.load(currentTriplets[0][2])  # Participant Response
+                    y_loc_0 = np.load(currentTriplets[0][1])  # Ground Truth # yLoc
+
+                    x_1 = np.load(currentTriplets[1][0])  # Input
+                    y_1 = np.load(currentTriplets[1][2])  # Participant Response
+                    y_loc_1 = np.load(currentTriplets[1][1])  # Ground Truth # yLoc
+
+                    x_2 = np.load(currentTriplets[2][0])  # Input
+                    y_2 = np.load(currentTriplets[2][2])  # Participant Response
+                    y_loc_2 = np.load(currentTriplets[2][1])  # Ground Truth # yLoc
+
+                    # Decrease first dimension size of batches to the size of the smallest by truncating first fixation epoch rows
+                    truncated_arrays_x = truncate_to_smallest([x_0, x_1, x_2])
+                    truncated_arrays_y = truncate_to_smallest([y_0, y_1, y_2])
+                    truncated_arrays_y_loc = truncate_to_smallest([y_loc_0, y_loc_1, y_loc_2])
+                    # Concatenate the trauncated batches
+                    x = np.concatenate((truncated_arrays_x[0], truncated_arrays_x[1], truncated_arrays_x[2]))
+                    y = np.concatenate((truncated_arrays_y[0], truncated_arrays_y[1], truncated_arrays_y[2]))
+                    y_loc = np.concatenate(
+                        (truncated_arrays_y_loc[0], truncated_arrays_y_loc[1], truncated_arrays_y_loc[2]))
+
+                elif numberOfBatches == 4:
+                    x_0 = np.load(currentTriplets[0][0])  # Input
+                    y_0 = np.load(currentTriplets[0][2])  # Participant Response
+                    y_loc_0 = np.load(currentTriplets[0][1])  # Ground Truth # yLoc
+
+                    x_1 = np.load(currentTriplets[1][0])  # Input
+                    y_1 = np.load(currentTriplets[1][2])  # Participant Response
+                    y_loc_1 = np.load(currentTriplets[1][1])  # Ground Truth # yLoc
+
+                    x_2 = np.load(currentTriplets[2][0])  # Input
+                    y_2 = np.load(currentTriplets[2][2])  # Participant Response
+                    y_loc_2 = np.load(currentTriplets[2][1])  # Ground Truth # yLoc
+
+                    x_3 = np.load(currentTriplets[3][0])  # Input
+                    y_3 = np.load(currentTriplets[3][2])  # Participant Response
+                    y_loc_3 = np.load(currentTriplets[3][1])  # Ground Truth # yLoc
+
+                    # Decrease first dimension size of batches to the size of the smallest by truncating first fixation epoch rows
+                    truncated_arrays_x = truncate_to_smallest([x_0, x_1, x_2, x_3])
+                    truncated_arrays_y = truncate_to_smallest([y_0, y_1, y_2, y_3])
+                    truncated_arrays_y_loc = truncate_to_smallest([y_loc_0, y_loc_1, y_loc_2, y_loc_3])
+                    # Concatenate the trauncated batches
+                    x = np.concatenate((truncated_arrays_x[0], truncated_arrays_x[1], truncated_arrays_x[2],
+                                        truncated_arrays_x[3]))
+                    y = np.concatenate((truncated_arrays_y[0], truncated_arrays_y[1], truncated_arrays_y[2],
+                                        truncated_arrays_y[3]))
+                    y_loc = np.concatenate((truncated_arrays_y_loc[0], truncated_arrays_y_loc[1], truncated_arrays_y_loc[2], truncated_arrays_y_loc[3]))
+                else:
+                    raise ValueError(f"batchSize {batchSize} is not valid")
+            if errorComparison == True:
+                return x,y,y_loc,base_name
+            else:
+                return x,y,y_loc
         except Exception as e:
             print(f"An error occurred: {e}. Retrying...")
             attempt += 1
