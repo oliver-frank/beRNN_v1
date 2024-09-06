@@ -249,8 +249,14 @@ class Analysis(object):
                     format='png', dpi=300, bbox_inches='tight', pad_inches=0.1)
         plt.show()
 
+    def get_similarity(self):
+        # labels = self.labels
+        from sklearn.metrics.pairwise import cosine_similarity
+        similarity = cosine_similarity(self.h_normvar_all)  # Compute similarity
+        return similarity
+
     def plot_similarity_matrix(self, model_dir, mode):
-        labels = self.labels
+        # labels = self.labels
         from sklearn.metrics.pairwise import cosine_similarity
         similarity = cosine_similarity(self.h_normvar_all)  # Compute similarity
 

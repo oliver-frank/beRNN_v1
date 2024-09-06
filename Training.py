@@ -117,6 +117,7 @@ def get_default_hp(ruleset):
     return hp
 
 def split_files(files, split_ratio=0.8):
+    # random.seed(42) # info: add seed to always shuffle similiar - would be good for NetworkAnalysis
     random.shuffle(files)
     split_index = int(len(files) * split_ratio)
     return files[:split_index], files[split_index:]
