@@ -1,4 +1,3 @@
-#%%
 import numpy as np
 import pandas as pd
 import Tools
@@ -109,7 +108,7 @@ def createErrorDataframes(opened_xlsxFile):
 # sequence_off=file_dict["sequence_off"], 
 # batchLength=file_dict["batchLength"])
 
-#%%
+
 
 
 def preprocess_DM_Exclude_Errors(opened_xlsxFile, questionnare_files, list_allSessions, sequence_on, sequence_off, batchLength):
@@ -377,11 +376,13 @@ def preprocess_DM_Exclude_Errors(opened_xlsxFile, questionnare_files, list_allSe
             Input = Input.astype('float32')
 
             # Save input data
-            os.chdir(os.path.join(os.getcwd(), main_path, taskShorts)) #INSERTED
-            input_filename = participant+'-'+'month_'+str(month)+'-' + 'batch_' + str(batchNumber) + '-' + taskShorts + '-' + xlsxFile.split('_')[3].split('-')[0]+'_'+ xlsxFile.split('_')[3].split('-')[1]+'-'+'Input_' + error_filter#INSERTED
+            os.chdir(os.path.join(os.getcwd(), main_path, taskShorts))
+            input_filename = participant+'-'+'month_'+str(month)+'-' + 'batch_' + str(batchNumber) + '-' + taskShorts + '-' + \
+                            xlsxFile.split('_')[3].split('-')[0]+'_'+ xlsxFile.split('_')[3].split('-')[1]+'-'+'Input_' + error_filter
             np.save(input_filename, Input)
             # Save response information for later error class detection
-            response_filename = participant + '-' + 'month_' + str(month) + '-' + 'batch_' + str(batchNumber) + '-' + taskShorts + '-' + xlsxFile.split('_')[3].split('-')[0] + '_' + xlsxFile.split('_')[3].split('-')[1] + '-' + 'Response_' + error_filter#INSERTED
+            response_filename = participant + '-' + 'month_' + str(month) + '-' + 'batch_' + str(batchNumber) + '-' + taskShorts + '-' + \
+                            xlsxFile.split('_')[3].split('-')[0] + '_' + xlsxFile.split('_')[3].split('-')[1] + '-' + 'Response_' + error_filter
             np.save(response_filename, responseEntries)
 
             # Sanity check
@@ -453,13 +454,16 @@ def preprocess_DM_Exclude_Errors(opened_xlsxFile, questionnare_files, list_allSe
             Output = Output.astype('float32')
 
             # Save output data
-            output_filename = participant + '-' + 'month_' + str(month) + '-' + 'batch_' + str(batchNumber) + '-' + taskShorts + '-' + xlsxFile.split('_')[3].split('-')[0] + '_' + xlsxFile.split('_')[3].split('-')[1] + '-' + 'Output_' + error_filter #INSERTED
+            output_filename = participant + '-' + 'month_' + str(month) + '-' + 'batch_' + str(batchNumber) + '-' + taskShorts + '-' + \
+                            xlsxFile.split('_')[3].split('-')[0] + '_' + xlsxFile.split('_')[3].split('-')[1] + '-' + 'Output_' + error_filter
             np.save(output_filename, Output)
             # Save y_loc data
-            yLoc_filename = participant + '-' + 'month_' + str(month) + '-' + 'batch_' + str(batchNumber) + '-' + taskShorts + '-' + xlsxFile.split('_')[3].split('-')[0] + '_' + xlsxFile.split('_')[3].split('-')[1] + '-' + 'yLoc_' + error_filter#INSERTED
+            yLoc_filename = participant + '-' + 'month_' + str(month) + '-' + 'batch_' + str(batchNumber) + '-' + taskShorts + '-' + \
+                            xlsxFile.split('_')[3].split('-')[0] + '_' + xlsxFile.split('_')[3].split('-')[1] + '-' + 'yLoc_' + error_filter
             np.save(yLoc_filename, y_loc)
             # Save meta data
-            meta_filename = participant + '-' + 'month_' + str(month) + '-' + 'batch_' + str(batchNumber) + '-' + taskShorts + '-' + xlsxFile.split('_')[3].split('-')[0] + '_' + xlsxFile.split('_')[3].split('-')[1] + '-' + 'Meta_' +error_filter#INSERTED
+            meta_filename = participant + '-' + 'month_' + str(month) + '-' + 'batch_' + str(batchNumber) + '-' + taskShorts + '-' + \
+                            xlsxFile.split('_')[3].split('-')[0] + '_' + xlsxFile.split('_')[3].split('-')[1] + '-' + 'Meta_' +error_filter
             with open('{}.json'.format(meta_filename), 'w') as json_file:
                 json.dump(meta_dict, json_file)
 
@@ -470,9 +474,6 @@ def preprocess_DM_Exclude_Errors(opened_xlsxFile, questionnare_files, list_allSe
 
 
 
-print("Loaded")
-
-#%%
 
 
 # def preprocess_DM(opened_xlsxFile, questionnare_files, list_allSessions, sequence_on, sequence_off, batchLength):
@@ -815,14 +816,12 @@ print("Loaded")
 
 
 
-
-#
 ########################################################################################################################
 # todo: EF tasks #######################################################################################################
 ########################################################################################################################
 # For debugging
 # xlsxFile = 'W:\\AG_CSP\\Projekte\\BeRNN\\02_Daten\\BeRNN_main\\BeRNN_01\\1\\data_exp_149474-v2_task-2p6f-9621849.xlsx'
-def preprocess_EF_Exclude_Errors(opened_xlsxFile, questionnare_files, list_allSessions, sequence_on, sequence_off, batchLength):
+def preprocess_EF(opened_xlsxFile, questionnare_files, list_allSessions, sequence_on, sequence_off, batchLength):
     # Initialize columns with default values
     opened_xlsxFile.loc[:, 'Fixation input'] = 1
     opened_xlsxFile.loc[:, 'Fixation output'] = 0.8
@@ -842,356 +841,324 @@ def preprocess_EF_Exclude_Errors(opened_xlsxFile, questionnare_files, list_allSe
     taskString, final_questionaire = find_questionaire(opened_xlsxFile['Tree Node Key'][0].split('-')[1],list_allSessions, questionnare_files)
     opened_questionare = pd.read_excel(os.path.join(processing_path_month, final_questionaire), engine='openpyxl',dtype={'column_name': 'float64'})
 
+    # Select specific columns from the DataFrame
+    opened_xlsxFile_selection = opened_xlsxFile[
+                      ['Spreadsheet', 'TimeLimit', 'Onset Time', 'Response', 'Spreadsheet: CorrectAnswer', 'Correct',
+                       'Component Name', 'Fixation input', 'Fixation output', 'Spreadsheet: Field 1', 'Spreadsheet: Field 2',
+                       'Spreadsheet: Field 3', 'Spreadsheet: Field 4', 'Spreadsheet: Field 5', 'Spreadsheet: Field 6',
+                       'Spreadsheet: Field 7', 'Spreadsheet: Field 8', 'Spreadsheet: Field 9', 'Spreadsheet: Field 10',
+                       'Spreadsheet: Field 11', 'Spreadsheet: Field 12', 'Spreadsheet: Field 13', 'Spreadsheet: Field 14',
+                       'Spreadsheet: Field 15', 'Spreadsheet: Field 16', 'Spreadsheet: Field 17', 'Spreadsheet: Field 18',
+                       'Spreadsheet: Field 19', 'Spreadsheet: Field 20', 'Spreadsheet: Field 21', 'Spreadsheet: Field 22',
+                       'Spreadsheet: Field 23', 'Spreadsheet: Field 24', 'Spreadsheet: Field 25', 'Spreadsheet: Field 26',
+                       'Spreadsheet: Field 27', 'Spreadsheet: Field 28', 'Spreadsheet: Field 29', 'Spreadsheet: Field 30',
+                       'Spreadsheet: Field 31', 'Spreadsheet: Field 32', 'Spreadsheet: Field 1', 'Spreadsheet: Field 2',
+                       'Spreadsheet: Field 3', 'Spreadsheet: Field 4', 'Spreadsheet: Field 5', 'Spreadsheet: Field 6',
+                       'Spreadsheet: Field 7', 'Spreadsheet: Field 8', 'Spreadsheet: Field 9', 'Spreadsheet: Field 10',
+                       'Spreadsheet: Field 11', 'Spreadsheet: Field 12', 'Spreadsheet: Field 13', 'Spreadsheet: Field 14',
+                       'Spreadsheet: Field 15', 'Spreadsheet: Field 16', 'Spreadsheet: Field 17', 'Spreadsheet: Field 18',
+                       'Spreadsheet: Field 19', 'Spreadsheet: Field 20', 'Spreadsheet: Field 21', 'Spreadsheet: Field 22',
+                       'Spreadsheet: Field 23', 'Spreadsheet: Field 24', 'Spreadsheet: Field 25', 'Spreadsheet: Field 26',
+                       'Spreadsheet: Field 27', 'Spreadsheet: Field 28', 'Spreadsheet: Field 29', 'Spreadsheet: Field 30',
+                       'Spreadsheet: Field 31', 'Spreadsheet: Field 32', 'DM', 'DM Anti', 'EF', 'EF Anti', 'RP', 'RP Anti',
+                       'RP Ctx1', 'RP Ctx2', 'WM', 'WM Anti', 'WM Ctx1', 'WM Ctx1', 'UTC Date and Time']]
 
+    # Count sequences, save particpant response and ground truth for later error analysis
+    incrementList = []
+    responseParticipantEntries = []
+    responseGroundTruthEntries = []
 
-    error_filters = createErrorDataframes(opened_xlsxFile=opened_xlsxFile)#INSERTED
+    for i, name in enumerate(opened_xlsxFile_selection['Component Name']):
+        if name == 'Fixation Timing':
+            incrementList.append(i + 1)
+            # Check if the next row exists to avoid IndexError
+            if i + 1 < len(opened_xlsxFile_selection):
+                responseParticipantEntry = opened_xlsxFile_selection['Response'].iloc[i + 1]
+                responseParticipantEntries.append(responseParticipantEntry)
+                responseGroundTruthEntry = opened_xlsxFile_selection['Spreadsheet: CorrectAnswer'].iloc[i + 1]
+                responseGroundTruthEntries.append(responseGroundTruthEntry)
+            else:
+                # Append None or some placeholder if there is no next row
+                responseParticipantEntries.append(None)
+                responseGroundTruthEntries.append(None)
 
+    concatResponseEntries = np.array((responseParticipantEntries, responseGroundTruthEntries))
+    numberBatches = len(incrementList) // batchLength
 
+    # Split the data into batches based on the fixation timing component
+    for batchNumber in range(numberBatches):
+        batchOn = batchNumber * batchLength
+        batchOff = batchNumber * batchLength + batchLength
+        numFixStepsTotal = 0
+        numRespStepsTotal = 0
+        # Prepare response array for this batch
+        currentConcatResponseEntries = concatResponseEntries[:, batchOn:batchOff]
+        # Calculate average fix, resp and total steps for this batch
+        for j in incrementList[batchOn:batchOff]:
+            # Accumulate step numbers
+            currentTrial = opened_xlsxFile_selection[j:j + 2].reset_index().drop(columns=['index'])
+            numFixSteps = round(currentTrial['Onset Time'][0] / 20)
+            numRespSteps = round(currentTrial['Onset Time'][1] / 20)
+            numFixStepsTotal += numFixSteps
+            numRespStepsTotal += numRespSteps
+            # Calculate average after cumulative addition of whole batch
+            if j == incrementList[batchOff - 1]:
+                numFixStepsAverage = int(numFixStepsTotal / batchLength)
+                numRespStepsAverage = int(numRespStepsTotal / batchLength)
+                totalStepsAverage = numFixStepsAverage + numRespStepsAverage
+                # print(numFixStepsAverage,numRespStepsAverage,totalStepsAverage)
 
-    for error_filter in error_filters.keys():#INSERTED
-        print(f"\n\nRunning for: {error_filter}, {error_filters[error_filter].shape} dataset...")#INSERTED
-        # reassign opend_xlsxFile to the real data#INSERTED
-        opened_xlsxFile = error_filters[error_filter]#INSERTED
+        finalSequenceList = []
+        concatedValuesAndOccurrencesList = []
+        # Create sequences of every trial in the current batch with the previous calculated time steps
+        for j in incrementList[batchOn:batchOff]:
+            currentTrial = opened_xlsxFile_selection[j:j + 2].reset_index().drop(columns=['index'])
+            # ----------------------------------------------------------------------------------------------------------
+            # Get the rest of the trial information for later error analysis
+            png_strings = np.array([s for s in currentTrial.loc[0] if isinstance(s, str) and s.endswith('.png')])
+            unique_values, occurrence_counts = np.unique(png_strings, return_counts=True)
+            unique_values, occurrence_counts = unique_values[1:], occurrence_counts[1:]  # exclude 000_000.png
+            # Check if values and counts are below 2 and zeropad them, so that all columns have the same length
+            if len(unique_values) == 1:
+                unique_values, occurrence_counts = np.concatenate((unique_values, ['None']), axis=0), np.concatenate((occurrence_counts, [0]), axis=0)
+            concatedValuesAndOccurrences = np.concatenate([unique_values, occurrence_counts], axis=0)
+            concatedValuesAndOccurrencesList.append(concatedValuesAndOccurrences)
+            # ----------------------------------------------------------------------------------------------------------
+            currentSequenceList = []
+            for k in range(totalStepsAverage):
+                sequence = [currentTrial.iloc[0]]
+                currentSequenceList.append(sequence)
+            finalSequenceList.append(currentSequenceList)
+        # --------------------------------------------------------------------------------------------------------------
+        # Concatenate trial information for error anaylsis to response entries
+        currentConcatResponseEntriesFinal = np.concatenate([currentConcatResponseEntries, np.array(concatedValuesAndOccurrencesList, dtype=object).T], axis=0)
+        # --------------------------------------------------------------------------------------------------------------
 
+        # Create final df for INPUT and OUPUT
+        newOrderSequenceList = []
+        # Append all the time steps accordingly to a list
+        for j in range(0, totalStepsAverage):
+            for i in range(0, len(finalSequenceList)):
+                newOrderSequenceList.append(finalSequenceList[i][j])
 
+        # Create Yang form
+        finalTrialsList_array = np.array(newOrderSequenceList).reshape((len(finalSequenceList[0]), len(finalSequenceList), 86))
+        # Create meta dict before deleting necessary information from current trials List
+        date = str(finalTrialsList_array[0, 0, 85]).split(' ')[0]
+        sleepingQualityQuestion, sleepingQualityValue, drugVectorQuestion, drugVectorValue = find_sleepingQuality_drugVector(opened_questionare, date)
+        # print('# DEBUGGING ###########################################################################################')
+        # print('>>>>>>>>>>>>>>>>>>>>>>>>     ', taskString, final_questionaire, date)
+        # print('>>>>>>>>>>>>>>>>>>>>>>>>     ', 'sleepingQualityValue:', sleepingQualityValue, 'drugVector:',drugVectorValue)
+        # print('# DEBUGGING ###########################################################################################')
+        # Catch meta data now that you have all the necessary
+        meta_dict = {'date_time': str(finalTrialsList_array[0, 0, 85]), 'difficultyLevel': finalTrialsList_array[0, 0, 0],
+                     'timeLimit': finalTrialsList_array[0, 0, 1], 'sleepingQualityQuestion': sleepingQualityQuestion,
+                     'sleepingQualityValue': sleepingQualityValue, 'drugVectorQuestion': drugVectorQuestion,
+                     'drugVectorValue': drugVectorValue}
+        # Create one input file and one output file
+        Input, Output = finalTrialsList_array, finalTrialsList_array
+        Input = np.delete(Input, [0, 1, 2, 3, 4, 5, 6, 8,85], axis=2)
+        Output = np.delete(Output, np.s_[0, 1, 2, 4, 5, 6, 7,85], axis=2)
+        Output = np.delete(Output, np.s_[34:78], axis=2)
+        Input, Output = Input[:, sequence_on:sequence_off, :], Output[:, sequence_on:sequence_off, :]
+        responseEntries = currentConcatResponseEntriesFinal[:, sequence_on:sequence_off]
 
-        # Select specific columns from the DataFrame
-        opened_xlsxFile_selection = opened_xlsxFile[
-                        ['Spreadsheet', 'TimeLimit', 'Onset Time', 'Response', 'Spreadsheet: CorrectAnswer', 'Correct',
-                        'Component Name', 'Fixation input', 'Fixation output', 'Spreadsheet: Field 1', 'Spreadsheet: Field 2',
-                        'Spreadsheet: Field 3', 'Spreadsheet: Field 4', 'Spreadsheet: Field 5', 'Spreadsheet: Field 6',
-                        'Spreadsheet: Field 7', 'Spreadsheet: Field 8', 'Spreadsheet: Field 9', 'Spreadsheet: Field 10',
-                        'Spreadsheet: Field 11', 'Spreadsheet: Field 12', 'Spreadsheet: Field 13', 'Spreadsheet: Field 14',
-                        'Spreadsheet: Field 15', 'Spreadsheet: Field 16', 'Spreadsheet: Field 17', 'Spreadsheet: Field 18',
-                        'Spreadsheet: Field 19', 'Spreadsheet: Field 20', 'Spreadsheet: Field 21', 'Spreadsheet: Field 22',
-                        'Spreadsheet: Field 23', 'Spreadsheet: Field 24', 'Spreadsheet: Field 25', 'Spreadsheet: Field 26',
-                        'Spreadsheet: Field 27', 'Spreadsheet: Field 28', 'Spreadsheet: Field 29', 'Spreadsheet: Field 30',
-                        'Spreadsheet: Field 31', 'Spreadsheet: Field 32', 'Spreadsheet: Field 1', 'Spreadsheet: Field 2',
-                        'Spreadsheet: Field 3', 'Spreadsheet: Field 4', 'Spreadsheet: Field 5', 'Spreadsheet: Field 6',
-                        'Spreadsheet: Field 7', 'Spreadsheet: Field 8', 'Spreadsheet: Field 9', 'Spreadsheet: Field 10',
-                        'Spreadsheet: Field 11', 'Spreadsheet: Field 12', 'Spreadsheet: Field 13', 'Spreadsheet: Field 14',
-                        'Spreadsheet: Field 15', 'Spreadsheet: Field 16', 'Spreadsheet: Field 17', 'Spreadsheet: Field 18',
-                        'Spreadsheet: Field 19', 'Spreadsheet: Field 20', 'Spreadsheet: Field 21', 'Spreadsheet: Field 22',
-                        'Spreadsheet: Field 23', 'Spreadsheet: Field 24', 'Spreadsheet: Field 25', 'Spreadsheet: Field 26',
-                        'Spreadsheet: Field 27', 'Spreadsheet: Field 28', 'Spreadsheet: Field 29', 'Spreadsheet: Field 30',
-                        'Spreadsheet: Field 31', 'Spreadsheet: Field 32', 'DM', 'DM Anti', 'EF', 'EF Anti', 'RP', 'RP Anti',
-                        'RP Ctx1', 'RP Ctx2', 'WM', 'WM Anti', 'WM Ctx1', 'WM Ctx1', 'UTC Date and Time']]
+        # INPUT ############################################################################################################
+        # float all fixation input values to 1
+        for i in range(0, Input.shape[0]):
+            for j in range(0, Input.shape[1]):
+                Input[i][j][0] = float(1)
+        # float all task values to 0
+        for i in range(0, Input.shape[0]):
+            for j in range(0, Input.shape[1]):
+                for k in range(65, Input.shape[2]):
+                    Input[i][j][k] = float(0)
 
-        # Count sequences, save particpant response and ground truth for later error analysis
-        incrementList = []
-        responseParticipantEntries = []
-        responseGroundTruthEntries = []
+        # Define a task dictionary for specific task-related columns
+        taskDict = {'DM': 65, 'DM Anti': 66, 'EF': 67, 'EF Anti': 68, 'RP': 69, 'RP Anti': 70, 'RP Ctx1': 71,
+                    'RP Ctx2': 72, 'WM': 73, 'WM Anti': 74, 'WM Ctx1': 75, 'WM Ctx2': 76}
 
-        for i, name in enumerate(opened_xlsxFile_selection['Component Name']):
-            if name == 'Fixation Timing':
-                incrementList.append(i + 1)
-                # Check if the next row exists to avoid IndexError
-                if i + 1 < len(opened_xlsxFile_selection):
-                    responseParticipantEntry = opened_xlsxFile_selection['Response'].iloc[i + 1]
-                    responseParticipantEntries.append(responseParticipantEntry)
-                    responseGroundTruthEntry = opened_xlsxFile_selection['Spreadsheet: CorrectAnswer'].iloc[i + 1]
-                    responseGroundTruthEntries.append(responseGroundTruthEntry)
+        # float all task values to 1
+        for i in range(0, Input.shape[0]):
+            for j in range(0, Input.shape[1]):
+                if len(opened_xlsxFile_selection['Spreadsheet'][0].split('_')) == 4:
+                    Input[i][j][taskDict[opened_xlsxFile_selection['Spreadsheet'][0].split('_')[0]]] = float(1)
+                    taskShorts = opened_xlsxFile_selection['Spreadsheet'][0].split('_')[0]
                 else:
-                    # Append None or some placeholder if there is no next row
-                    responseParticipantEntries.append(None)
-                    responseGroundTruthEntries.append(None)
+                    Input[i][j][taskDict[opened_xlsxFile_selection['Spreadsheet'][0].split('_')[0] + ' ' + opened_xlsxFile_selection['Spreadsheet'][0].split('_')[1]]] = float(1)
+                    taskShorts = opened_xlsxFile_selection['Spreadsheet'][0].split('_')[0] + '_' + opened_xlsxFile_selection['Spreadsheet'][0].split('_')[1]
 
-        concatResponseEntries = np.array((responseParticipantEntries, responseGroundTruthEntries))
-        numberBatches = len(incrementList) // batchLength
-
-         # add 1 if numberBatches == 0
-        if numberBatches == 0: #INSERTED
-            numberBatches = 1 #INSERTED this was inserted
-
-        # Split the data into batches based on the fixation timing component
-        for batchNumber in range(numberBatches):
-            batchOn = batchNumber * batchLength
-            batchOff = batchNumber * batchLength + batchLength
-            numFixStepsTotal = 0
-            numRespStepsTotal = 0
-            # Prepare response array for this batch
-            currentConcatResponseEntries = concatResponseEntries[:, batchOn:batchOff]
-
-
-            if len(incrementList) < (batchOff - 1): #INSERTED
-                batchOff = len(incrementList)  #INSERTED TODO - check if this is appropriate, or whether this has to be eg len(increment_list) -/+ 1 
-
-
-
-            # Calculate average fix, resp and total steps for this batch
-            for j in incrementList[batchOn:batchOff]:
-                # Accumulate step numbers
-                currentTrial = opened_xlsxFile_selection[j:j + 2].reset_index().drop(columns=['index'])
-                numFixSteps = round(currentTrial['Onset Time'][0] / 20)
-                numRespSteps = round(currentTrial['Onset Time'][1] / 20)
-                numFixStepsTotal += numFixSteps
-                numRespStepsTotal += numRespSteps
-                # Calculate average after cumulative addition of whole batch
-                if j == incrementList[batchOff - 1]:
-                    numFixStepsAverage = int(numFixStepsTotal / batchLength)
-                    numRespStepsAverage = int(numRespStepsTotal / batchLength)
-                    totalStepsAverage = numFixStepsAverage + numRespStepsAverage
-                    # print(numFixStepsAverage,numRespStepsAverage,totalStepsAverage)
-
-            finalSequenceList = []
-            concatedValuesAndOccurrencesList = []
-            # Create sequences of every trial in the current batch with the previous calculated time steps
-            for j in incrementList[batchOn:batchOff]:
-                currentTrial = opened_xlsxFile_selection[j:j + 2].reset_index().drop(columns=['index'])
-                # ----------------------------------------------------------------------------------------------------------
-                # Get the rest of the trial information for later error analysis
-                png_strings = np.array([s for s in currentTrial.loc[0] if isinstance(s, str) and s.endswith('.png')])
-                unique_values, occurrence_counts = np.unique(png_strings, return_counts=True)
-                unique_values, occurrence_counts = unique_values[1:], occurrence_counts[1:]  # exclude 000_000.png
-                # Check if values and counts are below 2 and zeropad them, so that all columns have the same length
-                if len(unique_values) == 1:
-                    unique_values, occurrence_counts = np.concatenate((unique_values, ['None']), axis=0), np.concatenate((occurrence_counts, [0]), axis=0)
-                concatedValuesAndOccurrences = np.concatenate([unique_values, occurrence_counts], axis=0)
-                concatedValuesAndOccurrencesList.append(concatedValuesAndOccurrences)
-                # ----------------------------------------------------------------------------------------------------------
-                currentSequenceList = []
-                for k in range(totalStepsAverage):
-                    sequence = [currentTrial.iloc[0]]
-                    currentSequenceList.append(sequence)
-                finalSequenceList.append(currentSequenceList)
-            # --------------------------------------------------------------------------------------------------------------
-            # Concatenate trial information for error anaylsis to response entries
-            currentConcatResponseEntriesFinal = np.concatenate([currentConcatResponseEntries, np.array(concatedValuesAndOccurrencesList, dtype=object).T], axis=0)
-            # --------------------------------------------------------------------------------------------------------------
-
-            # Create final df for INPUT and OUPUT
-            newOrderSequenceList = []
-            # Append all the time steps accordingly to a list
-            for j in range(0, totalStepsAverage):
-                for i in range(0, len(finalSequenceList)):
-                    newOrderSequenceList.append(finalSequenceList[i][j])
-
-            # Create Yang form
-            finalTrialsList_array = np.array(newOrderSequenceList).reshape((len(finalSequenceList[0]), len(finalSequenceList), 86))
-            # Create meta dict before deleting necessary information from current trials List
-            date = str(finalTrialsList_array[0, 0, 85]).split(' ')[0]
-            sleepingQualityQuestion, sleepingQualityValue, drugVectorQuestion, drugVectorValue = find_sleepingQuality_drugVector(opened_questionare, date)
-            # print('# DEBUGGING ###########################################################################################')
-            # print('>>>>>>>>>>>>>>>>>>>>>>>>     ', taskString, final_questionaire, date)
-            # print('>>>>>>>>>>>>>>>>>>>>>>>>     ', 'sleepingQualityValue:', sleepingQualityValue, 'drugVector:',drugVectorValue)
-            # print('# DEBUGGING ###########################################################################################')
-            # Catch meta data now that you have all the necessary
-            meta_dict = {'date_time': str(finalTrialsList_array[0, 0, 85]), 'difficultyLevel': finalTrialsList_array[0, 0, 0],
-                        'timeLimit': finalTrialsList_array[0, 0, 1], 'sleepingQualityQuestion': sleepingQualityQuestion,
-                        'sleepingQualityValue': sleepingQualityValue, 'drugVectorQuestion': drugVectorQuestion,
-                        'drugVectorValue': drugVectorValue}
-            # Create one input file and one output file
-            Input, Output = finalTrialsList_array, finalTrialsList_array
-            Input = np.delete(Input, [0, 1, 2, 3, 4, 5, 6, 8,85], axis=2)
-            Output = np.delete(Output, np.s_[0, 1, 2, 4, 5, 6, 7,85], axis=2)
-            Output = np.delete(Output, np.s_[34:78], axis=2)
-            Input, Output = Input[:, sequence_on:sequence_off, :], Output[:, sequence_on:sequence_off, :]
-            responseEntries = currentConcatResponseEntriesFinal[:, sequence_on:sequence_off]
-
-            # INPUT ############################################################################################################
-            # float all fixation input values to 1
-            for i in range(0, Input.shape[0]):
-                for j in range(0, Input.shape[1]):
-                    Input[i][j][0] = float(1)
-            # float all task values to 0
-            for i in range(0, Input.shape[0]):
-                for j in range(0, Input.shape[1]):
-                    for k in range(65, Input.shape[2]):
+        # float all 000_000's on field units to 0
+        for i in range(0, Input.shape[0]):
+            for j in range(0, Input.shape[1]):
+                for k in range(1, 65):
+                    if Input[i][j][k] == '000_000.png':
                         Input[i][j][k] = float(0)
 
-            # Define a task dictionary for specific task-related columns
-            taskDict = {'DM': 65, 'DM Anti': 66, 'EF': 67, 'EF Anti': 68, 'RP': 69, 'RP Anti': 70, 'RP Ctx1': 71,
-                        'RP Ctx2': 72, 'WM': 73, 'WM Anti': 74, 'WM Ctx1': 75, 'WM Ctx2': 76}
+        # Define modulation dictionaries for specific columns
+        mod1Dict = {'green': float(0.5), 'red': float(1.0)}
+        # mod1Dict = {'green': float(1.0), 'red': float(2.0)}
 
-            # float all task values to 1
-            for i in range(0, Input.shape[0]):
-                for j in range(0, Input.shape[1]):
-                    if len(opened_xlsxFile_selection['Spreadsheet'][0].split('_')) == 4:
-                        Input[i][j][taskDict[opened_xlsxFile_selection['Spreadsheet'][0].split('_')[0]]] = float(1)
-                        taskShorts = opened_xlsxFile_selection['Spreadsheet'][0].split('_')[0]
-                    else:
-                        Input[i][j][taskDict[opened_xlsxFile_selection['Spreadsheet'][0].split('_')[0] + ' ' + opened_xlsxFile_selection['Spreadsheet'][0].split('_')[1]]] = float(1)
-                        taskShorts = opened_xlsxFile_selection['Spreadsheet'][0].split('_')[0] + '_' + opened_xlsxFile_selection['Spreadsheet'][0].split('_')[1]
+        for i in range(0, Input.shape[0]):
+            for j in range(0, Input.shape[1]):
+                for k in range(1, 33):
+                    if Input[i][j][k] != 0:
+                        Input[i][j][k] = mod1Dict[Input[i][j][k].split('_')[0]]
 
-            # float all 000_000's on field units to 0
-            for i in range(0, Input.shape[0]):
-                for j in range(0, Input.shape[1]):
-                    for k in range(1, 65):
-                        if Input[i][j][k] == '000_000.png':
-                            Input[i][j][k] = float(0)
+        # Define modulation dictionaries for specific columns
+        mod2Dict = {'right.png': float(0.2), 'down.png': float(0.4), 'left.png': float(0.6), 'up.png': float(0.8), 'X.png': float(1.0)}
+        # mod2Dict = {'right.png': float(0.4), 'down.png': float(0.8), 'left.png': float(1.2), 'up.png': float(1.6), 'X.png': float(2.0)}
 
-            # Define modulation dictionaries for specific columns
-            mod1Dict = {'green': float(0.5), 'red': float(1.0)}
-            # mod1Dict = {'green': float(1.0), 'red': float(2.0)}
+        for i in range(0, Input.shape[0]):
+            for j in range(0, Input.shape[1]):
+                for k in range(33, 65):
+                    if Input[i][j][k] != 0:
+                        Input[i][j][k] = mod2Dict[Input[i][j][k].split('_')[1]]
 
-            for i in range(0, Input.shape[0]):
-                for j in range(0, Input.shape[1]):
-                    for k in range(1, 33):
-                        if Input[i][j][k] != 0:
-                            Input[i][j][k] = mod1Dict[Input[i][j][k].split('_')[0]]
+        # float all field values of fixation period to 0
+        for i in range(0, numFixStepsAverage):
+            for j in range(0, Input.shape[1]):
+                for k in range(1, 65):
+                    Input[i][j][k] = float(0)
 
-            # Define modulation dictionaries for specific columns
-            mod2Dict = {'right.png': float(0.2), 'down.png': float(0.4), 'left.png': float(0.6), 'up.png': float(0.8), 'X.png': float(1.0)}
-            # mod2Dict = {'right.png': float(0.4), 'down.png': float(0.8), 'left.png': float(1.2), 'up.png': float(1.6), 'X.png': float(2.0)}
+        # Add input gradient activation
+        # Create default hyperparameters for network
+        num_ring, n_eachring, n_rule = 2, 32, 12
+        n_input, n_output = 1 + num_ring * n_eachring + n_rule, n_eachring + 1
+        pref = np.arange(0, 2 * np.pi, 2 * np.pi / 32)
 
-            for i in range(0, Input.shape[0]):
-                for j in range(0, Input.shape[1]):
-                    for k in range(33, 65):
-                        if Input[i][j][k] != 0:
-                            Input[i][j][k] = mod2Dict[Input[i][j][k].split('_')[1]]
+        for i in range(0, Input.shape[0]):
+            for j in range(0, Input.shape[1]):
+                currentTimeStepModOne = Input[i][j][1:33]
+                currentTimeStepModTwo = Input[i][j][33:65]
+                # Allocate first unit ring
+                unitRingMod1 = np.zeros(32, dtype='float32')
+                unitRingMod2 = np.zeros(32, dtype='float32')
 
-            # float all field values of fixation period to 0
-            for i in range(0, numFixStepsAverage):
-                for j in range(0, Input.shape[1]):
-                    for k in range(1, 65):
-                        Input[i][j][k] = float(0)
+                # Get non-zero values of time steps on both modalities and also directly fix distance between units issue
+                NonZero_Mod1 = np.nonzero(currentTimeStepModOne)[0]
+                NonZero_Mod2 = np.nonzero(currentTimeStepModTwo)[0]
+                if len(NonZero_Mod1) != 0:
+                    # Accumulating all activities for both unit rings together
+                    for k in range(0, len(NonZero_Mod1)):
+                        currentStimLoc_Mod1 = pref[NonZero_Mod1[k]]
+                        currentStimStrength_Mod1 = currentTimeStepModOne[NonZero_Mod1[k]]
+                        currentStimLoc_Mod2 = pref[NonZero_Mod2[k]]
+                        currentStimStrength_Mod2 = currentTimeStepModTwo[NonZero_Mod2[k]]
+                        # add one gradual activated stim to final form
+                        currentActivation_Mod1 = add_x_loc(currentStimLoc_Mod1, pref) * currentStimStrength_Mod1
+                        currentActivation_Mod2 = add_x_loc(currentStimLoc_Mod2, pref) * currentStimStrength_Mod2
+                        # Add all activations for one trial together
+                        unitRingMod1 = np.around(unitRingMod1 + currentActivation_Mod1, decimals=2)
+                        unitRingMod2 = np.around(unitRingMod2 + currentActivation_Mod2, decimals=2)
 
-            # Add input gradient activation
-            # Create default hyperparameters for network
-            num_ring, n_eachring, n_rule = 2, 32, 12
-            n_input, n_output = 1 + num_ring * n_eachring + n_rule, n_eachring + 1
-            pref = np.arange(0, 2 * np.pi, 2 * np.pi / 32)
+                    # Store
+                    currentFinalRow = np.concatenate((Input[i][j][0:1], unitRingMod1, unitRingMod2, Input[i][j][65:78]))
+                    Input[i][j][0:78] = currentFinalRow
 
-            for i in range(0, Input.shape[0]):
-                for j in range(0, Input.shape[1]):
-                    currentTimeStepModOne = Input[i][j][1:33]
-                    currentTimeStepModTwo = Input[i][j][33:65]
-                    # Allocate first unit ring
-                    unitRingMod1 = np.zeros(32, dtype='float32')
-                    unitRingMod2 = np.zeros(32, dtype='float32')
+        # Change dtype of every element in matrix to float32 for later validation functions
+        for i in range(0, Input.shape[0]):
+            for j in range(0, Input.shape[1]):
+                for k in range(0, Input.shape[2]):
+                    Input[i][j][k] = np.float32(Input[i][j][k])
+        # Also change dtype for entire array
+        Input = Input.astype('float32')
 
-                    # Get non-zero values of time steps on both modalities and also directly fix distance between units issue
-                    NonZero_Mod1 = np.nonzero(currentTimeStepModOne)[0]
-                    NonZero_Mod2 = np.nonzero(currentTimeStepModTwo)[0]
-                    if len(NonZero_Mod1) != 0:
-                        # Accumulating all activities for both unit rings together
-                        for k in range(0, len(NonZero_Mod1)):
-                            currentStimLoc_Mod1 = pref[NonZero_Mod1[k]]
-                            currentStimStrength_Mod1 = currentTimeStepModOne[NonZero_Mod1[k]]
-                            currentStimLoc_Mod2 = pref[NonZero_Mod2[k]]
-                            currentStimStrength_Mod2 = currentTimeStepModTwo[NonZero_Mod2[k]]
-                            # add one gradual activated stim to final form
-                            currentActivation_Mod1 = add_x_loc(currentStimLoc_Mod1, pref) * currentStimStrength_Mod1
-                            currentActivation_Mod2 = add_x_loc(currentStimLoc_Mod2, pref) * currentStimStrength_Mod2
-                            # Add all activations for one trial together
-                            unitRingMod1 = np.around(unitRingMod1 + currentActivation_Mod1, decimals=2)
-                            unitRingMod2 = np.around(unitRingMod2 + currentActivation_Mod2, decimals=2)
+        # Save input data
+        os.chdir(os.path.join(os.getcwd(), main_path, taskShorts))
+        input_filename = (participant + '-' + 'month_' + str(month) + '-' + 'batch_' + str(batchNumber) + '-' + taskShorts + '-' + \
+                          xlsxFile.split('_')[3].split('-')[0] + '_' + xlsxFile.split('_')[3].split('-')[1] + '-' + 'Input')
+        np.save(input_filename, Input)
+        # Save response information for later error class detection
+        response_filename = participant + '-' + 'month_' + str(month) + '-' + 'batch_' + str(batchNumber) + '-' + taskShorts + '-' + \
+                            xlsxFile.split('_')[3].split('-')[0] + '_' + xlsxFile.split('_')[3].split('-')[1] + '-' + 'Response'
+        np.save(response_filename, responseEntries)
 
-                        # Store
-                        currentFinalRow = np.concatenate((Input[i][j][0:1], unitRingMod1, unitRingMod2, Input[i][j][65:78]))
-                        Input[i][j][0:78] = currentFinalRow
+        # Sanity check
+        print('Input solved: ', opened_xlsxFile_selection['Spreadsheet'][0], ' ', opened_xlsxFile_selection['TimeLimit'][0])
+        print('Response solved: ', opened_xlsxFile_selection['Spreadsheet'][0], ' ', opened_xlsxFile_selection['TimeLimit'][0])
 
-            # Change dtype of every element in matrix to float32 for later validation functions
-            for i in range(0, Input.shape[0]):
-                for j in range(0, Input.shape[1]):
-                    for k in range(0, Input.shape[2]):
-                        Input[i][j][k] = np.float32(Input[i][j][k])
-            # Also change dtype for entire array
-            Input = Input.astype('float32')
+        # OUTPUT ###########################################################################################################
+        # float all field units during fixation epoch on 0.05
+        for i in range(0, numFixStepsAverage):
+            for j in range(0, Output.shape[1]):
+                for k in range(2, 34):
+                    Output[i][j][k] = float(0.05)
+        # float all field units of response epoch to 0
+        for i in range(numFixStepsAverage, totalStepsAverage):
+            for j in range(0, Output.shape[1]):
+                for k in range(2, 34):
+                    Output[i][j][k] = float(0)
+        # float all fixation outputs during response period to 0.05
+        for i in range(numFixStepsAverage, totalStepsAverage):
+            for j in range(0, Output.shape[1]):
+                Output[i][j][1] = float(0.05)
 
-            # Save input data
-            os.chdir(os.path.join(os.getcwd(), main_path, taskShorts)) #INSERTED
-            input_filename = participant+'-'+'month_'+str(month)+'-' + 'batch_' + str(batchNumber) + '-' + taskShorts + '-' + xlsxFile.split('_')[3].split('-')[0]+'_'+ xlsxFile.split('_')[3].split('-')[1]+'-'+'Input_' + error_filter#INSERTED
-            np.save(input_filename, Input)
-            # Save response information for later error class detection
-            response_filename = participant + '-' + 'month_' + str(month) + '-' + 'batch_' + str(batchNumber) + '-' + taskShorts + '-' + xlsxFile.split('_')[3].split('-')[0] + '_' + xlsxFile.split('_')[3].split('-')[1] + '-' + 'Response_' + error_filter#INSERTED
-            np.save(response_filename, responseEntries)
+        # Define an output dictionary for specific response values
+        outputDict = {'U': 32, 'R': 8, 'L': 24, 'D': 16}
 
-            # Sanity check
-            print('Input solved: ', opened_xlsxFile_selection['Spreadsheet'][0], ' ', opened_xlsxFile_selection['TimeLimit'][0])
-            print('Response solved: ', opened_xlsxFile_selection['Spreadsheet'][0], ' ', opened_xlsxFile_selection['TimeLimit'][0])
-
-            # OUTPUT ###########################################################################################################
-            # float all field units during fixation epoch on 0.05
-            for i in range(0, numFixStepsAverage):
-                for j in range(0, Output.shape[1]):
+        for i in range(numFixStepsAverage, totalStepsAverage):
+            for j in range(0, Output.shape[1]):
+                if isinstance(Output[i][j][0], str) and Output[i][j][0] != 'noResponse' and Output[i][j][0] != 'NoResponse':
+                    Output[i][j][outputDict[Output[i][j][0]]] = float(0.85)
+                else:
                     for k in range(2, 34):
                         Output[i][j][k] = float(0.05)
-            # float all field units of response epoch to 0
-            for i in range(numFixStepsAverage, totalStepsAverage):
-                for j in range(0, Output.shape[1]):
-                    for k in range(2, 34):
-                        Output[i][j][k] = float(0)
-            # float all fixation outputs during response period to 0.05
-            for i in range(numFixStepsAverage, totalStepsAverage):
-                for j in range(0, Output.shape[1]):
-                    Output[i][j][1] = float(0.05)
 
-            # Define an output dictionary for specific response values
-            outputDict = {'U': 32, 'R': 8, 'L': 24, 'D': 16}
+        # Drop unnecessary first column
+        Output = np.delete(Output, [0], axis=2)
+        # Pre-allocate y-loc matrix; needed for later validation - Ground Truth
+        y_loc = np.zeros((Output.shape[0], Output.shape[1]))
 
-            for i in range(numFixStepsAverage, totalStepsAverage):
-                for j in range(0, Output.shape[1]):
-                    if isinstance(Output[i][j][0], str) and Output[i][j][0] != 'noResponse' and Output[i][j][0] != 'NoResponse':
-                        Output[i][j][outputDict[Output[i][j][0]]] = float(0.85)
-                    else:
-                        for k in range(2, 34):
-                            Output[i][j][k] = float(0.05)
+        # Add output gradient activation
+        for i in range(0, Output.shape[0]):
+            for j in range(0, Output.shape[1]):
+                currentTimeStepOutput = Output[i][j][1:33]
+                # Allocate first unit ring
+                unitRingOutput = np.zeros(32, dtype='float32')
+                # Get non-zero values of time steps
+                nonZerosOutput = np.nonzero(currentTimeStepOutput)[0]
+                # Float first fixations rows with -1
+                for k in range(0, numFixStepsAverage):
+                    y_loc[k][j] = np.float32(-1)
 
-            # Drop unnecessary first column
-            Output = np.delete(Output, [0], axis=2)
-            # Pre-allocate y-loc matrix; needed for later validation - Ground Truth
-            y_loc = np.zeros((Output.shape[0], Output.shape[1]))
+                if len(nonZerosOutput) == 1:
+                    # Get activity and model gradient activation around it
+                    currentOutputLoc = pref[nonZerosOutput[0]]
+                    currentActivation_Output = add_x_loc(currentOutputLoc, pref) + 0.05  # adding noise
+                    unitRingOutput = np.around(unitRingOutput + currentActivation_Output, decimals=2)
+                    # Store
+                    currentFinalRow = np.concatenate((Output[i][j][0:1], unitRingOutput))
+                    Output[i][j][0:33] = currentFinalRow
+                    # Complete y_loc matrix
+                    for k in range(numFixStepsAverage, totalStepsAverage):
+                        y_loc[k][j] = pref[nonZerosOutput[0]]
 
-            # Add output gradient activation
-            for i in range(0, Output.shape[0]):
-                for j in range(0, Output.shape[1]):
-                    currentTimeStepOutput = Output[i][j][1:33]
-                    # Allocate first unit ring
-                    unitRingOutput = np.zeros(32, dtype='float32')
-                    # Get non-zero values of time steps
-                    nonZerosOutput = np.nonzero(currentTimeStepOutput)[0]
-                    # Float first fixations rows with -1
-                    for k in range(0, numFixStepsAverage):
-                        y_loc[k][j] = np.float32(-1)
+        # Change dtype of every element in matrix to float32 for later validation functions
+        for i in range(0, Output.shape[0]):
+            for j in range(0, Output.shape[1]):
+                for k in range(0, Output.shape[2]):
+                    Output[i][j][k] = np.float32(Output[i][j][k])
+        # Also change dtype for entire array
+        Output = Output.astype('float32')
 
-                    if len(nonZerosOutput) == 1:
-                        # Get activity and model gradient activation around it
-                        currentOutputLoc = pref[nonZerosOutput[0]]
-                        currentActivation_Output = add_x_loc(currentOutputLoc, pref) + 0.05  # adding noise
-                        unitRingOutput = np.around(unitRingOutput + currentActivation_Output, decimals=2)
-                        # Store
-                        currentFinalRow = np.concatenate((Output[i][j][0:1], unitRingOutput))
-                        Output[i][j][0:33] = currentFinalRow
-                        # Complete y_loc matrix
-                        for k in range(numFixStepsAverage, totalStepsAverage):
-                            y_loc[k][j] = pref[nonZerosOutput[0]]
+        # Save output data
+        output_filename = participant + '-' + 'month_' + str(month) + '-' + 'batch_' + str(batchNumber) + '-' + taskShorts + '-' + \
+                          xlsxFile.split('_')[3].split('-')[0] + '_' + xlsxFile.split('_')[3].split('-')[1] + '-' + 'Output'
+        np.save(output_filename, Output)
+        # Save y_loc data
+        yLoc_filename = participant + '-' + 'month_' + str(month) + '-' + 'batch_' + str(batchNumber) + '-' + taskShorts + '-' + \
+                        xlsxFile.split('_')[3].split('-')[0] + '_' + xlsxFile.split('_')[3].split('-')[1] + '-' + 'yLoc'
+        np.save(yLoc_filename, y_loc)
+        # Save meta data
+        meta_filename = participant + '-' + 'month_' + str(month) + '-' + 'batch_' + str(batchNumber) + '-' + taskShorts + '-' + \
+                        xlsxFile.split('_')[3].split('-')[0] + '_' + xlsxFile.split('_')[3].split('-')[1] + '-' + 'Meta'
+        with open('{}.json'.format(meta_filename), 'w') as json_file:
+            json.dump(meta_dict, json_file)
 
-            # Change dtype of every element in matrix to float32 for later validation functions
-            for i in range(0, Output.shape[0]):
-                for j in range(0, Output.shape[1]):
-                    for k in range(0, Output.shape[2]):
-                        Output[i][j][k] = np.float32(Output[i][j][k])
-            # Also change dtype for entire array
-            Output = Output.astype('float32')
-
-            # Save output data
-            output_filename = participant + '-' + 'month_' + str(month) + '-' + 'batch_' + str(batchNumber) + '-' + taskShorts + '-' + xlsxFile.split('_')[3].split('-')[0] + '_' + xlsxFile.split('_')[3].split('-')[1] + '-' + 'Output_' + error_filter #INSERTED
-            np.save(output_filename, Output)
-            # Save y_loc data
-            yLoc_filename = participant + '-' + 'month_' + str(month) + '-' + 'batch_' + str(batchNumber) + '-' + taskShorts + '-' +xlsxFile.split('_')[3].split('-')[0] + '_' + xlsxFile.split('_')[3].split('-')[1] + '-' + 'yLoc_' + error_filter#INSERTED
-            np.save(yLoc_filename, y_loc)
-            # Save meta data
-            meta_filename = participant + '-' + 'month_' + str(month) + '-' + 'batch_' + str(batchNumber) + '-' + taskShorts + '-' + xlsxFile.split('_')[3].split('-')[0] + '_' + xlsxFile.split('_')[3].split('-')[1] + '-' + 'Meta_' +error_filter#INSERTED
-            with open('{}.json'.format(meta_filename), 'w') as json_file:
-                json.dump(meta_dict, json_file)
-
-            # Sanity check
-            print('Meta solved:', 'sleepingQualityValue: ', meta_dict['sleepingQualityValue'])
-            print('Output solved: ', opened_xlsxFile_selection['Spreadsheet'][0], ' ', opened_xlsxFile_selection['TimeLimit'][0])
-
-
-
-
-
-
-
-
-
-
-
-
-
+        # Sanity check
+        print('Meta solved:', 'sleepingQualityValue: ', meta_dict['sleepingQualityValue'])
+        print('Output solved: ', opened_xlsxFile_selection['Spreadsheet'][0], ' ', opened_xlsxFile_selection['TimeLimit'][0])
 
 ########################################################################################################################
 # todo: RP tasks #######################################################################################################
@@ -1199,9 +1166,7 @@ def preprocess_EF_Exclude_Errors(opened_xlsxFile, questionnare_files, list_allSe
 # # For debugging
 # file_path = 'W:\\group_csp\\analyses\\oliver.frank\\Data\\BeRNN_01\\7\\data_exp_149474-v16_task-7py6-11139854.xlsx'
 # opened_xlsxFile = pd.read_excel(file_path, engine='openpyxl')
-
-#%%
-def preprocess_RP_Exclude_Errors(opened_xlsxFile, questionnare_files, list_allSessions, sequence_on, sequence_off, batchLength):
+def preprocess_RP(opened_xlsxFile, questionnare_files, list_allSessions, sequence_on, sequence_off, batchLength):
     # Initialize columns with default values
     opened_xlsxFile.loc[:, 'Fixation input'] = 1
     opened_xlsxFile.loc[:, 'Fixation output'] = 0.8
@@ -1221,382 +1186,358 @@ def preprocess_RP_Exclude_Errors(opened_xlsxFile, questionnare_files, list_allSe
     taskString, final_questionaire = find_questionaire(opened_xlsxFile['Tree Node Key'][0].split('-')[1],list_allSessions, questionnare_files)
     opened_questionare = pd.read_excel(os.path.join(processing_path_month, final_questionaire), engine='openpyxl',dtype={'column_name': 'float64'})
 
+    # Select specific columns from the DataFrame
+    opened_xlsxFile_selection = opened_xlsxFile[['Spreadsheet', 'TimeLimit', 'Onset Time', 'Object Name', 'Spreadsheet: CorrectAnswer1', 'Correct', 'Component Name', \
+                           'Fixation input', 'Fixation output', 'Spreadsheet: Field 1', 'Spreadsheet: Field 2', 'Spreadsheet: Field 3', 'Spreadsheet: Field 4',\
+                           'Spreadsheet: Field 5', 'Spreadsheet: Field 6', 'Spreadsheet: Field 7', 'Spreadsheet: Field 8', 'Spreadsheet: Field 9',\
+                           'Spreadsheet: Field 10', 'Spreadsheet: Field 11', 'Spreadsheet: Field 12', 'Spreadsheet: Field 13', 'Spreadsheet: Field 14',\
+                           'Spreadsheet: Field 15', 'Spreadsheet: Field 16', 'Spreadsheet: Field 17', 'Spreadsheet: Field 18', 'Spreadsheet: Field 19',\
+                           'Spreadsheet: Field 20', 'Spreadsheet: Field 21', 'Spreadsheet: Field 22', 'Spreadsheet: Field 23', 'Spreadsheet: Field 24',\
+                           'Spreadsheet: Field 25', 'Spreadsheet: Field 26', 'Spreadsheet: Field 27', 'Spreadsheet: Field 28', 'Spreadsheet: Field 29',\
+                           'Spreadsheet: Field 30', 'Spreadsheet: Field 31', 'Spreadsheet: Field 32', \
+                           'Spreadsheet: Field 1', 'Spreadsheet: Field 2', 'Spreadsheet: Field 3', 'Spreadsheet: Field 4', \
+                           'Spreadsheet: Field 5', 'Spreadsheet: Field 6', 'Spreadsheet: Field 7', 'Spreadsheet: Field 8', 'Spreadsheet: Field 9', \
+                           'Spreadsheet: Field 10', 'Spreadsheet: Field 11', 'Spreadsheet: Field 12', 'Spreadsheet: Field 13', 'Spreadsheet: Field 14',\
+                           'Spreadsheet: Field 15', 'Spreadsheet: Field 16', 'Spreadsheet: Field 17', 'Spreadsheet: Field 18', 'Spreadsheet: Field 19',\
+                           'Spreadsheet: Field 20', 'Spreadsheet: Field 21', 'Spreadsheet: Field 22', 'Spreadsheet: Field 23',\
+                           'Spreadsheet: Field 24', 'Spreadsheet: Field 25', 'Spreadsheet: Field 26', 'Spreadsheet: Field 27', 'Spreadsheet: Field 28',\
+                           'Spreadsheet: Field 29', 'Spreadsheet: Field 30', 'Spreadsheet: Field 31', 'Spreadsheet: Field 32', 'DM',\
+                           'DM Anti', 'EF', 'EF Anti', 'RP', 'RP Anti', 'RP Ctx1', 'RP Ctx2', 'WM', 'WM Anti', 'WM Ctx1', 'WM Ctx1', 'Spreadsheet: display', 'UTC Date and Time', 'Response']]
 
+    # Count sequences, save particpant response and ground truth for later error analysis
+    incrementList = []
+    responseParticipantEntries = []
+    responseGroundTruthEntries = []
 
-    error_filters = createErrorDataframes(opened_xlsxFile=opened_xlsxFile)#INSERTED
+    for i, name in enumerate(opened_xlsxFile_selection['Component Name']):
+        if name == 'Fixation Timing':
+            incrementList.append(i + 1)
+            # Check if the next row exists to avoid IndexError
+            if i + 1 < len(opened_xlsxFile_selection):
+                responseParticipantEntry = opened_xlsxFile_selection['Response'].iloc[i + 1]
+                responseParticipantEntries.append(responseParticipantEntry)
+                responseGroundTruthEntry = opened_xlsxFile_selection['Spreadsheet: CorrectAnswer1'].iloc[i + 1]
+                responseGroundTruthEntries.append(responseGroundTruthEntry)
+            else:
+                # Append None or some placeholder if there is no next row
+                responseParticipantEntries.append(None)
+                responseGroundTruthEntries.append(None)
 
+    concatResponseEntries = np.array((responseParticipantEntries, responseGroundTruthEntries))
+    numberBatches = len(incrementList) // batchLength
 
+    # Split the data into batches based on the fixation timing component
+    for batchNumber in range(numberBatches):
+        batchOn = batchNumber * batchLength
+        batchOff = batchNumber * batchLength + batchLength
+        numFixStepsTotal = 0
+        numRespStepsTotal = 0
+        # Prepare response array for this batch
+        currentConcatResponseEntries = concatResponseEntries[:, batchOn:batchOff]
+        # Calculate average fix, resp and total steps for this batch
+        for j in incrementList[batchOn:batchOff]:
+            # Accumulate step numbers
+            currentTrial = opened_xlsxFile_selection[j:j + 2].reset_index().drop(columns=['index'])
+            numFixSteps = round(currentTrial['Onset Time'][0] / 20)
+            numRespSteps = round(currentTrial['Onset Time'][1] / 20)
+            numFixStepsTotal += numFixSteps
+            numRespStepsTotal += numRespSteps
+            # Calculate average after cumulative addition of whole batch
+            if j == incrementList[batchOff - 1]:
+                numFixStepsAverage = int(numFixStepsTotal / batchLength)
+                numRespStepsAverage = int(numRespStepsTotal / batchLength)
+                totalStepsAverage = numFixStepsAverage + numRespStepsAverage
+                # print(numFixStepsAverage,numRespStepsAverage,totalStepsAverage)
 
-    for error_filter in error_filters.keys():#INSERTED
-        print(f"\n\nRunning for: {error_filter}, {error_filters[error_filter].shape} dataset...")#INSERTED
-        # reassign opend_xlsxFile to the real data#INSERTED
-        opened_xlsxFile = error_filters[error_filter]#INSERTED
+        finalSequenceList = []
+        concatedValuesAndOccurrencesList = []
+        # Create sequences of every trial in the current batch with the previous calculated time steps
+        for j in incrementList[batchOn:batchOff]:
+            currentTrial = opened_xlsxFile_selection[j:j + 2].reset_index().drop(columns=['index'])
+            # ----------------------------------------------------------------------------------------------------------
+            # Get the rest of the trial information for later error analysis
+            png_strings = np.array([s for s in currentTrial.loc[0][9:73] if isinstance(s, str) and s.endswith('.png')])
+            unique_values, occurrence_counts = np.unique(png_strings, return_counts=True)
+            unique_values, occurrence_counts = unique_values[1:], occurrence_counts[1:]  # exclude 000_000.png
+            # Check if values and counts are equal/below 4 and zeropad them, so that all columns have the same length
+            if len(unique_values) <= 4:
+                for i in range(5-len(unique_values)):
+                    unique_values, occurrence_counts = np.concatenate((unique_values,['None']),axis=0), np.concatenate((occurrence_counts,[0]),axis=0)
+            concatedValuesAndOccurrences = np.concatenate([unique_values, occurrence_counts], axis=0)
+            concatedValuesAndOccurrencesList.append(concatedValuesAndOccurrences)
+            # ----------------------------------------------------------------------------------------------------------
+            currentSequenceList = []
+            for k in range(totalStepsAverage):
+                sequence = [currentTrial.iloc[0]]
+                currentSequenceList.append(sequence)
+            finalSequenceList.append(currentSequenceList)
+        # --------------------------------------------------------------------------------------------------------------
+        # Concatenate trial information for error anaylsis to response entries
+        currentConcatResponseEntriesFinal = np.concatenate([currentConcatResponseEntries, np.array(concatedValuesAndOccurrencesList, dtype=object).T],axis=0)
+        # --------------------------------------------------------------------------------------------------------------
 
+        # Create final df for INPUT and OUPUT
+        newOrderSequenceList = []
+        # Append all the time steps accordingly to a list
+        for j in range(0, totalStepsAverage):
+            for i in range(0, len(finalSequenceList)):
+                newOrderSequenceList.append(finalSequenceList[i][j])
 
+        # Create Yang form
+        finalTrialsList_array = np.array(newOrderSequenceList).reshape((len(finalSequenceList[0]), len(finalSequenceList), 88))
+        # Create meta dict before deleting necessary information from current trials List
+        date = str(finalTrialsList_array[0,0,86]).split(' ')[0]
+        sleepingQualityQuestion, sleepingQualityValue, drugVectorQuestion, drugVectorValue = find_sleepingQuality_drugVector(opened_questionare, date)
+        # print('# DEBUGGING ###########################################################################################')
+        # print('>>>>>>>>>>>>>>>>>>>>>>>>     ', taskString, final_questionaire, date)
+        # print('>>>>>>>>>>>>>>>>>>>>>>>>     ', 'sleepingQualityValue:', sleepingQualityValue, 'drugVector:',drugVectorValue)
+        # print('# DEBUGGING ###########################################################################################')
+        # Catch meta data now that you have all the necessary
+        meta_dict = {'date_time': str(finalTrialsList_array[0, 0, 85]), 'difficultyLevel': finalTrialsList_array[0,0,0],
+                     'timeLimit': finalTrialsList_array[0,0,1], 'sleepingQualityQuestion': sleepingQualityQuestion,
+                     'sleepingQualityValue': sleepingQualityValue, 'drugVectorQuestion': drugVectorQuestion,
+                     'drugVectorValue': drugVectorValue}
+        # Create one input file and one output file
+        Input, Output = finalTrialsList_array, finalTrialsList_array
+        Input = np.delete(Input, [0, 1, 2, 3, 4, 5, 6, 8, 85,86,87], axis=2) # todo: 77 statt 85 ????
+        Output = np.delete(Output, np.s_[0, 1, 2, 4, 5, 6, 7,86,87], axis=2)
+        Output = np.delete(Output, np.s_[34:78], axis=2)
+        Input, Output = Input[:, sequence_on:sequence_off, :], Output[:, sequence_on:sequence_off, :]
+        responseEntries = currentConcatResponseEntriesFinal[:, sequence_on:sequence_off]
 
-        # Select specific columns from the DataFrame
-        opened_xlsxFile_selection = opened_xlsxFile[['Spreadsheet', 'TimeLimit', 'Onset Time', 'Object Name', 'Spreadsheet: CorrectAnswer1', 'Correct', 'Component Name', \
-                            'Fixation input', 'Fixation output', 'Spreadsheet: Field 1', 'Spreadsheet: Field 2', 'Spreadsheet: Field 3', 'Spreadsheet: Field 4',\
-                            'Spreadsheet: Field 5', 'Spreadsheet: Field 6', 'Spreadsheet: Field 7', 'Spreadsheet: Field 8', 'Spreadsheet: Field 9',\
-                            'Spreadsheet: Field 10', 'Spreadsheet: Field 11', 'Spreadsheet: Field 12', 'Spreadsheet: Field 13', 'Spreadsheet: Field 14',\
-                            'Spreadsheet: Field 15', 'Spreadsheet: Field 16', 'Spreadsheet: Field 17', 'Spreadsheet: Field 18', 'Spreadsheet: Field 19',\
-                            'Spreadsheet: Field 20', 'Spreadsheet: Field 21', 'Spreadsheet: Field 22', 'Spreadsheet: Field 23', 'Spreadsheet: Field 24',\
-                            'Spreadsheet: Field 25', 'Spreadsheet: Field 26', 'Spreadsheet: Field 27', 'Spreadsheet: Field 28', 'Spreadsheet: Field 29',\
-                            'Spreadsheet: Field 30', 'Spreadsheet: Field 31', 'Spreadsheet: Field 32', \
-                            'Spreadsheet: Field 1', 'Spreadsheet: Field 2', 'Spreadsheet: Field 3', 'Spreadsheet: Field 4', \
-                            'Spreadsheet: Field 5', 'Spreadsheet: Field 6', 'Spreadsheet: Field 7', 'Spreadsheet: Field 8', 'Spreadsheet: Field 9', \
-                            'Spreadsheet: Field 10', 'Spreadsheet: Field 11', 'Spreadsheet: Field 12', 'Spreadsheet: Field 13', 'Spreadsheet: Field 14',\
-                            'Spreadsheet: Field 15', 'Spreadsheet: Field 16', 'Spreadsheet: Field 17', 'Spreadsheet: Field 18', 'Spreadsheet: Field 19',\
-                            'Spreadsheet: Field 20', 'Spreadsheet: Field 21', 'Spreadsheet: Field 22', 'Spreadsheet: Field 23',\
-                            'Spreadsheet: Field 24', 'Spreadsheet: Field 25', 'Spreadsheet: Field 26', 'Spreadsheet: Field 27', 'Spreadsheet: Field 28',\
-                            'Spreadsheet: Field 29', 'Spreadsheet: Field 30', 'Spreadsheet: Field 31', 'Spreadsheet: Field 32', 'DM',\
-                            'DM Anti', 'EF', 'EF Anti', 'RP', 'RP Anti', 'RP Ctx1', 'RP Ctx2', 'WM', 'WM Anti', 'WM Ctx1', 'WM Ctx1', 'Spreadsheet: display', 'UTC Date and Time', 'Response']]
+        # INPUT ############################################################################################################
+        # float all fixation input values to 1
+        for i in range(0, Input.shape[0]):
+            for j in range(0, Input.shape[1]):
+                Input[i][j][0] = float(1)
+        # float all task values to 0
+        for i in range(0, Input.shape[0]):
+            for j in range(0, Input.shape[1]):
+                for k in range(65, Input.shape[2]):
+                    Input[i][j][k] = float(0)
 
-        # Count sequences, save particpant response and ground truth for later error analysis
-        incrementList = []
-        responseParticipantEntries = []
-        responseGroundTruthEntries = []
+        # Define a task dictionary for specific task-related columns
+        taskDict = {'DM': 65, 'DM Anti': 66, 'EF': 67, 'EF Anti': 68, 'RP': 69, 'RP Anti': 70, 'RP Ctx1': 71,
+                    'RP Ctx2': 72, 'WM': 73, 'WM Anti': 74, 'WM Ctx1': 75, 'WM Ctx2': 76}
 
-        for i, name in enumerate(opened_xlsxFile_selection['Component Name']):
-            if name == 'Fixation Timing':
-                incrementList.append(i + 1)
-                # Check if the next row exists to avoid IndexError
-                if i + 1 < len(opened_xlsxFile_selection):
-                    responseParticipantEntry = opened_xlsxFile_selection['Response'].iloc[i + 1]
-                    responseParticipantEntries.append(responseParticipantEntry)
-                    responseGroundTruthEntry = opened_xlsxFile_selection['Spreadsheet: CorrectAnswer1'].iloc[i + 1]
-                    responseGroundTruthEntries.append(responseGroundTruthEntry)
+        # float all task values to 1
+        for i in range(0, Input.shape[0]):
+            for j in range(0, Input.shape[1]):
+                if len(opened_xlsxFile_selection['Spreadsheet'][0].split('_')) == 4:
+                    Input[i][j][taskDict[opened_xlsxFile_selection['Spreadsheet'][0].split('_')[0]]] = float(1)
+                    taskShorts = opened_xlsxFile_selection['Spreadsheet'][0].split('_')[0]
                 else:
-                    # Append None or some placeholder if there is no next row
-                    responseParticipantEntries.append(None)
-                    responseGroundTruthEntries.append(None)
+                    Input[i][j][taskDict[opened_xlsxFile_selection['Spreadsheet'][0].split('_')[0] + ' ' + opened_xlsxFile_selection['Spreadsheet'][0].split('_')[1]]] = float(1)
+                    taskShorts = opened_xlsxFile_selection['Spreadsheet'][0].split('_')[0] + '_' + opened_xlsxFile_selection['Spreadsheet'][0].split('_')[1]
 
-        concatResponseEntries = np.array((responseParticipantEntries, responseGroundTruthEntries))
-        numberBatches = len(incrementList) // batchLength
-
-         # add 1 if numberBatches == 0
-        if numberBatches == 0: #INSERTED
-            numberBatches = 1 #INSERTED this was inserted
-
-
-        # Split the data into batches based on the fixation timing component
-        for batchNumber in range(numberBatches):
-            batchOn = batchNumber * batchLength
-            batchOff = batchNumber * batchLength + batchLength
-            numFixStepsTotal = 0
-            numRespStepsTotal = 0
-            # Prepare response array for this batch
-            currentConcatResponseEntries = concatResponseEntries[:, batchOn:batchOff]
-
-            if len(incrementList) < (batchOff - 1): #INSERTED
-                batchOff = len(incrementList)  #INSERTED TODO - check if this is appropriate, or whether this has to be eg len(increment_list) -/+ 1 
-
-
-
-            # Calculate average fix, resp and total steps for this batch
-            for j in incrementList[batchOn:batchOff]:
-                # Accumulate step numbers
-                currentTrial = opened_xlsxFile_selection[j:j + 2].reset_index().drop(columns=['index'])
-                numFixSteps = round(currentTrial['Onset Time'][0] / 20)
-                numRespSteps = round(currentTrial['Onset Time'][1] / 20)
-                numFixStepsTotal += numFixSteps
-                numRespStepsTotal += numRespSteps
-                # Calculate average after cumulative addition of whole batch
-                if j == incrementList[batchOff - 1]:
-                    numFixStepsAverage = int(numFixStepsTotal / batchLength)
-                    numRespStepsAverage = int(numRespStepsTotal / batchLength)
-                    totalStepsAverage = numFixStepsAverage + numRespStepsAverage
-                    # print(numFixStepsAverage,numRespStepsAverage,totalStepsAverage)
-
-            finalSequenceList = []
-            concatedValuesAndOccurrencesList = []
-            # Create sequences of every trial in the current batch with the previous calculated time steps
-            for j in incrementList[batchOn:batchOff]:
-                currentTrial = opened_xlsxFile_selection[j:j + 2].reset_index().drop(columns=['index'])
-                # ----------------------------------------------------------------------------------------------------------
-                # Get the rest of the trial information for later error analysis
-                png_strings = np.array([s for s in currentTrial.loc[0][9:73] if isinstance(s, str) and s.endswith('.png')])
-                unique_values, occurrence_counts = np.unique(png_strings, return_counts=True)
-                unique_values, occurrence_counts = unique_values[1:], occurrence_counts[1:]  # exclude 000_000.png
-                # Check if values and counts are equal/below 4 and zeropad them, so that all columns have the same length
-                if len(unique_values) <= 4:
-                    for i in range(5-len(unique_values)):
-                        unique_values, occurrence_counts = np.concatenate((unique_values,['None']),axis=0), np.concatenate((occurrence_counts,[0]),axis=0)
-                concatedValuesAndOccurrences = np.concatenate([unique_values, occurrence_counts], axis=0)
-                concatedValuesAndOccurrencesList.append(concatedValuesAndOccurrences)
-                # ----------------------------------------------------------------------------------------------------------
-                currentSequenceList = []
-                for k in range(totalStepsAverage):
-                    sequence = [currentTrial.iloc[0]]
-                    currentSequenceList.append(sequence)
-                finalSequenceList.append(currentSequenceList)
-            # --------------------------------------------------------------------------------------------------------------
-            # Concatenate trial information for error anaylsis to response entries
-            currentConcatResponseEntriesFinal = np.concatenate([currentConcatResponseEntries, np.array(concatedValuesAndOccurrencesList, dtype=object).T],axis=0)
-            # --------------------------------------------------------------------------------------------------------------
-
-            # Create final df for INPUT and OUPUT
-            newOrderSequenceList = []
-            # Append all the time steps accordingly to a list
-            for j in range(0, totalStepsAverage):
-                for i in range(0, len(finalSequenceList)):
-                    newOrderSequenceList.append(finalSequenceList[i][j])
-
-            # Create Yang form
-            finalTrialsList_array = np.array(newOrderSequenceList).reshape((len(finalSequenceList[0]), len(finalSequenceList), 88))
-            # Create meta dict before deleting necessary information from current trials List
-            date = str(finalTrialsList_array[0,0,86]).split(' ')[0]
-            sleepingQualityQuestion, sleepingQualityValue, drugVectorQuestion, drugVectorValue = find_sleepingQuality_drugVector(opened_questionare, date)
-            # print('# DEBUGGING ###########################################################################################')
-            # print('>>>>>>>>>>>>>>>>>>>>>>>>     ', taskString, final_questionaire, date)
-            # print('>>>>>>>>>>>>>>>>>>>>>>>>     ', 'sleepingQualityValue:', sleepingQualityValue, 'drugVector:',drugVectorValue)
-            # print('# DEBUGGING ###########################################################################################')
-            # Catch meta data now that you have all the necessary
-            meta_dict = {'date_time': str(finalTrialsList_array[0, 0, 85]), 'difficultyLevel': finalTrialsList_array[0,0,0],
-                        'timeLimit': finalTrialsList_array[0,0,1], 'sleepingQualityQuestion': sleepingQualityQuestion,
-                        'sleepingQualityValue': sleepingQualityValue, 'drugVectorQuestion': drugVectorQuestion,
-                        'drugVectorValue': drugVectorValue}
-            # Create one input file and one output file
-            Input, Output = finalTrialsList_array, finalTrialsList_array
-            Input = np.delete(Input, [0, 1, 2, 3, 4, 5, 6, 8, 85,86,87], axis=2) # todo: 77 statt 85 ????
-            Output = np.delete(Output, np.s_[0, 1, 2, 4, 5, 6, 7,86,87], axis=2)
-            Output = np.delete(Output, np.s_[34:78], axis=2)
-            Input, Output = Input[:, sequence_on:sequence_off, :], Output[:, sequence_on:sequence_off, :]
-            responseEntries = currentConcatResponseEntriesFinal[:, sequence_on:sequence_off]
-
-            # INPUT ############################################################################################################
-            # float all fixation input values to 1
-            for i in range(0, Input.shape[0]):
-                for j in range(0, Input.shape[1]):
-                    Input[i][j][0] = float(1)
-            # float all task values to 0
-            for i in range(0, Input.shape[0]):
-                for j in range(0, Input.shape[1]):
-                    for k in range(65, Input.shape[2]):
+        # float all 000_000's on field units to 0
+        for i in range(0, Input.shape[0]):
+            for j in range(0, Input.shape[1]):
+                for k in range(1, 65):
+                    if Input[i][j][k] == '000_000.png':
                         Input[i][j][k] = float(0)
 
-            # Define a task dictionary for specific task-related columns
-            taskDict = {'DM': 65, 'DM Anti': 66, 'EF': 67, 'EF Anti': 68, 'RP': 69, 'RP Anti': 70, 'RP Ctx1': 71,
-                        'RP Ctx2': 72, 'WM': 73, 'WM Anti': 74, 'WM Ctx1': 75, 'WM Ctx2': 76}
+        # Define modulation dictionaries for specific columns
+        mod1Dict = {'red': 0.08, 'rust': 0.17, 'orange': 0.25, 'amber': 0.33, 'yellow': 0.42, 'lime': 0.5, 'green': 0.58, \
+                    'moss': 0.66, 'blue': 0.75, 'violet': 0.83, 'magenta': 0.92, 'purple': 1.0}
+        # mod1Dict = {'red': 0.16, 'rust': 0.32, 'orange': 0.5, 'amber': 0.66, 'yellow': 0.84, 'lime': 1.0,'green': 1.16, \
+        #             'moss': 1.32, 'blue': 1.5, 'violet': 1.66, 'magenta': 1.84, 'purple': 2.0}
 
-            # float all task values to 1
-            for i in range(0, Input.shape[0]):
-                for j in range(0, Input.shape[1]):
-                    if len(opened_xlsxFile_selection['Spreadsheet'][0].split('_')) == 4:
-                        Input[i][j][taskDict[opened_xlsxFile_selection['Spreadsheet'][0].split('_')[0]]] = float(1)
-                        taskShorts = opened_xlsxFile_selection['Spreadsheet'][0].split('_')[0]
-                    else:
-                        Input[i][j][taskDict[opened_xlsxFile_selection['Spreadsheet'][0].split('_')[0] + ' ' + opened_xlsxFile_selection['Spreadsheet'][0].split('_')[1]]] = float(1)
-                        taskShorts = opened_xlsxFile_selection['Spreadsheet'][0].split('_')[0] + '_' + opened_xlsxFile_selection['Spreadsheet'][0].split('_')[1]
+        for i in range(0, Input.shape[0]):
+            for j in range(0, Input.shape[1]):
+                for k in range(1, 33):
+                    if Input[i][j][k] != 0:
+                        Input[i][j][k] = mod1Dict[Input[i][j][k].split('_')[0]]
 
-            # float all 000_000's on field units to 0
-            for i in range(0, Input.shape[0]):
-                for j in range(0, Input.shape[1]):
-                    for k in range(1, 65):
-                        if Input[i][j][k] == '000_000.png':
-                            Input[i][j][k] = float(0)
+        # Define modulation dictionaries for specific columns
+        # mod2Dict = {'triangle.png': float(0.4), 'pentagon.png': float(0.8), 'heptagon.png': float(1.2), 'nonagon.png': float(1.6), 'circle.png': float(2.0)}
+        mod2Dict = {'triangle.png': float(0.2), 'pentagon.png': float(0.4), 'heptagon.png': float(0.6), 'nonagon.png': float(0.8), 'circle.png': float(1.0)}
 
-            # Define modulation dictionaries for specific columns
-            mod1Dict = {'red': 0.08, 'rust': 0.17, 'orange': 0.25, 'amber': 0.33, 'yellow': 0.42, 'lime': 0.5, 'green': 0.58, \
-                        'moss': 0.66, 'blue': 0.75, 'violet': 0.83, 'magenta': 0.92, 'purple': 1.0}
-            # mod1Dict = {'red': 0.16, 'rust': 0.32, 'orange': 0.5, 'amber': 0.66, 'yellow': 0.84, 'lime': 1.0,'green': 1.16, \
-            #             'moss': 1.32, 'blue': 1.5, 'violet': 1.66, 'magenta': 1.84, 'purple': 2.0}
+        for i in range(0, Input.shape[0]):
+            for j in range(0, Input.shape[1]):
+                for k in range(33, 65):
+                    if Input[i][j][k] != 0:
+                        Input[i][j][k] = mod2Dict[Input[i][j][k].split('_')[1]]
 
-            for i in range(0, Input.shape[0]):
-                for j in range(0, Input.shape[1]):
-                    for k in range(1, 33):
-                        if Input[i][j][k] != 0:
-                            Input[i][j][k] = mod1Dict[Input[i][j][k].split('_')[0]]
+        # float all field values of fixation period to 0
+        for i in range(0, numFixStepsAverage):
+            for j in range(0, Input.shape[1]):
+                for k in range(1, 65):
+                    Input[i][j][k] = float(0)
 
-            # Define modulation dictionaries for specific columns
-            # mod2Dict = {'triangle.png': float(0.4), 'pentagon.png': float(0.8), 'heptagon.png': float(1.2), 'nonagon.png': float(1.6), 'circle.png': float(2.0)}
-            mod2Dict = {'triangle.png': float(0.2), 'pentagon.png': float(0.4), 'heptagon.png': float(0.6), 'nonagon.png': float(0.8), 'circle.png': float(1.0)}
+        # Add input gradient activation
+        # Create default hyperparameters for network
+        num_ring, n_eachring, n_rule = 2, 32, 12
+        n_input, n_output = 1 + num_ring * n_eachring + n_rule, n_eachring + 1
+        pref = np.arange(0, 2 * np.pi, 2 * np.pi / 32)
 
-            for i in range(0, Input.shape[0]):
-                for j in range(0, Input.shape[1]):
-                    for k in range(33, 65):
-                        if Input[i][j][k] != 0:
-                            Input[i][j][k] = mod2Dict[Input[i][j][k].split('_')[1]]
+        for i in range(0, Input.shape[0]):
+            for j in range(0, Input.shape[1]):
+                currentTimeStepModOne = Input[i][j][1:33]
+                currentTimeStepModTwo = Input[i][j][33:65]
+                # Allocate first unit ring
+                unitRingMod1 = np.zeros(32, dtype='float32')
+                unitRingMod2 = np.zeros(32, dtype='float32')
 
-            # float all field values of fixation period to 0
-            for i in range(0, numFixStepsAverage):
-                for j in range(0, Input.shape[1]):
-                    for k in range(1, 65):
-                        Input[i][j][k] = float(0)
+                # Get non-zero values of time steps on both modalities and also directly fix distance between units issue
+                NonZero_Mod1 = np.nonzero(currentTimeStepModOne)[0]
+                NonZero_Mod2 = np.nonzero(currentTimeStepModTwo)[0]
+                if len(NonZero_Mod1) != 0:
+                    # Accumulating all activities for both unit rings together
+                    for k in range(0, len(NonZero_Mod1)):
+                        currentStimLoc_Mod1 = pref[NonZero_Mod1[k]]
+                        currentStimStrength_Mod1 = currentTimeStepModOne[NonZero_Mod1[k]]
+                        currentStimLoc_Mod2 = pref[NonZero_Mod2[k]]
+                        currentStimStrength_Mod2 = currentTimeStepModTwo[NonZero_Mod2[k]]
+                        # add one gradual activated stim to final form
+                        currentActivation_Mod1 = add_x_loc(currentStimLoc_Mod1, pref) * currentStimStrength_Mod1
+                        currentActivation_Mod2 = add_x_loc(currentStimLoc_Mod2, pref) * currentStimStrength_Mod2
+                        # Add all activations for one trial together
+                        unitRingMod1 = np.around(unitRingMod1 + currentActivation_Mod1, decimals=2)
+                        unitRingMod2 = np.around(unitRingMod2 + currentActivation_Mod2, decimals=2)
+                    # Store
+                    currentFinalRow = np.concatenate((Input[i][j][0:1], unitRingMod1, unitRingMod2, Input[i][j][65:78]))
+                    Input[i][j][0:78] = currentFinalRow
 
-            # Add input gradient activation
-            # Create default hyperparameters for network
-            num_ring, n_eachring, n_rule = 2, 32, 12
-            n_input, n_output = 1 + num_ring * n_eachring + n_rule, n_eachring + 1
-            pref = np.arange(0, 2 * np.pi, 2 * np.pi / 32)
+        # Change dtype of every element in matrix to float32 for later validation functions
+        for i in range(0, Input.shape[0]):
+            for j in range(0, Input.shape[1]):
+                for k in range(0, Input.shape[2]):
+                    Input[i][j][k] = np.float32(Input[i][j][k])
+        # Also change dtype for entire array
+        Input = Input.astype('float32')
 
-            for i in range(0, Input.shape[0]):
-                for j in range(0, Input.shape[1]):
-                    currentTimeStepModOne = Input[i][j][1:33]
-                    currentTimeStepModTwo = Input[i][j][33:65]
-                    # Allocate first unit ring
-                    unitRingMod1 = np.zeros(32, dtype='float32')
-                    unitRingMod2 = np.zeros(32, dtype='float32')
+        # Save input data
+        os.chdir(os.path.join(os.getcwd(), main_path, taskShorts))
+        input_filename = (participant + '-' + 'month_' + str(month) + '-' + 'batch_' + str(batchNumber) + '-' + taskShorts + '-' + \
+                          xlsxFile.split('_')[3].split('-')[0] + '_' + xlsxFile.split('_')[3].split('-')[1] + '-' + 'Input')
+        np.save(input_filename, Input)
+        # Save response information for later error class detection
+        response_filename = participant + '-' + 'month_' + str(month) + '-' + 'batch_' + str(batchNumber) + '-' + taskShorts + '-' + \
+                            xlsxFile.split('_')[3].split('-')[0] + '_' + xlsxFile.split('_')[3].split('-')[1] + '-' + 'Response'
+        np.save(response_filename, responseEntries)
 
-                    # Get non-zero values of time steps on both modalities and also directly fix distance between units issue
-                    NonZero_Mod1 = np.nonzero(currentTimeStepModOne)[0]
-                    NonZero_Mod2 = np.nonzero(currentTimeStepModTwo)[0]
-                    if len(NonZero_Mod1) != 0:
-                        # Accumulating all activities for both unit rings together
-                        for k in range(0, len(NonZero_Mod1)):
-                            currentStimLoc_Mod1 = pref[NonZero_Mod1[k]]
-                            currentStimStrength_Mod1 = currentTimeStepModOne[NonZero_Mod1[k]]
-                            currentStimLoc_Mod2 = pref[NonZero_Mod2[k]]
-                            currentStimStrength_Mod2 = currentTimeStepModTwo[NonZero_Mod2[k]]
-                            # add one gradual activated stim to final form
-                            currentActivation_Mod1 = add_x_loc(currentStimLoc_Mod1, pref) * currentStimStrength_Mod1
-                            currentActivation_Mod2 = add_x_loc(currentStimLoc_Mod2, pref) * currentStimStrength_Mod2
-                            # Add all activations for one trial together
-                            unitRingMod1 = np.around(unitRingMod1 + currentActivation_Mod1, decimals=2)
-                            unitRingMod2 = np.around(unitRingMod2 + currentActivation_Mod2, decimals=2)
-                        # Store
-                        currentFinalRow = np.concatenate((Input[i][j][0:1], unitRingMod1, unitRingMod2, Input[i][j][65:78]))
-                        Input[i][j][0:78] = currentFinalRow
+        # Sanity check
+        print('Input solved: ', opened_xlsxFile_selection['Spreadsheet'][0], ' ', opened_xlsxFile_selection['TimeLimit'][0])
+        print('Response solved: ', opened_xlsxFile_selection['Spreadsheet'][0], ' ', opened_xlsxFile_selection['TimeLimit'][0])
 
-            # Change dtype of every element in matrix to float32 for later validation functions
-            for i in range(0, Input.shape[0]):
-                for j in range(0, Input.shape[1]):
-                    for k in range(0, Input.shape[2]):
-                        Input[i][j][k] = np.float32(Input[i][j][k])
-            # Also change dtype for entire array
-            Input = Input.astype('float32')
+        # OUTPUT ###########################################################################################################
+        # float all field units during fixation epoch on 0.05
+        for i in range(0, numFixStepsAverage):
+            for j in range(0, Output.shape[1]):
+                for k in range(2, 34):
+                    Output[i][j][k] = float(0.05)
+        # float all field units of response epoch to 0
+        for i in range(numFixStepsAverage, totalStepsAverage):
+            for j in range(0, Output.shape[1]):
+                for k in range(2, 34):
+                    Output[i][j][k] = float(0)
+        # float all fixation outputs during response period to 0.05
+        for i in range(numFixStepsAverage, totalStepsAverage):
+            for j in range(0, Output.shape[1]):
+                Output[i][j][1] = float(0.05)
+        # # Until 6 month there are only two different displays, afterwards they are divided into 4
+        # if int(month) <= 6:
+        #     # Assign field units to their according participant response value after fixation period
+        #     outputDict_RP_1 = {'Image 2': 2, 'Image 4': 4, 'Image 6': 6, 'Image 8': 8, 'Image 10': 10, 'Image 12': 12, 'Image 14': 14,\
+        #         'Image 16': 16, 'Image 18': 18, 'Image 20': 20, 'Image 22': 22, 'Image 24': 24, 'Image 26': 26, 'Image 28': 28, 'Image 30': 30, 'Image 32': 32}
+        #
+        #     outputDict_RP_2 = {'Image 1': 1, 'Image 3': 3, 'Image 5': 5, 'Image 7': 7, 'Image 9': 9, 'Image 11': 11, 'Image 13': 13, 'Image 15': 15, 'Image 17': 17, 'Image 19': 19, 'Image 21': 21,
+        #                        'Image 23': 23, 'Image 25': 25, 'Image 27': 27, 'Image 29': 29, 'Image 31': 31}
+        #
+        # else:
+        #     outputDict_RP_1 = {'Image 2': 2, 'Image 6': 6, 'Image 10': 10, 'Image 14': 14, 'Image 18': 18, 'Image 22': 22, 'Image 26': 26, 'Image 30': 30}
+        #
+        #     outputDict_RP_2 = {'Image 1': 1, 'Image 5': 5, 'Image 9': 9, 'Image 13': 13, 'Image 17': 17, 'Image 21': 21, 'Image 25': 25, 'Image 29': 29}
+        #
+        #     outputDict_RP_3 = {'Image 4': 4, 'Image 8': 8, 'Image 12': 12, 'Image 16': 16, 'Image 20': 20, 'Image 24': 24, 'Image 28': 28, 'Image 32': 32}
+        #
+        #     outputDict_RP_4 = {'Image 3': 3, 'Image 7': 7, 'Image 11': 11, 'Image 15': 15, 'Image 19': 19, 'Image 23': 23, 'Image 27': 27, 'Image 31': 31}
 
-            # Save input data
-            os.chdir(os.path.join(os.getcwd(), main_path, taskShorts))
-            input_filename = participant+'-'+'month_'+str(month)+'-' + 'batch_' + str(batchNumber) + '-' + taskShorts + '-' + xlsxFile.split('_')[3].split('-')[0]+'_'+ xlsxFile.split('_')[3].split('-')[1]+'-'+'Input_' + error_filter#INSERTED
-            np.save(input_filename, Input)
-            # Save response information for later error class detection
-            response_filename = participant + '-' + 'month_' + str(month) + '-' + 'batch_' + str(batchNumber) + '-' + taskShorts + '-' + xlsxFile.split('_')[3].split('-')[0] + '_' + xlsxFile.split('_')[3].split('-')[1] + '-' + 'Response_' + error_filter#INSERTED
-            np.save(response_filename, responseEntries)
+        outputDict = {'Image 2': 2, 'Image 4': 4, 'Image 6': 6, 'Image 8': 8, 'Image 10': 10, 'Image 12': 12, 'Image 14': 14,\
+                'Image 16': 16, 'Image 18': 18, 'Image 20': 20, 'Image 22': 22, 'Image 24': 24, 'Image 26': 26, 'Image 28': 28, 'Image 30': 30, 'Image 32': 32, \
+                'Image 1': 1, 'Image 3': 3, 'Image 5': 5, 'Image 7': 7, 'Image 9': 9, 'Image 11': 11,'Image 13': 13, 'Image 15': 15, 'Image 17': 17, 'Image 19': 19, 'Image 21': 21,
+                'Image 23': 23, 'Image 25': 25, 'Image 27': 27, 'Image 29': 29, 'Image 31': 31}
 
-            # Sanity check
-            print('Input solved: ', opened_xlsxFile_selection['Spreadsheet'][0], ' ', opened_xlsxFile_selection['TimeLimit'][0])
-            print('Response solved: ', opened_xlsxFile_selection['Spreadsheet'][0], ' ', opened_xlsxFile_selection['TimeLimit'][0])
 
-            # OUTPUT ###########################################################################################################
-            # float all field units during fixation epoch on 0.05
-            for i in range(0, numFixStepsAverage):
-                for j in range(0, Output.shape[1]):
+        for i in range(numFixStepsAverage, totalStepsAverage):
+            for j in range(0, Output.shape[1]):
+                # # Get the right dictionary
+                # if Output[i][j]['Display'].split(' RP')[0] == 'Display 1':
+                #     outputDict = outputDict_RP_1
+                # elif Output[i][j]['Display'].split(' RP')[0] == 'Display 2':
+                #     outputDict = outputDict_RP_2
+                # if Output[i][j]['Display'].split(' RP')[0] == 'Display 3':
+                #     outputDict = outputDict_RP_3
+                # elif Output[i][j]['Display'].split(' RP')[0] == 'Display 4':
+                #     outputDict = outputDict_RP_4
+
+                if Output[i][j][0] != 'screen' and Output[i][j][0] != 'noResponse' and Output[i][j][0] != 'NoResponse' and Output[i][j][0] != 'Fixation Cross':
+                    Output[i][j][outputDict[Output[i][j][0]]] = np.float32(0.85)
+                else:
                     for k in range(2, 34):
-                        Output[i][j][k] = float(0.05)
-            # float all field units of response epoch to 0
-            for i in range(numFixStepsAverage, totalStepsAverage):
-                for j in range(0, Output.shape[1]):
-                    for k in range(2, 34):
-                        Output[i][j][k] = float(0)
-            # float all fixation outputs during response period to 0.05
-            for i in range(numFixStepsAverage, totalStepsAverage):
-                for j in range(0, Output.shape[1]):
-                    Output[i][j][1] = float(0.05)
-            # # Until 6 month there are only two different displays, afterwards they are divided into 4
-            # if int(month) <= 6:
-            #     # Assign field units to their according participant response value after fixation period
-            #     outputDict_RP_1 = {'Image 2': 2, 'Image 4': 4, 'Image 6': 6, 'Image 8': 8, 'Image 10': 10, 'Image 12': 12, 'Image 14': 14,\
-            #         'Image 16': 16, 'Image 18': 18, 'Image 20': 20, 'Image 22': 22, 'Image 24': 24, 'Image 26': 26, 'Image 28': 28, 'Image 30': 30, 'Image 32': 32}
-            #
-            #     outputDict_RP_2 = {'Image 1': 1, 'Image 3': 3, 'Image 5': 5, 'Image 7': 7, 'Image 9': 9, 'Image 11': 11, 'Image 13': 13, 'Image 15': 15, 'Image 17': 17, 'Image 19': 19, 'Image 21': 21,
-            #                        'Image 23': 23, 'Image 25': 25, 'Image 27': 27, 'Image 29': 29, 'Image 31': 31}
-            #
-            # else:
-            #     outputDict_RP_1 = {'Image 2': 2, 'Image 6': 6, 'Image 10': 10, 'Image 14': 14, 'Image 18': 18, 'Image 22': 22, 'Image 26': 26, 'Image 30': 30}
-            #
-            #     outputDict_RP_2 = {'Image 1': 1, 'Image 5': 5, 'Image 9': 9, 'Image 13': 13, 'Image 17': 17, 'Image 21': 21, 'Image 25': 25, 'Image 29': 29}
-            #
-            #     outputDict_RP_3 = {'Image 4': 4, 'Image 8': 8, 'Image 12': 12, 'Image 16': 16, 'Image 20': 20, 'Image 24': 24, 'Image 28': 28, 'Image 32': 32}
-            #
-            #     outputDict_RP_4 = {'Image 3': 3, 'Image 7': 7, 'Image 11': 11, 'Image 15': 15, 'Image 19': 19, 'Image 23': 23, 'Image 27': 27, 'Image 31': 31}
+                        Output[i][j][k] = np.float32(0.05)
 
-            outputDict = {'Image 2': 2, 'Image 4': 4, 'Image 6': 6, 'Image 8': 8, 'Image 10': 10, 'Image 12': 12, 'Image 14': 14,\
-                    'Image 16': 16, 'Image 18': 18, 'Image 20': 20, 'Image 22': 22, 'Image 24': 24, 'Image 26': 26, 'Image 28': 28, 'Image 30': 30, 'Image 32': 32, \
-                    'Image 1': 1, 'Image 3': 3, 'Image 5': 5, 'Image 7': 7, 'Image 9': 9, 'Image 11': 11,'Image 13': 13, 'Image 15': 15, 'Image 17': 17, 'Image 19': 19, 'Image 21': 21,
-                    'Image 23': 23, 'Image 25': 25, 'Image 27': 27, 'Image 29': 29, 'Image 31': 31}
+        # Drop unnecessary columns
+        Output = np.delete(Output, [0,34], axis=2)
+        # Pre-allocate y-loc matrix; needed for later validation
+        y_loc = np.zeros((Output.shape[0], Output.shape[1]))
 
+        # Add output gradient activation
+        for i in range(0, Output.shape[0]):
+            for j in range(0, Output.shape[1]):
+                currentTimeStepOutput = Output[i][j][1:33]
+                # Allocate first unit ring
+                unitRingOutput = np.zeros(32, dtype='float32')
+                # Get non-zero values of time steps
+                nonZerosOutput = np.nonzero(currentTimeStepOutput)[0]
+                # Float first fixations rows with -1
+                for k in range(0, numFixStepsAverage):
+                    y_loc[k][j] = np.float32(-1)
 
-            for i in range(numFixStepsAverage, totalStepsAverage):
-                for j in range(0, Output.shape[1]):
-                    # # Get the right dictionary
-                    # if Output[i][j]['Display'].split(' RP')[0] == 'Display 1':
-                    #     outputDict = outputDict_RP_1
-                    # elif Output[i][j]['Display'].split(' RP')[0] == 'Display 2':
-                    #     outputDict = outputDict_RP_2
-                    # if Output[i][j]['Display'].split(' RP')[0] == 'Display 3':
-                    #     outputDict = outputDict_RP_3
-                    # elif Output[i][j]['Display'].split(' RP')[0] == 'Display 4':
-                    #     outputDict = outputDict_RP_4
+                if len(nonZerosOutput) == 1:
+                    # Get activity and model gradient activation around it
+                    currentOutputLoc = pref[nonZerosOutput[0]]
+                    currentActivation_Output = add_x_loc(currentOutputLoc, pref) + 0.05  # adding noise
+                    unitRingOutput = np.around(unitRingOutput + currentActivation_Output, decimals=2)
+                    # Store
+                    currentFinalRow = np.concatenate((Output[i][j][0:1], unitRingOutput))
+                    Output[i][j][0:33] = currentFinalRow
+                    # Complete y_loc matrix
+                    for k in range(numFixStepsAverage, totalStepsAverage):
+                        y_loc[k][j] = pref[nonZerosOutput[0]]
 
-                    if Output[i][j][0] != 'screen' and Output[i][j][0] != 'noResponse' and Output[i][j][0] != 'NoResponse' and Output[i][j][0] != 'Fixation Cross':
-                        Output[i][j][outputDict[Output[i][j][0]]] = np.float32(0.85)
-                    else:
-                        for k in range(2, 34):
-                            Output[i][j][k] = np.float32(0.05)
+        # Change dtype of every element in matrix to float32 for later validation functions
+        for i in range(0, Output.shape[0]):
+            for j in range(0, Output.shape[1]):
+                for k in range(0, Output.shape[2]):
+                    Output[i][j][k] = np.float32(Output[i][j][k])
+        # Also change dtype for entire array
+        Output = Output.astype('float32')
 
-            # Drop unnecessary columns
-            Output = np.delete(Output, [0,34], axis=2)
-            # Pre-allocate y-loc matrix; needed for later validation
-            y_loc = np.zeros((Output.shape[0], Output.shape[1]))
+        # Save output data
+        output_filename = participant + '-' + 'month_' + str(month) + '-' + 'batch_' + str(batchNumber) + '-' + taskShorts + '-' + \
+                          xlsxFile.split('_')[3].split('-')[0] + '_' + xlsxFile.split('_')[3].split('-')[1] + '-' + 'Output'
+        np.save(output_filename, Output)
+        # Save y_loc data
+        yLoc_filename = participant + '-' + 'month_' + str(month) + '-' + 'batch_' + str(batchNumber) + '-' + taskShorts + '-' + \
+                        xlsxFile.split('_')[3].split('-')[0] + '_' + xlsxFile.split('_')[3].split('-')[1] + '-' + 'yLoc'
+        np.save(yLoc_filename, y_loc)
+        # Save meta data
+        meta_filename = participant + '-' + 'month_' + str(month) + '-' + 'batch_' + str(batchNumber) + '-' + taskShorts + '-' + \
+                        xlsxFile.split('_')[3].split('-')[0] + '_' + xlsxFile.split('_')[3].split('-')[1] + '-' + 'Meta'
+        with open('{}.json'.format(meta_filename), 'w') as json_file:
+            json.dump(meta_dict, json_file)
 
-            # Add output gradient activation
-            for i in range(0, Output.shape[0]):
-                for j in range(0, Output.shape[1]):
-                    currentTimeStepOutput = Output[i][j][1:33]
-                    # Allocate first unit ring
-                    unitRingOutput = np.zeros(32, dtype='float32')
-                    # Get non-zero values of time steps
-                    nonZerosOutput = np.nonzero(currentTimeStepOutput)[0]
-                    # Float first fixations rows with -1
-                    for k in range(0, numFixStepsAverage):
-                        y_loc[k][j] = np.float32(-1)
-
-                    if len(nonZerosOutput) == 1:
-                        # Get activity and model gradient activation around it
-                        currentOutputLoc = pref[nonZerosOutput[0]]
-                        currentActivation_Output = add_x_loc(currentOutputLoc, pref) + 0.05  # adding noise
-                        unitRingOutput = np.around(unitRingOutput + currentActivation_Output, decimals=2)
-                        # Store
-                        currentFinalRow = np.concatenate((Output[i][j][0:1], unitRingOutput))
-                        Output[i][j][0:33] = currentFinalRow
-                        # Complete y_loc matrix
-                        for k in range(numFixStepsAverage, totalStepsAverage):
-                            y_loc[k][j] = pref[nonZerosOutput[0]]
-
-            # Change dtype of every element in matrix to float32 for later validation functions
-            for i in range(0, Output.shape[0]):
-                for j in range(0, Output.shape[1]):
-                    for k in range(0, Output.shape[2]):
-                        Output[i][j][k] = np.float32(Output[i][j][k])
-            # Also change dtype for entire array
-            Output = Output.astype('float32')
-
-            # Save output data
-            output_filename = participant + '-' + 'month_' + str(month) + '-' + 'batch_' + str(batchNumber) + '-' + taskShorts + '-' + xlsxFile.split('_')[3].split('-')[0] + '_' + xlsxFile.split('_')[3].split('-')[1] + '-' + 'Output_' + error_filter #INSERTED
-            np.save(output_filename, Output)
-            # Save y_loc data
-            yLoc_filename = participant + '-' + 'month_' + str(month) + '-' + 'batch_' + str(batchNumber) + '-' + taskShorts + '-' +xlsxFile.split('_')[3].split('-')[0] + '_' + xlsxFile.split('_')[3].split('-')[1] + '-' + 'yLoc_' + error_filter#INSERTED
-            np.save(yLoc_filename, y_loc)
-            # Save meta data
-            meta_filename = participant + '-' + 'month_' + str(month) + '-' + 'batch_' + str(batchNumber) + '-' + taskShorts + '-' + xlsxFile.split('_')[3].split('-')[0] + '_' + xlsxFile.split('_')[3].split('-')[1] + '-' + 'Meta_' +error_filter#INSERTED
-            with open('{}.json'.format(meta_filename), 'w') as json_file:
-                json.dump(meta_dict, json_file)
-
-            # Sanity check
-            print('Meta solved:', 'sleepingQualityValue: ', meta_dict['sleepingQualityValue'])
-            print('Output solved: ', opened_xlsxFile_selection['Spreadsheet'][0], ' ', opened_xlsxFile_selection['TimeLimit'][0])
-
-
-print("Loaded")
+        # Sanity check
+        print('Meta solved:', 'sleepingQualityValue: ', meta_dict['sleepingQualityValue'])
+        print('Output solved: ', opened_xlsxFile_selection['Spreadsheet'][0], ' ', opened_xlsxFile_selection['TimeLimit'][0])
 
 ########################################################################################################################
 # todo: WM tasks #######################################################################################################
 ########################################################################################################################
 # For debugging
 # batchfile_location = 'W:\\AG_CSP\\Projekte\\BeRNN\\02_Daten\\BeRNN_main\\BeRNN_01\\1\\data_exp_149474-v2_task-fhgh-9621849.xlsx'
-
-#%%
 def preprocess_WM(opened_xlsxFile, questionnare_files, list_allSessions, sequence_on, sequence_off, batchLength):
     # Initialize columns with default values
     opened_xlsxFile.loc[:, 'Fixation input'] = 1
@@ -1970,7 +1911,7 @@ def preprocess_WM(opened_xlsxFile, questionnare_files, list_allSessions, sequenc
 
 
 
-#%%
+
 
 def check_permissions(file_path):
     permissions = {
@@ -1986,7 +1927,6 @@ subfolders = ['RP_Ctx1']
 subfolders = ['DM', 'DM_Anti', 'EF', 'EF_Anti', 'RP', 'RP_Anti', 'RP_Ctx1', 'RP_Ctx2', 'WM', 'WM_Anti', 'WM_Ctx1', 'WM_Ctx2']
 preprocessing_folder = 'PreprocessedData_wResp_ALL'
 participants = ['BeRNN_01']
-
 months = ['2', '3', '4', '5', '6', '7'] # todo: add months here
 # months = ['5', '6'] # todo: add months here
 
@@ -2058,7 +1998,6 @@ for participant in participants:
                                 # Preprocess the xlsxFile according to its task type and directly save it to the right directory
                                 if opened_xlsxFile['Spreadsheet'][0].split('_')[0] == 'DM':
                                     print("DM")
-                                    #continue
                                     # file_dict = {"group":"DM",
                                     #     "opened_xlsxFile":opened_xlsxFile, 
                                     #              "questionnare_files":questionnare_files, 
@@ -2072,11 +2011,11 @@ for participant in participants:
                                 elif opened_xlsxFile['Spreadsheet'][0].split('_')[0] == 'EF':
                                     print("EF")
                                     #continue
-                                    preprocess_EF_Exclude_Errors(opened_xlsxFile, questionnare_files, list_allSessions, sequence_on, sequence_off, batchLength)
+                                    preprocess_EF(opened_xlsxFile, questionnare_files, list_allSessions, sequence_on, sequence_off, batchLength)
                                 elif opened_xlsxFile['Spreadsheet'][0].split('_')[0] == 'RP':
                                     print("RP")
                                     #continue
-                                    preprocess_RP_Exclude_Errors(opened_xlsxFile, questionnare_files, list_allSessions, sequence_on, sequence_off, batchLength)
+                                    preprocess_RP(opened_xlsxFile, questionnare_files, list_allSessions, sequence_on, sequence_off, batchLength)
                                 if opened_xlsxFile['Spreadsheet'][0].split('_')[0] == 'WM':
                                     print("WM")
                                     #continue
@@ -2093,12 +2032,8 @@ for participant in participants:
             print(f"Month directory not found: {processing_path_month}")
 
 
-print("Done")
-#%%
-print("Done")
 
 
-#%%
 ### WIP: 
 #file_dict.keys()
 
@@ -2140,5 +2075,3 @@ errors = np.load(os.path.join(base_path,(file+ '-yLoc_ERRORS_ONLY.npy')), allow_
 org.shape
 clean.shape
 errors.shape
-
-# %%

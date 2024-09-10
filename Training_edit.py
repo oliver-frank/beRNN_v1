@@ -1,5 +1,5 @@
 """Main training loop"""
-
+#%%
 from __future__ import division
 
 import warnings
@@ -21,6 +21,8 @@ from Network import Model, get_perf
 # from analysis import variance
 import Tools
 
+
+#%%
 
 def get_default_hp(ruleset):
     '''Get a default hp.
@@ -414,8 +416,8 @@ def train(model_dir,trial_dir,monthsConsidered,train_data ,eval_data,hp=None,max
         print("Optimization finished!")
 
 
-
-
+#%%
+# ERRORS_REMOVED
 if __name__ == '__main__':
     dataFolder = "Data"
     participant = 'BeRNN_01'
@@ -425,6 +427,7 @@ if __name__ == '__main__':
     model_number = 'Model_' + number + '_' + participant + '_Month_' + strToSave # Manually add months considered e.g. 1-7
     monthsConsidered = ['2','3','4','5','6','7'] # Add all months you want to take into consideration for training and evaluation
     model_dir = os.path.join('/Users/marcschubert/Documents/rnns/models', model_number)
+    model_dir = os.path.join(model_dir, "ERRORS_REMOVED")
     if not os.path.exists(model_dir):
         os.makedirs(model_dir)
     # preprocessedData_folder = 'PreprocessedData_wResp_ALL'
@@ -447,19 +450,28 @@ if __name__ == '__main__':
         random.shuffle(files)
         split_index = int(len(files) * split_ratio)
         return files[:split_index], files[split_index:]
-
+    
+    print(subdirs)
     for subdir in subdirs:
         # Collect all file triplets in the current subdirectory
         file_triplets = []
         for file in os.listdir(subdir):
-            if file.endswith('Input.npy'):
+            if file.find('Input')>0:
                 base_name = file.split('Input')[0]
-                # print(base_name)
-                error_group = ""  # "ORIGNAL"
+
+                if base_name.find("WM")> 0:
+                    print(base_name)
+                    error_group = ""  # "ORIGNAL"
+                else: 
+                    error_group = "_ERRORS_REMOVED"  # "ORIGNAL"
+
+
+                #error_group = "_ERRORS_ONLY"  # "ORIGNAL"
                 input_file = os.path.join(subdir, base_name + 'Input'+error_group+'.npy')
                 yloc_file = os.path.join(subdir, base_name + 'yLoc'+error_group+'.npy')
                 output_file = os.path.join(subdir, base_name + 'Output'+error_group+'.npy')
                 file_triplets.append((input_file, yloc_file, output_file))
+
 
         # Split the file triplets
         train_files, eval_files = split_files(file_triplets)
@@ -473,3 +485,145 @@ if __name__ == '__main__':
     # train(model_dir=model_dir, trial_dir=preprocessedData_path)
 
 
+
+
+
+#%%
+# ORIGINAL 
+
+if __name__ == '__main__':
+    
+    dataFolder = "Data"
+    participant = 'BeRNN_01'
+    model_folder = 'Model'
+    strToSave = '2-6'
+    number = str(150)
+    model_number = 'Model_' + number + '_' + participant + '_Month_' + strToSave # Manually add months considered e.g. 1-7
+    monthsConsidered = ['2','3','4','5','6','7'] # Add all months you want to take into consideration for training and evaluation
+    model_dir = os.path.join('/Users/marcschubert/Documents/rnns/models', model_number)
+    model_dir = os.path.join(model_dir, "ORIGINAL")
+    if not os.path.exists(model_dir):
+        os.makedirs(model_dir)
+    # preprocessedData_folder = 'PreprocessedData_wResp_ALL'
+    # preprocessedData_path = os.path.join('W:\\group_csp\\analyses\\oliver.frank', dataFolder, participant, 'PreprocessedData_wResp_ALL')
+    preprocessedData_path = os.path.join('/Users/marcschubert/Documents/rnns/Data/', participant,'PreprocessedData_wResp_ALL')
+    # Define probability of each task being trained
+    rule_prob_map = {"DM": 1,"DM_Anti": 1,"EF": 1,"EF_Anti": 1,"RP": 1,"RP_Anti": 1,"RP_Ctx1": 1,"RP_Ctx2": 1,"WM": 1,"WM_Anti": 1,"WM_Ctx1": 1,"WM_Ctx2": 1}
+    rule_prob_map = {"DM": 1,"DM_Anti": 1}#,"EF": 1,"EF_Anti": 1,"RP": 1,"RP_Anti": 1,"RP_Ctx1": 1,"RP_Ctx2": 1,"WM": 1,"WM_Anti": 1,"WM_Ctx1": 1,"WM_Ctx2": 1}
+    # III: Split the data ##############################################################################################
+    # List of the subdirectories
+    subdirs = [os.path.join(preprocessedData_path, d) for d in os.listdir(preprocessedData_path) if os.path.isdir(os.path.join(preprocessedData_path, d))]
+
+
+    # Initialize dictionaries to store training and evaluation data
+    train_data = {}
+    eval_data = {}
+
+    # Function to split the files
+    def split_files(files, split_ratio=0.8):
+        random.shuffle(files)
+        split_index = int(len(files) * split_ratio)
+        return files[:split_index], files[split_index:]
+    
+    print(subdirs)
+    for subdir in subdirs:
+        # Collect all file triplets in the current subdirectory
+        file_triplets = []
+        for file in os.listdir(subdir):
+            if file.find('Input')>0:
+                base_name = file.split('Input')[0]
+
+                if base_name.find("WM")> 0:
+                    print(base_name)
+                    error_group = ""  # "ORIGNAL"
+                else: 
+                    error_group = "_ORIGINAL"  # "ORIGNAL"
+
+
+                #error_group = "_ERRORS_ONLY"  # "ORIGNAL"
+                input_file = os.path.join(subdir, base_name + 'Input'+error_group+'.npy')
+                yloc_file = os.path.join(subdir, base_name + 'yLoc'+error_group+'.npy')
+                output_file = os.path.join(subdir, base_name + 'Output'+error_group+'.npy')
+                file_triplets.append((input_file, yloc_file, output_file))
+
+
+        # Split the file triplets
+        train_files, eval_files = split_files(file_triplets)
+
+        # Store the results in the dictionaries
+        train_data[subdir] = train_files
+        eval_data[subdir] = eval_files
+    # III: Split the data ##############################################################################################
+
+    train(model_dir=model_dir, trial_dir=preprocessedData_path, monthsConsidered = monthsConsidered, rule_prob_map=rule_prob_map, train_data = train_data, eval_data = eval_data)
+    # train(model_dir=model_dir, trial_dir=preprocessedData_path)
+
+  
+if __name__ == '__main__':
+    dataFolder = "Data"
+    participant = 'BeRNN_01'
+    model_folder = 'Model'
+    strToSave = '2-6'
+    number = str(150)
+    model_number = 'Model_' + number + '_' + participant + '_Month_' + strToSave # Manually add months considered e.g. 1-7
+    monthsConsidered = ['2','3','4','5','6','7'] # Add all months you want to take into consideration for training and evaluation
+    model_dir = os.path.join('/Users/marcschubert/Documents/rnns/models', model_number)
+    model_dir = os.path.join(model_dir, "ERRORS_ONLY")
+    if not os.path.exists(model_dir):
+        os.makedirs(model_dir)
+    # preprocessedData_folder = 'PreprocessedData_wResp_ALL'
+    # preprocessedData_path = os.path.join('W:\\group_csp\\analyses\\oliver.frank', dataFolder, participant, 'PreprocessedData_wResp_ALL')
+    preprocessedData_path = os.path.join('/Users/marcschubert/Documents/rnns/Data/', participant,'PreprocessedData_wResp_ALL')
+    # Define probability of each task being trained
+    rule_prob_map = {"DM": 1,"DM_Anti": 1,"EF": 1,"EF_Anti": 1,"RP": 1,"RP_Anti": 1,"RP_Ctx1": 1,"RP_Ctx2": 1,"WM": 1,"WM_Anti": 1,"WM_Ctx1": 1,"WM_Ctx2": 1}
+    rule_prob_map = {"DM": 1,"DM_Anti": 1}#,"EF": 1,"EF_Anti": 1,"RP": 1,"RP_Anti": 1,"RP_Ctx1": 1,"RP_Ctx2": 1,"WM": 1,"WM_Anti": 1,"WM_Ctx1": 1,"WM_Ctx2": 1}
+    # III: Split the data ##############################################################################################
+    # List of the subdirectories
+    subdirs = [os.path.join(preprocessedData_path, d) for d in os.listdir(preprocessedData_path) if os.path.isdir(os.path.join(preprocessedData_path, d))]
+
+
+    # Initialize dictionaries to store training and evaluation data
+    train_data = {}
+    eval_data = {}
+
+    # Function to split the files
+    def split_files(files, split_ratio=0.8):
+        random.shuffle(files)
+        split_index = int(len(files) * split_ratio)
+        return files[:split_index], files[split_index:]
+    
+    print(subdirs)
+    for subdir in subdirs:
+        # Collect all file triplets in the current subdirectory
+        file_triplets = []
+        for file in os.listdir(subdir):
+            if file.find('Input')>0:
+                base_name = file.split('Input')[0]
+
+                if base_name.find("WM")> 0:
+                    print(base_name)
+                    error_group = ""  # "ORIGNAL"
+                else: 
+                    error_group = "_ERRORS_ONLY"  # "ORIGNAL"
+
+
+                #error_group = "_ERRORS_ONLY"  # "ORIGNAL"
+                input_file = os.path.join(subdir, base_name + 'Input'+error_group+'.npy')
+                yloc_file = os.path.join(subdir, base_name + 'yLoc'+error_group+'.npy')
+                output_file = os.path.join(subdir, base_name + 'Output'+error_group+'.npy')
+                file_triplets.append((input_file, yloc_file, output_file))
+
+
+        # Split the file triplets
+        train_files, eval_files = split_files(file_triplets)
+
+        # Store the results in the dictionaries
+        train_data[subdir] = train_files
+        eval_data[subdir] = eval_files
+    # III: Split the data ##############################################################################################
+
+    train(model_dir=model_dir, trial_dir=preprocessedData_path, monthsConsidered = monthsConsidered, rule_prob_map=rule_prob_map, train_data = train_data, eval_data = eval_data)
+    # train(model_dir=model_dir, trial_dir=preprocessedData_path)
+
+
+# %%

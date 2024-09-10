@@ -9,7 +9,9 @@ import numpy as np
 import warnings
 warnings.simplefilter(action='ignore', category=FutureWarning)
 
-import tensorflow as tf
+#import tensorflow as tf
+import tensorflow.compat.v1 as tf
+
 from tensorflow.python.platform import tf_logging as logging
 from tensorflow.python.ops import variable_scope as vs
 from tensorflow.python.ops import array_ops
@@ -19,6 +21,10 @@ from tensorflow.python.ops import nn_ops
 from tensorflow.python.util import nest
 from tensorflow.python.ops import rnn
 from tensorflow.python.ops.rnn_cell_impl import RNNCell
+
+import tensorflow.compat.v1 as tf
+
+
 
 import Tools
 
@@ -445,7 +451,8 @@ class Model(object):
         """
 
         # Reset tensorflow graphs
-        tf.reset_default_graph()  # must be in the beginning
+        #tf.reset_default_graph()  # must be in the beginning
+        tf.compat.v1.reset_default_graph()
 
         if hp is None:
             hp = Tools.load_hp(model_dir)
@@ -454,6 +461,8 @@ class Model(object):
                     'No hp found for model_dir {:s}'.format(model_dir))
 
         tf.set_random_seed(hp['seed'])
+        #tf.random.set_seed(hp['seed'])
+
         self.rng = np.random.RandomState(hp['seed'])
 
         if sigma_rec is not None:

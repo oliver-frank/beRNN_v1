@@ -14,6 +14,13 @@ def writeJSON(data, filename):
     with open(filename, "w") as file:
         json.dump(data, file)
 
+def nparray_to_list(inputx):
+    if isinstance(inputx, list):
+        return [item.tolist() if isinstance(item, np.ndarray) else item for item in inputx]
+    elif isinstance(inputx, np.ndarray):
+        return inputx.tolist()
+    else:
+        return inputx
 
 def run_through(group, set_response_string, set_meta_string):
 
@@ -24,21 +31,21 @@ def run_through(group, set_response_string, set_meta_string):
 
         # Prepare data for plotting
         print(errors_dict)
-        try: 
-            json_saving_path = os.path.join(directory.split('PreprocessedData')[0],'ErrorGraphics' ,group,participant+task+'_errors_dict.json')
-            writeJSON( errors_dict, json_saving_path)
-        except Exception as e:
-            try: 
-                print("Json saving not possible:")
-                print(str(e))
-                json_saving_path = os.path.join(directory.split('PreprocessedData')[0],'ErrorGraphics' ,group,participant+task+'_errors_dict.json')
-                writeJSON( errors_dict.tolist(), json_saving_path)
-            except Exception as e:
-                print(str(e))
+        # try: 
+        #     json_saving_path = os.path.join(directory.split('PreprocessedData')[0],'ErrorGraphics' ,group,participant+task+'_errors_dict.json')
+        #     writeJSON( errors_dict, json_saving_path)
+        # except Exception as e:
+        #     try: 
+        #         print("Json saving not possible:")
+        #         print(str(e))
+        #         json_saving_path = os.path.join(directory.split('PreprocessedData')[0],'ErrorGraphics' ,group,participant+task+'_errors_dict.json')
+        #         writeJSON( errors_dict.tolist(), json_saving_path)
+        #     except Exception as e:
+        #         print(str(e))
 
             
 
-    
+
 
         categories = list(errors_dict.keys())
         occurrences = [len(values) for values in errors_dict.values()]
@@ -72,17 +79,17 @@ def run_through(group, set_response_string, set_meta_string):
         participant = directory.split('/')[6] + ' '
 
         print(errors_dict)
-        try: 
-            json_saving_path = os.path.join(directory.split('PreprocessedData')[0],'ErrorGraphics' ,group,participant+task+'_errors_dict.json')
-            writeJSON( errors_dict, json_saving_path)
-        except Exception as e:
-            try: 
-                print("Json saving not possible:")
-                print(str(e))
-                json_saving_path = os.path.join(directory.split('PreprocessedData')[0],'ErrorGraphics' ,group,participant+task+'_errors_dict.json')
-                writeJSON( errors_dict.tolist(), json_saving_path)
-            except Exception as e:
-                print(str(e))
+        # try: 
+        #     json_saving_path = os.path.join(directory.split('PreprocessedData')[0],'ErrorGraphics' ,group,participant+task+'_errors_dict.json')
+        #     writeJSON( errors_dict, json_saving_path)
+        # except Exception as e:
+        #     try: 
+        #         print("Json saving not possible:")
+        #         print(str(e))
+        #         json_saving_path = os.path.join(directory.split('PreprocessedData')[0],'ErrorGraphics' ,group,participant+task+'_errors_dict.json')
+        #         writeJSON( errors_dict.tolist(), json_saving_path)
+        #     except Exception as e:
+        #         print(str(e))
 
         # Prepare data for plotting
         try: 
@@ -309,7 +316,6 @@ def run_through(group, set_response_string, set_meta_string):
     directory = 'W:\\group_csp\\analyses\\oliver.frank\\Data\\BeRNN_03\\PreprocessedData_wResp_ALL\\'
     directory = "/Users/marcschubert/Documents/rnns/Data/BeRNN_01/PreprocessedData_wResp_ALL/"
 
-
     ########################################################################################################################
     # Decision Making ------------------------------------------------------------------------------------------------------
     ########################################################################################################################
@@ -336,6 +342,7 @@ def run_through(group, set_response_string, set_meta_string):
 
                 errors_dict[currentChosenList].append(Response[:, i])
 
+        #writeJSON(errors_dict, "errors_dict.json")
         return errors_dict
 
     # Define dicts
@@ -363,6 +370,15 @@ def run_through(group, set_response_string, set_meta_string):
         # Sort the 4th and 5th row, so that HIGHER value is on 4th row. Sort 2nd and 3rd accordingly
         sortedResponse = sort_rows_descending(Response)
         errors_dict_DM = get_errors_DM(sortedResponse, errors_dict_DM, distract_dict, opposite_dict, strength_dict)
+
+
+    ### Inserted to save the errors for quantificiation
+    dict_to_convert = errors_dict_DM  
+    json_fitted = {key: nparray_to_list(value) for key, value in dict_to_convert.items()}
+    writeJSON(json_fitted, "errors_dict_DM.json")
+    ### Inserted to save the errors for quantificiation
+
+
     # Visualize results
     # plot_errorDistribution(errors_dict_DM,participantDirectory,'DM', 'rough')
     # plot_errorDistribution_relative(errors_dict_DM,participantDirectory,'DM', 'rough')
@@ -387,6 +403,12 @@ def run_through(group, set_response_string, set_meta_string):
             errors_dict_fineGrained = {name: [] for name in categorical_names_fineGrained}
             errors_dict_fineGrained = get_fine_grained_error(sortedResponse, errors_dict_fineGrained, 'DM')
             # plot_errorDistribution(errors_dict_fineGrained, participantDirectory, 'DM_fineGrained ' + j, 'fine')
+            ### Inserted to save the errors for quantificiation
+            dict_to_convert = errors_dict_fineGrained  
+            json_fitted = {key: nparray_to_list(value) for key, value in dict_to_convert.items()}
+            writeJSON(json_fitted, "errors_dict_fineGrained_DM.json")
+            ### Inserted to save the errors for quantificiation
+
             plot_errorDistribution_relative(errors_dict_fineGrained, participantDirectory, 'DM_fineGrained ' + j, 'fine')
         except Exception as e:
             print(str(e))
@@ -407,6 +429,14 @@ def run_through(group, set_response_string, set_meta_string):
     # plot_errorDistribution(errors_dict_DM_Anti,participantDirectory,'DM_Anti', grainity='rough')
     plot_errorDistribution_relative(errors_dict_DM_Anti,participantDirectory,'DM_Anti', grainity='rough')
 
+    ### Inserted to save the errors for quantificiation
+    dict_to_convert = errors_dict_DM_Anti  
+    json_fitted = {key: nparray_to_list(value) for key, value in dict_to_convert.items()}
+    writeJSON(json_fitted, "errors_dict_DM_Anti.json")
+    ### Inserted to save the errors for quantificiation
+
+
+
     # DM Anti - Fine Graining ----------------------------------------------------------------------------------------------
     list1 = ['distractLeft', 'distractRight', 'distractUp', 'distractDown']
     list2 = ['Lowest', 'Low', 'Strong', 'Strongest']
@@ -426,7 +456,19 @@ def run_through(group, set_response_string, set_meta_string):
             errors_dict_fineGrained = {name: [] for name in categorical_names_fineGrained}
             errors_dict_fineGrained = get_fine_grained_error(sortedResponse, errors_dict_fineGrained, 'DM_Anti')
             # plot_errorDistribution(errors_dict_fineGrained, participantDirectory, 'DM_Anti_fineGrained ' + j, 'fine')
+            ### Inserted to save the errors for quantificiation
+            dict_to_convert = errors_dict_fineGrained  
+            json_fitted = {key: nparray_to_list(value) for key, value in dict_to_convert.items()}
+            writeJSON(json_fitted, "errors_dict_fineGrained_DM_Anti.json")
+            ### Inserted to save the errors for quantificiation
+            
+    
+    
+    
             plot_errorDistribution_relative(errors_dict_fineGrained, participantDirectory, 'DM_Anti_fineGrained ' + j, 'fine')
+    
+    
+    
         except Exception as e:
             print(str(e))
 
@@ -490,6 +532,15 @@ def run_through(group, set_response_string, set_meta_string):
         sortedResponse = sort_rows_ascending(Response)
         errors_dict_EF = get_errors_EF(sortedResponse, errors_dict_EF, distract_dict, opposite_dict)
     # Visualize results
+
+
+    ### Inserted to save the errors for quantificiation
+    dict_to_convert = errors_dict_EF  
+    json_fitted = {key: nparray_to_list(value) for key, value in dict_to_convert.items()}
+    writeJSON(json_fitted, "errors_dict_EF.json")
+    ### Inserted to save the errors for quantificiation
+
+
     # plot_errorDistribution(errors_dict_EF,participantDirectory,'EF', grainity='rough')
     plot_errorDistribution_relative(errors_dict_EF,participantDirectory,'EF', grainity='rough')
 
@@ -512,6 +563,13 @@ def run_through(group, set_response_string, set_meta_string):
             errors_dict_fineGrained = {name: [] for name in categorical_names_fineGrained}
             errors_dict_fineGrained = get_fine_grained_error(sortedResponse, errors_dict_fineGrained, 'EF')
             # plot_errorDistribution(errors_dict_fineGrained, participantDirectory, 'EF_fineGrained ' + j, 'fine')
+            
+            ### Inserted to save the errors for quantificiation
+            dict_to_convert = errors_dict_fineGrained  
+            json_fitted = {key: nparray_to_list(value) for key, value in dict_to_convert.items()}
+            writeJSON(json_fitted, "errors_dict_fineGrained_EF.json")
+            ### Inserted to save the errors for quantificiation        
+            
             plot_errorDistribution_relative(errors_dict_fineGrained, participantDirectory, 'EF_fineGrained ' + j, 'fine')
         except Exception as e:
             print(str(e))
@@ -529,6 +587,14 @@ def run_through(group, set_response_string, set_meta_string):
         # Sort the 4th and 5th row, so that LOWER value is on 4th row. Sort 2nd and 3rd accordingly
         sortedResponse = sort_rows_ascending(Response)
         errors_dict_EF_Anti = get_errors_EF(Response, errors_dict_EF_Anti, distract_dict, opposite_dict)
+
+
+    ### Inserted to save the errors for quantificiation
+    dict_to_convert = errors_dict_EF_Anti  
+    json_fitted = {key: nparray_to_list(value) for key, value in dict_to_convert.items()}
+    writeJSON(json_fitted, "errors_dict_EF_Anti.json")
+    ### Inserted to save the errors for quantificiation  
+
     # Visualize results
     # plot_errorDistribution(errors_dict_EF_Anti,participantDirectory,'EF_Anti', grainity='rough')
     plot_errorDistribution_relative(errors_dict_EF_Anti,participantDirectory,'EF_Anti', grainity='rough')
@@ -552,6 +618,15 @@ def run_through(group, set_response_string, set_meta_string):
             errors_dict_fineGrained = {name: [] for name in categorical_names_fineGrained}
             errors_dict_fineGrained = get_fine_grained_error(sortedResponse, errors_dict_fineGrained, 'EF_Anti')
             # plot_errorDistribution(errors_dict_fineGrained, participantDirectory, 'EF_Anti_fineGrained ' + j, 'fine')
+            
+            ### Inserted to save the errors for quantificiation
+            dict_to_convert = errors_dict_fineGrained  
+            json_fitted = {key: nparray_to_list(value) for key, value in dict_to_convert.items()}
+            writeJSON(json_fitted, "errors_dict_fineGrained_EF_Anti.json")
+            ### Inserted to save the errors for quantificiation  
+            
+            
+            
             plot_errorDistribution_relative(errors_dict_fineGrained, participantDirectory, 'EF_Anti_fineGrained ' + j, 'fine')
         except Exception as e:
             print(str(e))
@@ -618,6 +693,16 @@ def run_through(group, set_response_string, set_meta_string):
         # Use the function
         Response = np.load(npy_file, allow_pickle=True)
         errors_dict_RP = get_errors_RP(Response, errors_dict_RP, opened_meta_file)
+
+            
+    ### Inserted to save the errors for quantificiation
+    dict_to_convert = errors_dict_RP  
+    json_fitted = {key: nparray_to_list(value) for key, value in dict_to_convert.items()}
+    writeJSON(json_fitted, "errors_dict_RP.json")
+    ### Inserted to save the errors for quantificiation  
+
+
+
     # Visualize results
     # plot_errorDistribution(errors_dict_RP,participantDirectory,'RP', grainity='rough')
     plot_errorDistribution_relative(errors_dict_RP,participantDirectory,'RP', grainity='rough')
@@ -640,6 +725,17 @@ def run_through(group, set_response_string, set_meta_string):
             errors_dict_fineGrained = {name: [] for name in categorical_names_fineGrained}
             errors_dict_fineGrained = get_fine_grained_error(sortedResponse, errors_dict_fineGrained, 'RP')
             # plot_errorDistribution(errors_dict_fineGrained, participantDirectory, 'RP_fineGrained ' + j, 'fine')
+        
+        
+            ### Inserted to save the errors for quantificiation
+            dict_to_convert = errors_dict_fineGrained  
+            json_fitted = {key: nparray_to_list(value) for key, value in dict_to_convert.items()}
+            writeJSON(json_fitted, "errors_dict_fineGrained_RP.json")
+            ### Inserted to save the errors for quantificiation  
+
+            
+            
+            
             plot_errorDistribution_relative(errors_dict_fineGrained, participantDirectory, 'RP_fineGrained ' + j, 'fine')
         except Exception as e:
             print(str(e))
@@ -660,6 +756,16 @@ def run_through(group, set_response_string, set_meta_string):
         # Use the function
         Response = np.load(npy_file, allow_pickle=True)
         errors_dict_RP_Anti = get_errors_RP(Response, errors_dict_RP_Anti, opened_meta_file)
+
+
+    ### Inserted to save the errors for quantificiation
+    dict_to_convert = errors_dict_RP_Anti  
+    json_fitted = {key: nparray_to_list(value) for key, value in dict_to_convert.items()}
+    writeJSON(json_fitted, "errors_dict_RP_Anti.json")
+    ### Inserted to save the errors for quantificiation  
+
+
+
     # Visualize results
     # plot_errorDistribution(errors_dict_RP_Anti,participantDirectory,'RP_Anti', grainity='rough')
     plot_errorDistribution_relative(errors_dict_RP_Anti,participantDirectory,'RP_Anti', grainity='rough')
@@ -682,6 +788,15 @@ def run_through(group, set_response_string, set_meta_string):
             errors_dict_fineGrained = {name: [] for name in categorical_names_fineGrained}
             errors_dict_fineGrained = get_fine_grained_error(sortedResponse, errors_dict_fineGrained, 'RP_Anti')
             # plot_errorDistribution(errors_dict_fineGrained, participantDirectory, 'RP_Anti_fineGrained ' + j, 'fine')
+            
+            ### Inserted to save the errors for quantificiation
+            dict_to_convert = errors_dict_fineGrained  
+            json_fitted = {key: nparray_to_list(value) for key, value in dict_to_convert.items()}
+            writeJSON(json_fitted, "errors_dict_fineGrained_RP_Anti.json")
+            ### Inserted to save the errors for quantificiation  
+
+            
+            
             plot_errorDistribution_relative(errors_dict_fineGrained, participantDirectory, 'RP_Anti_fineGrained ' + j, 'fine')
         except Exception as e:
             print(str(e))
@@ -702,6 +817,15 @@ def run_through(group, set_response_string, set_meta_string):
         # Use the function
         Response = np.load(npy_file, allow_pickle=True)
         errors_dict_RP_Ctx1 = get_errors_RP(Response, errors_dict_RP_Ctx1, opened_meta_file)
+
+
+    ### Inserted to save the errors for quantificiation
+    dict_to_convert = errors_dict_RP_Ctx1  
+    json_fitted = {key: nparray_to_list(value) for key, value in dict_to_convert.items()}
+    writeJSON(json_fitted, "errors_dict_RP_Ctx1.json")
+    ### Inserted to save the errors for quantificiation  
+
+
     # Visualize results
     # plot_errorDistribution(errors_dict_RP_Ctx1,participantDirectory,'RP_Ctx1', grainity='rough')
     plot_errorDistribution_relative(errors_dict_RP_Ctx1,participantDirectory,'RP_Ctx1', grainity='rough')
@@ -724,6 +848,14 @@ def run_through(group, set_response_string, set_meta_string):
             errors_dict_fineGrained = {name: [] for name in categorical_names_fineGrained}
             errors_dict_fineGrained = get_fine_grained_error(sortedResponse, errors_dict_fineGrained, 'RP_Ctx1')
             # plot_errorDistribution(errors_dict_fineGrained, participantDirectory, 'RP_Ctx1_fineGrained ' + j, 'fine')
+            
+            
+            ### Inserted to save the errors for quantificiation
+            dict_to_convert = errors_dict_fineGrained  
+            json_fitted = {key: nparray_to_list(value) for key, value in dict_to_convert.items()}
+            writeJSON(json_fitted, "errors_dict_fineGrained_RP_Ctx1.json")
+            ### Inserted to save the errors for quantificiation  
+            
             plot_errorDistribution_relative(errors_dict_fineGrained, participantDirectory, 'RP_Ctx1_fineGrained ' + j, 'fine')
         except Exception as e:
             print(str(e))
@@ -744,6 +876,14 @@ def run_through(group, set_response_string, set_meta_string):
         # Use the function
         Response = np.load(npy_file, allow_pickle=True)
         errors_dict_RP_Ctx2 = get_errors_RP(Response, errors_dict_RP_Ctx2, opened_meta_file)
+
+    ### Inserted to save the errors for quantificiation
+    dict_to_convert = errors_dict_RP_Ctx2  
+    json_fitted = {key: nparray_to_list(value) for key, value in dict_to_convert.items()}
+    writeJSON(json_fitted, "errors_dict_RP_Ctx2.json")
+    ### Inserted to save the errors for quantificiation
+
+
     # Visualize results
     # plot_errorDistribution(errors_dict_RP_Ctx2,participantDirectory,'RP_Ctx2 ', grainity='rough')
     plot_errorDistribution_relative(errors_dict_RP_Ctx2,participantDirectory,'RP_Ctx2 ', grainity='rough')
@@ -766,6 +906,14 @@ def run_through(group, set_response_string, set_meta_string):
             errors_dict_fineGrained = {name: [] for name in categorical_names_fineGrained}
             errors_dict_fineGrained = get_fine_grained_error(sortedResponse, errors_dict_fineGrained, 'RP_Ctx2')
             # plot_errorDistribution(errors_dict_fineGrained, participantDirectory, 'RP_Ctx2_fineGrained ' + j, 'fine')
+            
+            ### Inserted to save the errors for quantificiation
+            dict_to_convert = errors_dict_fineGrained  
+            json_fitted = {key: nparray_to_list(value) for key, value in dict_to_convert.items()}
+            writeJSON(json_fitted, "errors_dict_fineGrained_RP_Ctx2.json")
+            ### Inserted to save the errors for quantificiation
+            
+            
             plot_errorDistribution_relative(errors_dict_fineGrained, participantDirectory, 'RP_Ctx2_fineGrained ' + j, 'fine')
         except Exception as e:
             print(str(e))
@@ -907,6 +1055,14 @@ def run_through(group, set_response_string, set_meta_string):
         # Sort the correct stim on the 2nd row
         sortedResponse = sort_rows_correctOn2(Response)
         errors_dict_WM = get_errors_WM(sortedResponse, errors_dict_WM, opened_meta_file)
+
+
+    ### Inserted to save the errors for quantificiation
+    dict_to_convert = errors_dict_WM  
+    json_fitted = {key: nparray_to_list(value) for key, value in dict_to_convert.items()}
+    writeJSON(json_fitted, "errors_dict_WM.json")
+    ### Inserted to save the errors for quantificiation
+
     # # Visualize results
     # plot_errorDistribution(errors_dict_WM, participantDirectory,'WM', grainity='rough')
     plot_errorDistribution_relative(errors_dict_WM, participantDirectory,'WM', grainity='rough')
@@ -929,6 +1085,14 @@ def run_through(group, set_response_string, set_meta_string):
             errors_dict_fineGrained = {name: [] for name in categorical_names_fineGrained}
             errors_dict_fineGrained = get_fine_grained_error(sortedResponse, errors_dict_fineGrained, 'WM')
             # plot_errorDistribution(errors_dict_fineGrained, participantDirectory, 'WM_fineGrained ' + j, 'fine')
+            
+            ### Inserted to save the errors for quantificiation
+            dict_to_convert = errors_dict_fineGrained  
+            json_fitted = {key: nparray_to_list(value) for key, value in dict_to_convert.items()}
+            writeJSON(json_fitted, "errors_dict_fineGrained_WM.json")
+            ### Inserted to save the errors for quantificiation
+            
+            
             plot_errorDistribution_relative(errors_dict_fineGrained, participantDirectory, 'WM_fineGrained ' + j, 'fine')
         except Exception as e:
             print(str(e))
@@ -950,6 +1114,14 @@ def run_through(group, set_response_string, set_meta_string):
         # Sort the correct stim on the 2nd row
         sortedResponse = sort_rows_correctOn2(Response)
         errors_dict_WM_Anti = get_errors_WM(sortedResponse, errors_dict_WM_Anti, opened_meta_file)
+
+
+    ### Inserted to save the errors for quantificiation
+    dict_to_convert = errors_dict_WM_Anti  
+    json_fitted = {key: nparray_to_list(value) for key, value in dict_to_convert.items()}
+    writeJSON(json_fitted, "errors_dict_WM_Anti.json")
+    ### Inserted to save the errors for quantificiation
+
     # Visualize results
     # plot_errorDistribution(errors_dict_WM_Anti,participantDirectory,'WM_Anti', grainity='rough')
     plot_errorDistribution_relative(errors_dict_WM_Anti,participantDirectory,'WM_Anti', grainity='rough')
@@ -972,6 +1144,14 @@ def run_through(group, set_response_string, set_meta_string):
             errors_dict_fineGrained = {name: [] for name in categorical_names_fineGrained}
             errors_dict_fineGrained = get_fine_grained_error(sortedResponse, errors_dict_fineGrained, 'WM_Anti')
             # plot_errorDistribution(errors_dict_fineGrained, participantDirectory, 'WM_Anti_fineGrained ' + j, 'fine')
+            
+            
+            ### Inserted to save the errors for quantificiation
+            dict_to_convert = errors_dict_fineGrained  
+            json_fitted = {key: nparray_to_list(value) for key, value in dict_to_convert.items()}
+            writeJSON(json_fitted, "errors_dict_fineGrained_WM_Anti.json")
+            ### Inserted to save the errors for quantificiation
+            
             plot_errorDistribution_relative(errors_dict_fineGrained, participantDirectory, 'WM_Anti_fineGrained ' + j, 'fine')
         except Exception as e:
             print(str(e))
@@ -991,6 +1171,15 @@ def run_through(group, set_response_string, set_meta_string):
         # Use the function
         Response = np.load(npy_file, allow_pickle=True)
         errors_dict_WM_Ctx1 = get_errors_WM_Ctx(Response, errors_dict_WM_Ctx1, opened_meta_file)
+
+
+    ### Inserted to save the errors for quantificiation
+    dict_to_convert = errors_dict_WM_Ctx1  
+    json_fitted = {key: nparray_to_list(value) for key, value in dict_to_convert.items()}
+    writeJSON(json_fitted, "errors_dict_WM_Ctx1.json")
+    ### Inserted to save the errors for quantificiation
+
+
     # Visualize results
     # plot_errorDistribution(errors_dict_WM_Ctx1,participantDirectory,'WM_Ctx1', grainity='rough')
     plot_errorDistribution_relative(errors_dict_WM_Ctx1,participantDirectory,'WM_Ctx1', grainity='rough')
@@ -1018,6 +1207,14 @@ def run_through(group, set_response_string, set_meta_string):
             errors_dict_fineGrained = {name: [] for name in categorical_names_fineGrained}
             errors_dict_fineGrained = get_fine_grained_error(sortedResponse, errors_dict_fineGrained, 'WM_Ctx1')
             # plot_errorDistribution(errors_dict_fineGrained, participantDirectory, 'WM_Ctx1_fineGrained ' + j, 'fine')
+            
+            
+            ### Inserted to save the errors for quantificiation
+            dict_to_convert = errors_dict_WM_Ctx1  
+            json_fitted = {key: nparray_to_list(value) for key, value in dict_to_convert.items()}
+            writeJSON(json_fitted, "errors_dict_fineGrained_WM_Ctx1.json")
+            ### Inserted to save the errors for quantificiation
+            
             plot_errorDistribution_relative(errors_dict_fineGrained, participantDirectory, 'WM_Ctx1_fineGrained ' + j, 'fine')
         except Exception as e:
             print(str(e))
@@ -1037,6 +1234,14 @@ def run_through(group, set_response_string, set_meta_string):
         # Use the function
         Response = np.load(npy_file, allow_pickle=True)
         errors_dict_WM_Ctx2 = get_errors_WM_Ctx(Response, errors_dict_WM_Ctx2, opened_meta_file)
+
+
+    ### Inserted to save the errors for quantificiation
+    dict_to_convert = errors_dict_WM_Ctx2  
+    json_fitted = {key: nparray_to_list(value) for key, value in dict_to_convert.items()}
+    writeJSON(json_fitted, "errors_dict_WM_Ctx2.json")
+    ### Inserted to save the errors for quantificiation
+
     # Visualize results
     # plot_errorDistribution(errors_dict_WM_Ctx2,participantDirectory,'WM_Ctx2', grainity='rough')
     plot_errorDistribution_relative(errors_dict_WM_Ctx2,participantDirectory,'WM_Ctx2', grainity='rough')
@@ -1063,6 +1268,15 @@ def run_through(group, set_response_string, set_meta_string):
             errors_dict_fineGrained = {name: [] for name in categorical_names_fineGrained}
             errors_dict_fineGrained = get_fine_grained_error(sortedResponse, errors_dict_fineGrained, 'WM_Ctx2')
             # plot_errorDistribution(errors_dict_fineGrained, participantDirectory, 'WM_Ctx2_fineGrained ' + j, 'fine')
+            
+            ### Inserted to save the errors for quantificiation
+            dict_to_convert = errors_dict_fineGrained  
+            json_fitted = {key: nparray_to_list(value) for key, value in dict_to_convert.items()}
+            writeJSON(json_fitted, "errors_dict_fineGrained_WM_Ctx2.json")
+            ### Inserted to save the errors for quantificiation
+
+            
+            
             plot_errorDistribution_relative(errors_dict_fineGrained, participantDirectory, 'WM_Ctx2_fineGrained ' + j, 'fine')
         except Exception as e:
             print(e)
@@ -1093,7 +1307,7 @@ def run_through(group, set_response_string, set_meta_string):
 #set_meta_string = '*Meta.json'
 
 groups= ["ORIGINAL", "ERRORS_REMOVED", "ERRORS_ONLY"]
-
+groups = ["ORIGINAL"]
 for group in groups:
     set_response_string = f'*Response_{group}.npy'
     set_meta_string = f'*Meta_{group}.json'
