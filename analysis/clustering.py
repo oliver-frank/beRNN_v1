@@ -270,7 +270,7 @@ class Analysis(object):
         matrix_height = 0.6
 
         ax_matrix = fig.add_axes([matrix_left, matrix_bottom, matrix_width, matrix_height])
-        im = ax_matrix.imshow(similarity, cmap='coolwarm', interpolation='nearest', vmin=0, vmax=1)
+        im = ax_matrix.imshow(similarity, cmap='coolwarm', interpolation='nearest', vmin=-1, vmax=1)
 
         # Add title
         ax_matrix.set_title('Average Functional Cosine Similiarity - BeRNN', fontsize=22, pad=20)
@@ -312,7 +312,7 @@ class Analysis(object):
 
         ax_cb = fig.add_axes([colorbar_left, matrix_bottom, colorbar_width, matrix_height])
         cb = plt.colorbar(im, cax=ax_cb)
-        cb.set_ticks([0, 1])
+        cb.set_ticks([-1, 1])
         cb.outline.set_linewidth(0.5)
         cb.set_label('Similarity', fontsize=18, labelpad=0)
 
@@ -324,9 +324,7 @@ class Analysis(object):
 
         # ax_matrix.set_title(title, fontsize=14, pad=20)
         # Save the figure with a tight bounding box to ensure alignment
-        save_path = os.path.join('W:\\group_csp\\analyses\\oliver.frank',
-                                 'BeRNN_models\\Visuals\\Similiarity\\finalReport',
-                                 model_dir.split("\\")[-1] + '_' + mode + '.png')
+        save_path = os.path.join('W:\\group_csp\\analyses\\oliver.frank', 'BeRNN_models\\Visuals\\Similiarity\\finalReport', model_dir.split("\\")[-1] + '_' + mode + '.png')
         plt.savefig(save_path, format='png', dpi=300, bbox_inches='tight')
         plt.show()
 

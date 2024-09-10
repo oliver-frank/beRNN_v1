@@ -81,7 +81,7 @@ def get_perf(y_hat, y_loc):
         raise ValueError('y_hat must have shape (Time, Batch, Unit)')
     # Only look at last time points
     y_loc = y_loc[-1]
-    y_hat = y_hat[-1]
+    y_hat = y_hat[-1] # info: Only at the last time point, but response epoch schould be < 0.5
 
     # Fixation and location of y_hat
     y_hat_fix = y_hat[..., 0] # Get only first fixation unit

@@ -66,6 +66,7 @@ def _compute_variance_bymodel(model: object, sess: object, mode: str, monthsCons
 
     # Function to split the files
     def split_files(files, split_ratio=0.8):
+        random.seed(42) # info: add seed to always shuffle similiar
         random.shuffle(files)
         split_index = int(len(files) * split_ratio)
         return files[:split_index], files[split_index:]

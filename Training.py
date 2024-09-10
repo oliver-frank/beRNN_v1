@@ -400,7 +400,7 @@ def train(model_dir,train_data ,eval_data,hp=None,max_steps=3e7,display_step=500
                 feed_dict = Tools.gen_feed_dict(model, x, y, c_mask, hp)
                 # print('passed feed_dict Training')
                 # print(feed_dict)
-                sess.run(model.train_step, feed_dict=feed_dict)
+                sess.run(model.train_step, feed_dict=feed_dict) # info: Trainables are actualized
 
                 # Get Training performance in a similiar fashion as in do_eval
                 clsq_train_tmp = list()
@@ -438,7 +438,7 @@ if __name__ == '__main__':
     dataFolder = "Data"
     model_folder = 'Model'
     participant = 'BeRNN_03'
-    model_name = 'Model_batchSizeTEST5_BeRNN_03_Month_2-8' # Manually add months considered e.g. 1-7
+    model_name = 'Model_TESTAC_BeRNN_03_Month_2-8' # Manually add months considered e.g. 1-7
 
     # Define data path for different servers
     preprocessedData_path = os.path.join('W:\\group_csp\\analyses\\oliver.frank', dataFolder, participant,'PreprocessedData_wResp_ALL')

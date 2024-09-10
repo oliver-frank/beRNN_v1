@@ -27,8 +27,8 @@ from Tools import rule_name
 ########################################################################################################################
 # Pre-Allocation of variables and models to be examined (+ definition of one global function)
 ########################################################################################################################
-folderPath = 'W:\\group_csp\\analyses\\oliver.frank\\BeRNN_models\\BeRNN_05_fR'
-figurePath = 'W:\\group_csp\\analyses\\oliver.frank\\BeRNN_models\\Visuals\\Performance\\BeRNN_05_fR'
+folderPath = 'W:\\group_csp\\analyses\\oliver.frank\\BeRNN_models\\BeRNN_02_fR'
+figurePath = 'W:\\group_csp\\analyses\\oliver.frank\\BeRNN_models\\Visuals\\Performance\\BeRNN_02_fR'
 
 # Check if the directory exists
 if not os.path.exists(figurePath):
@@ -44,7 +44,7 @@ selected_hp_keys = ['rnn_type', 'activation', 'tau', 'dt', 'sigma_rec', 'sigma_x
 files = os.listdir(folderPath)
 model_list = []
 for file in files:
-    # if any(include in file for include in ['Model_1']):
+    # if any(include in file for include in ['Model_1_', 'Model_6_']):
     model_list.append(os.path.join(folderPath,file))
 
 # model_list = ['W:\\group_csp\\analyses\\oliver.frank\\BeRNN_models\\BeRNN_01_fR\\Model_1_BeRNN_01_Month_2-8',
@@ -72,164 +72,164 @@ def smoothed(data, window_size):
 # each representing 40 trained trials. So I should gather 5 data points of the training data to have the same smoothness
 # in the plots, window size = 5
 ########################################################################################################################
-# def plot_performanceprogress_eval_BeRNN(model_dir, rule_plot=None):
-#     # Plot Evaluation Progress
-#     log = Tools.load_log(model_dir)
-#     hp = Tools.load_hp(model_dir)
-#
-#     # co: change to [::2] if you want to have only every second validation value
-#     # trials = log['trials'][::2]
-#     trials = log['trials']
-#     x_plot = np.array(trials) / 1000  # scale the x-axis right
-#
-#     fs = 18  # fontsize
-#     fig_eval = plt.figure(figsize=(14, 6))
-#     ax = fig_eval.add_axes([0.1, 0.4, 0.6, 0.5])  # co: third value influences width of cartoon
-#     lines = list()
-#     labels = list()
-#
-#     if rule_plot == None:
-#         rule_plot = hp['rules']
-#
-#     for i, rule in enumerate(rule_plot):
-#         # co: add [::2] if you want to have only every second validation values
-#         line = ax.plot(x_plot, np.log10(log['cost_' + rule]), color=rule_color[rule])
-#         ax.plot(x_plot, log['perf_' + rule], color=rule_color[rule])
-#         lines.append(line[0])
-#         labels.append(rule_name[rule])
-#
-#     ax.tick_params(axis='both', which='major', labelsize=fs)
-#
-#     ax.set_ylim([0, 1])
-#     # ax.set_xlim([0, 80000])
-#     ax.set_xlabel('Total number of trials (/1000)', fontsize=fs, labelpad=2)
-#     ax.set_ylabel('Performance', fontsize=fs, labelpad=0)
-#     ax.locator_params(axis='x', nbins=5)
-#     ax.set_yticks([0, .25, .5, .75, 1])
-#     ax.spines["right"].set_visible(False)
-#     ax.spines["top"].set_visible(False)
-#     ax.xaxis.set_ticks_position('bottom')
-#     ax.yaxis.set_ticks_position('left')
-#
-#     # Add Hyperparameters as Text Box
-#     hp_text = "\n".join([f"{key}: {currentHP[key]}" for key in selected_hp_keys if key in currentHP])
-#     plt.figtext(0.75, 0.75, hp_text, fontsize=10, ha='left', va='top', bbox=dict(facecolor='white', alpha=0.5))
-#
-#     lg = fig_eval.legend(lines, labels, title='Task', ncol=2, bbox_to_anchor=(0.1, 0.1),
-#                          # co: first value influences horizontal position of legend
-#                          fontsize=fs, labelspacing=0.3, loc=6, frameon=False)
-#     plt.setp(lg.get_title(), fontsize=fs)
-#     # plt.title(model_dir.split("\\")[-1]+'_EVALUATION.png') # info: Add title
-#     plt.title('_'.join(model_dir.split("\\")[-1].split('_')[0:4]) + '_TEST', fontsize=18)  # info: Add title
-#     # # Add the randomness thresholds
-#     # # DM & RP Ctx
-#     # plt.axhline(y=0.2, color='green', label= 'DM & DM Anti & RP Ctx1 & RP Ctx2', linestyle=':')
-#     # plt.axhline(y=0.2, color='green', linestyle=':')
-#     # # # EF
-#     # plt.axhline(y=0.25, color='black', label= 'EF & EF Anti', linestyle=':')
-#     # plt.axhline(y=0.25, color='black', linestyle=':')
-#     # # # RP
-#     # plt.axhline(y=0.143, color='brown', label= 'RP & RP Anti', linestyle=':')
-#     # plt.axhline(y=0.143, color='brown', linestyle=':')
-#     # # # WM
-#     # plt.axhline(y=0.5, color='blue', label= 'WM & WM Anti & WM Ctx1 & WM Ctx2', linestyle=':')
-#     # plt.axhline(y=0.5, color='blue', linestyle=':')
-#     # #
-#     # rt = fig.legend(title='Randomness threshold', bbox_to_anchor=(0.1, 0.35), fontsize=fs, labelspacing=0.3  # co: first value influences length of
-#     #                 ,loc=6, frameon=False)
-#     # plt.setp(rt.get_title(), fontsize=fs)
-#
-#     plt.savefig(os.path.join(figurePath, model_dir.split("\\")[-1] + '_TEST.png'), format='png', dpi=300)
-#
-#     plt.show()
-#
-# def plot_performanceprogress_train_BeRNN(model_dir, rule_plot=None):
-#     # Plot Training Progress
-#     log = Tools.load_log(model_dir)
-#     hp = Tools.load_hp(model_dir)
-#
-#     # co: change to [::2] if you want to have only every second validation value
-#     # trials = log['trials'][::2]
-#     trials = log['trials']  # info: There is an entry every 40 trials for each task
-#     x_plot = (np.array(trials)) / 1000  # scale the x-axis right
-#
-#     fs = 18  # fontsize
-#     fig_train = plt.figure(figsize=(14, 6))
-#     ax = fig_train.add_axes([0.1, 0.4, 0.6, 0.5])  # info: third value influences width of cartoon
-#     lines = list()
-#     labels = list()
-#
-#     if rule_plot is None:
-#         rule_plot = hp['rules']
-#
-#     for i, rule in enumerate(rule_plot):
-#         y_cost = log['cost_train_' + rule][::int((len(log['cost_train_' + rule]) / len(x_plot)))][:len(x_plot)]
-#         y_perf = log['perf_train_' + rule][::int((len(log['perf_train_' + rule]) / len(x_plot)))][:len(x_plot)]
-#
-#         window_size = 5  # Adjust window_size to smooth less or more, should actually be 20 so that it concolves the same amount of data (800 trials) for one one measure as in evaluation
-#
-#         y_cost_smoothed = smoothed(y_cost, window_size=window_size)
-#         y_perf_smoothed = smoothed(y_perf, window_size=window_size)
-#
-#         # Ensure the lengths match
-#         y_cost_smoothed = y_cost_smoothed[:len(x_plot)]
-#         y_perf_smoothed = y_perf_smoothed[:len(x_plot)]
-#
-#         line = ax.plot(x_plot, np.log10(y_cost_smoothed), color=rule_color[rule])
-#         ax.plot(x_plot, y_perf_smoothed, color=rule_color[rule])
-#
-#         lines.append(line[0])
-#         labels.append(rule_name[rule])
-#
-#     ax.tick_params(axis='both', which='major', labelsize=fs)
-#     ax.set_ylim([0, 1])
-#     ax.set_xlabel('Total number of trials (/1000)', fontsize=fs, labelpad=2)
-#     ax.set_ylabel('Performance', fontsize=fs, labelpad=0)
-#     ax.locator_params(axis='x', nbins=5)
-#     ax.set_yticks([0, .25, .5, .75, 1])
-#     ax.spines["right"].set_visible(False)
-#     ax.spines["top"].set_visible(False)
-#     ax.xaxis.set_ticks_position('bottom')
-#     ax.yaxis.set_ticks_position('left')
-#
-#     # Add Hyperparameters as Text Box
-#     hp_text = "\n".join([f"{key}: {currentHP[key]}" for key in selected_hp_keys if key in currentHP])
-#     plt.figtext(0.75, 0.75, hp_text, fontsize=10, ha='left', va='top', bbox=dict(facecolor='white', alpha=0.5))
-#
-#     lg = fig_train.legend(lines, labels, title='Task', ncol=2, bbox_to_anchor=(0.1, 0.1),
-#                           fontsize=fs, labelspacing=0.3, loc=6, frameon=False) # info: first value influences horizontal position of legend
-#     plt.setp(lg.get_title(), fontsize=fs)
-#
-#     plt.title('_'.join(model_dir.split("\\")[-1].split('_')[0:4]) + '_TRAINING', fontsize=18)
-#
-#     plt.savefig(os.path.join(figurePath, model_dir.split("\\")[-1].split() + '_TRAINING.png'), format='png', dpi=300)
-#
-#     plt.show()
-#
-# for model_dir in model_list:
-#     # Load hp
-#     currentHP = Tools.load_hp(model_dir)
-#     # Assign a color to each task
-#     _rule_color = {
-#                 'DM': 'green',
-#                 'DM_Anti': 'olive',
-#                 'EF': 'forest green',
-#                 'EF_Anti': 'mustard',
-#                 'RP': 'tan',
-#                 'RP_Anti': 'brown',
-#                 'RP_Ctx1': 'lavender',
-#                 'RP_Ctx2': 'aqua',
-#                 'WM': 'bright purple',
-#                 'WM_Anti': 'green blue',
-#                 'WM_Ctx1': 'blue',
-#                 'WM_Ctx2': 'indigo'
-#                 }
-#     rule_color = {k: 'xkcd:'+v for k, v in _rule_color.items()}
-#
-#     # Plot improvement of performance over iterating evaluation steps
-#     plot_performanceprogress_eval_BeRNN(model_dir)
-#     # Plot improvement of performance over iterating training steps
-#     plot_performanceprogress_train_BeRNN(model_dir)
+def plot_performanceprogress_eval_BeRNN(model_dir, rule_plot=None):
+    # Plot Evaluation Progress
+    log = Tools.load_log(model_dir)
+    hp = Tools.load_hp(model_dir)
+
+    # co: change to [::2] if you want to have only every second validation value
+    # trials = log['trials'][::2]
+    trials = log['trials']
+    x_plot = np.array(trials) / 1000  # scale the x-axis right
+
+    fs = 18  # fontsize
+    fig_eval = plt.figure(figsize=(14, 6))
+    ax = fig_eval.add_axes([0.1, 0.4, 0.6, 0.5])  # co: third value influences width of cartoon
+    lines = list()
+    labels = list()
+
+    if rule_plot == None:
+        rule_plot = hp['rules']
+
+    for i, rule in enumerate(rule_plot):
+        # co: add [::2] if you want to have only every second validation values
+        line = ax.plot(x_plot, np.log10(log['cost_' + rule]), color=rule_color[rule])
+        ax.plot(x_plot, log['perf_' + rule], color=rule_color[rule])
+        lines.append(line[0])
+        labels.append(rule_name[rule])
+
+    ax.tick_params(axis='both', which='major', labelsize=fs)
+
+    ax.set_ylim([0, 1])
+    # ax.set_xlim([0, 80000])
+    ax.set_xlabel('Total number of trials (/1000)', fontsize=fs, labelpad=2)
+    ax.set_ylabel('Performance', fontsize=fs, labelpad=0)
+    ax.locator_params(axis='x', nbins=5)
+    ax.set_yticks([0, .25, .5, .75, 1])
+    ax.spines["right"].set_visible(False)
+    ax.spines["top"].set_visible(False)
+    ax.xaxis.set_ticks_position('bottom')
+    ax.yaxis.set_ticks_position('left')
+
+    # Add Hyperparameters as Text Box
+    hp_text = "\n".join([f"{key}: {currentHP[key]}" for key in selected_hp_keys if key in currentHP])
+    plt.figtext(0.75, 0.75, hp_text, fontsize=10, ha='left', va='top', bbox=dict(facecolor='white', alpha=0.5))
+
+    lg = fig_eval.legend(lines, labels, title='Task', ncol=2, bbox_to_anchor=(0.1, 0.1),
+                         # co: first value influences horizontal position of legend
+                         fontsize=fs, labelspacing=0.3, loc=6, frameon=False)
+    plt.setp(lg.get_title(), fontsize=fs)
+    # plt.title(model_dir.split("\\")[-1]+'_EVALUATION.png') # info: Add title
+    plt.title('_'.join(model_dir.split("\\")[-1].split('_')[0:4]) + '_TEST', fontsize=18)  # info: Add title
+    # # Add the randomness thresholds
+    # # DM & RP Ctx
+    # plt.axhline(y=0.2, color='green', label= 'DM & DM Anti & RP Ctx1 & RP Ctx2', linestyle=':')
+    # plt.axhline(y=0.2, color='green', linestyle=':')
+    # # # EF
+    # plt.axhline(y=0.25, color='black', label= 'EF & EF Anti', linestyle=':')
+    # plt.axhline(y=0.25, color='black', linestyle=':')
+    # # # RP
+    # plt.axhline(y=0.143, color='brown', label= 'RP & RP Anti', linestyle=':')
+    # plt.axhline(y=0.143, color='brown', linestyle=':')
+    # # # WM
+    # plt.axhline(y=0.5, color='blue', label= 'WM & WM Anti & WM Ctx1 & WM Ctx2', linestyle=':')
+    # plt.axhline(y=0.5, color='blue', linestyle=':')
+    # #
+    # rt = fig.legend(title='Randomness threshold', bbox_to_anchor=(0.1, 0.35), fontsize=fs, labelspacing=0.3  # co: first value influences length of
+    #                 ,loc=6, frameon=False)
+    # plt.setp(rt.get_title(), fontsize=fs)
+
+    plt.savefig(os.path.join(figurePath, model_dir.split("\\")[-1] + '_TEST.png'), format='png', dpi=300)
+
+    plt.show()
+
+def plot_performanceprogress_train_BeRNN(model_dir, rule_plot=None):
+    # Plot Training Progress
+    log = Tools.load_log(model_dir)
+    hp = Tools.load_hp(model_dir)
+
+    # co: change to [::2] if you want to have only every second validation value
+    # trials = log['trials'][::2]
+    trials = log['trials']  # info: There is an entry every 40 trials for each task
+    x_plot = (np.array(trials)) / 1000  # scale the x-axis right
+
+    fs = 18  # fontsize
+    fig_train = plt.figure(figsize=(14, 6))
+    ax = fig_train.add_axes([0.1, 0.4, 0.6, 0.5])  # info: third value influences width of cartoon
+    lines = list()
+    labels = list()
+
+    if rule_plot is None:
+        rule_plot = hp['rules']
+
+    for i, rule in enumerate(rule_plot):
+        y_cost = log['cost_train_' + rule][::int((len(log['cost_train_' + rule]) / len(x_plot)))][:len(x_plot)]
+        y_perf = log['perf_train_' + rule][::int((len(log['perf_train_' + rule]) / len(x_plot)))][:len(x_plot)]
+
+        window_size = 5  # Adjust window_size to smooth less or more, should actually be 20 so that it concolves the same amount of data (800 trials) for one one measure as in evaluation
+
+        y_cost_smoothed = smoothed(y_cost, window_size=window_size)
+        y_perf_smoothed = smoothed(y_perf, window_size=window_size)
+
+        # Ensure the lengths match
+        y_cost_smoothed = y_cost_smoothed[:len(x_plot)]
+        y_perf_smoothed = y_perf_smoothed[:len(x_plot)]
+
+        line = ax.plot(x_plot, np.log10(y_cost_smoothed), color=rule_color[rule])
+        ax.plot(x_plot, y_perf_smoothed, color=rule_color[rule])
+
+        lines.append(line[0])
+        labels.append(rule_name[rule])
+
+    ax.tick_params(axis='both', which='major', labelsize=fs)
+    ax.set_ylim([0, 1])
+    ax.set_xlabel('Total number of trials (/1000)', fontsize=fs, labelpad=2)
+    ax.set_ylabel('Performance', fontsize=fs, labelpad=0)
+    ax.locator_params(axis='x', nbins=5)
+    ax.set_yticks([0, .25, .5, .75, 1])
+    ax.spines["right"].set_visible(False)
+    ax.spines["top"].set_visible(False)
+    ax.xaxis.set_ticks_position('bottom')
+    ax.yaxis.set_ticks_position('left')
+
+    # Add Hyperparameters as Text Box
+    hp_text = "\n".join([f"{key}: {currentHP[key]}" for key in selected_hp_keys if key in currentHP])
+    plt.figtext(0.75, 0.75, hp_text, fontsize=10, ha='left', va='top', bbox=dict(facecolor='white', alpha=0.5))
+
+    lg = fig_train.legend(lines, labels, title='Task', ncol=2, bbox_to_anchor=(0.1, 0.1),
+                          fontsize=fs, labelspacing=0.3, loc=6, frameon=False) # info: first value influences horizontal position of legend
+    plt.setp(lg.get_title(), fontsize=fs)
+
+    plt.title('_'.join(model_dir.split("\\")[-1].split('_')[0:4]) + '_TRAINING', fontsize=18)
+
+    plt.savefig(os.path.join(figurePath, model_dir.split("\\")[-1].split() + '_TRAINING.png'), format='png', dpi=300)
+
+    plt.show()
+
+for model_dir in model_list:
+    # Load hp
+    currentHP = Tools.load_hp(model_dir)
+    # Assign a color to each task
+    _rule_color = {
+                'DM': 'green',
+                'DM_Anti': 'olive',
+                'EF': 'forest green',
+                'EF_Anti': 'mustard',
+                'RP': 'tan',
+                'RP_Anti': 'brown',
+                'RP_Ctx1': 'lavender',
+                'RP_Ctx2': 'aqua',
+                'WM': 'bright purple',
+                'WM_Anti': 'green blue',
+                'WM_Ctx1': 'blue',
+                'WM_Ctx2': 'indigo'
+                }
+    rule_color = {k: 'xkcd:'+v for k, v in _rule_color.items()}
+
+    # Plot improvement of performance over iterating evaluation steps
+    plot_performanceprogress_eval_BeRNN(model_dir)
+    # Plot improvement of performance over iterating training steps
+    plot_performanceprogress_train_BeRNN(model_dir)
 
 
 
@@ -353,7 +353,7 @@ def plot_aggregated_performance(model_list, mode, tasks, figure_path):
     plt.title(f'Average {modus} Performance Across Networks - {subject}', fontsize=fs)
 
     # Save the figure
-    model_name = '_'.join(model_list[0].split("\\")[-1].split('_')[2:6])
+    model_name = '_'.join(model_list[0].split("\\")[-1].split('_')[1:6])
     plt.savefig(os.path.join(figure_path, f'modelAverage_{model_name}_{modus}.png'), format='png', dpi=300)
 
     plt.show()
@@ -387,41 +387,58 @@ plot_aggregated_performance(model_list, mode, tasks, figurePath)
 
 
 ########################################################################################################################
-# Clustering
+# Topological Markers - Individual network
 ########################################################################################################################
-# def compute_n_cluster(model_dir, mode, monthsConsidered):
-#     # hp = Tools.load_hp(model_dir)
-#     # try:
-#     log = Tools.load_log(model_dir)
-#     analysis = clustering.Analysis(model_dir, mode, monthsConsidered, 'rule')
-#     # Plots from instance methods in class
-#     # analysis.plot_cluster_score(show)
-#     # analysis.plot_variance(model_dir, mode)
-#     analysis.plot_similarity_matrix(model_dir, mode)
-#     # analysis.plot_2Dvisualization(model_dir, mode, show)
-#     # analysis.plot_example_unit(show)
-#     # analysis.plot_connectivity_byclusters_WrecOnly(model_dir, mode)
-#
-#     log['n_cluster'] = analysis.n_cluster
-#     log['model_dir'] = model_dir
-#     Tools.save_log(log)
-#     # except IOError:
-#     #
+def compute_n_cluster(model_dir, mode, monthsConsidered):
+    # hp = Tools.load_hp(model_dir)
+    # try:
+    log = Tools.load_log(model_dir)
+    analysis = clustering.Analysis(model_dir, mode, monthsConsidered, 'rule')
+    # Plots from instance methods in class
+    # analysis.plot_cluster_score(show)
+    # analysis.plot_variance(model_dir, mode)
+    analysis.plot_similarity_matrix(model_dir, mode)
+    # analysis.plot_2Dvisualization(model_dir, mode, show)
+    # analysis.plot_example_unit(show)
+    # analysis.plot_connectivity_byclusters_WrecOnly(model_dir, mode)
 
+    log['n_cluster'] = analysis.n_cluster
+    log['model_dir'] = model_dir
+    Tools.save_log(log)
+    # except IOError:
+    #
+
+# Apply functions on individual models
+for model_dir in model_list:
+    months = model_dir.split('_')[-1].split('-')
+    monthsConsidered = []
+    for i in range(int(months[0]), int(months[1]) + 1):
+        monthsConsidered.append(str(i))
+    # Load hp
+    currentHP = Tools.load_hp(model_dir)
+
+    mode = 'Evaluation'
+    compute_n_cluster(model_dir, mode, monthsConsidered)
+
+
+
+########################################################################################################################
+# Topological Markers - Individual network
+########################################################################################################################
 def compute_averageSimilarity(model_list, monthsConsidered):
     hp = Tools.load_hp(model_list[0])
     n_rnn = hp['n_rnn']
     modelCount = 0
-    similarity = np.zeros((n_rnn, n_rnn))
+    average_similarity = np.zeros((n_rnn, n_rnn))
     for model_dir in model_list:
         log = Tools.load_log(model_dir)
         mode = 'Evaluation'
         analysis = clustering.Analysis(model_dir, mode, monthsConsidered, 'rule')
         similarity = analysis.get_similarity()  # Compute similarity
-        similarity += similarity
+        average_similarity += similarity
         modelCount += 1
 
-    averageSimiliarity = similarity/ modelCount
+    averageSimiliarity = average_similarity/ modelCount
 
     # Set up the figure
     fig = plt.figure(figsize=(10, 10))
@@ -433,7 +450,7 @@ def compute_averageSimilarity(model_list, monthsConsidered):
     matrix_height = 0.6
 
     ax_matrix = fig.add_axes([matrix_left, matrix_bottom, matrix_width, matrix_height])
-    im = ax_matrix.imshow(averageSimiliarity, cmap='coolwarm', interpolation='nearest', vmin=0, vmax=1)
+    im = ax_matrix.imshow(averageSimiliarity, cmap='coolwarm', interpolation='nearest', vmin=-1, vmax=1)
 
     # Add title
     subject = '_'.join(model_list[0].split("\\")[-1].split('_')[2:4])
@@ -452,7 +469,7 @@ def compute_averageSimilarity(model_list, monthsConsidered):
 
     ax_cb = fig.add_axes([colorbar_left, matrix_bottom, colorbar_width, matrix_height])
     cb = plt.colorbar(im, cax=ax_cb)
-    cb.set_ticks([0, 1])
+    cb.set_ticks([-1, 1])
     cb.outline.set_linewidth(0.5)
     cb.set_label('Similarity', fontsize=18, labelpad=0)
 
@@ -464,23 +481,10 @@ def compute_averageSimilarity(model_list, monthsConsidered):
 
     # ax_matrix.set_title(title, fontsize=14, pad=20)
     # Save the figure with a tight bounding box to ensure alignment
-    save_path = os.path.join('W:\\group_csp\\analyses\\oliver.frank',
-                             'BeRNN_models\\Visuals\\Similarity\\finalReport',
-                             model_list[0].split("\\")[-1] + '_' + 'Average' + '.png')
+    save_path = os.path.join('W:\\group_csp\\analyses\\oliver.frank', 'BeRNN_models\\Visuals\\Similarity\\finalReport',
+                             model_list[0].split("\\")[-1] + '_' + 'AverageSimilarity' + '.png')
     plt.savefig(save_path, format='png', dpi=300, bbox_inches='tight')
     plt.show()
-
-# # Apply functions on individual models
-# for model_dir in model_list:
-#     months = model_dir.split('_')[-1].split('-')
-#     monthsConsidered = []
-#     for i in range(int(months[0]), int(months[1]) + 1):
-#         monthsConsidered.append(str(i))
-#     # Load hp
-#     currentHP = Tools.load_hp(model_dir)
-#
-#     mode = 'Evaluation'
-#     compute_n_cluster(model_dir, mode, monthsConsidered)
 
 months = model_list[0].split('_')[-1].split('-')
 monthsConsidered = []
@@ -488,9 +492,5 @@ for i in range(int(months[0]), int(months[1]) + 1):
     monthsConsidered.append(str(i))
 # Apply functions on whole model_list to receive averaged graphs
 compute_averageSimilarity(model_list, monthsConsidered)
-
-
-
-
 
 
