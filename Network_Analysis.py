@@ -28,7 +28,7 @@ from Tools import rule_name
 # Pre-Allocation of variables and models to be examined (+ definition of one global function)
 ########################################################################################################################
 folderPath = 'W:\\group_csp\\analyses\\oliver.frank\\BeRNN_models\\BeRNN_02_fR'
-figurePath = 'W:\\group_csp\\analyses\\oliver.frank\\BeRNN_models\\Visuals\\Performance\\BeRNN_02_fR'
+figurePath = 'W:\\group_csp\\analyses\\oliver.frank\\BeRNN_models\\Visuals\\Performance\\BeRNN_03_HPT_03'
 
 # Check if the directory exists
 if not os.path.exists(figurePath):
@@ -38,16 +38,22 @@ if not os.path.exists(figurePath):
 else:
     print(f"Directory already exists: {figurePath}")
 
-selected_hp_keys = ['rnn_type', 'activation', 'tau', 'dt', 'sigma_rec', 'sigma_x', 'w_rec_init', 'l1_h', 'l2_h', \
-                    'l1_weight', 'l2_weight', 'l2_weight_init', 'learning_rate', 'n_rnn', 'c_mask_responseValue', 'monthsConsidered']  # Replace with the keys you want
-
 files = os.listdir(folderPath)
 model_list = []
 for file in files:
     # if any(include in file for include in ['Model_1_', 'Model_6_']):
     model_list.append(os.path.join(folderPath,file))
 
-# model_list = ['W:\\group_csp\\analyses\\oliver.frank\\BeRNN_models\\BeRNN_01_fR\\Model_1_BeRNN_01_Month_2-8',
+selected_hp_keys = ['rnn_type', 'activation', 'tau', 'dt', 'sigma_rec', 'sigma_x', 'w_rec_init', 'l1_h', 'l2_h', \
+                    'l1_weight', 'l2_weight', 'l2_weight_init', 'learning_rate', 'n_rnn', 'c_mask_responseValue',
+                    'monthsConsidered']  # Replace with the keys you want
+
+model_list = ['W:\\group_csp\\analyses\\oliver.frank\\BeRNN_models\\BeRNN_03_HPT_03\\Model_41_BeRNN_03_Month_2-8',
+              'W:\\group_csp\\analyses\\oliver.frank\\BeRNN_models\\BeRNN_03_HPT_03\\Model_46_BeRNN_03_Month_2-8',
+              'W:\\group_csp\\analyses\\oliver.frank\\BeRNN_models\\BeRNN_03_HPT_03\\Model_51_BeRNN_03_Month_2-8',
+              'W:\\group_csp\\analyses\\oliver.frank\\BeRNN_models\\BeRNN_03_HPT_03\\Model_56_BeRNN_03_Month_2-8',
+              'W:\\group_csp\\analyses\\oliver.frank\\BeRNN_models\\BeRNN_03_HPT_03\\Model_61_BeRNN_03_Month_2-8',
+              'W:\\group_csp\\analyses\\oliver.frank\\BeRNN_models\\BeRNN_03_HPT_03\\Model_66_BeRNN_03_Month_2-8'] # ,
 #               'W:\\group_csp\\analyses\\oliver.frank\\BeRNN_models\\BeRNN_02_fR\\Model_1_BeRNN_02_Month_2-8',
 #               'W:\\group_csp\\analyses\\oliver.frank\\BeRNN_models\\BeRNN_03_fR\\Model_1_BeRNN_03_Month_2-8',
 #               'W:\\group_csp\\analyses\\oliver.frank\\BeRNN_models\\BeRNN_05_fR\\Model_1_BeRNN_05_Month_2-8',
@@ -202,7 +208,7 @@ def plot_performanceprogress_train_BeRNN(model_dir, rule_plot=None):
 
     plt.title('_'.join(model_dir.split("\\")[-1].split('_')[0:4]) + '_TRAINING', fontsize=18)
 
-    plt.savefig(os.path.join(figurePath, model_dir.split("\\")[-1].split() + '_TRAINING.png'), format='png', dpi=300)
+    plt.savefig(os.path.join(figurePath, model_dir.split("\\")[-1] + '_TRAINING.png'), format='png', dpi=300)
 
     plt.show()
 
@@ -230,6 +236,45 @@ for model_dir in model_list:
     plot_performanceprogress_eval_BeRNN(model_dir)
     # Plot improvement of performance over iterating training steps
     plot_performanceprogress_train_BeRNN(model_dir)
+
+
+
+########################################################################################################################
+# Topological Markers - Individual network
+########################################################################################################################
+def compute_n_cluster(model_dir, mode, monthsConsidered):
+    # hp = Tools.load_hp(model_dir)
+    # try:
+    log = Tools.load_log(model_dir)
+    analysis = clustering.Analysis(model_dir, mode, monthsConsidered, 'rule')
+    # Plots from instance methods in class
+    # analysis.plot_cluster_score(show)
+    # analysis.plot_variance(model_dir, mode)
+    analysis.plot_similarity_matrix(model_dir, mode)
+    # analysis.plot_2Dvisualization(model_dir, mode, show)
+    # analysis.plot_example_unit(show)
+    # analysis.plot_connectivity_byclusters_WrecOnly(model_dir, mode)
+
+    log['n_cluster'] = analysis.n_cluster
+    log['model_dir'] = model_dir
+    Tools.save_log(log)
+    # except IOError:
+    #
+
+# Apply functions on individual models
+for model_dir in model_list:
+    months = model_dir.split('_')[-1].split('-')
+    monthsConsidered = []
+    for i in range(int(months[0]), int(months[1]) + 1):
+        monthsConsidered.append(str(i))
+    # Load hp
+    currentHP = Tools.load_hp(model_dir)
+
+    mode = 'Evaluation'
+    compute_n_cluster(model_dir, mode, monthsConsidered)
+
+
+
 
 
 
@@ -383,42 +428,6 @@ plot_aggregated_performance(model_list, mode, tasks, figurePath)
 # Plot the average performance of models on training data
 mode = 'train'
 plot_aggregated_performance(model_list, mode, tasks, figurePath)
-
-
-
-########################################################################################################################
-# Topological Markers - Individual network
-########################################################################################################################
-def compute_n_cluster(model_dir, mode, monthsConsidered):
-    # hp = Tools.load_hp(model_dir)
-    # try:
-    log = Tools.load_log(model_dir)
-    analysis = clustering.Analysis(model_dir, mode, monthsConsidered, 'rule')
-    # Plots from instance methods in class
-    # analysis.plot_cluster_score(show)
-    # analysis.plot_variance(model_dir, mode)
-    analysis.plot_similarity_matrix(model_dir, mode)
-    # analysis.plot_2Dvisualization(model_dir, mode, show)
-    # analysis.plot_example_unit(show)
-    # analysis.plot_connectivity_byclusters_WrecOnly(model_dir, mode)
-
-    log['n_cluster'] = analysis.n_cluster
-    log['model_dir'] = model_dir
-    Tools.save_log(log)
-    # except IOError:
-    #
-
-# Apply functions on individual models
-for model_dir in model_list:
-    months = model_dir.split('_')[-1].split('-')
-    monthsConsidered = []
-    for i in range(int(months[0]), int(months[1]) + 1):
-        monthsConsidered.append(str(i))
-    # Load hp
-    currentHP = Tools.load_hp(model_dir)
-
-    mode = 'Evaluation'
-    compute_n_cluster(model_dir, mode, monthsConsidered)
 
 
 

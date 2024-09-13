@@ -50,7 +50,7 @@ def popvec(y):
     temp_sum = y.sum(axis=-1) # Sum of activity at last time point of response epoch for every trial in the batch, respectively
     temp_cos = np.sum(y*np.cos(pref), axis=-1)/temp_sum # Multiplies each unit's activation by the cosine of its preferred direction.
     temp_sin = np.sum(y*np.sin(pref), axis=-1)/temp_sum # Multiplies each unit's activation by the sine of its preferred direction.
-    loc = np.arctan2(temp_sin, temp_cos) # This line computes the arctangent of the normalized sine and cosine components, resulting in the angle (location) in radians for each batch sample
+    loc = np.arctan2(temp_sin, temp_cos) # This line computes the arctangent of the normalized sine and cosine components, resulting in the angle (location) in radians for each trial in batch
     return np.mod(loc, 2*np.pi)
 
 def tf_popvec(y):
