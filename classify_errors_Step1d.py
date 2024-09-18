@@ -2,9 +2,11 @@ import pandas as pd
 import json
 # path to error occurence file
 path  = "/Users/marcschubert/Documents/rnns/ErrorCategorization/ERROR_FILTERING.csv"
+path = "/Users/marcschubert/Documents/rnns/Data/BeRNN_01/PreprocessedData_wResp_ALL_V3/ErrorCats/ERROR_FILTERING.csv"
+
 data = pd.read_csv(path)
 data.columns
-os.chdir( "/Users/marcschubert/Documents/rnns/ErrorCategorization/")
+os.chdir( "/Users/marcschubert/Documents/rnns/Data/BeRNN_01/PreprocessedData_wResp_ALL_V3/ErrorCats/")
 ### Functions######
 
 def getErrorGroups(data, threshold):

@@ -10,7 +10,7 @@ import json
 import pandas as pd
 import matplotlib.pyplot as plt
 os.getcwd()
-directory = "/Users/marcschubert/Documents/rnns/Data/BeRNN_01/PreprocessedData_wResp_ALL"
+directory = "/Users/marcschubert/Documents/rnns/Data/BeRNN_01/PreprocessedData_wResp_ALL_V3"
 os.chdir(directory)
 
 files = [file for file in os.listdir() if file.startswith("errors_dict")]
@@ -27,7 +27,6 @@ def extractCounts(filename):
     df["taskgroup"] = filename
     return df  
 
-data_list
 
 dfs = []
 for filename in files: 

@@ -84,8 +84,8 @@ def createErrorDataframes(opened_xlsxFile):
 
     print(f"Shape of dataframes:\n Original:\t{original_data.shape}\n Errors removed:{data_errors_removed.shape}\n Errors only:\t{data_errors_only.shape}")
     error_filters = {"ORIGINAL":original_data,
-                    "ERRORS_REMOVED":data_errors_removed,
-                     "ERRORS_ONLY":   data_errors_only
+                    #"ERRORS_REMOVED":data_errors_removed,
+                    # "ERRORS_ONLY":   data_errors_only
                       }
     return error_filters
 
@@ -1166,6 +1166,7 @@ def preprocess_EF_Exclude_Errors(opened_xlsxFile, questionnare_files, list_allSe
             Output = Output.astype('float32')
 
             # Save output data
+    
             output_filename = participant + '-' + 'month_' + str(month) + '-' + 'batch_' + str(batchNumber) + '-' + taskShorts + '-' + xlsxFile.split('_')[3].split('-')[0] + '_' + xlsxFile.split('_')[3].split('-')[1] + '-' + 'Output_' + error_filter #INSERTED
             np.save(output_filename, Output)
             # Save y_loc data
@@ -1984,7 +1985,7 @@ def check_permissions(file_path):
 dataFolder = "Data"
 subfolders = ['RP_Ctx1']
 subfolders = ['DM', 'DM_Anti', 'EF', 'EF_Anti', 'RP', 'RP_Anti', 'RP_Ctx1', 'RP_Ctx2', 'WM', 'WM_Anti', 'WM_Ctx1', 'WM_Ctx2']
-preprocessing_folder = 'PreprocessedData_wResp_ALL'
+preprocessing_folder = 'PreprocessedData_wResp_ALL_V2'
 participants = ['BeRNN_01']
 
 months = ['2', '3', '4', '5', '6', '7'] # todo: add months here

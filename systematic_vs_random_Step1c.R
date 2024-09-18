@@ -1,7 +1,7 @@
 # systematic vs random 
 
-path <- "/Users/marcschubert/Documents/rnns/Data/BeRNN_01/PreprocessedData_wResp_ALL/all_error_counts.csv"
-setwd("/Users/marcschubert/Documents/rnns/ErrorCategorization/")
+path <- "/Users/marcschubert/Documents/rnns/Data/BeRNN_01/PreprocessedData_wResp_ALL_V3/all_error_counts.csv"
+setwd("/Users/marcschubert/Documents/rnns/Data/BeRNN_01/PreprocessedData_wResp_ALL_V3/ErrorCats")
 data <- read.csv(path)
 data$fineGrained <- str_detect(data$taskgroup, "fineGrained")
 data$fineGrained[data$fineGrained] <- "fineGrained"

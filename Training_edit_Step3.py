@@ -73,7 +73,7 @@ def get_default_hp(ruleset):
         # l2 regularization on weight
         'l1_weight': 0,
         # l2 regularization on weight
-        'l2_weight': 0,
+        'l2_weight': 1e-05,
         # l2 regularization on deviation from initialization
         'l2_weight_init': 0,
         # proportion of weights to train, None or float between (0, 1) - e.g. .1 will train a random 10% weight selection, the rest stays fixed (Yang et al. range: .05-.075)
@@ -499,17 +499,19 @@ def train(model_dir,trial_dir,monthsConsidered,train_data ,eval_data,hp=None,max
 #     getSubsetsAndSave(org, "org")
 
 run_ids = ["org", "coronly", "corsys", "corrand", "sysrand",  "randonly","sysonly"]
+run_ids.reverse()
+
 
 if __name__ == '__main__':
 
     for CUR_RUN_ID in run_ids:
-        print(CUR_RUN_ID)
+        print("CUR_RUN_ID: ", CUR_RUN_ID)
         dataFolder = "Data"
         participant = 'BeRNN_01'
         model_folder = 'Model'
         strToSave = '2-6'
         number = str(150)
-        model_number = 'XModel_' + number + '_' + participant + '_Month_' + strToSave # Manually add months considered e.g. 1-7
+        model_number = 'XwithSplittedWM_Model_' + number + '_' + participant + '_Month_' + strToSave # Manually add months considered e.g. 1-7
         monthsConsidered = ['2','3','4','5','6','7'] # Add all months you want to take into consideration for training and evaluation
         model_dir = os.path.join('/Users/marcschubert/Documents/rnns/models', model_number)
         model_dir = os.path.join(model_dir, "ORIGINAL_" + CUR_RUN_ID)
@@ -519,7 +521,7 @@ if __name__ == '__main__':
 
         # preprocessedData_folder = 'PreprocessedData_wResp_ALL'
         # preprocessedData_path = os.path.join('W:\\group_csp\\analyses\\oliver.frank', dataFolder, participant, 'PreprocessedData_wResp_ALL')
-        preprocessedData_path = os.path.join('/Users/marcschubert/Documents/rnns/Data/', participant,'PreprocessedData_wResp_ALL')
+        preprocessedData_path = os.path.join('/Users/marcschubert/Documents/rnns/Data/', participant,'PreprocessedData_wResp_ALL_V3')
         # Define probability of each task being trained
         rule_prob_map = {"DM": 1,"DM_Anti": 1,"EF": 1,"EF_Anti": 1,"RP": 1,"RP_Anti": 1,"RP_Ctx1": 1,"RP_Ctx2": 1,"WM": 1,"WM_Anti": 1,"WM_Ctx1": 1,"WM_Ctx2": 1}
         rule_prob_map = {"DM": 1,"DM_Anti": 1,"EF": 1,"EF_Anti": 1,"RP": 1,"RP_Anti": 1,"RP_Ctx1": 1,"RP_Ctx2": 1,"WM": 1,"WM_Anti": 1,"WM_Ctx1": 1,"WM_Ctx2": 1}
@@ -541,23 +543,39 @@ if __name__ == '__main__':
         print(subdirs)
         for subdir in subdirs:
             # Collect all file triplets in the current subdirectory
+            print("subdir: ", subdir)
             file_triplets = []
             for file in os.listdir(subdir):
-                if file.find('Input')>0:
+                
+                # WM Tasks
+                if file.find("WMgdx")>0 and file.find("Input")>0 and file.find(CUR_RUN_ID)>0:
+                    #print(file, CUR_RUN_ID)
+                    input_file = os.path.join(subdir, file)
+                    yloc_file = os.path.join(subdir, file.replace("Input", "yLoc"))
+                    output_file = os.path.join(subdir, file.replace("Output", "yLoc"))
+                    file_triplets.append((input_file, yloc_file, output_file))
+                    if not os.path.exists(input_file):
+                        print(os.path.exists(input_file), input_file) 
+
+
+
+                elif file.find('Input')>0 and file.find("WM")<0:
                     base_name = file.split('Input')[0]
+                    #print("basename: ", base_name)
+                    # if base_name.find("WM")> 0:
+                    #    error_group = "" +"_"+CUR_RUN_ID # "ORIGNAL"
+                    #    continue # skip WMs here because they are handled before
 
-                    if base_name.find("WM")> 0:
-                        print(base_name)
-                        error_group = ""  # "ORIGNAL"
-                    else: 
-                        error_group = "_ORIGINAL" + "_"+CUR_RUN_ID  # "ORIGNAL"
-
+                    # else: 
+                    error_group = "_"+CUR_RUN_ID  # "ORIGNAL"
 
                     #error_group = "_ERRORS_ONLY"  # "ORIGNAL"
                     input_file = os.path.join(subdir, base_name + 'Input'+error_group+'.npy')
                     yloc_file = os.path.join(subdir, base_name + 'yLoc'+error_group+'.npy')
                     output_file = os.path.join(subdir, base_name + 'Output'+error_group+'.npy')
                     file_triplets.append((input_file, yloc_file, output_file))
+                    if not os.path.exists(input_file):
+                        print(os.path.exists(input_file), input_file)
 
 
             # Split the file triplets

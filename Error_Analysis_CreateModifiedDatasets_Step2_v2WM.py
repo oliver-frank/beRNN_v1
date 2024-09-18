@@ -11,6 +11,7 @@ import itertools
 import matplotlib.pyplot as plt
 
 error_classes_path = "/Users/marcschubert/Documents/rnns/ErrorCategorization/error_names_threshold0.1.json"
+error_classes_path = "/Users/marcschubert/Documents/rnns/Data/BeRNN_01/PreprocessedData_wResp_ALL_V3/ErrorCats/error_names_threshold0.1.json"
 with open(error_classes_path) as f: 
     error_classes = json.load(f)
 
@@ -495,6 +496,10 @@ def run_through(group, set_response_string, set_meta_string):
     # focusedMonths = ['month_5']
     directory = 'W:\\group_csp\\analyses\\oliver.frank\\Data\\BeRNN_03\\PreprocessedData_wResp_ALL\\'
     directory = "/Users/marcschubert/Documents/rnns/Data/BeRNN_01/PreprocessedData_wResp_ALL/"
+    directory = "/Users/marcschubert/Documents/rnns/Data/BeRNN_01/PreprocessedData_wResp_ALL_V3/"
+   
+
+
 
     ########################################################################################################################
     # Decision Making ------------------------------------------------------------------------------------------------------
@@ -1731,9 +1736,6 @@ def run_through(group, set_response_string, set_meta_string):
 
 
 
-
-
-
 ################################################################################
 ################################################################################
 ################################################################################
@@ -1758,6 +1760,7 @@ groups= ["ORIGINAL", "ERRORS_REMOVED", "ERRORS_ONLY"]
 # run the above code 
 groups = ["ORIGINAL_"]
 groups = [""]
+#groups = ["ORIGINAL_"]
 for group in groups:
     set_response_string = f'*Response{group}.npy'
     set_meta_string = f'*Meta{group}.json'

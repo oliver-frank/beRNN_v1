@@ -315,6 +315,9 @@ def run_through(group, set_response_string, set_meta_string):
     # focusedMonths = ['month_5']
     directory = 'W:\\group_csp\\analyses\\oliver.frank\\Data\\BeRNN_03\\PreprocessedData_wResp_ALL\\'
     directory = "/Users/marcschubert/Documents/rnns/Data/BeRNN_01/PreprocessedData_wResp_ALL/"
+    directory = "/Users/marcschubert/Documents/rnns/Data/BeRNN_01/PreprocessedData_wResp_ALL_V3/"
+   
+
 
     ########################################################################################################################
     # Decision Making ------------------------------------------------------------------------------------------------------
@@ -1308,10 +1311,15 @@ def run_through(group, set_response_string, set_meta_string):
 
 groups= ["ORIGINAL", "ERRORS_REMOVED", "ERRORS_ONLY"]
 groups = ["ORIGINAL"]
+
+
+groups = [""]
 for group in groups:
-    set_response_string = f'*Response_{group}.npy'
-    set_meta_string = f'*Meta_{group}.json'
+    set_response_string = f'*Response{group}.npy'
+    set_meta_string = f'*Meta{group}.json'
     print(set_response_string, set_meta_string)
     run_through(group, set_response_string, set_meta_string)
     print("Done.")
 
+
+print("Final-Done.")
