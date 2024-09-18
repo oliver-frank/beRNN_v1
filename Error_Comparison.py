@@ -56,13 +56,14 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 from Network import Model, get_perf
+from Training import split_files
 import Tools
 import glob
 
 ########################################################################################################################
 # Functions
 ########################################################################################################################
-def visualize_contingency_table(data, task, figure_path, model_dir, ratio_correct, ratio_error):
+def visualize_contingency_table(data, task, figure_path, mode, model_dir, ratio_correct, ratio_error):
     # Define labels for the table
     row_labels = ['Participant Response Correct', 'Participant Response Incorrect']
     col_labels = ['Model Response Correct', 'Model Response Incorrect']
@@ -97,13 +98,14 @@ def visualize_contingency_table(data, task, figure_path, model_dir, ratio_correc
 
     # Add title directly above the heatmap in the center
     subject = model_dir.split('\\')[-1].split('_')[2] + '_' + model_dir.split('\\')[-1].split('_')[3] # info: Subject of last model taken into account will define title
-    plt.suptitle(f'Contingency Table (%) - {task} - {subject}', fontsize=18, y=.95, x=.4)
+    plt.suptitle(f'{mode} Contingency Table (%) - {task} - {subject}', fontsize=18, y=.95, x=.4)
 
     # Adjust layout to fit all elements within the figure bounds
     plt.tight_layout(rect=[0, 0, .9, .95])  # Adjusted the layout to accommodate the title
 
     # Save the plot ensuring all elements are included
-    save_path = os.path.join(figure_path, f'Average_Contingency_{task}_{subject}.png')
+
+    save_path = os.path.join(figure_path, f'{mode}_Contingency_{task}_{subject}.png')
     os.makedirs(os.path.dirname(save_path), exist_ok=True)
     plt.savefig(save_path, format='png', dpi=300, bbox_inches='tight', pad_inches=0.2)
 
@@ -115,16 +117,22 @@ def evaluate_model_responses(models, tasks):
         accumulated_data_percentage = None
         model_count = 0
         # modelDirectories
-        figurePath = 'W:\\group_csp\\analyses\\oliver.frank\\BeRNN_models\\Visuals\\Contingency\\modelAverage'
+        figurePath = 'W:\\group_csp\\analyses\\oliver.frank\\BeRNN_models\\Visuals\\Contingency'
         # Create directory for saving figures if it doesn't exist
         if not os.path.exists(figurePath):
             os.makedirs(figurePath)
 
+        if len(models) > 1:
+            mode = 'Average'
+        else:
+            mode = 'Individual'
+
         for model_dir in models:
 
             trial_dir = 'W:\\group_csp\\analyses\\oliver.frank\\Data' + '\\BeRNN_' + \
-                        model_dir.split('\\')[-1].split('_')[3] + '\\PreprocessedData_wResp_ALL'  # Info: Adjust for test and training data
+                        model_dir.split('\\')[-1].split('_')[3] + '\\PreprocessedData_wResp_ALL'
 
+            # Info: Adjust for test and training data if training was random seeded
             file_triplets = get_file_triplets(trial_dir, task, model_dir)
             correct_match, error_match, correct_mismatch, error_mismatch, total_trials = evaluate_task(model_dir, task, file_triplets)
 
@@ -148,7 +156,7 @@ def evaluate_model_responses(models, tasks):
         ratioError = average_data_percentage[1][0] / average_data_percentage[1][1]
 
         # Visualize the averaged contingency table
-        visualize_contingency_table(average_data_percentage, task, figurePath, model_dir=model_dir, ratio_correct=ratioCorrect, ratio_error=ratioError)
+        visualize_contingency_table(average_data_percentage, task, figurePath, mode, model_dir=model_dir, ratio_correct=ratioCorrect, ratio_error=ratioError)
 
 def get_file_triplets(trial_dir, task, model_dir):
     dir = os.path.join(trial_dir, task)
@@ -168,7 +176,10 @@ def get_file_triplets(trial_dir, task, model_dir):
         output_file = os.path.join(dir, base_name + 'Output.npy')
         file_triplets.append((input_file, yloc_file, output_file))
 
-    return file_triplets
+    # Split the file triplets and take the test files
+    train_files, eval_files = split_files(file_triplets)
+
+    return eval_files
 
 def evaluate_task(model_dir, task, file_triplets):
     error_match = 0
@@ -214,12 +225,11 @@ def evaluate_task(model_dir, task, file_triplets):
 # Model evaluation for chosen tasks
 ########################################################################################################################
 # info: Create several tables for several models
-models_list = [['W:\\group_csp\\analyses\\oliver.frank\\BeRNN_models\\BeRNN_01_fR\\Model_1_BeRNN_01_Month_2-8'],\
-               ['W:\\group_csp\\analyses\\oliver.frank\\BeRNN_models\\BeRNN_02_fR\\Model_1_BeRNN_02_Month_2-8'],\
-               ['W:\\group_csp\\analyses\\oliver.frank\\BeRNN_models\\BeRNN_03_fR\\Model_1_BeRNN_03_Month_2-8'],\
-               ['W:\\group_csp\\analyses\\oliver.frank\\BeRNN_models\\BeRNN_05_fR\\Model_1_BeRNN_05_Month_2-8']]
+models_list = [['W:\\group_csp\\analyses\\oliver.frank\\BeRNN_models\\BeRNN_01_fR\\Model_2_BeRNN_01_Month_2-8'],
+               ['W:\\group_csp\\analyses\\oliver.frank\\BeRNN_models\\BeRNN_01_fR\\Model_3_BeRNN_01_Month_2-8',
+                'W:\\group_csp\\analyses\\oliver.frank\\BeRNN_models\\BeRNN_01_fR\\Model_4_BeRNN_01_Month_2-8']]
 # info: Tasks to evaluate
-tasks = ['EF']
+tasks = ['EF', 'WM']
 
 for models in models_list:
     evaluate_model_responses(models, tasks)

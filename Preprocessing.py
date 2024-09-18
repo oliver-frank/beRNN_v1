@@ -1465,7 +1465,9 @@ months = ['7'] # info: add months here
 for participant in participants:
     # Create current main_path
     main_path = os.path.join('W:\\group_csp\\analyses\\oliver.frank', dataFolder, participant, preprocessing_folder)
-    # main_path = os.path.join("/zi/flstorage/group_csp/analyses/oliver.frank", dataFolder, participant,preprocessing_folder)
+    # main_path = os.path.join("/data", dataFolder, participant,preprocessing_folder)
+    # main_path = os.path.join("/pandora/home/oliver.frank/01_Projects/RNN/multitask_BeRNN-main, participant,preprocessing_folder)
+
     # Create Folder Structure
     if not os.path.exists(main_path):
         os.makedirs(main_path)
@@ -1477,7 +1479,9 @@ for participant in participants:
 
     # Processing path allocation
     processing_path = os.path.join('W:\\group_csp\\analyses\\oliver.frank',dataFolder, participant)
-    # processing_path = os.path.join("/zi/flstorage/group_csp/analyses/oliver.frank", dataFolder, participant)
+    # processing_path = os.path.join("/data", dataFolder, participant)
+    # processing_path = os.path.join("/pandora/home/oliver.frank/01_Projects/RNN/multitask_BeRNN-main, participant)
+
     # list of task names in each session; very first name is the one of the associated questionare
     list_d4fh = ['d4fh', 'b4ya', 'bert', '7py6', 'bx2n', '2p6f', '9ivx', 'fhgh', 'k1jg', '6x4x', 'aiut', 'ar8p', '627g']
     list_2353 = ['2353', '6vnh', '113d', 'pbq6', 'q4ei', 'u7od', '9qcv', '4lrw', 'u31n', 'jr36', 'hia1', 'odic', 'qkw4']

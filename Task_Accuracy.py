@@ -21,7 +21,7 @@ with warnings.catch_warnings():
 participant_dir = 'W:\\group_csp\\analyses\\oliver.frank\\Data'
 participantList = os.listdir(participant_dir)
 
-participant = participantList[4] # choose which particpant to analyze
+participant = participantList[2] # choose which particpant to analyze
 month = '9' # choose which month to analyze
 
 percentCorrect_DM, count_DM = 0, 0
@@ -59,7 +59,7 @@ for i in list_testParticipant_month:
                 # percentCorrect_DM_Anti += currentFile['Store: PercentCorrectDMAnti'][len(currentFile['Store: PercentCorrectDMAnti'])-3]
                 # count_DM_Anti += 1
 
-                filtered_rows = currentFile[currentFile['Event Index'] == 124].copy() # info: every now and then the 125th event is missing
+                filtered_rows = currentFile[currentFile['Event Index'] == 124].copy()
                 percentCorrect_DM_Anti += sum(filtered_rows['Store: PercentCorrectDMAnti'])
                 count_DM_Anti += len(filtered_rows)
                 print('currentFile processed')
@@ -68,7 +68,7 @@ for i in list_testParticipant_month:
                 # percentCorrect_EF += currentFile['Store: PercentCorrectEF'][len(currentFile['Store: PercentCorrectEF'])-3]
                 # count_EF += 1
 
-                filtered_rows = currentFile[currentFile['Event Index'] == 125].copy()
+                filtered_rows = currentFile[currentFile['Event Index'] == 124].copy()
                 percentCorrect_EF += sum(filtered_rows['Store: PercentCorrectEF'])
                 count_EF += len(filtered_rows)
                 print('currentFile processed')
@@ -77,7 +77,7 @@ for i in list_testParticipant_month:
                 # percentCorrect_EF_Anti += currentFile['Store: PercentCorrectEFAnti'][len(currentFile['Store: PercentCorrectEFAnti'])-3] # no extra displays for Anti were made
                 # count_EF_Anti += 1
 
-                filtered_rows = currentFile[currentFile['Event Index'] == 125].copy()
+                filtered_rows = currentFile[currentFile['Event Index'] == 124].copy()
                 percentCorrect_EF_Anti += sum(filtered_rows['Store: PercentCorrectEFAnti'])
                 count_EF_Anti += len(filtered_rows)
                 print('currentFile processed')
@@ -86,7 +86,7 @@ for i in list_testParticipant_month:
                 # percentCorrect_RP += currentFile['Store: PercentCorrectRP'][len(currentFile['Store: PercentCorrectRP'])-3]
                 # count_RP += 1
 
-                filtered_rows = currentFile[currentFile['Event Index'] == 124].copy() # info: every now and then the 125th event is missing
+                filtered_rows = currentFile[currentFile['Event Index'] == 124].copy()
                 percentCorrect_RP += sum(filtered_rows['Store: PercentCorrectRP'])
                 count_RP += len(filtered_rows)
                 print('currentFile processed')
@@ -95,7 +95,7 @@ for i in list_testParticipant_month:
                 # percentCorrect_RP_Anti += currentFile['Store: PercentCorrectRPAnti'][len(currentFile['Store: PercentCorrectRPAnti'])-3]
                 # count_RP_Anti += 1
 
-                filtered_rows = currentFile[currentFile['Event Index'] == 125].copy()
+                filtered_rows = currentFile[currentFile['Event Index'] == 124].copy()
                 percentCorrect_RP_Anti += sum(filtered_rows['Store: PercentCorrectRPAnti'])
                 count_RP_Anti += len(filtered_rows)
                 print('currentFile processed')
@@ -104,7 +104,7 @@ for i in list_testParticipant_month:
                 # percentCorrect_RP_Ctx1 += currentFile['Store: PercentCorrectRPCtx1'][len(currentFile['Store: PercentCorrectRPCtx1'])-3]
                 # count_RP_Ctx1 += 1
 
-                filtered_rows = currentFile[currentFile['Event Index'] == 124].copy() # info: every now and then the 125th event is missing
+                filtered_rows = currentFile[currentFile['Event Index'] == 124].copy()
                 percentCorrect_RP_Ctx1 += sum(filtered_rows['Store: PercentCorrectRPCtx1'])
                 count_RP_Ctx1 += len(filtered_rows)
                 print('currentFile processed')
@@ -113,7 +113,7 @@ for i in list_testParticipant_month:
                 # percentCorrect_RP_Ctx2 += currentFile['Store: PercentCorrectRPCtx2'][len(currentFile['Store: PercentCorrectRPCtx2'])-3]
                 # count_RP_Ctx2 += 1
 
-                filtered_rows = currentFile[currentFile['Event Index'] == 125].copy()
+                filtered_rows = currentFile[currentFile['Event Index'] == 124].copy()
                 percentCorrect_RP_Ctx2 += sum(filtered_rows['Store: PercentCorrectRPCtx2'])
                 count_RP_Ctx2 += len(filtered_rows)
                 print('currentFile processed')
@@ -122,7 +122,7 @@ for i in list_testParticipant_month:
                 # percentCorrect_WM += currentFile['Store: PercentCorrectWM'][len(currentFile['Store: PercentCorrectWM'])-3]
                 # count_WM += 1
 
-                filtered_rows = currentFile[currentFile['Event Index'] == 125].copy()
+                filtered_rows = currentFile[currentFile['Event Index'] == 124].copy()
                 percentCorrect_WM += sum(filtered_rows['Store: PercentCorrectWM'])
                 count_WM += len(filtered_rows)
                 print('currentFile processed')
@@ -131,12 +131,12 @@ for i in list_testParticipant_month:
                 # percentCorrect_WM_Anti += currentFile['Store: PercentCorrectWMAnti'][len(currentFile['Store: PercentCorrectWMAnti'])-3]
                 # count_WM_Anti += 1
 
-                filtered_rows = currentFile[currentFile['Event Index'] == 125].copy()
+                filtered_rows = currentFile[currentFile['Event Index'] == 124].copy()
                 percentCorrect_WM_Anti += sum(filtered_rows['Store: PercentCorrectWMAnti'])
                 count_WM_Anti += len(filtered_rows)
                 print('currentFile processed')
 
-            if currentFile['Spreadsheet'][0].split('_trials_')[0]  == 'WM_Ctx1': # info: Change to _3stim_trials_ from 8th month again
+            if currentFile['Spreadsheet'][0].split('_trials_')[0]  == 'WM_Ctx1':
                 # percentCorrect_WM_Ctx1 += currentFile['Store: PercentCorrectWMCtx1'][len(currentFile['Store: PercentCorrectWMCtx1'])-3]
                 # count_WM_Ctx1 += 1
 
@@ -286,8 +286,8 @@ for participant in newParticpantList:
     max_date = max(all_x_values)
     date_range = (max_date - min_date) / 6
 
-    x_ticks = [min_date + i * date_range for i in range(8)] # attention: increase with every added month
-    x_labels = ['Start month 2', 'Start month 3', 'Start month 4', 'Start month 5', 'Start month 6', 'Start month 7', 'Start month 8', 'End month 8'] # attention: add month
+    x_ticks = [min_date + i * date_range for i in range(8)] # info: Add one label for every newly added month
+    x_labels = ['Start month 2', 'Start month 3', 'Start month 4', 'Start month 5', 'Start month 6', 'Start month 7', 'Start month 8', 'End month 8']
 
     fs = 18
     plt.legend(loc='center left',fontsize=fs, ncol=2, bbox_to_anchor=(1, 0.5))

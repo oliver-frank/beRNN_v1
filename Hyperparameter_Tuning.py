@@ -49,28 +49,27 @@ best_params = {
     'use_separate_input': [False],  # Wrap the boolean in a list
     'loss_type': ['lsq'],  # Wrap the string in a list
     'optimizer': ['adam'],  # Wrap the string in a list
-    'activation': ['softplus'],  # Wrap the string in a list
+    'activation': ['relu'],  # Wrap the string in a list
     'tau': [100],  # Wrap the integer in a list
     'dt': [20],  # Wrap the integer in a list
     'sigma_rec': [0.05],
     'sigma_x': [0.01],
     'w_rec_init': ['randortho'],  # Wrap the string in a list
-    'l1_h': [0],  # Wrap the integer in a list
-    'l2_h': [0.0001], # .00001
-    'l1_weight': [0],  # Wrap the integer in a list
-    'l2_weight': [0.0001], # .00001
+    'l1_h': [0.0001,0.00005,0.00001],  # Wrap the integer in a list
+    'l2_h': [0.0001,0.00005,0.00001], # .00001
+    'l1_weight': [0.0001,0.00005,0.00001],  # Wrap the integer in a list
+    'l2_weight': [0.0001,0.00005,0.00001], # .00001
     'l2_weight_init': [0],
     'p_weight_train': [None],  # Wrap None in a list
-    'learning_rate': [0.0001],  # .001
-    'n_rnn': [256], # 512
+    'learning_rate': [0.001],  # .001
+    'n_rnn': [512], # 512
     'c_mask_responseValue': [5.],
-    'monthsConsidered': [['2', '3', '4', '5', '6', '7', '8']]  # Already a list
+    'monthsConsidered': [['2','3','4'],['4','5','6'],['6','7','8'], ['2','3','4','5','6','7','8']]  # Already a list
 }
-
-# # Randomly sample a chosen selection combinations
+# # Randomly sample combinations
 # sampled_combinations = create_param_combinations(best_params, 20)
 
-# Randomly sample a chosen selection combinations
+# Create one combination and repeat it according to sample_size
 sampled_repeated_combinations = create_repeated_param_combinations(best_params, 5)
 
 
@@ -87,13 +86,13 @@ for params in sampled_repeated_combinations: # info: either sampled_combinations
 
     # Data paths for different server
     # preprocessedData_path = os.path.join('W:\\group_csp\\analyses\\oliver.frank\\Data', participant,'PreprocessedData_wResp_ALL')
-    # preprocessedData_path = os.path.join('/zi/home/oliver.frank/Desktop/RNN/multitask_BeRNN-main/', participant, 'PreprocessedData_wResp_ALL')
+    # preprocessedData_path = os.path.join('/data', participant, 'PreprocessedData_wResp_ALL')
     preprocessedData_path = os.path.join('/pandora/home/oliver.frank/01_Projects/RNN/multitask_BeRNN-main', participant, 'PreprocessedData_wResp_ALL')
 
     model = 'Model_' + str(model_number) + '_' + participant + '_Month_' + monthsConsidered[0] + '-' + monthsConsidered[-1]
     # Model directories for different server
     # model_dir = os.path.join('W:\\group_csp\\analyses\\oliver.frank\\BeRNN_models\\BeRNN_01_HPT01', model)
-    # model_dir = os.path.join('/zi/home/oliver.frank/Desktop/RNN/multitask_BeRNN-main/BeRNN_01_HPT04', model)
+    # model_dir = os.path.join('/data/BeRNN_01_HPT04', model)
     model_dir = os.path.join('/pandora/home/oliver.frank/01_Projects/RNN/multitask_BeRNN-main/BeRNN_03_HPT03', model)
 
     # Define probability of each task being trained
@@ -117,7 +116,7 @@ for params in sampled_repeated_combinations: # info: either sampled_combinations
 
     # Function to split the files
     def split_files(files, split_ratio=0.8):
-        random.seed(42) # info: add seed to always shuffle similiar - would be good for NetworkAnalysis
+        # random.seed(42) # info: add seed to always shuffle similiar - would be good for NetworkAnalysis
         random.shuffle(files)
         split_index = int(len(files) * split_ratio)
         return files[:split_index], files[split_index:]

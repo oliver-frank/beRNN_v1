@@ -24,11 +24,15 @@ from analysis import clustering #, variance
 import Tools
 from Tools import rule_name
 
+selected_hp_keys = ['rnn_type', 'activation', 'tau', 'dt', 'sigma_rec', 'sigma_x', 'w_rec_init', 'l1_h', 'l2_h', \
+                    'l1_weight', 'l2_weight', 'l2_weight_init', 'learning_rate', 'n_rnn', 'c_mask_responseValue',
+                    'monthsConsidered']  # Replace with the keys you want
+
 ########################################################################################################################
-# Pre-Allocation of variables and models to be examined (+ definition of one global function)
+# info: Pre-Allocation of variables and models to be examined (+ definition of one global function)
 ########################################################################################################################
-folderPath = 'W:\\group_csp\\analyses\\oliver.frank\\BeRNN_models\\BeRNN_02_fR'
-figurePath = 'W:\\group_csp\\analyses\\oliver.frank\\BeRNN_models\\Visuals\\Performance\\BeRNN_03_HPT_03'
+folderPath = 'W:\\group_csp\\analyses\\oliver.frank\\BeRNN_models\\BeRNN_02_fR\\modelBatch_01_BeRNN_02'
+figurePath = 'W:\\group_csp\\analyses\\oliver.frank\\BeRNN_models\\Visuals\\Performance\\BeRNN_02_fR\\modelBatch_01_BeRNN_02'
 
 # Check if the directory exists
 if not os.path.exists(figurePath):
@@ -43,21 +47,6 @@ model_list = []
 for file in files:
     # if any(include in file for include in ['Model_1_', 'Model_6_']):
     model_list.append(os.path.join(folderPath,file))
-
-selected_hp_keys = ['rnn_type', 'activation', 'tau', 'dt', 'sigma_rec', 'sigma_x', 'w_rec_init', 'l1_h', 'l2_h', \
-                    'l1_weight', 'l2_weight', 'l2_weight_init', 'learning_rate', 'n_rnn', 'c_mask_responseValue',
-                    'monthsConsidered']  # Replace with the keys you want
-
-model_list = ['W:\\group_csp\\analyses\\oliver.frank\\BeRNN_models\\BeRNN_03_HPT_03\\Model_41_BeRNN_03_Month_2-8',
-              'W:\\group_csp\\analyses\\oliver.frank\\BeRNN_models\\BeRNN_03_HPT_03\\Model_46_BeRNN_03_Month_2-8',
-              'W:\\group_csp\\analyses\\oliver.frank\\BeRNN_models\\BeRNN_03_HPT_03\\Model_51_BeRNN_03_Month_2-8',
-              'W:\\group_csp\\analyses\\oliver.frank\\BeRNN_models\\BeRNN_03_HPT_03\\Model_56_BeRNN_03_Month_2-8',
-              'W:\\group_csp\\analyses\\oliver.frank\\BeRNN_models\\BeRNN_03_HPT_03\\Model_61_BeRNN_03_Month_2-8',
-              'W:\\group_csp\\analyses\\oliver.frank\\BeRNN_models\\BeRNN_03_HPT_03\\Model_66_BeRNN_03_Month_2-8'] # ,
-#               'W:\\group_csp\\analyses\\oliver.frank\\BeRNN_models\\BeRNN_02_fR\\Model_1_BeRNN_02_Month_2-8',
-#               'W:\\group_csp\\analyses\\oliver.frank\\BeRNN_models\\BeRNN_03_fR\\Model_1_BeRNN_03_Month_2-8',
-#               'W:\\group_csp\\analyses\\oliver.frank\\BeRNN_models\\BeRNN_05_fR\\Model_1_BeRNN_05_Month_2-8',
-#               'W:\\group_csp\\analyses\\oliver.frank\\BeRNN_models\\BeRNN_05_fR\\Model_1_BeRNN_05_Month_2-8'] # info: If only one network should be examined
 
 def smoothed(data, window_size):
     smoothed_data = np.convolve(data, np.ones(window_size) / window_size, mode='valid')
@@ -240,48 +229,8 @@ for model_dir in model_list:
 
 
 ########################################################################################################################
-# Topological Markers - Individual network
-########################################################################################################################
-def compute_n_cluster(model_dir, mode, monthsConsidered):
-    # hp = Tools.load_hp(model_dir)
-    # try:
-    log = Tools.load_log(model_dir)
-    analysis = clustering.Analysis(model_dir, mode, monthsConsidered, 'rule')
-    # Plots from instance methods in class
-    # analysis.plot_cluster_score(show)
-    # analysis.plot_variance(model_dir, mode)
-    analysis.plot_similarity_matrix(model_dir, mode)
-    # analysis.plot_2Dvisualization(model_dir, mode, show)
-    # analysis.plot_example_unit(show)
-    # analysis.plot_connectivity_byclusters_WrecOnly(model_dir, mode)
-
-    log['n_cluster'] = analysis.n_cluster
-    log['model_dir'] = model_dir
-    Tools.save_log(log)
-    # except IOError:
-    #
-
-# Apply functions on individual models
-for model_dir in model_list:
-    months = model_dir.split('_')[-1].split('-')
-    monthsConsidered = []
-    for i in range(int(months[0]), int(months[1]) + 1):
-        monthsConsidered.append(str(i))
-    # Load hp
-    currentHP = Tools.load_hp(model_dir)
-
-    mode = 'Evaluation'
-    compute_n_cluster(model_dir, mode, monthsConsidered)
-
-
-
-
-
-
-########################################################################################################################
 # Performance - Group of networks
 ########################################################################################################################
-# Attention: A difference has to be made between eval and test on the plot!
 def aggregate_performance_eval_data(model_list, tasks):
     aggregated_costs = {task: [] for task in tasks}
     aggregated_performances = {task: [] for task in tasks}
@@ -431,8 +380,75 @@ plot_aggregated_performance(model_list, mode, tasks, figurePath)
 
 
 
+
+
+
 ########################################################################################################################
-# Topological Markers - Individual network
+# Cosine Similarity - Individual networks
+########################################################################################################################
+def compute_similarity(model_list, monthsConsidered):
+    mode = 'Evaluation'
+    for model_dir in model_list:
+        analysis = clustering.Analysis(model_dir, mode, monthsConsidered, 'rule')
+        similarity = analysis.get_similarity()  # Compute similarity
+
+        # Set up the figure
+        fig = plt.figure(figsize=(10, 10))
+
+        # Create the main similarity matrix plot
+        matrix_left = 0.1
+        matrix_bottom = 0.3
+        matrix_width = 0.6
+        matrix_height = 0.6
+
+        ax_matrix = fig.add_axes([matrix_left, matrix_bottom, matrix_width, matrix_height])
+        im = ax_matrix.imshow(similarity, cmap='coolwarm', interpolation='nearest', vmin=-1, vmax=1)
+
+        # Add title
+        subject = '_'.join(model_dir.split("\\")[-1].split('_')[0:4])
+        ax_matrix.set_title(f'Functional Cosine Similarity - {subject}', fontsize=22, pad=20)
+        # Add x-axis and y-axis labels
+        ax_matrix.set_xlabel('Hidden units', fontsize=16, labelpad=15)
+        ax_matrix.set_ylabel('Hidden units', fontsize=16, labelpad=15)
+
+        # Remove x and y ticks
+        ax_matrix.set_xticks([])  # Disable x-ticks
+        ax_matrix.set_yticks([])  # Disable y-ticks
+
+        # Create the colorbar on the right side, aligned with the matrix
+        colorbar_left = matrix_left + matrix_width + 0.02
+        colorbar_width = 0.03
+
+        ax_cb = fig.add_axes([colorbar_left, matrix_bottom, colorbar_width, matrix_height])
+        cb = plt.colorbar(im, cax=ax_cb)
+        cb.set_ticks([-1, 1])
+        cb.outline.set_linewidth(0.5)
+        cb.set_label('Similarity', fontsize=18, labelpad=0)
+
+        # # Set the title above the similarity matrix, centered
+        # if mode == 'Training':
+        #     title = '_'.join(model_dir.split("\\")[-1].split('_')[0:4]) + '_TRAINING'
+        # elif mode == 'Evaluation':
+        #     title = '_'.join(model_dir.split("\\")[-1].split('_')[0:4]) + '_TEST'
+
+        # ax_matrix.set_title(title, fontsize=14, pad=20)
+        # Save the figure with a tight bounding box to ensure alignment
+        save_path = os.path.join('W:\\group_csp\\analyses\\oliver.frank', 'BeRNN_models\\Visuals\\Similarity\\finalReport',
+                                 model_dir.split("\\")[-1] + '_' + 'Similarity' + '.png')
+        plt.savefig(save_path, format='png', dpi=300, bbox_inches='tight')
+        plt.show()
+
+months = model_list[0].split('_')[-1].split('-')
+monthsConsidered = []
+for i in range(int(months[0]), int(months[1]) + 1):
+    monthsConsidered.append(str(i))
+# Apply functions on whole model_list to receive averaged graphs
+compute_similarity(model_list, monthsConsidered)
+
+
+
+########################################################################################################################
+# Cosine Similarity - Multiple networks
 ########################################################################################################################
 def compute_averageSimilarity(model_list, monthsConsidered):
     hp = Tools.load_hp(model_list[0])
@@ -501,5 +517,45 @@ for i in range(int(months[0]), int(months[1]) + 1):
     monthsConsidered.append(str(i))
 # Apply functions on whole model_list to receive averaged graphs
 compute_averageSimilarity(model_list, monthsConsidered)
+
+
+
+
+
+
+# attention: Topological Markers will be implemented soon - networkX module based
+# ########################################################################################################################
+# # Topological Markers - Individual network
+# ########################################################################################################################
+# def compute_n_cluster(model_dir, mode, monthsConsidered):
+#     # hp = Tools.load_hp(model_dir)
+#     # try:
+#     log = Tools.load_log(model_dir)
+#     analysis = clustering.Analysis(model_dir, mode, monthsConsidered, 'rule')
+#     # Plots from instance methods in class
+#     # analysis.plot_cluster_score(show)
+#     # analysis.plot_variance(model_dir, mode)
+#     analysis.plot_similarity_matrix(model_dir, mode)
+#     # analysis.plot_2Dvisualization(model_dir, mode, show)
+#     # analysis.plot_example_unit(show)
+#     # analysis.plot_connectivity_byclusters_WrecOnly(model_dir, mode)
+#
+#     log['n_cluster'] = analysis.n_cluster
+#     log['model_dir'] = model_dir
+#     Tools.save_log(log)
+#     # except IOError:
+#     #
+#
+# # Apply functions on individual models
+# for model_dir in model_list:
+#     months = model_dir.split('_')[-1].split('-')
+#     monthsConsidered = []
+#     for i in range(int(months[0]), int(months[1]) + 1):
+#         monthsConsidered.append(str(i))
+#     # Load hp
+#     currentHP = Tools.load_hp(model_dir)
+#
+#     mode = 'Evaluation'
+#     compute_n_cluster(model_dir, mode, monthsConsidered)
 
 

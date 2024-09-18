@@ -26,9 +26,9 @@ dataFolder = "Data"
 participants = ['BeRNN_03']
 preprocessedData_folder = 'PreprocessedData_wResp_ALL'
 
-# directory = "/zi/flstorage/group_csp/analyses/oliver.frank" # hitkip15
+directory = "/data" # hitkip15
 # directory = "/pandora/home/oliver.frank/01_Projects/RNN/multitask_BeRNN-main" # pandora
-directory = "W:\\group_csp\\analyses\\oliver.frank" # local
+# directory = "W:\\group_csp\\analyses\\oliver.frank" # local
 
 task_counters = {
     "DM": "DM_removedBatches_counter",

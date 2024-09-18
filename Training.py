@@ -50,7 +50,7 @@ def get_default_hp(ruleset):
         # input type: normal, multi
         'in_type': 'normal',
         # Type of RNNs: NonRecurrent, LeakyRNN, LeakyGRU, EILeakyGRU, GRU, LSTM
-        'rnn_type': 'LeakyGRU',
+        'rnn_type': 'LeakyRNN',
         # whether rule and stimulus inputs are represented separately
         'use_separate_input': False,
         # Type of loss functions
@@ -117,7 +117,7 @@ def get_default_hp(ruleset):
     return hp
 
 def split_files(files, split_ratio=0.8):
-    # random.seed(42) # info: add seed to always shuffle similiar - would be good for NetworkAnalysis
+    random.seed(42) # info: add seed to always shuffle similiar - would be good for NetworkAnalysis
     random.shuffle(files)
     split_index = int(len(files) * split_ratio)
     return files[:split_index], files[split_index:]
@@ -442,12 +442,12 @@ if __name__ == '__main__':
 
     # Define data path for different servers
     preprocessedData_path = os.path.join('W:\\group_csp\\analyses\\oliver.frank', dataFolder, participant,'PreprocessedData_wResp_ALL')
-    # preprocessedData_path = os.path.join('/zi/flstorage/group_csp/analyses/oliver.frank/Data/', participant, 'PreprocessedData_wResp_ALL')
+    # preprocessedData_path = os.path.join('/data', participant, 'PreprocessedData_wResp_ALL')
     # preprocessedData_path = os.path.join('/pandora/home/oliver.frank/01_Projects/RNN/multitask_BeRNN-main', participant, 'PreprocessedData_wResp_ALL')
 
     # Define model_dir for different servers
     model_dir = os.path.join('W:\\group_csp\\analyses\\oliver.frank\\BeRNN_models', model_name)
-    # model_dir = os.path.join('/zi/home/oliver.frank/Desktop/RNN/multitask_BeRNN-main/BeRNN_Models', model_name)
+    # model_dir = os.path.join('/data', model_name)
     # model_dir = os.path.join('/pandora/home/oliver.frank/01_Projects/RNN/multitask_BeRNN-main/BeRNN_Models', model_name)
     if not os.path.exists(model_dir):
         os.makedirs(model_dir)
