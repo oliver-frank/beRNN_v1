@@ -50,7 +50,7 @@ def get_default_hp(ruleset):
         # input type: normal, multi
         'in_type': 'normal',
         # Type of RNNs: NonRecurrent, LeakyRNN, LeakyGRU, EILeakyGRU, GRU, LSTM
-        'rnn_type': 'LeakyRNN',
+        'rnn_type': 'LeakyGRU',
         # whether rule and stimulus inputs are represented separately
         'use_separate_input': False,
         # Type of loss functions
@@ -58,7 +58,7 @@ def get_default_hp(ruleset):
         # Optimizer
         'optimizer': 'adam',
         # Type of activation runctions, relu, softplus, tanh, elu, linear
-        'activation': 'softplus',
+        'activation': 'relu',
         # Time constant (ms)
         'tau': 100,
         # discretization time step (ms)
@@ -72,11 +72,11 @@ def get_default_hp(ruleset):
         # leaky_rec weight initialization, diag, randortho, randgauss
         'w_rec_init': 'randortho',
         # a default weak regularization prevents instability (regularizing with absolute value of magnitude of coefficients, leading to sparse features)
-        'l1_h': 0, # info: The higher the amount of hidden_rnn, the stronger the regularization to prevent overfitting
+        'l1_h': 0.0001, # info: The higher the amount of hidden_rnn, the stronger the regularization to prevent overfitting
         # l2 regularization on activity (regularizing with squared value of magnitude of coefficients, decreasing influence of features)
         'l2_h': 0.00001,
         # l2 regularization on weight
-        'l1_weight': 0,
+        'l1_weight': 0.00001,
         # l2 regularization on weight
         'l2_weight': 0.00001,
         # l2 regularization on deviation from initialization
@@ -106,7 +106,7 @@ def get_default_hp(ruleset):
         # name to save
         'save_name': 'test',
         # learning rate
-        'learning_rate': 0.0001, # n_rnn:256 - 0.001; n_rnn:512 - 0.0001; n_rnn:1024 - 0.00007; n_rnn:2048 - 0.00004
+        'learning_rate': 0.001, # n_rnn:256 - 0.001; n_rnn:512 - 0.0001; n_rnn:1024 - 0.00007; n_rnn:2048 - 0.00004
         # c_mask response epoch value - info: How strong is the response epoch taken into account for caclulating error, the higher the more it influences the costs and therefore the parameter changes
         'c_mask_responseValue': 5.,
         # intelligent synapses parameters, tuple (c, ksi) -> Yang et al. only apply these in sequential training
