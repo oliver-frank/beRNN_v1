@@ -86,8 +86,8 @@ for params in sampled_repeated_combinations: # info: either sampled_combinations
 
     # Data paths for different server
     # preprocessedData_path = os.path.join('W:\\group_csp\\analyses\\oliver.frank\\Data', participant,'PreprocessedData_wResp_ALL')
-    # preprocessedData_path = os.path.join('/data', participant, 'PreprocessedData_wResp_ALL')
-    preprocessedData_path = os.path.join('/pandora/home/oliver.frank/01_Projects/RNN/multitask_BeRNN-main', participant, 'PreprocessedData_wResp_ALL')
+    # preprocessedData_path = os.path.join('/data/Data', participant, 'PreprocessedData_wResp_ALL')
+    preprocessedData_path = os.path.join('/pandora/home/oliver.frank/01_Projects/RNN/multitask_BeRNN-main/Data', participant, 'PreprocessedData_wResp_ALL')
 
     model = 'Model_' + str(model_number) + '_' + participant + '_Month_' + monthsConsidered[0] + '-' + monthsConsidered[-1]
     # Model directories for different server

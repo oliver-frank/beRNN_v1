@@ -31,8 +31,8 @@ selected_hp_keys = ['rnn_type', 'activation', 'tau', 'dt', 'sigma_rec', 'sigma_x
 ########################################################################################################################
 # info: Pre-Allocation of variables and models to be examined (+ definition of one global function)
 ########################################################################################################################
-folderPath = 'W:\\group_csp\\analyses\\oliver.frank\\BeRNN_models\\BeRNN_02_fR\\modelBatch_01_BeRNN_02'
-figurePath = 'W:\\group_csp\\analyses\\oliver.frank\\BeRNN_models\\Visuals\\Performance\\BeRNN_02_fR\\modelBatch_01_BeRNN_02'
+folderPath = 'W:\\group_csp\\analyses\\oliver.frank\\BeRNN_models\\BeRNN_03_HPT_03\\modelBatch_03'
+figurePath = 'W:\\group_csp\\analyses\\oliver.frank\\BeRNN_models\\Visuals\\Performance\\BeRNN_03_HPT_03\\modelBatch_03'
 
 # Check if the directory exists
 if not os.path.exists(figurePath):

@@ -74,7 +74,7 @@ def get_default_hp(ruleset):
         # a default weak regularization prevents instability (regularizing with absolute value of magnitude of coefficients, leading to sparse features)
         'l1_h': 0.0001, # info: The higher the amount of hidden_rnn, the stronger the regularization to prevent overfitting
         # l2 regularization on activity (regularizing with squared value of magnitude of coefficients, decreasing influence of features)
-        'l2_h': 0.00001,
+        'l2_h': 0.00001, # info: These values represent lambda which controls the strength of regularization
         # l2 regularization on weight
         'l1_weight': 0.00001,
         # l2 regularization on weight
@@ -435,15 +435,14 @@ def train(model_dir,train_data ,eval_data,hp=None,max_steps=3e7,display_step=500
 ########################################################################################################################
 if __name__ == '__main__':
     # Adjust variables manually as needed
-    dataFolder = "Data"
     model_folder = 'Model'
     participant = 'BeRNN_03'
     model_name = 'Model_TESTAC_BeRNN_03_Month_2-8' # Manually add months considered e.g. 1-7
 
     # Define data path for different servers
-    preprocessedData_path = os.path.join('W:\\group_csp\\analyses\\oliver.frank', dataFolder, participant,'PreprocessedData_wResp_ALL')
-    # preprocessedData_path = os.path.join('/data', participant, 'PreprocessedData_wResp_ALL')
-    # preprocessedData_path = os.path.join('/pandora/home/oliver.frank/01_Projects/RNN/multitask_BeRNN-main', participant, 'PreprocessedData_wResp_ALL')
+    preprocessedData_path = os.path.join('W:\\group_csp\\analyses\\oliver.frank\\Data', participant,'PreprocessedData_wResp_ALL')
+    # preprocessedData_path = os.path.join('/data',dataFolder, participant, 'PreprocessedData_wResp_ALL')
+    # preprocessedData_path = os.path.join('/pandora/home/oliver.frank/01_Projects/RNN/multitask_BeRNN-main/Data', participant, 'PreprocessedData_wResp_ALL')
 
     # Define model_dir for different servers
     model_dir = os.path.join('W:\\group_csp\\analyses\\oliver.frank\\BeRNN_models', model_name)
