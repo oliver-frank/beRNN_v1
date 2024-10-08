@@ -31,8 +31,10 @@ selected_hp_keys = ['rnn_type', 'activation', 'tau', 'dt', 'sigma_rec', 'sigma_x
 ########################################################################################################################
 # info: Pre-Allocation of variables and models to be examined (+ definition of one global function)
 ########################################################################################################################
-folderPath = 'W:\\group_csp\\analyses\\oliver.frank\\BeRNN_models\\BeRNN_03_HPT_03\\modelBatch_03'
-figurePath = 'W:\\group_csp\\analyses\\oliver.frank\\BeRNN_models\\Visuals\\Performance\\BeRNN_03_HPT_03\\modelBatch_03'
+# folderPath = 'C:\\Users\\oliver.frank\\Desktop\\BackUp\\BeRNN_models\\Barna_Models'
+folderPath = 'W:\\group_csp\\analyses\\oliver.frank\\BeRNN_models\\Barna_Models'
+# figurePath = 'C:\\Users\\oliver.frank\\Desktop\\BackUp\\BeRNN_models\\Visuals\\Performance'
+figurePath = 'W:\\group_csp\\analyses\\oliver.frank\\BeRNN_models\\Visuals\\Performance\\Barna_Models'
 
 # Check if the directory exists
 if not os.path.exists(figurePath):
@@ -433,7 +435,9 @@ def compute_similarity(model_list, monthsConsidered):
 
         # ax_matrix.set_title(title, fontsize=14, pad=20)
         # Save the figure with a tight bounding box to ensure alignment
-        save_path = os.path.join('W:\\group_csp\\analyses\\oliver.frank', 'BeRNN_models\\Visuals\\Similarity\\finalReport',
+        # save_path = os.path.join('W:\\group_csp\\analyses\\oliver.frank', 'BeRNN_models\\Visuals\\Similarity\\finalReport',
+        #                          model_dir.split("\\")[-1] + '_' + 'Similarity' + '.png')
+        save_path = os.path.join('C:\\Users\\oliver.frank\\Desktop\\BackUp\\BeRNN_models\\Visuals\\Similarity',
                                  model_dir.split("\\")[-1] + '_' + 'Similarity' + '.png')
         plt.savefig(save_path, format='png', dpi=300, bbox_inches='tight')
         plt.show()

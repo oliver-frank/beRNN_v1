@@ -98,7 +98,7 @@ def get_default_hp(ruleset):
         # number of output units
         'n_output': n_output,
         # number of recurrent units
-        'n_rnn': 512,
+        'n_rnn': 495,
         # random number used for several random initializations
         'rng': np.random.RandomState(seed=0),
         # number of input units
@@ -109,6 +109,8 @@ def get_default_hp(ruleset):
         'learning_rate': 0.001, # n_rnn:256 - 0.001; n_rnn:512 - 0.0001; n_rnn:1024 - 0.00007; n_rnn:2048 - 0.00004
         # c_mask response epoch value - info: How strong is the response epoch taken into account for caclulating error, the higher the more it influences the costs and therefore the parameter changes
         'c_mask_responseValue': 5.,
+        # Structural mask
+        's_mask': None # 'sc1000' info: Make sure n_rnn has the same size as the chosen s_mask
         # intelligent synapses parameters, tuple (c, ksi) -> Yang et al. only apply these in sequential training
         # 'c_intsyn': 0,
         # 'ksi_intsyn': 0,
@@ -223,7 +225,7 @@ def do_eval(sess, model, log, rule_train, eval_data):
 
     return log
 
-def train(model_dir,train_data ,eval_data,hp=None,max_steps=3e7,display_step=500,ruleset='all',rule_trains=None,rule_prob_map=None,seed=0,
+def train(model_dir,train_data ,eval_data,hp=None,max_steps=1e6,display_step=500,ruleset='all',rule_trains=None,rule_prob_map=None,seed=0,
           load_dir=None,trainables=None):
     """Train the network.
 
@@ -272,6 +274,35 @@ def train(model_dir,train_data ,eval_data,hp=None,max_steps=3e7,display_step=500
         rule_prob = np.array([rule_prob_map.get(r, 1.) for r in hp['rule_trains']])
         hp['rule_probs'] = list(rule_prob / np.sum(rule_prob))
     Tools.save_hp(hp, model_dir)
+
+    # info: Create structural mask to multiply with hidden layer
+    if hp['s_mask'] == 'sc1000':
+        import scipy.io
+        # sc1000 = scipy.io.loadmat('C:\\Users\\oliver.frank\\Desktop\\BackUp\\art_BeRNN\\sc1000')
+        sc1000 = scipy.io.loadmat('/zi/home/oliver.frank/Desktop/RNN/multitask_BeRNN-main/sc1000')
+        sc1000_mask = sc1000['mat_zero']
+
+        # info: quadratic mask matrix necessary, maskSize = numberHiddenUnits !
+        maskSize = sc1000_mask.shape[0]
+        for i in range(0, maskSize):
+            for j in range(0, maskSize):
+                sc1000_mask[i, j] = 1 if sc1000_mask[i, j] != 0 else 0
+
+        # import numpy as np
+        # count_ones = np.count_nonzero(sc1000_mask[0,:] == 1) # info: 495 hidden units are trained
+
+        # # info: Visualize the structural matrix
+        # import matplotlib.pyplot as plt
+        #
+        # plt.figure(figsize=(8, 8))
+        # plt.imshow(sc1000_mask, aspect='auto', cmap='viridis')
+        # plt.colorbar()
+        # plt.title("Visualization of a 1000x1000 ndarray")
+        # plt.show()
+
+        hp['s_mask'] = sc1000_mask
+    # elif # fix: Add other structural masks here
+
 
     # Build the model
     model = Model(model_dir, hp=hp)
@@ -434,66 +465,71 @@ def train(model_dir,train_data ,eval_data,hp=None,max_steps=3e7,display_step=500
 # Train model
 ########################################################################################################################
 if __name__ == '__main__':
-    # Adjust variables manually as needed
-    model_folder = 'Model'
-    participant = 'BeRNN_03'
-    model_name = 'Model_TESTAC_BeRNN_03_Month_2-8' # Manually add months considered e.g. 1-7
+    monthsConsidered = ['1','2','3','4','5','6','7','8','9']
+    for month in monthsConsidered:
+        # Adjust variables manually as needed
+        model_folder = 'Model'
+        participant = 'BeRNN_03'
+        model_name = f'Model_noMaskGRU_{participant}_Month_{month}' # Manually add months considered e.g. 1-7
 
-    # Define data path for different servers
-    preprocessedData_path = os.path.join('W:\\group_csp\\analyses\\oliver.frank\\Data', participant,'PreprocessedData_wResp_ALL')
-    # preprocessedData_path = os.path.join('/data',dataFolder, participant, 'PreprocessedData_wResp_ALL')
-    # preprocessedData_path = os.path.join('/pandora/home/oliver.frank/01_Projects/RNN/multitask_BeRNN-main/Data', participant, 'PreprocessedData_wResp_ALL')
+        # Define data path for different servers
+        # preprocessedData_path = os.path.join('C:\\Users\\oliver.frank\\Desktop\\BackUp\\BeRNN_models', participant,'PreprocessedData_wResp_ALL')
+        # preprocessedData_path = os.path.join('W:\\group_csp\\analyses\\oliver.frank\\Data', participant,'PreprocessedData_wResp_ALL')
+        # preprocessedData_path = os.path.join('/data/Data', participant, 'PreprocessedData_wResp_ALL')
+        preprocessedData_path = os.path.join('/pandora/home/oliver.frank/01_Projects/RNN/multitask_BeRNN-main/Data', participant, 'PreprocessedData_wResp_ALL')
 
-    # Define model_dir for different servers
-    model_dir = os.path.join('W:\\group_csp\\analyses\\oliver.frank\\BeRNN_models', model_name)
-    # model_dir = os.path.join('/data', model_name)
-    # model_dir = os.path.join('/pandora/home/oliver.frank/01_Projects/RNN/multitask_BeRNN-main/BeRNN_Models', model_name)
-    if not os.path.exists(model_dir):
-        os.makedirs(model_dir)
+        # Define model_dir for different servers
+        # model_dir = os.path.join('C:\\Users\\oliver.frank\\Desktop\\BackUp\\BeRNN_models\\Barna_Models', model_name)
+        # model_dir = os.path.join('W:\\group_csp\\analyses\\oliver.frank\\BeRNN_models', model_name)
+        # model_dir = os.path.join('/data', model_name)
+        model_dir = os.path.join('/pandora/home/oliver.frank/01_Projects/RNN/multitask_BeRNN-main/BeRNN_Models', model_name)
 
-    # Define months taken into account for model training
-    months = model_name.split('_')[-1].split('-')
-    monthsConsidered = []
-    for i in range(int(months[0]), int(months[1]) + 1):
-        monthsConsidered.append(str(i))
+        if not os.path.exists(model_dir):
+            os.makedirs(model_dir)
 
-    # Define probability of each task being trained
-    rule_prob_map = {"DM": 1,"DM_Anti": 1,"EF": 1,"EF_Anti": 1,"RP": 1,"RP_Anti": 1,"RP_Ctx1": 1,"RP_Ctx2": 1,"WM": 1,"WM_Anti": 1,"WM_Ctx1": 1,"WM_Ctx2": 1}
+        # # Define months taken into account for model training
+        # months = model_name.split('_')[-1].split('-')
+        # monthsConsidered = []
+        # for i in range(int(months[0]), int(months[1]) + 1):
+        #     monthsConsidered.append(str(i))
 
-    # Split the data into training and test data -----------------------------------------------------------------------
-    # List of the subdirectories
-    subdirs = [os.path.join(preprocessedData_path, d) for d in os.listdir(preprocessedData_path) if os.path.isdir(os.path.join(preprocessedData_path, d))]
+        # Define probability of each task being trained
+        rule_prob_map = {"DM": 1,"DM_Anti": 1,"EF": 1,"EF_Anti": 1,"RP": 1,"RP_Anti": 1,"RP_Ctx1": 1,"RP_Ctx2": 1,"WM": 1,"WM_Anti": 1,"WM_Ctx1": 1,"WM_Ctx2": 1}
 
-    # Initialize dictionaries to store training and evaluation data
-    train_data = {}
-    eval_data = {}
+        # Split the data into training and test data -----------------------------------------------------------------------
+        # List of the subdirectories
+        subdirs = [os.path.join(preprocessedData_path, d) for d in os.listdir(preprocessedData_path) if os.path.isdir(os.path.join(preprocessedData_path, d))]
 
-    for subdir in subdirs:
-        # Collect all file triplets in the current subdirectory
-        file_triplets = []
-        for file in os.listdir(subdir):
-            if file.endswith('Input.npy'):
-                # # III: Exclude files with specific substrings in their names
-                # if any(exclude in file for exclude in ['Randomization', 'Segmentation', 'Mirrored', 'Rotation']):
-                #     continue
-                # # Include only files that contain any of the months in monthsConsidered
-                # if not any(month in file for month in monthsConsidered):
-                #     continue
-                # Add all necessary files to triplets
-                base_name = file.split('Input')[0]
-                input_file = os.path.join(subdir, base_name + 'Input.npy')
-                yloc_file = os.path.join(subdir, base_name + 'yLoc.npy')
-                output_file = os.path.join(subdir, base_name + 'Output.npy')
-                file_triplets.append((input_file, yloc_file, output_file))
+        # Initialize dictionaries to store training and evaluation data
+        train_data = {}
+        eval_data = {}
 
-            # Split the file triplets
-            train_files, eval_files = split_files(file_triplets)
+        for subdir in subdirs:
+            # Collect all file triplets in the current subdirectory
+            file_triplets = []
+            for file in os.listdir(subdir):
+                if file.endswith('Input.npy'):
+                    # # III: Exclude files with specific substrings in their names
+                    # if any(exclude in file for exclude in ['Randomization', 'Segmentation', 'Mirrored', 'Rotation']):
+                    #     continue
+                    # Include only files that contain any of the months in monthsConsidered
+                    if month not in file:
+                        continue
+                    # Add all necessary files to triplets
+                    base_name = file.split('Input')[0]
+                    input_file = os.path.join(subdir, base_name + 'Input.npy')
+                    yloc_file = os.path.join(subdir, base_name + 'yLoc.npy')
+                    output_file = os.path.join(subdir, base_name + 'Output.npy')
+                    file_triplets.append((input_file, yloc_file, output_file))
 
-            # Store the results in the dictionaries
-            train_data[subdir] = train_files
-            eval_data[subdir] = eval_files
+                # Split the file triplets
+                train_files, eval_files = split_files(file_triplets)
 
-    # Start Training ---------------------------------------------------------------------------------------------------
-    train(model_dir=model_dir, rule_prob_map=rule_prob_map, train_data = train_data, eval_data = eval_data)
+                # Store the results in the dictionaries
+                train_data[subdir] = train_files
+                eval_data[subdir] = eval_files
+
+        # Start Training ---------------------------------------------------------------------------------------------------
+        train(model_dir=model_dir, rule_prob_map=rule_prob_map, train_data = train_data, eval_data = eval_data)
 
 

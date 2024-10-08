@@ -127,7 +127,8 @@ class LeakyRNNCell(RNNCell):
                  w_rec_init='diag',
                  rng=None,
                  reuse=None,
-                 name=None):
+                 name=None,
+                 mask=None):
         super(LeakyRNNCell, self).__init__(_reuse=reuse, name=name)
 
         # Inputs must be 2-dimensional.
@@ -135,6 +136,8 @@ class LeakyRNNCell(RNNCell):
 
         self._num_units = num_units
         self._w_rec_init = w_rec_init
+        self.mask = mask
+
         self._reuse = reuse
 
         if activation == 'softplus':
@@ -175,7 +178,7 @@ class LeakyRNNCell(RNNCell):
         w_in0 = (self.rng.randn(n_input, n_hidden) /
                  np.sqrt(n_input) * self._w_in_start)
 
-        testMatrix = rng.randn(77, 256) / np.sqrt(77)
+        # testMatrix = rng.randn(77, 256) / np.sqrt(77)
 
         if self._w_rec_init == 'diag':
             w_rec0 = self._w_rec_start*np.eye(n_hidden)
@@ -208,6 +211,15 @@ class LeakyRNNCell(RNNCell):
                 'kernel',
                 shape=[input_depth + self._num_units, self._num_units],
                 initializer=self._initializer)
+
+        # Split the candidate weights into input and recurrent parts
+        w_in, w_rec = tf.split(self._kernel, [input_depth, self._num_units], axis=0)
+        # info: Apply structural mask only to the recurrent part (w_rec)
+        if isinstance(self.mask, np.ndarray):
+            w_rec = w_rec * self.mask
+        # Concatenate the input and masked recurrent weights back together
+        self._kernel = tf.concat([w_in, w_rec], axis=0)
+
         self._bias = self.add_variable(
                 'bias',
                 shape=[self._num_units],
@@ -258,7 +270,8 @@ class LeakyGRUCell(RNNCell):
                reuse=None,
                kernel_initializer=None,
                bias_initializer=None,
-               name=None):
+               name=None,
+               mask=None):
     super(LeakyGRUCell, self).__init__(_reuse=reuse, name=name)
 
     # Inputs must be 2-dimensional.
@@ -268,6 +281,7 @@ class LeakyGRUCell(RNNCell):
     self._activation = activation or math_ops.tanh
     self._kernel_initializer = kernel_initializer
     self._bias_initializer = bias_initializer
+    self.mask = mask
 
     self._alpha = alpha
     self._sigma = np.sqrt(2 / alpha) * sigma_rec
@@ -292,6 +306,7 @@ class LeakyGRUCell(RNNCell):
           "gates/%s" % 'kernel',
           shape=[input_depth + self._num_units, 2 * self._num_units],
           initializer=self._kernel_initializer)
+
       self._gate_bias = self.add_variable(
           "gates/%s" % 'bias',
           shape=[2 * self._num_units],
@@ -299,10 +314,20 @@ class LeakyGRUCell(RNNCell):
               self._bias_initializer
               if self._bias_initializer is not None
               else init_ops.constant_initializer(1.0, dtype=self.dtype)))
+
       self._candidate_kernel = self.add_variable(
           "candidate/%s" % 'kernel',
           shape=[input_depth + self._num_units, self._num_units],
           initializer=self._kernel_initializer)
+
+      # Split the candidate weights into input and recurrent parts
+      w_in, w_rec = tf.split(self._candidate_kernel, [input_depth, self._num_units], axis=0)
+      # info: Apply structural mask only to the recurrent part (w_rec)
+      if isinstance(self.mask, np.ndarray):
+          w_rec = w_rec * self.mask
+      # Concatenate the input and masked recurrent weights back together
+      self._candidate_kernel = tf.concat([w_in, w_rec], axis=0)
+
       self._candidate_bias = self.add_variable(
           "candidate/%s" % 'bias',
           shape=[self._num_units],
@@ -358,7 +383,8 @@ class LeakyRNNCellSeparateInput(RNNCell):
                  w_rec_init='diag',
                  rng=None,
                  reuse=None,
-                 name=None):
+                 name=None,
+                 mask=None):
         super(LeakyRNNCellSeparateInput, self).__init__(_reuse=reuse, name=name)
 
         # Inputs must be 2-dimensional.
@@ -366,6 +392,8 @@ class LeakyRNNCellSeparateInput(RNNCell):
 
         self._num_units = num_units
         self._w_rec_init = w_rec_init
+        self.mask = mask
+
         self._reuse = reuse
 
         if activation == 'softplus':
@@ -415,6 +443,11 @@ class LeakyRNNCellSeparateInput(RNNCell):
                 'kernel',
                 shape=[self._num_units, self._num_units],
                 initializer=self._initializer)
+
+        # info: Apply structural mask
+        if isinstance(self.mask, np.ndarray):
+            self._recurrent_kernel = self._recurrent_kernel * self.mask
+
         self._bias = self.add_variable(
                 'bias',
                 shape=[self._num_units],
@@ -571,16 +604,17 @@ class Model(object):
                                     sigma_rec=hp['sigma_rec'],
                                     activation=hp['activation'],
                                     w_rec_init=hp['w_rec_init'],
-                                    rng=self.rng)
+                                    rng=self.rng,
+                                    mask=hp['s_mask'])
             elif hp['rnn_type'] == 'LeakyGRU':
                 cell = LeakyGRUCell(
                     n_rnn, hp['alpha'],
-                    sigma_rec=hp['sigma_rec'], activation=f_act)
+                    sigma_rec=hp['sigma_rec'], activation=f_act, mask=hp['s_mask'])
             elif hp['rnn_type'] == 'LSTM':
                 cell = tf.contrib.rnn.LSTMCell(n_rnn, activation=f_act)
 
             elif hp['rnn_type'] == 'GRU':
-                cell = tf.contrib.rnn.GRUCell(n_rnn, activation=f_act)
+                cell = tf.contrib.rnn.GRUCell(n_rnn, activation=f_act, mask=hp['s_mask'])
             else:
                 raise NotImplementedError("""rnn_type must be one of LeakyRNN,
                         LeakyGRU, EILeakyGRU, LSTM, GRU
