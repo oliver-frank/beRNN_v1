@@ -183,7 +183,7 @@ class Analysis(object):
             plt.savefig('figure/'+fig_name+'.pdf', transparent=True)
         plt.show()
 
-    def plot_variance(self, model_dir, mode, save_name=None):
+    def plot_variance(self, model_dir, figurePath, mode, save_name=None):
         labels = self.labels
         # Plotting Variance --------------------------------------------------------------------------------------------
         # Plot Normalized Variance
@@ -202,7 +202,7 @@ class Analysis(object):
             rect_cb = [0.87, 0.1, 0.03, 0.85]
             tick_names = [rule_name[key[0]]+' '+key[1] for key in self.keys]
             fs = 5
-            labelpad = 20
+            labelpad = 18
         else:
             raise ValueError
 
@@ -214,7 +214,7 @@ class Analysis(object):
 
         plt.yticks(range(len(tick_names)), tick_names,rotation=0, va='center', fontsize=fs)
         plt.xticks([])
-        plt.title('Units', fontsize=7, y=0.97)
+        plt.title('Units', fontsize=7, y=1.0)
         plt.xlabel('Clusters', fontsize=7, labelpad=labelpad)
         ax.tick_params('both', length=0)
         for loc in ['bottom','top','left','right']:
@@ -245,14 +245,33 @@ class Analysis(object):
             ax.set_ylim([-1, 1])
             ax.axis('off')
 
-        plt.savefig(os.path.join('W:\\group_csp\\analyses\\oliver.frank', 'BeRNN_models\\Visuals\\Variance\\finalReport',model_dir.split("\\")[-1] + '_' + mode + '.png'), \
-                    format='png', dpi=300, bbox_inches='tight', pad_inches=0.1)
+        plt.savefig(os.path.join(figurePath, model_dir.split("\\")[-1] + '_' + 'taskVariance' + '.png'), format='png', dpi=300, bbox_inches='tight', pad_inches=0.1)
         plt.show()
+
+
+    def get_dotProductCorrelation(self):
+        # Center and normalize the data
+        data_centered = self.h_normvar_all - self.h_normvar_all.mean(axis=1, keepdims=True)
+        data_normalized = data_centered / np.linalg.norm(data_centered, axis=1, keepdims=True)
+
+        corr_coef = np.dot(data_normalized, data_normalized.T)
+
+        return corr_coef
 
     def get_similarity(self):
         # labels = self.labels
         from sklearn.metrics.pairwise import cosine_similarity
-        similarity = cosine_similarity(self.h_normvar_all)  # Compute similarity
+
+        # # info: Standardize variance - This is not very reasonable as it will partly vanish the distribution representation of the variance values
+        # # Compute the global mean and standard deviation
+        # global_mean = self.h_var_all.mean()
+        # global_std = self.h_var_all.std()
+        # # Standardize the data over all values
+        # h_var_all_standardized = (self.h_var_all - global_mean) / global_std
+        # similarity = cosine_similarity(h_var_all_standardized)  # Compute similarity based on standardized data
+
+        # info: Use normalized variance
+        similarity = cosine_similarity(self.h_normvar_all)  # Compute similarity based on standardized data
         return similarity
 
     def plot_similarity_matrix(self, model_dir, mode):
@@ -546,6 +565,60 @@ class Analysis(object):
                          model_dir.split("\\")[-1] + '_' + mode + '.png'), \
             format='png', dpi=300, bbox_inches='tight', pad_inches=0.1)
         plt.show()
+
+    def easy_connectivity_plot(self, model_dir):
+        """A simple plot of network connectivity."""
+
+        model = Model(model_dir)
+        with tf.Session() as sess:
+            model.restore()
+            # get all connection weights and biases as tensorflow variables
+            var_list = model.var_list
+            # evaluate the parameters after training
+            params = [sess.run(var) for var in var_list]
+            # get name of each variable
+            names = [var.name for var in var_list]
+
+        # Plot weights
+        for param, name in zip(params, names):
+            if len(param.shape) != 2:
+                continue
+
+            vmax = np.max(abs(param)) * 0.7
+            plt.figure()
+            # notice the transpose
+            plt.imshow(param.T, aspect='auto', cmap='bwr', vmin=-vmax, vmax=vmax,
+                       interpolation='none', origin='lower')
+            plt.title(name)
+            plt.colorbar()
+            plt.xlabel('From')
+            plt.ylabel('To')
+            plt.show()
+
+    def easy_connectivity_plot_hiddenUnitsOnly(self, model_dir):
+        """A simple plot of network connectivity."""
+
+        model = Model(model_dir)
+        with tf.Session() as sess:
+            model.restore()
+            # get all connection weights and biases as tensorflow variables
+            var_list = model.var_list
+            # evaluate the parameters after training
+            params = [sess.run(var) for var in var_list]
+            # get name of each variable
+            names = [var.name for var in var_list]
+
+            name = names[2]
+            params = params[2][77:,:]
+
+            # params_centered = params - params.mean(axis=1, keepdims=True)
+            # params_normalized = params_centered / np.linalg.norm(params_centered, axis=1, keepdims=True)
+
+            corr_coef = np.dot(params, params.T)
+
+            return corr_coef
+
+
 
 if __name__ == '__main__':
     pass

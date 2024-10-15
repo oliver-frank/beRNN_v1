@@ -98,7 +98,7 @@ def get_default_hp(ruleset):
         # number of output units
         'n_output': n_output,
         # number of recurrent units
-        'n_rnn': 495,
+        'n_rnn': 128, # If trained with sc100mask: 495
         # random number used for several random initializations
         'rng': np.random.RandomState(seed=0),
         # number of input units
@@ -225,7 +225,7 @@ def do_eval(sess, model, log, rule_train, eval_data):
 
     return log
 
-def train(model_dir,train_data ,eval_data,hp=None,max_steps=1e6,display_step=500,ruleset='all',rule_trains=None,rule_prob_map=None,seed=0,
+def train(model_dir,train_data ,eval_data,hp=None,max_steps=3e6,display_step=500,ruleset='all',rule_trains=None,rule_prob_map=None,seed=0,
           load_dir=None,trainables=None):
     """Train the network.
 
@@ -323,6 +323,7 @@ def train(model_dir,train_data ,eval_data,hp=None,max_steps=1e6,display_step=500
     with tf.Session() as sess:
         if load_dir is not None:
             model.restore(load_dir)  # complete restore
+            print('model restored')
         else:
             # Assume everything is restored
             sess.run(tf.global_variables_initializer())
@@ -465,71 +466,76 @@ def train(model_dir,train_data ,eval_data,hp=None,max_steps=1e6,display_step=500
 # Train model
 ########################################################################################################################
 if __name__ == '__main__':
-    monthsConsidered = ['1','2','3','4','5','6','7','8','9']
-    for month in monthsConsidered:
-        # Adjust variables manually as needed
-        model_folder = 'Model'
-        participant = 'BeRNN_03'
-        model_name = f'Model_noMaskGRU_{participant}_Month_{month}' # Manually add months considered e.g. 1-7
+    for modelNumber in range(0,5): # Just do everything 10 times
 
-        # Define data path for different servers
-        # preprocessedData_path = os.path.join('C:\\Users\\oliver.frank\\Desktop\\BackUp\\BeRNN_models', participant,'PreprocessedData_wResp_ALL')
-        # preprocessedData_path = os.path.join('W:\\group_csp\\analyses\\oliver.frank\\Data', participant,'PreprocessedData_wResp_ALL')
-        # preprocessedData_path = os.path.join('/data/Data', participant, 'PreprocessedData_wResp_ALL')
-        preprocessedData_path = os.path.join('/pandora/home/oliver.frank/01_Projects/RNN/multitask_BeRNN-main/Data', participant, 'PreprocessedData_wResp_ALL')
+        monthsConsidered = ['1','2','3','4','5','6','7','8','9']
+        load_dir = None
+        for month in monthsConsidered:
+            # Adjust variables manually as needed
+            model_folder = 'Model'
+            participant = 'BeRNN_05'
+            model_name = f'Model{modelNumber}_noMaskGRU128cascade4_{participant}_Month_{month}' # Manually add months considered e.g. 1-7
 
-        # Define model_dir for different servers
-        # model_dir = os.path.join('C:\\Users\\oliver.frank\\Desktop\\BackUp\\BeRNN_models\\Barna_Models', model_name)
-        # model_dir = os.path.join('W:\\group_csp\\analyses\\oliver.frank\\BeRNN_models', model_name)
-        # model_dir = os.path.join('/data', model_name)
-        model_dir = os.path.join('/pandora/home/oliver.frank/01_Projects/RNN/multitask_BeRNN-main/BeRNN_Models', model_name)
+            # Define data path for different servers
+            # preprocessedData_path = os.path.join('C:\\Users\\oliver.frank\\Desktop\\BackUp\\BeRNN_models', participant,'PreprocessedData_wResp_ALL')
+            # preprocessedData_path = os.path.join('W:\\group_csp\\analyses\\oliver.frank\\Data', participant,'PreprocessedData_wResp_ALL')
+            # preprocessedData_path = os.path.join('/data/Data', participant, 'PreprocessedData_wResp_ALL')
+            preprocessedData_path = os.path.join('/pandora/home/oliver.frank/01_Projects/RNN/multitask_BeRNN-main/Data', participant, 'PreprocessedData_wResp_ALL')
 
-        if not os.path.exists(model_dir):
-            os.makedirs(model_dir)
+            # Define model_dir for different servers
+            # model_dir = os.path.join('C:\\Users\\oliver.frank\\Desktop\\BackUp\\BeRNN_models\\Barna_Models', model_name)
+            # model_dir = os.path.join('W:\\group_csp\\analyses\\oliver.frank\\BeRNN_models\\Barna_Models', model_name)
+            # model_dir = os.path.join('/data', model_name)
+            model_dir = os.path.join('/pandora/home/oliver.frank/01_Projects/RNN/multitask_BeRNN-main/BeRNN_Models/Cascade2', model_name)
 
-        # # Define months taken into account for model training
-        # months = model_name.split('_')[-1].split('-')
-        # monthsConsidered = []
-        # for i in range(int(months[0]), int(months[1]) + 1):
-        #     monthsConsidered.append(str(i))
+            if not os.path.exists(model_dir):
+                os.makedirs(model_dir)
 
-        # Define probability of each task being trained
-        rule_prob_map = {"DM": 1,"DM_Anti": 1,"EF": 1,"EF_Anti": 1,"RP": 1,"RP_Anti": 1,"RP_Ctx1": 1,"RP_Ctx2": 1,"WM": 1,"WM_Anti": 1,"WM_Ctx1": 1,"WM_Ctx2": 1}
+            # # Define months taken into account for model training
+            # months = model_name.split('_')[-1].split('-')
+            # monthsConsidered = []
+            # for i in range(int(months[0]), int(months[1]) + 1):
+            #     monthsConsidered.append(str(i))
 
-        # Split the data into training and test data -----------------------------------------------------------------------
-        # List of the subdirectories
-        subdirs = [os.path.join(preprocessedData_path, d) for d in os.listdir(preprocessedData_path) if os.path.isdir(os.path.join(preprocessedData_path, d))]
+            # Define probability of each task being trained
+            rule_prob_map = {"DM": 1,"DM_Anti": 1,"EF": 1,"EF_Anti": 1,"RP": 1,"RP_Anti": 1,"RP_Ctx1": 1,"RP_Ctx2": 1,"WM": 1,"WM_Anti": 1,"WM_Ctx1": 1,"WM_Ctx2": 1}
 
-        # Initialize dictionaries to store training and evaluation data
-        train_data = {}
-        eval_data = {}
+            # Split the data into training and test data -----------------------------------------------------------------------
+            # List of the subdirectories
+            subdirs = [os.path.join(preprocessedData_path, d) for d in os.listdir(preprocessedData_path) if os.path.isdir(os.path.join(preprocessedData_path, d))]
 
-        for subdir in subdirs:
-            # Collect all file triplets in the current subdirectory
-            file_triplets = []
-            for file in os.listdir(subdir):
-                if file.endswith('Input.npy'):
-                    # # III: Exclude files with specific substrings in their names
-                    # if any(exclude in file for exclude in ['Randomization', 'Segmentation', 'Mirrored', 'Rotation']):
-                    #     continue
-                    # Include only files that contain any of the months in monthsConsidered
-                    if month not in file:
-                        continue
-                    # Add all necessary files to triplets
-                    base_name = file.split('Input')[0]
-                    input_file = os.path.join(subdir, base_name + 'Input.npy')
-                    yloc_file = os.path.join(subdir, base_name + 'yLoc.npy')
-                    output_file = os.path.join(subdir, base_name + 'Output.npy')
-                    file_triplets.append((input_file, yloc_file, output_file))
+            # Initialize dictionaries to store training and evaluation data
+            train_data = {}
+            eval_data = {}
 
-                # Split the file triplets
-                train_files, eval_files = split_files(file_triplets)
+            for subdir in subdirs:
+                # Collect all file triplets in the current subdirectory
+                file_triplets = []
+                for file in os.listdir(subdir):
+                    if file.endswith('Input.npy'):
+                        # # III: Exclude files with specific substrings in their names
+                        # if any(exclude in file for exclude in ['Randomization', 'Segmentation', 'Mirrored', 'Rotation']):
+                        #     continue
+                        # Include only files that contain any of the months in monthsConsidered
+                        if month not in file:
+                            continue
+                        # Add all necessary files to triplets
+                        base_name = file.split('Input')[0]
+                        input_file = os.path.join(subdir, base_name + 'Input.npy')
+                        yloc_file = os.path.join(subdir, base_name + 'yLoc.npy')
+                        output_file = os.path.join(subdir, base_name + 'Output.npy')
+                        file_triplets.append((input_file, yloc_file, output_file))
 
-                # Store the results in the dictionaries
-                train_data[subdir] = train_files
-                eval_data[subdir] = eval_files
+                    # Split the file triplets
+                    train_files, eval_files = split_files(file_triplets)
 
-        # Start Training ---------------------------------------------------------------------------------------------------
-        train(model_dir=model_dir, rule_prob_map=rule_prob_map, train_data = train_data, eval_data = eval_data)
+                    # Store the results in the dictionaries
+                    train_data[subdir] = train_files
+                    eval_data[subdir] = eval_files
+
+            # Start Training ---------------------------------------------------------------------------------------------------
+            train(model_dir=model_dir, rule_prob_map=rule_prob_map, train_data = train_data, eval_data = eval_data, load_dir = load_dir)
+
+            load_dir = model_dir # attention: Comment out if no Cascade training should be applied
 
 
