@@ -3,7 +3,7 @@
 # ########################################################################################################################
 # # Monthly evaluation of task performance for individual participant. Training effect plot shows change of pefromance over
 # # the whole data collection period.
-#
+
 # ########################################################################################################################
 # # Import necessary libraries and modules
 # ########################################################################################################################
@@ -18,10 +18,10 @@ with warnings.catch_warnings():
 ########################################################################################################################
 # Participant list
 
-participant_dir = 'W:\\group_csp\\analyses\\oliver.frank\\Data'
+participant_dir = 'C:\\Users\\oliver.frank\\Desktop\\BackUp\\beRNNmodels'
 participantList = os.listdir(participant_dir)
 
-participant = participantList[4] # choose which particpant to analyze
+participant = participantList[0] # choose which particpant to analyze
 month = '10' # choose which month to analyze
 
 percentCorrect_DM, count_DM = 0, 0

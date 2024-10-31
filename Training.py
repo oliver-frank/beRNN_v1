@@ -98,7 +98,7 @@ def get_default_hp(ruleset):
         # number of output units
         'n_output': n_output,
         # number of recurrent units
-        'n_rnn': 128, # If trained with sc100mask: 495
+        'n_rnn': 1000, # If trained with sc100mask: 495
         # random number used for several random initializations
         'rng': np.random.RandomState(seed=0),
         # number of input units
@@ -110,7 +110,7 @@ def get_default_hp(ruleset):
         # c_mask response epoch value - info: How strong is the response epoch taken into account for caclulating error, the higher the more it influences the costs and therefore the parameter changes
         'c_mask_responseValue': 5.,
         # Structural mask
-        's_mask': None # 'sc1000' info: Make sure n_rnn has the same size as the chosen s_mask
+        's_mask': 'sc1000' # None info: Make sure n_rnn has the same size as the chosen s_mask
         # intelligent synapses parameters, tuple (c, ksi) -> Yang et al. only apply these in sequential training
         # 'c_intsyn': 0,
         # 'ksi_intsyn': 0,
@@ -278,24 +278,24 @@ def train(model_dir,train_data ,eval_data,hp=None,max_steps=3e6,display_step=500
     # info: Create structural mask to multiply with hidden layer
     if hp['s_mask'] == 'sc1000':
         import scipy.io
-        # sc1000 = scipy.io.loadmat('C:\\Users\\oliver.frank\\Desktop\\BackUp\\art_BeRNN\\sc1000')
-        sc1000 = scipy.io.loadmat('/zi/home/oliver.frank/Desktop/RNN/multitask_BeRNN-main/sc1000')
+        sc1000 = scipy.io.loadmat('C:\\Users\\oliver.frank\\Desktop\\BackUp\\art_BeRNN\\sc1000')
+        # sc1000 = scipy.io.loadmat('/zi/home/oliver.frank/Desktop/RNN/multitask_BeRNN-main/sc1000')
         sc1000_mask = sc1000['mat_zero']
 
         # info: quadratic mask matrix necessary, maskSize = numberHiddenUnits !
         maskSize = sc1000_mask.shape[0]
         for i in range(0, maskSize):
             for j in range(0, maskSize):
-                sc1000_mask[i, j] = 1 if sc1000_mask[i, j] != 0 else 0
+                sc1000_mask[i, j] = 1 if sc1000_mask[i, j] > 11 else 0
 
         # import numpy as np
         # count_ones = np.count_nonzero(sc1000_mask[0,:] == 1) # info: 495 hidden units are trained
-
+        #
         # # info: Visualize the structural matrix
         # import matplotlib.pyplot as plt
         #
         # plt.figure(figsize=(8, 8))
-        # plt.imshow(sc1000_mask, aspect='auto', cmap='viridis')
+        # plt.imshow(sc1000_mask, aspect='auto', cmap='coolwarm')
         # plt.colorbar()
         # plt.title("Visualization of a 1000x1000 ndarray")
         # plt.show()
@@ -466,27 +466,27 @@ def train(model_dir,train_data ,eval_data,hp=None,max_steps=3e6,display_step=500
 # Train model
 ########################################################################################################################
 if __name__ == '__main__':
-    for modelNumber in range(0,5): # Just do everything 10 times
+    for modelNumber in range(1,21): # Just do everything 10 times
 
         monthsConsidered = ['1','2','3','4','5','6','7','8','9']
         load_dir = None
         for month in monthsConsidered:
             # Adjust variables manually as needed
             model_folder = 'Model'
-            participant = 'BeRNN_05'
-            model_name = f'Model{modelNumber}_noMaskGRU128cascade4_{participant}_Month_{month}' # Manually add months considered e.g. 1-7
+            participant = 'BeRNN_03'
+            model_name = f'mask128GRU1000cascade{modelNumber}_{participant}_month{month}' # Manually add months considered e.g. 1-7
 
             # Define data path for different servers
             # preprocessedData_path = os.path.join('C:\\Users\\oliver.frank\\Desktop\\BackUp\\BeRNN_models', participant,'PreprocessedData_wResp_ALL')
             # preprocessedData_path = os.path.join('W:\\group_csp\\analyses\\oliver.frank\\Data', participant,'PreprocessedData_wResp_ALL')
-            # preprocessedData_path = os.path.join('/data/Data', participant, 'PreprocessedData_wResp_ALL')
-            preprocessedData_path = os.path.join('/pandora/home/oliver.frank/01_Projects/RNN/multitask_BeRNN-main/Data', participant, 'PreprocessedData_wResp_ALL')
+            preprocessedData_path = os.path.join('/data/data', participant, 'PreprocessedData_wResp_ALL')
+            # preprocessedData_path = os.path.join('/pandora/home/oliver.frank/01_Projects/RNN/multitask_BeRNN-main/Data', participant, 'PreprocessedData_wResp_ALL')
 
             # Define model_dir for different servers
             # model_dir = os.path.join('C:\\Users\\oliver.frank\\Desktop\\BackUp\\BeRNN_models\\Barna_Models', model_name)
             # model_dir = os.path.join('W:\\group_csp\\analyses\\oliver.frank\\BeRNN_models\\Barna_Models', model_name)
-            # model_dir = os.path.join('/data', model_name)
-            model_dir = os.path.join('/pandora/home/oliver.frank/01_Projects/RNN/multitask_BeRNN-main/BeRNN_Models/Cascade2', model_name)
+            model_dir = os.path.join('/data/models', model_name)
+            # model_dir = os.path.join('/pandora/home/oliver.frank/01_Projects/RNN/multitask_BeRNN-main/BeRNN_Models/Cascade2', model_name)
 
             if not os.path.exists(model_dir):
                 os.makedirs(model_dir)
