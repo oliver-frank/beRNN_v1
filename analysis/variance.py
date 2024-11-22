@@ -99,9 +99,9 @@ def _compute_variance_bymodel(model: object, sess: object, mode: str, monthsCons
 
     for task in rules:
         print(task)
-        if mode == 'Training':
+        if mode == 'train':
             data = train_data
-        elif mode == 'Evaluation':
+        elif mode == 'eval':
             data = eval_data
         x, y, y_loc = Tools.load_trials(task, mode, hp['batch_size'], data, False)
         epochs = Tools.find_epochs(x)

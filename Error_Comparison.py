@@ -78,7 +78,7 @@ def visualize_contingency_table(data, task, figure_path, mode, model_dir, ratio_
     # Plot the contingency table with clear annotations
     sns.heatmap(data, annot=True, fmt='.0f', cmap='coolwarm', cbar=True,
                 xticklabels=col_labels, yticklabels=row_labels, ax=ax,
-                linewidths=0, linecolor='black', annot_kws={"fontsize": 22, "color": "white"}, square=True,
+                linewidths=0, linecolor='black', annot_kws={"fontsize": 30, "color": "white"}, square=True,
                 cbar_ax=cax,
                 vmin=0, vmax=100)
 
@@ -117,7 +117,7 @@ def evaluate_model_responses(models, tasks):
         accumulated_data_percentage = None
         model_count = 0
         # modelDirectories
-        figurePath = 'W:\\group_csp\\analyses\\oliver.frank\\BeRNN_models\\Visuals\\Contingency'
+        figurePath = 'W:\\group_csp\\analyses\\oliver.frank\\beRNNmodels\\Visuals\\Contingency'
         # Create directory for saving figures if it doesn't exist
         if not os.path.exists(figurePath):
             os.makedirs(figurePath)
@@ -162,11 +162,10 @@ def get_file_triplets(trial_dir, task, model_dir):
     dir = os.path.join(trial_dir, task)
     npy_files_Input = glob.glob(os.path.join(dir, '*Input.npy'))
     # Filter file_triplets for months taken into account
-    monthsConsidered = list(range(int(model_dir.split('\\')[-1].split('_')[-1].split('-')[0]),
-                                  int(model_dir.split('\\')[-1].split('_')[-1].split('-')[1]) + 1))
-    for i in range(0, len(monthsConsidered)):
-        monthsConsidered[i] = 'month_' + str(monthsConsidered[i])
-    filtered_npy_files_Input = [file for file in npy_files_Input if any(month in file for month in monthsConsidered)]
+    monthsConsidered = model_dir.split('_')[-1]
+
+    monthsConsidered_string = 'month_' + monthsConsidered
+    filtered_npy_files_Input = [file for file in npy_files_Input if monthsConsidered_string in file]
 
     file_triplets = []
     for file in filtered_npy_files_Input:
@@ -194,8 +193,8 @@ def evaluate_task(model_dir, task, file_triplets):
     with tf.Session() as sess:
         model.restore(model_dir)
 
-        for i in range(0, 1000): # Info: Each iteration represents one batch
-            x, y, y_loc, base_name = Tools.load_trials(task, 'Evaluation', 40, file_triplets, True)
+        for i in range(0, 100): # Info: Each iteration represents one batch - fter the spliting most often you only have 4 batches for one month
+            x, y, y_loc, base_name = Tools.load_trials(task, 'eval', 40, file_triplets, True)
             ground_truth = np.load(os.path.join(base_name + 'Response.npy'), allow_pickle=True)
 
             # Sort response data
@@ -224,14 +223,16 @@ def evaluate_task(model_dir, task, file_triplets):
 ########################################################################################################################
 # Model evaluation for chosen tasks
 ########################################################################################################################
-# info: Create several tables for several models
-models_list = [['W:\\group_csp\\analyses\\oliver.frank\\BeRNN_models\\BeRNN_01_fR\\Model_2_BeRNN_01_Month_2-8'],
-               ['W:\\group_csp\\analyses\\oliver.frank\\BeRNN_models\\BeRNN_01_fR\\Model_3_BeRNN_01_Month_2-8',
-                'W:\\group_csp\\analyses\\oliver.frank\\BeRNN_models\\BeRNN_01_fR\\Model_4_BeRNN_01_Month_2-8']]
-# info: Tasks to evaluate
-tasks = ['EF', 'WM']
+directory = 'W:\\group_csp\\analyses\\oliver.frank\\beRNNmodels\\barnaModels\\Cascade1'
+currentModelList = [os.path.join(directory, item) for item in os.listdir(directory)]
+participant = 'BeRNN_05'
+excludedMonth = 'Month_1'
+# Models to evaluate
+models_list = [d for d in currentModelList if participant in d and excludedMonth not in d]
 
-for models in models_list:
-    evaluate_model_responses(models, tasks)
+# Tasks to evaluate
+tasks = ['DM', 'RP', 'EF', 'WM']
+
+evaluate_model_responses(models_list, tasks)
 
 

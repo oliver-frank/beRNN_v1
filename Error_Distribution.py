@@ -39,7 +39,8 @@ def plot_errorDistribution_relative(errors_dict, directory, task, granularity):
     palette = sns.color_palette("coolwarm", len(categories))
 
     # Create the bar chart
-    fig, ax = plt.subplots(figsize=(12, len(categories) * 0.5))  # Adjust figure size as needed
+    # fig, ax = plt.subplots(figsize=(12, len(categories) * 0.5))  # Adjust figure size as needed
+    fig, ax = plt.subplots(figsize=(8, 8))
     sns.barplot(y=categories, x=occurrences, palette=palette, ax=ax)
 
     # Set labels and titles
@@ -267,8 +268,9 @@ def get_fine_grained_error(sortedResponse, errors_dict_fineGrained, task):
             errors_dict_fineGrained[currentChosenList].append(sortedResponse[:, i])
     return errors_dict_fineGrained
 
-focusedMonths = ['month_2','month_3','month_4','month_5','month_6', 'month_7', 'month_8']
-directory = 'W:\\group_csp\\analyses\\oliver.frank\\Data\\BeRNN_05\\PreprocessedData_wResp_ALL\\'
+participant = 'BeRNN_05'
+focusedMonths = ['month_2','month_3','month_4','month_5','month_6', 'month_7', 'month_8', 'month_9']
+directory = f'W:\\group_csp\\analyses\\oliver.frank\\Data\\{participant}\\PreprocessedData_wResp_ALL\\'
 
 ########################################################################################################################
 # Decision Making
@@ -732,13 +734,13 @@ categorical_names_WM = categorical_names_WM_1 + categorical_names_WM_2
 list1 = ['formClassCombi_CircleCircle', 'formClassCombi_CirclePolygon', 'formClassCombi_CircleTriangle',\
          'formClassCombi_PolygonPolygon', 'formClassCombi_PolygonTriangle', 'formClassCombi_TriangleTriangle']
 list2 = ['diffColor_diffForm', 'simColor_diffForm','diffColor_simForm', 'simColor_simForm']
-list3 = ['3stim']
+# list3 = ['3stim']
 list4 = ['responseMatch', 'responseMismatch', 'responseNoResponse']
 
-categorical_names_WM_Ctx_1 = ['_'.join(combination) for combination in itertools.product(list1, list2, list3, list4)]
+# categorical_names_WM_Ctx_1 = ['_'.join(combination) for combination in itertools.product(list1, list2, list3, list4)]
 categorical_names_WM_Ctx_2 = ['_'.join(combination) for combination in itertools.product(list1, list2, list4)]
 
-categorical_names_WM_Ctx = categorical_names_WM_Ctx_1 + categorical_names_WM_Ctx_2
+categorical_names_WM_Ctx = categorical_names_WM_Ctx_2 # + categorical_names_WM_Ctx_1
 
 # shows current trial in detail and similiarity in form and color to previous trials
 def get_errors_WM(Response, errors_dict, opened_meta_file):

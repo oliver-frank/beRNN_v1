@@ -301,7 +301,7 @@ class LeakyGRUCell(RNNCell):
         raise ValueError("Expected inputs.shape[-1] to be known, saw shape: %s"
                          % inputs_shape)
 
-      input_depth = inputs_shape[1].value
+      input_depth = inputs_shape[1].value # fix: The masking has to be applied on all three relevant structural matrices
       self._gate_kernel = self.add_variable(
           "gates/%s" % 'kernel',
           shape=[input_depth + self._num_units, 2 * self._num_units],
@@ -320,14 +320,6 @@ class LeakyGRUCell(RNNCell):
           shape=[input_depth + self._num_units, self._num_units],
           initializer=self._kernel_initializer)
 
-      # Split the candidate weights into input and recurrent parts
-      w_in, w_rec = tf.split(self._candidate_kernel, [input_depth, self._num_units], axis=0)
-      # info: Apply structural mask only to the recurrent part (w_rec)
-      if isinstance(self.mask, np.ndarray):
-          w_rec = w_rec * self.mask
-      # Concatenate the input and masked recurrent weights back together
-      self._candidate_kernel = tf.concat([w_in, w_rec], axis=0)
-
       self._candidate_bias = self.add_variable(
           "candidate/%s" % 'bias',
           shape=[self._num_units],
@@ -335,6 +327,25 @@ class LeakyGRUCell(RNNCell):
               self._bias_initializer
               if self._bias_initializer is not None
               else init_ops.zeros_initializer(dtype=self.dtype)))
+
+      # info: Apply structural mask only to the recurrent part (w_rec)
+      if isinstance(self.mask, np.ndarray):
+          # Split the candidate kernel into input and recurrent parts
+          w_in, w_rec = tf.split(self._candidate_kernel, [input_depth, self._num_units], axis=0)
+          # Split the gate kernel into input and gate parts
+          w_in2, w_gate = tf.split(self._gate_kernel, [input_depth, self._num_units], axis=0)
+          # Split the gate weights into inhibitory and excitatory parts
+          w_inhibi, w_exita = tf.split(w_gate, num_or_size_splits=2, axis=1)
+
+          w_rec = w_rec * self.mask
+          w_inhibi = w_inhibi * self.mask
+          w_exita = w_exita * self.mask
+
+          # Concatenate the input and masked recurrent weights back together
+          self._candidate_kernel = tf.concat([w_in, w_rec], axis=0)
+          # Concatenate inhibitory and excitatory parts without duplication
+          w_gate = tf.concat([w_inhibi, w_exita], axis=1)
+          self._gate_kernel = tf.concat([w_in2, w_gate], axis=0)
 
       self.built = True
 
@@ -357,7 +368,7 @@ class LeakyGRUCell(RNNCell):
 
       c = self._activation(candidate)
       # new_h = u * state + (1 - u) * c  # original GRU
-      new_h = (1 - self._alpha * u) * state + (self._alpha * u) * c
+      new_h = (1 - self._alpha * u) * state + (self._alpha * u) * c # info: Where the decision is made which units are inhibitory and which are excitatory
 
       return new_h, new_h
 

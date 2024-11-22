@@ -246,7 +246,9 @@ class Analysis(object):
             ax.axis('off')
 
         plt.savefig(os.path.join(figurePath, model_dir.split("\\")[-1] + '_' + 'taskVariance' + '.png'), format='png', dpi=300, bbox_inches='tight', pad_inches=0.1)
-        plt.show()
+
+        # plt.show()
+        # plt.close()
 
 
     def get_dotProductCorrelation(self):
@@ -595,8 +597,8 @@ class Analysis(object):
             plt.ylabel('To')
             plt.show()
 
-    def easy_connectivity_plot_hiddenUnitsOnly(self, model_dir):
-        """A simple plot of network connectivity."""
+    def easy_connectivity_plot_recurrentWeightsOnly(self, model_dir):
+        """A simple plot of network weight connectivity."""
 
         model = Model(model_dir)
         with tf.Session() as sess:
@@ -618,6 +620,51 @@ class Analysis(object):
 
             return corr_coef
 
+    def easy_connectivity_plot_excitatoryGatedWeightsOnly(self, model_dir):
+        """A simple plot of network weight connectivity."""
+
+        model = Model(model_dir)
+        with tf.Session() as sess:
+            model.restore()
+            # get all connection weights and biases as tensorflow variables
+            var_list = model.var_list
+            # evaluate the parameters after training
+            params = [sess.run(var) for var in var_list]
+            # get name of each variable
+            names = [var.name for var in var_list]
+
+            name = names[0]
+            params = params[0][77:, 128:256] # excitatory gate fix: Add generic network size variable
+
+            # params_centered = params - params.mean(axis=1, keepdims=True)
+            # params_normalized = params_centered / np.linalg.norm(params_centered, axis=1, keepdims=True)
+
+            corr_coef = np.dot(params, params.T)
+
+            return corr_coef
+
+    def easy_connectivity_plot_inhibitoryGatedWeightsOnly(self, model_dir):
+        """A simple plot of network weight connectivity."""
+
+        model = Model(model_dir)
+        with tf.Session() as sess:
+            model.restore()
+            # get all connection weights and biases as tensorflow variables
+            var_list = model.var_list
+            # evaluate the parameters after training
+            params = [sess.run(var) for var in var_list]
+            # get name of each variable
+            names = [var.name for var in var_list]
+
+            name = names[0]
+            params = params[0][77:, :128] # inhibitory gate fix: Add generic network size variable
+
+            # params_centered = params - params.mean(axis=1, keepdims=True)
+            # params_normalized = params_centered / np.linalg.norm(params_centered, axis=1, keepdims=True)
+
+            corr_coef = np.dot(params, params.T)
+
+            return corr_coef
 
 
 if __name__ == '__main__':

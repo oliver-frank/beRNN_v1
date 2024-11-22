@@ -95,7 +95,7 @@ def load_trials(task,mode,batchSize,data,errorComparison):
             numberOfBatches = int(batchSize / 40) # Choose numberOfBatches for one training step
             if numberOfBatches < 1: numberOfBatches = 1  # Be sure to load at least one batch and then sample it down if defined by batchSize
 
-            if mode == 'Training':
+            if mode == 'train':
                 # Choose the triplet from the splitted data
                 currenTask_values = []
                 for key, values in data.items():
@@ -104,7 +104,7 @@ def load_trials(task,mode,batchSize,data,errorComparison):
                 # Select number of batches according to defined batchSize
                 currentTriplets = random.sample(currenTask_values, numberOfBatches)
                 base_name = currentTriplets[0][0].split('\\')[-1].split('Input')
-
+                print('chosenFile:  ', base_name)
                 # Load the files
                 if numberOfBatches <= 1:
                     x = np.load(currentTriplets[0][0]) # Input
@@ -198,7 +198,7 @@ def load_trials(task,mode,batchSize,data,errorComparison):
                 else:
                     raise ValueError(f"batchSize {batchSize} is not valid")
 
-            elif mode == 'Evaluation':
+            elif mode == 'eval':
                 # Choose the triplet from the splitted data
                 if errorComparison == False:
                     currenTask_values = []
@@ -209,7 +209,7 @@ def load_trials(task,mode,batchSize,data,errorComparison):
                 elif errorComparison == True:
                     currentTriplets = random.sample(data, numberOfBatches) # info: for Error_Comparison.py
                     base_name = currentTriplets[0][0].split('Input')[0]
-
+                    print('chosenFile:  ', base_name)
                 # Load the files
                 if numberOfBatches <= 1:
                     x = np.load(currentTriplets[0][0])  # Input
@@ -327,20 +327,25 @@ def getEpochSteps(y):
     previous_value = None
     fixation_steps = None
     for i in range(y.shape[0]):
-        current_value = y[i, 0, 0]
-        if previous_value == np.float32(0.8) and current_value == np.float32(0.05):
-            # print('Length of fixation epoch: ', i)
-            fixation_steps = i
-            response_steps = y.shape[0] - i
+        if y.shape[1] != 0:
+            current_value = y[i, 0, 0]
+            if previous_value == np.float32(0.8) and current_value == np.float32(0.05):
+                # print('Length of fixation epoch: ', i)
+                fixation_steps = i
+                response_steps = y.shape[0] - i
 
-            # fixation = y[:fixation_steps,:,:]
-            # response = y[fixation_steps:,:,:]
+                # fixation = y[:fixation_steps,:,:]
+                # response = y[fixation_steps:,:,:]
 
-        previous_value = current_value
+            previous_value = current_value
 
-    if fixation_steps is None:  # Unclean fix for fixation_steps not found - has to be improved in the future
-        fixation_steps = int(y.shape[0] / 2)
-        # print('fixation_steps artificially created for: ', file_stem)
+        else:
+            continue
+            # fixation_steps = np.round(int(y.shape[0] / 2))
+
+    # if fixation_steps is None:  # Unclean fix for fixation_steps not found - has to be improved in the future
+    #     fixation_steps = np.round(int(y.shape[0] / 2))
+    #     # print('fixation_steps artificially created for: ', file_stem)
 
     return fixation_steps
 
