@@ -19,7 +19,8 @@ from glob import glob
 import numpy as np
 
 rules_dict = {'all' : ['DM', 'DM_Anti', 'EF', 'EF_Anti', 'RP', 'RP_Anti', 'RP_Ctx1', 'RP_Ctx2',
-              'WM', 'WM_Anti', 'WM_Ctx1', 'WM_Ctx2']}
+              'WM', 'WM_Anti', 'WM_Ctx1', 'WM_Ctx2'],
+              'DMs_only' : ['DM', 'DM_Anti']} # fix: not very feasible because preprocessing created 77 unit input structure (could be adjusted in Tools.load_trials)
 
 rule_name = {
             'DM': 'Decison Making (DM)',
@@ -104,7 +105,7 @@ def load_trials(task,mode,batchSize,data,errorComparison):
                 # Select number of batches according to defined batchSize
                 currentTriplets = random.sample(currenTask_values, numberOfBatches)
                 base_name = currentTriplets[0][0].split('\\')[-1].split('Input')
-                print('chosenFile:  ', base_name)
+                # print('chosenFile:  ', base_name)
                 # Load the files
                 if numberOfBatches <= 1:
                     x = np.load(currentTriplets[0][0]) # Input

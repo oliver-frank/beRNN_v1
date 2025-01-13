@@ -85,7 +85,7 @@ def get_perf(y_hat, y_loc):
 
     # Fixation and location of y_hat
     y_hat_fix = y_hat[..., 0] # Get only first fixation unit
-    y_hat_loc = popvec(y_hat[..., 1:]) # y_hat[..., 1:] Get all units except for first fixation unit
+    y_hat_loc = popvec(y_hat[..., 1:]) # y_hat[..., 1:] Get all units except for first epoch unit
 
     # Fixating? Correctly saccading?
     fixating = y_hat_fix > 0.5
@@ -99,7 +99,67 @@ def get_perf(y_hat, y_loc):
 
     # performance
     perf = should_fix * fixating + (1-should_fix) * corr_loc * (1-fixating)
-    return perf
+    perf_rounded = np.round(perf, decimals=3)
+    return perf_rounded
+
+
+# info: lowDIM section
+def popvec_lowDIM(y):
+    """Population vector read out.
+
+    Assuming the last dimension is the dimension to be collapsed
+
+    Args:
+        y: population output on a ring network. Numpy array (Batch, Units)
+
+    Returns:
+        Readout locations: Numpy array (Batch,)
+    """
+
+    loc = np.arctan2(y[:,0], y[:,1])
+    return np.mod(loc, 2*np.pi) # check this? January 22 2019
+
+def tf_popvec_lowDIM(y):
+    """Population vector read-out in tensorflow."""
+
+    loc = tf.atan2(y[:,0], y[:,1])
+    return tf.mod(loc+np.pi, 2*np.pi) # check this? January 22 2019
+
+def get_perf_lowDIM(y_hat, y_loc):
+    """Get performance.
+
+    Args:
+      y_hat: Actual output. Numpy array (Time, Batch, Unit)
+      y_loc: Target output location (-1 for fixation).
+        Numpy array (Time, Batch)
+
+    Returns:
+      perf: Numpy array (Batch,)
+    """
+    if len(y_hat.shape) != 3:
+        raise ValueError('y_hat must have shape (Time, Batch, Unit)')
+    # Only look at last time points
+    y_loc = y_loc[-1]
+    y_hat = y_hat[-1]
+
+    # Fixation and location of y_hat
+    y_hat_fix = y_hat[..., 0]
+    y_hat_loc = popvec_lowDIM(y_hat[..., 1:]) # info: Here for y_hat:networkOutput only unit 1 and 2 are taken
+
+    # Fixating? Correctly saccading?
+    fixating = y_hat_fix > 0.5
+
+    original_dist = y_loc - y_hat_loc
+    dist = np.minimum(abs(original_dist), 2*np.pi-abs(original_dist))
+    corr_loc = dist < 0.2 * np.pi # fix: potential hyperparameter to play around with, should maybe set more liberal for more complex tasks
+
+    # Should fixate?
+    should_fix = y_loc < 0
+
+    # performance
+    perf = should_fix * fixating + (1-should_fix) * corr_loc * (1-fixating)
+    perf_rounded = np.round(perf, decimals=3)
+    return perf_rounded
 
 ########################################################################################################################
 # Network architectures

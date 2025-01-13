@@ -50,7 +50,7 @@ def get_default_hp(ruleset):
         # input type: normal, multi
         'in_type': 'normal',
         # Type of RNNs: NonRecurrent, LeakyRNN, LeakyGRU, EILeakyGRU, GRU, LSTM
-        'rnn_type': 'LeakyGRU',
+        'rnn_type': 'LeakyRNN',
         # whether rule and stimulus inputs are represented separately
         'use_separate_input': False,
         # Type of loss functions
@@ -58,7 +58,7 @@ def get_default_hp(ruleset):
         # Optimizer
         'optimizer': 'adam',
         # Type of activation runctions, relu, softplus, tanh, elu, linear
-        'activation': 'relu',
+        'activation': 'softplus',
         # Time constant (ms)
         'tau': 100,
         # discretization time step (ms)
@@ -72,13 +72,13 @@ def get_default_hp(ruleset):
         # leaky_rec weight initialization, diag, randortho, randgauss
         'w_rec_init': 'randortho',
         # a default weak regularization prevents instability (regularizing with absolute value of magnitude of coefficients, leading to sparse features)
-        'l1_h': 0.0001, # info: The higher the amount of hidden_rnn, the stronger the regularization to prevent overfitting
+        'l1_h': 0.00005, # info: The higher the amount of hidden_rnn, the stronger the regularization to prevent overfitting
         # l2 regularization on activity (regularizing with squared value of magnitude of coefficients, decreasing influence of features)
-        'l2_h': 0.00001, # info: These values represent lambda which controls the strength of regularization
+        'l2_h': 0.00005, # info: These values represent lambda which controls the strength of regularization
         # l2 regularization on weight
-        'l1_weight': 0.00001,
+        'l1_weight': 0.00005,
         # l2 regularization on weight
-        'l2_weight': 0.00001,
+        'l2_weight': 0.00005,
         # l2 regularization on deviation from initialization
         'l2_weight_init': 0,
         # proportion of weights to train, None or float between (0, 1) - e.g. .1 will train a random 10% weight selection, the rest stays fixed (Yang et al. range: .05-.075)
@@ -98,7 +98,7 @@ def get_default_hp(ruleset):
         # number of output units
         'n_output': n_output,
         # number of recurrent units
-        'n_rnn': 128, # info: check theshold to know what amount of parameters will be actually trained (e.g. 11: 128 parameters)
+        'n_rnn': 32, # info: check theshold to know what amount of parameters will be actually trained (e.g. 11: 128 parameters)
         # random number used for several random initializations
         'rng': np.random.RandomState(seed=0),
         # number of input units
@@ -145,7 +145,10 @@ def do_eval(sess, model, log, rule_train, eval_data):
           '  | Now training ' + rule_name_print)
 
     for task in hp['rules']:
-        n_rep = 20 # 20 * 40 or 20 * 20 trials per evaluation are taken, depending on batch_size
+        if 'WM' in task:
+            n_rep = 80 # info: four times the amount of normal training, because of splitted, smaller batch sizes (special small for WM tasks)
+        else:
+            n_rep = 40 # info: double the amount of normal training, because of splitted, smaller batch sizes
         # batch_size_test_rep = int(hp['batch_size_test']/n_rep)
         clsq_tmp = list()
         creg_tmp = list()
@@ -227,7 +230,7 @@ def do_eval(sess, model, log, rule_train, eval_data):
 
     return log
 
-def train(model_dir,train_data ,eval_data,hp=None,max_steps=3e6,display_step=500,ruleset='all',rule_trains=None,rule_prob_map=None,seed=0,
+def train(model_dir,train_data ,eval_data, subdir, hp=None,max_steps=3e6,display_step=500,ruleset='all',rule_trains=None,rule_prob_map=None,seed=0,
           load_dir=None,trainables=None):
     """Train the network.
 
@@ -374,7 +377,9 @@ def train(model_dir,train_data ,eval_data,hp=None,max_steps=3e6,display_step=500
             model.set_optimizer(var_list=var_list)
 
         step = 0
-        while step * hp['batch_size'] <= max_steps:
+        if 'WM' in subdir.split('/')[-1]: divider = 4
+        else: divider = 2
+        while (step * hp['batch_size'])/divider <= max_steps:
             try:
                 # Validation
                 if step % display_step == 0: # III: Every 500 steps (20000 trials) do the evaluation
@@ -473,87 +478,89 @@ def train(model_dir,train_data ,eval_data,hp=None,max_steps=3e6,display_step=500
 # Train model
 ########################################################################################################################
 if __name__ == '__main__':
-    for modelNumber in range(1,6):
 
-        monthsConsidered = ['month_2','month_3','month_4','month_5','month_6']
-        chosenData = 'coronly.npy' # 'sysrand.npy'
+    # Define probability of each task being trained
+    # rule_prob_map = {"DM": 1,"DM_Anti": 1,"EF": 1,"EF_Anti": 1,"RP": 1,"RP_Anti": 1,"RP_Ctx1": 1,"RP_Ctx2": 1,"WM": 1,"WM_Anti": 1,"WM_Ctx1": 1,"WM_Ctx2": 1}
+    rule_prob_map = {"DM": 0, "DM_Anti": 0, "EF": 0, "EF_Anti": 0, "RP": 0, "RP_Anti": 0, "RP_Ctx1": 0, "RP_Ctx2": 0,
+                     "WM": 0, "WM_Anti": 1, "WM_Ctx1": 0, "WM_Ctx2": 0}
+    taskClass = 'WMAnti'
+
+    for modelNumber in range(2,3):
+
+        monthsConsidered = ['month_3','month_4','month_5']
+        chosenData = 'coronly.npy' # 'sysrand.npy' info: don't use script for original data set
         load_dir = None
-        # for month in monthsConsidered: # attention: You have to delete this if cascade training should be set OFF
-        # Adjust variables manually as needed
-        model_folder = 'Model'
-        participant = 'BeRNN_03'
-        model_name = f'{chosenData.split(".")[0]}_DMAntionly{modelNumber}_noMaskGRU128_{participant}' # _{month}
+        for month in monthsConsidered: # attention: You have to delete this if cascade training should be set OFF
+            # Adjust variables manually as needed
+            model_folder = 'Model'
+            participant = 'BeRNN_03'
+            model_name = f'{participant}_{taskClass}_{chosenData.split(".")[0]}_32RNNsoftplus_reg5e-5_{month}'
 
-        # Define data path for different servers
-        # preprocessedData_path = os.path.join('C:\\Users\\oliver.frank\\Desktop\\BackUp\\beRNNmodels', participant,'PreprocessedData_wResp_ALL_SPLITs')
-        preprocessedData_path = os.path.join('W:\\group_csp\\analyses\\oliver.frank\\Data', participant, 'PreprocessedData_wResp_ALL_SPLITs')
-        # preprocessedData_path = os.path.join('/data/data', participant, 'PreprocessedData_wResp_ALL_SPLITs')
-        # preprocessedData_path = os.path.join('/pandora/home/oliver.frank/01_Projects/RNN/multitask_BeRNN-main/Data', participant, 'PreprocessedData_wResp_ALL_SPLITs')
+            path = 'C:\\Users\\oliver.frank\\Desktop\\BackUp'  # local
+            # path = 'W:\\group_csp\\analyses\\oliver.frank' # fl storage
+            # path = '/data' # hitkip cluster
+            # path = '/pandora/home/oliver.frank/01_Projects/RNN/multitask_BeRNN-main' # pandora server
 
-        # Define model_dir for different servers
-        # model_dir = os.path.join('C:\\Users\\oliver.frank\\Desktop\\BackUp\\BeRNN_models\\Barna_Models', model_name)
-        model_dir = os.path.join(f'W:\\group_csp\\analyses\\oliver.frank\\beRNNmodels\\barnaModels\\TEST\\{chosenData.split(".")[0]}Cascade', model_name)
-        # model_dir = os.path.join('/data/models', model_name)
-        # model_dir = os.path.join(f'/pandora/home/oliver.frank/01_Projects/RNN/multitask_BeRNN-main/BeRNN_Models/barnaModels/{chosenData.split(".")[0]}Cascade', model_name)
+            # Define data path for different servers
+            preprocessedData_path = os.path.join(path, 'Data', participant, 'PreprocessedData_wResp_ALL')
 
-        if not os.path.exists(model_dir):
-            os.makedirs(model_dir)
+            # Define model_dir for different servers
+            model_dir = os.path.join(f'{path}\\beRNNmodels\\barnaModels\\{participant}_32RNNsoftplus_DM_sequence{modelNumber}', model_name)
 
-        # # Define months taken into account for model training
-        # months = model_name.split('_')[-1].split('-')
-        # monthsConsidered = []
-        # for i in range(int(months[0]), int(months[1]) + 1):
-        #     monthsConsidered.append(str(i))
+            if not os.path.exists(model_dir):
+                os.makedirs(model_dir)
 
-        # Define probability of each task being trained
-        # rule_prob_map = {"DM": 1,"DM_Anti": 1,"EF": 1,"EF_Anti": 1,"RP": 1,"RP_Anti": 1,"RP_Ctx1": 1,"RP_Ctx2": 1,"WM": 1,"WM_Anti": 1,"WM_Ctx1": 1,"WM_Ctx2": 1}
-        rule_prob_map = {"DM": 0,"DM_Anti": 0,"EF": 1,"EF_Anti": 0,"RP": 0,"RP_Anti": 0,"RP_Ctx1": 0,"RP_Ctx2": 0,"WM": 0,"WM_Anti": 0,"WM_Ctx1": 0,"WM_Ctx2": 0}
+            # # Define months taken into account for model training
+            # months = model_name.split('_')[-1].split('-')
+            # monthsConsidered = []
+            # for i in range(int(months[0]), int(months[1]) + 1):
+            #     monthsConsidered.append(str(i))
 
-        # Split the data into training and test data -----------------------------------------------------------------------
-        # List of the subdirectories
-        subdirs = [os.path.join(preprocessedData_path, d) for d in os.listdir(preprocessedData_path) if os.path.isdir(os.path.join(preprocessedData_path, d))]
+            # Split the data into training and test data -----------------------------------------------------------------------
+            # List of the subdirectories
+            subdirs = [os.path.join(preprocessedData_path, d) for d in os.listdir(preprocessedData_path) if os.path.isdir(os.path.join(preprocessedData_path, d))]
 
-        # Initialize dictionaries to store training and evaluation data
-        train_data = {}
-        eval_data = {}
+            # Initialize dictionaries to store training and evaluation data
+            train_data = {}
+            eval_data = {}
 
-        for subdir in subdirs:
-            # Collect all file triplets in the current subdirectory
-            file_triplets = []
-            for file in os.listdir(subdir):
-                if 'Input' in file and chosenData.split('.')[0] in file: # attention: Delete chosenData if trained on Original data
-                    # # III: Exclude files with specific substrings in their names
-                    # if any(exclude in file for exclude in ['Randomization', 'Segmentation', 'Mirrored', 'Rotation']):
-                    #     continue
-                    if not any(exclude in file for exclude in monthsConsidered):
-                        continue
-                    # if month not in file: # Sort out months which should not be considered; attention: change to this if cascade is run
-                    #     continue
-                    # Add all necessary files to triplets
-                    if not 'WM' in subdir.split('/')[-1]: # attention: don't use '//' for pandora
-                        base_name = file.split('Input')[0]
-                        input_file = os.path.join(subdir, base_name + 'Input_ORIGINAL_' + chosenData)
-                        yloc_file = os.path.join(subdir, base_name + 'yLoc_ORIGINAL_'+ chosenData)
-                        output_file = os.path.join(subdir, base_name + 'Output_ORIGINAL_' + chosenData)
-                        file_triplets.append((input_file, yloc_file, output_file))
-                    else:
-                        base_name = file.split('Input')[0]
-                        fileEnd = '_' + file.split('_')[-1]
-                        input_file = os.path.join(subdir, base_name + 'Input_' + chosenData.split('.')[0] + fileEnd)
-                        yloc_file = os.path.join(subdir, base_name + 'yLoc_' + chosenData.split('.')[0] + fileEnd)
-                        output_file = os.path.join(subdir, base_name + 'Output_' + chosenData.split('.')[0] + fileEnd)
-                        file_triplets.append((input_file, yloc_file, output_file))
-                    # print(input_file)
-                # Split the file triplets
-                train_files, eval_files = split_files(file_triplets)
+            for subdir in subdirs:
+                # Collect all file triplets in the current subdirectory
+                file_triplets = []
+                for file in os.listdir(subdir):
+                    if 'Input' in file and chosenData.split('.')[0] in file: # attention: Delete chosenData if trained on Original data
+                        # # III: Exclude files with specific substrings in their names
+                        # if any(exclude in file for exclude in ['Randomization', 'Segmentation', 'Mirrored', 'Rotation']):
+                        #     continue
+                        if not any(exclude in file for exclude in monthsConsidered):
+                            continue
+                        # if month not in file: # Sort out months which should not be considered; attention: change to this if cascade is run
+                        #     continue
+                        # Add all necessary files to triplets
+                        if not 'WM' in subdir.split('/')[-1]: # attention: don't use '//' for pandora
+                            base_name = file.split('Input')[0]
+                            input_file = os.path.join(subdir, base_name + 'Input_ORIGINAL_' + chosenData)
+                            yloc_file = os.path.join(subdir, base_name + 'yLoc_ORIGINAL_'+ chosenData)
+                            output_file = os.path.join(subdir, base_name + 'Output_ORIGINAL_' + chosenData)
+                            file_triplets.append((input_file, yloc_file, output_file))
+                        else:
+                            base_name = file.split('Input')[0]
+                            fileEnd = '_' + file.split('_')[-1]
+                            input_file = os.path.join(subdir, base_name + 'Input_' + chosenData.split('.')[0] + fileEnd)
+                            yloc_file = os.path.join(subdir, base_name + 'yLoc_' + chosenData.split('.')[0] + fileEnd)
+                            output_file = os.path.join(subdir, base_name + 'Output_' + chosenData.split('.')[0] + fileEnd)
+                            file_triplets.append((input_file, yloc_file, output_file))
+                        # print(input_file)
+                    # Split the file triplets
+                    train_files, eval_files = split_files(file_triplets)
 
-                # Store the results in the dictionaries
-                train_data[subdir] = train_files
-                eval_data[subdir] = eval_files
+                    # Store the results in the dictionaries
+                    train_data[subdir] = train_files
+                    eval_data[subdir] = eval_files
 
-        # Start Training ---------------------------------------------------------------------------------------------------
-        train(model_dir=model_dir, rule_prob_map=rule_prob_map, train_data = train_data, eval_data = eval_data, load_dir = load_dir)
+            # Start Training ---------------------------------------------------------------------------------------------------
+            train(model_dir=model_dir, rule_prob_map=rule_prob_map, train_data = train_data, eval_data = eval_data, subdir = subdir, load_dir = load_dir)
 
-        # load_dir = model_dir # attention: Comment out if no Cascade training should be applied
+            load_dir = model_dir # attention: Comment out if no Cascade training should be applied
 
 

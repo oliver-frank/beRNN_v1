@@ -22,7 +22,7 @@ participant_dir = 'W:\\group_csp\\analyses\\oliver.frank\\Data\\'
 participantList = os.listdir(participant_dir)
 
 participant = participantList[2] # choose which particpant to analyze
-month = '10' # choose which month to analyze
+month = '11' # choose which month to analyze
 
 percentCorrect_DM, count_DM = 0, 0
 percentCorrect_DM_Anti, count_DM_Anti = 0, 0
@@ -104,7 +104,7 @@ for i in list_testParticipant_month:
                 # percentCorrect_RP_Ctx1 += currentFile['Store: PercentCorrectRPCtx1'][len(currentFile['Store: PercentCorrectRPCtx1'])-3]
                 # count_RP_Ctx1 += 1
 
-                filtered_rows = currentFile[currentFile['Event Index'] == 124].copy()
+                filtered_rows = currentFile[currentFile['Event Index'] == 125].copy()
                 percentCorrect_RP_Ctx1 += sum(filtered_rows['Store: PercentCorrectRPCtx1'])
                 count_RP_Ctx1 += len(filtered_rows)
                 print('currentFile processed')

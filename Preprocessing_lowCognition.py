@@ -55,6 +55,7 @@ def find_sleepingQuality_drugVector(opened_questionare, date):
             return sleepingQ, sleepingR, drugQ, drugR
     return None, None, None, None  # Return None if no match is found
 
+
 ########################################################################################################################
 # info: DM tasks
 ########################################################################################################################
@@ -134,11 +135,7 @@ def preprocess_DM(opened_xlsxFile, questionnare_files, list_allSessions, sequenc
         for j in incrementList[batchOn:batchOff]:
             # Accumulate step numbers
             currentTrial = opened_xlsxFile_selection[j:j + 2].reset_index().drop(columns=['index'])
-
-            if np.isnan(currentTrial['Onset Time'][0]):
-                numFixSteps = 35 # info: just an average empirical value
-            else:
-                numFixSteps = round(currentTrial['Onset Time'][0] / 20)
+            numFixSteps = round(currentTrial['Onset Time'][0] / 20)
 
             if np.isnan(currentTrial['Onset Time'][1]):
                 numRespSteps = numFixSteps  # fix: occures very rarely, through batchLength averagging not very influential
@@ -167,10 +164,6 @@ def preprocess_DM(opened_xlsxFile, questionnare_files, list_allSessions, sequenc
             # Check if values and counts are below 2 and zeropad them, so that all columns have the same length
             if len(unique_values) == 1:
                 unique_values, occurrence_counts = np.concatenate((unique_values, ['None']),axis=0), np.concatenate((occurrence_counts, [0]),axis=0)
-            elif len(unique_values) == 0:
-                currentTrialNumber = [i for i, value in enumerate(incrementList) if value == j][0]-batchOn
-                currentConcatResponseEntries = np.delete(currentConcatResponseEntries, currentTrialNumber, axis=1)
-                continue
             concatedValuesAndOccurrences = np.concatenate([unique_values, occurrence_counts], axis=0)
             concatedValuesAndOccurrencesList.append(concatedValuesAndOccurrences)
             # ----------------------------------------------------------------------------------------------------------
@@ -342,8 +335,16 @@ def preprocess_DM(opened_xlsxFile, questionnare_files, list_allSessions, sequenc
             for j in range(0, Output.shape[1]):
                 Output[i][j][1] = float(0.05)
 
+        # attention: add one unique value for every task, respectively
+        if taskShorts == 'DM':
+            lowCognitionValue = 1
+        elif taskShorts == 'DM_Anti':
+            lowCognitionValue = 3
+        else:
+            print('No task found !')
+
         # Define an output dictionary for specific response values
-        outputDict = {'U': 32, 'R': 8, 'L': 24, 'D': 16}
+        outputDict = {'U': lowCognitionValue, 'R': lowCognitionValue, 'L': lowCognitionValue, 'D': lowCognitionValue}
 
         for i in range(numFixStepsAverage, totalStepsAverage):
             for j in range(0, Output.shape[1]):
@@ -491,11 +492,7 @@ def preprocess_EF(opened_xlsxFile, questionnare_files, list_allSessions, sequenc
         for j in incrementList[batchOn:batchOff]:
             # Accumulate step numbers
             currentTrial = opened_xlsxFile_selection[j:j + 2].reset_index().drop(columns=['index'])
-
-            if np.isnan(currentTrial['Onset Time'][0]):
-                numFixSteps = 35 # info: just an average empirical value
-            else:
-                numFixSteps = round(currentTrial['Onset Time'][0] / 20)
+            numFixSteps = round(currentTrial['Onset Time'][0] / 20)
 
             if np.isnan(currentTrial['Onset Time'][1]):
                 numRespSteps = numFixSteps  # fix: occures very rarely, through batchLength averagging not very influential
@@ -524,10 +521,6 @@ def preprocess_EF(opened_xlsxFile, questionnare_files, list_allSessions, sequenc
             # Check if values and counts are below 2 and zeropad them, so that all columns have the same length
             if len(unique_values) == 1:
                 unique_values, occurrence_counts = np.concatenate((unique_values, ['None']), axis=0), np.concatenate((occurrence_counts, [0]), axis=0)
-            elif len(unique_values) == 0:
-                currentTrialNumber = [i for i, value in enumerate(incrementList) if value == j][0]-batchOn
-                currentConcatResponseEntries = np.delete(currentConcatResponseEntries, currentTrialNumber, axis=1)
-                continue
             concatedValuesAndOccurrences = np.concatenate([unique_values, occurrence_counts], axis=0)
             concatedValuesAndOccurrencesList.append(concatedValuesAndOccurrences)
             # ----------------------------------------------------------------------------------------------------------
@@ -701,8 +694,16 @@ def preprocess_EF(opened_xlsxFile, questionnare_files, list_allSessions, sequenc
             for j in range(0, Output.shape[1]):
                 Output[i][j][1] = float(0.05)
 
+        # attention: add one unique value for every task, respectively
+        if taskShorts == 'EF':
+            lowCognitionValue = 6
+        elif taskShorts == 'EF_Anti':
+            lowCognitionValue = 9
+        else:
+            print('No task found !')
+
         # Define an output dictionary for specific response values
-        outputDict = {'U': 32, 'R': 8, 'L': 24, 'D': 16}
+        outputDict = {'U': lowCognitionValue, 'R': lowCognitionValue, 'L': lowCognitionValue, 'D': lowCognitionValue}
 
         for i in range(numFixStepsAverage, totalStepsAverage):
             for j in range(0, Output.shape[1]):
@@ -1053,10 +1054,22 @@ def preprocess_RP(opened_xlsxFile, questionnare_files, list_allSessions, sequenc
             for j in range(0, Output.shape[1]):
                 Output[i][j][1] = float(0.05)
 
-        outputDict = {'Image 2': 2, 'Image 4': 4, 'Image 6': 6, 'Image 8': 8, 'Image 10': 10, 'Image 12': 12, 'Image 14': 14,\
-                'Image 16': 16, 'Image 18': 18, 'Image 20': 20, 'Image 22': 22, 'Image 24': 24, 'Image 26': 26, 'Image 28': 28, 'Image 30': 30, 'Image 32': 32, \
-                'Image 1': 1, 'Image 3': 3, 'Image 5': 5, 'Image 7': 7, 'Image 9': 9, 'Image 11': 11,'Image 13': 13, 'Image 15': 15, 'Image 17': 17, 'Image 19': 19, 'Image 21': 21,
-                'Image 23': 23, 'Image 25': 25, 'Image 27': 27, 'Image 29': 29, 'Image 31': 31}
+        # attention: add one unique value for every task, respectively
+        if taskShorts == 'RP':
+            lowCognitionValue = 12
+        elif taskShorts == 'RP_Anti':
+            lowCognitionValue = 15
+        elif taskShorts == 'RP_Ctx1':
+            lowCognitionValue = 18
+        elif taskShorts == 'RP_Ctx2':
+            lowCognitionValue = 21
+        else:
+            print('No task found !')
+
+        outputDict = {'Image 2': lowCognitionValue, 'Image 4': lowCognitionValue, 'Image 6': lowCognitionValue, 'Image 8': lowCognitionValue, 'Image 10': lowCognitionValue, 'Image 12': lowCognitionValue, 'Image 14': lowCognitionValue,\
+                'Image 16': lowCognitionValue, 'Image 18': lowCognitionValue, 'Image 20': lowCognitionValue, 'Image 22': lowCognitionValue, 'Image 24': lowCognitionValue, 'Image 26': lowCognitionValue, 'Image 28': lowCognitionValue, 'Image 30': lowCognitionValue, 'Image 32': lowCognitionValue, \
+                'Image 1': lowCognitionValue, 'Image 3': lowCognitionValue, 'Image 5': lowCognitionValue, 'Image 7': lowCognitionValue, 'Image 9': lowCognitionValue, 'Image 11': lowCognitionValue,'Image 13': lowCognitionValue, 'Image 15': lowCognitionValue, 'Image 17': lowCognitionValue, 'Image 19': lowCognitionValue, 'Image 21': lowCognitionValue,
+                'Image 23': lowCognitionValue, 'Image 25': lowCognitionValue, 'Image 27': lowCognitionValue, 'Image 29': lowCognitionValue, 'Image 31': lowCognitionValue}
 
 
         for i in range(numFixStepsAverage, totalStepsAverage):
@@ -1201,11 +1214,7 @@ def preprocess_WM(opened_xlsxFile, questionnare_files, list_allSessions, sequenc
         for j in incrementList[batchOn:batchOff]:
             # Accumulate step numbers
             currentTrial = opened_xlsxFile_selection[j:j + 2].reset_index().drop(columns=['index'])
-
-            if np.isnan(currentTrial['Onset Time'][0]):
-                numFixSteps = 35 # info: just an average empirical value
-            else:
-                numFixSteps = round(currentTrial['Onset Time'][0] / 20)
+            numFixSteps = round(currentTrial['Onset Time'][0] / 20)
 
             if np.isnan(currentTrial['Onset Time'][1]):
                 numRespSteps = numFixSteps  # fix: occures very rarely, through batchLength averagging not very influential
@@ -1233,10 +1242,6 @@ def preprocess_WM(opened_xlsxFile, questionnare_files, list_allSessions, sequenc
             # Check if values and counts are below 2 and zeropad them, so that all columns have the same length
             if len(unique_values) == 1:
                 unique_values, occurrence_counts = np.concatenate((unique_values, ['None']), axis=0), np.concatenate((occurrence_counts, [0]), axis=0)
-            elif len(unique_values) == 0:
-                currentTrialNumber = [i for i, value in enumerate(incrementList) if value == j][0]-batchOn
-                currentConcatResponseEntries = np.delete(currentConcatResponseEntries, currentTrialNumber, axis=1)
-                continue
             concatedValuesAndOccurrences = np.concatenate([unique_values, occurrence_counts], axis=0)
             concatedValuesAndOccurrencesList.append(concatedValuesAndOccurrences)
             # ----------------------------------------------------------------------------------------------------------
@@ -1422,15 +1427,27 @@ def preprocess_WM(opened_xlsxFile, questionnare_files, list_allSessions, sequenc
             for j in range(0, Output.shape[1]):
                 Output[i][j][2] = float(0.05)
 
-        # Assign field units to their according participant response value after fixation period
-        outputDict_WM = {'Image 1': 1, 'Image 2': 2, 'Image 3': 3, 'Image 4': 4, 'Image 5': 5, 'Image 6': 6, 'Image 7': 7,\
-            'Image 8': 8, 'Image 9': 9, 'Image 10': 10, 'Image 11': 11, 'Image 12': 12, 'Image 13': 13, 'Image 14': 14,\
-            'Image 15': 15, 'Image 16': 16, 'Image 17': 17, 'Image 18': 18, 'Image 19': 19, 'Image 20': 20, 'Image 21': 21,\
-            'Image 22': 22, 'Image 23': 23, 'Image 24': 24, 'Image 25': 25, 'Image 26': 26, 'Image 27': 27, 'Image 28': 28,\
-            'Image 29': 29, 'Image 30': 30, 'Image 31': 31, 'Image 32': 32}
+        # attention: add one unique value for every task, respectively
+        if taskShorts == 'WM':
+            lowCognitionValue = 24
+        elif taskShorts == 'WM_Anti':
+            lowCognitionValue = 27
+        elif taskShorts == 'WM_Ctx1':
+            lowCognitionValue = 29
+        elif taskShorts == 'WM_Ctx2':
+            lowCognitionValue = 31
+        else:
+            print('No task found !')
 
-        outputDict_WM_Ctx = {'object-1591': 8, 'object-1593': 8, 'object-1595': 8, 'object-1597': 8, 'object-2365': 8, 'object-2313': 8, 'object-2391': 8, 'object-2339': 8,
-                             'object-1592': 24, 'object-1594': 24, 'object-1596': 24, 'object-1598': 24, 'object-2366': 24, 'object-2314': 24, 'object-2392': 24, 'object-2340': 24}
+        # Assign field units to their according participant response value after fixation period
+        outputDict_WM = {'Image 1': lowCognitionValue, 'Image 2': lowCognitionValue, 'Image 3': lowCognitionValue, 'Image 4': lowCognitionValue, 'Image 5': lowCognitionValue, 'Image 6': lowCognitionValue, 'Image 7': lowCognitionValue,\
+            'Image 8': lowCognitionValue, 'Image 9': lowCognitionValue, 'Image 10': lowCognitionValue, 'Image 11': lowCognitionValue, 'Image 12': lowCognitionValue, 'Image 13': lowCognitionValue, 'Image 14': lowCognitionValue,\
+            'Image 15': lowCognitionValue, 'Image 16': lowCognitionValue, 'Image 17': lowCognitionValue, 'Image 18': lowCognitionValue, 'Image 19': lowCognitionValue, 'Image 20': lowCognitionValue, 'Image 21': lowCognitionValue,\
+            'Image 22': lowCognitionValue, 'Image 23': lowCognitionValue, 'Image 24': lowCognitionValue, 'Image 25': lowCognitionValue, 'Image 26': lowCognitionValue, 'Image 27': lowCognitionValue, 'Image 28': lowCognitionValue,\
+            'Image 29': lowCognitionValue, 'Image 30': lowCognitionValue, 'Image 31': lowCognitionValue, 'Image 32': lowCognitionValue}
+
+        outputDict_WM_Ctx = {'object-1591': lowCognitionValue, 'object-1593': lowCognitionValue, 'object-1595': lowCognitionValue, 'object-1597': lowCognitionValue, 'object-2365': lowCognitionValue, 'object-2313': lowCognitionValue, 'object-2391': lowCognitionValue, 'object-2339': lowCognitionValue,
+                             'object-1592': lowCognitionValue, 'object-1594': lowCognitionValue, 'object-1596': lowCognitionValue, 'object-1598': lowCognitionValue, 'object-2366': lowCognitionValue, 'object-2314': lowCognitionValue, 'object-2392': lowCognitionValue, 'object-2340': lowCognitionValue}
 
         noResponse = 0
         for i in range(numFixStepsAverage, totalStepsAverage):
@@ -1534,13 +1551,13 @@ def check_permissions(file_path):
 # Preallocation of variables
 dataFolder = "Data"
 subfolders = ['DM', 'DM_Anti', 'EF', 'EF_Anti', 'RP', 'RP_Anti', 'RP_Ctx1', 'RP_Ctx2', 'WM', 'WM_Anti', 'WM_Ctx1', 'WM_Ctx2']
-preprocessing_folder = 'PreprocessedData_wResp_ALL'
+preprocessing_folder = 'PreprocessedData_wResp_ALL_lowCognition'
 participants = ['BeRNN_01','BeRNN_02','BeRNN_03','BeRNN_05']
 months = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12'] # info: debugging 13
 
 for participant in participants:
     # attention: change to right path
-    path = 'W:\\group_csp\\analyses\\oliver.frank' # Fl storage
+    path = 'W:\\group_csp\\analyses\\oliver.frank'  # Fl storage
     # path = '/data' # hitkip cluster
     # path = '/pandora/home/oliver.frank/01_Projects/RNN/multitask_BeRNN-main' # pandora server
 

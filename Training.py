@@ -50,15 +50,15 @@ def get_default_hp(ruleset):
         # input type: normal, multi
         'in_type': 'normal',
         # Type of RNNs: NonRecurrent, LeakyRNN, LeakyGRU, EILeakyGRU, GRU, LSTM
-        'rnn_type': 'LeakyGRU',
+        'rnn_type': 'LeakyRNN',
         # whether rule and stimulus inputs are represented separately
         'use_separate_input': False,
         # Type of loss functions
-        'loss_type': 'lsq',
+        'loss_type': 'lsq', # Cross-entropy loss
         # Optimizer
         'optimizer': 'adam',
         # Type of activation runctions, relu, softplus, tanh, elu, linear
-        'activation': 'relu',
+        'activation': 'softplus',
         # Time constant (ms)
         'tau': 100,
         # discretization time step (ms)
@@ -74,11 +74,11 @@ def get_default_hp(ruleset):
         # a default weak regularization prevents instability (regularizing with absolute value of magnitude of coefficients, leading to sparse features)
         'l1_h': 0.0001, # info: The higher the amount of hidden_rnn, the stronger the regularization to prevent overfitting
         # l2 regularization on activity (regularizing with squared value of magnitude of coefficients, decreasing influence of features)
-        'l2_h': 0.00001, # info: These values represent lambda which controls the strength of regularization
+        'l2_h': 0.0001, # info: These values represent lambda which controls the strength of regularization
         # l2 regularization on weight
-        'l1_weight': 0.00001,
+        'l1_weight': 0.0001,
         # l2 regularization on weight
-        'l2_weight': 0.00001,
+        'l2_weight': 0.0001,
         # l2 regularization on deviation from initialization
         'l2_weight_init': 0,
         # proportion of weights to train, None or float between (0, 1) - e.g. .1 will train a random 10% weight selection, the rest stays fixed (Yang et al. range: .05-.075)
@@ -98,7 +98,7 @@ def get_default_hp(ruleset):
         # number of output units
         'n_output': n_output,
         # number of recurrent units
-        'n_rnn': 128, # info: check theshold to know what amount of parameters will be actually trained (e.g. 11: 128 parameters)
+        'n_rnn': 32, # info: check theshold to know what amount of parameters will be actually trained (e.g. 11: 128 parameters)
         # random number used for several random initializations
         'rng': np.random.RandomState(seed=0),
         # number of input units
@@ -472,27 +472,25 @@ def train(model_dir,train_data ,eval_data,hp=None,max_steps=3e6,display_step=500
 # Train model
 ########################################################################################################################
 if __name__ == '__main__':
-    for modelNumber in range(1,6): # Just do everything 10 times
+    for modelNumber in range(1,2): # Just do everything 10 times
 
-        monthsConsidered = ['month_2','month_3','month_4','month_5','month_6','month_7','month_8','month_9']
+        monthsConsidered = ['month_3','month_4','month_5'] # info: month 3-5 most constant ones
         load_dir = None
         for month in monthsConsidered: # attention: You have to delete this if cascade training should be set OFF
             # Adjust variables manually as needed
             model_folder = 'Model'
             participant = 'BeRNN_03'
-            model_name = f'maskedCascade{modelNumber}_{participant}_month{month}' # Manually add months considered e.g. 1-7
+            model_name = f'{participant}_32RNNsoftplus_DM_sequence{modelNumber}_{month}' # Manually add months considered e.g. 1-7
 
+            path = 'C:\\Users\\oliver.frank\\Desktop\\BackUp' # local
+            # path = 'W:\\group_csp\\analyses\\oliver.frank' # fl storage
+            # path = '/data' # hitkip cluster
+            # path = '/pandora/home/oliver.frank/01_Projects/RNN/multitask_BeRNN-main' # pandora server
             # Define data path for different servers
-            # preprocessedData_path = os.path.join('C:\\Users\\oliver.frank\\Desktop\\BackUp\\beRNNmodels', participant,'PreprocessedData_wResp_ALL')
-            preprocessedData_path = os.path.join('W:\\group_csp\\analyses\\oliver.frank\\Data', participant,'PreprocessedData_wResp_ALL')
-            # preprocessedData_path = os.path.join('/data/data', participant, 'PreprocessedData_wResp_ALL')
-            # preprocessedData_path = os.path.join('/pandora/home/oliver.frank/01_Projects/RNN/multitask_BeRNN-main/Data', participant, 'PreprocessedData_wResp_ALL')
+            preprocessedData_path = os.path.join(path, 'Data', participant, 'PreprocessedData_wResp_ALL')
 
             # Define model_dir for different servers
-            # model_dir = os.path.join('C:\\Users\\oliver.frank\\Desktop\\BackUp\\BeRNN_models\\Barna_Models', model_name)
-            model_dir = os.path.join(f'W:\\group_csp\\analyses\\oliver.frank\\beRNNmodels\\barnaModels\\coronlyCascade{modelNumber}', model_name)
-            # model_dir = os.path.join('/data/models', model_name)
-            # model_dir = os.path.join('/pandora/home/oliver.frank/01_Projects/RNN/multitask_BeRNN-main/BeRNN_Models', model_name)
+            model_dir = os.path.join(f'{path}\\beRNNmodels\\barnaModels\\{participant}_32RNNsoftplus_DM_sequence{modelNumber}', model_name)
 
             if not os.path.exists(model_dir):
                 os.makedirs(model_dir)
@@ -504,7 +502,8 @@ if __name__ == '__main__':
             #     monthsConsidered.append(str(i))
 
             # Define probability of each task being trained
-            rule_prob_map = {"DM": 1,"DM_Anti": 1,"EF": 1,"EF_Anti": 1,"RP": 1,"RP_Anti": 1,"RP_Ctx1": 1,"RP_Ctx2": 1,"WM": 1,"WM_Anti": 1,"WM_Ctx1": 1,"WM_Ctx2": 1}
+            # rule_prob_map = {"DM": 1,"DM_Anti": 1,"EF": 1,"EF_Anti": 1,"RP": 1,"RP_Anti": 1,"RP_Ctx1": 1,"RP_Ctx2": 1,"WM": 1,"WM_Anti": 1,"WM_Ctx1": 1,"WM_Ctx2": 1}
+            rule_prob_map = {"DM": 1,"DM_Anti": 0,"EF": 0,"EF_Anti": 0,"RP": 0,"RP_Anti": 0,"RP_Ctx1": 0,"RP_Ctx2": 0,"WM": 0,"WM_Anti": 0,"WM_Ctx1": 0,"WM_Ctx2": 0}
 
             # Split the data into training and test data -----------------------------------------------------------------------
             # List of the subdirectories
