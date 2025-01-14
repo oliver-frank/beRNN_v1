@@ -61,13 +61,13 @@ kelly_colors = \
 save = True
 
 class Analysis(object):
-    def __init__(self, model_dir, mode, monthsConsidered, data_type, normalization_method='sum'):
+    def __init__(self, data_dir, model_dir, mode, monthsConsidered, data_type, normalization_method='sum'):
         hp = Tools.load_hp(model_dir)
 
         # If not computed, use variance.py
-        fname = os.path.join(model_dir, 'variance_' + mode + '_' + data_type + '.pkl')
+        fname = os.path.join(model_dir, 'variance_' + mode + '_' + data_type + '_' + data_dir.split('\\')[-1] + '.pkl')
         if not os.path.exists(os.path.join(model_dir, fname)):
-            variance.compute_variance(model_dir, mode, monthsConsidered)
+            variance.compute_variance(data_dir, model_dir, mode, monthsConsidered)
         res = Tools.load_pickle(fname)
         h_var_all_ = res['h_var_all']
         self.keys  = res['keys']
@@ -245,11 +245,10 @@ class Analysis(object):
             ax.set_ylim([-1, 1])
             ax.axis('off')
 
-        plt.savefig(os.path.join(figurePath, model_dir.split("\\")[-1] + '_' + 'taskVariance' + '.png'), format='png', dpi=300, bbox_inches='tight', pad_inches=0.1)
+        plt.savefig(os.path.join(figurePath, model_dir.split("\\")[-1] + '_' + 'taskVariance' + '_' + mode + '.png'), format='png', dpi=300, bbox_inches='tight', pad_inches=0.1)
 
         # plt.show()
         # plt.close()
-
 
     def get_dotProductCorrelation(self):
         # Center and normalize the data

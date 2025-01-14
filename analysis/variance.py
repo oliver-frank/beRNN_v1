@@ -1,8 +1,6 @@
 ########################################################################################################################
 # info: Variance
 ########################################################################################################################
-#
-########################################################################################################################
 
 ########################################################################################################################
 # Import necessary libraries and modules
@@ -28,7 +26,7 @@ save = True
 ########################################################################################################################
 # Define functions
 ########################################################################################################################
-def _compute_variance_bymodel(model: object, sess: object, mode: str, monthsConsidered: list, rules: object = None, random_rotation: object = False) -> object:
+def _compute_variance_bymodel(data_dir, model: object, sess: object, mode: str, monthsConsidered: list, rules: object = None, random_rotation: object = False) -> object:
     """Compute variance for all tasks.
 
         Args:
@@ -40,7 +38,7 @@ def _compute_variance_bymodel(model: object, sess: object, mode: str, monthsCons
     h_all_byrule = OrderedDict()
     h_all_byepoch = OrderedDict()
     hp = model.hp
-    model_dir = model.model_dir
+    # model_dir = model.model_dir
 
 
     if rules is None:
@@ -54,11 +52,11 @@ def _compute_variance_bymodel(model: object, sess: object, mode: str, monthsCons
         from scipy.stats import ortho_group
         random_ortho_matrix = ortho_group.rvs(dim=n_hidden)
 
-    trial_dir = 'W:\\group_csp\\analyses\\oliver.frank' + '\\Data\\BeRNN_' + model_dir.split('BeRNN_')[-1].split('_')[0] + '\\PreprocessedData_wResp_ALL'
+    # data_dir = 'C:\\Users\\oliver.frank\\Desktop\\BackUp\\Data\\BeRNN_' + model_dir.split('BeRNN_')[-1].split('_')[0] + '\\PreprocessedData_wResp_ALL'
 
     # III: Split the data ##############################################################################################
     # List of the subdirectories
-    subdirs = [os.path.join(trial_dir, d) for d in os.listdir(trial_dir) if os.path.isdir(os.path.join(trial_dir, d))]
+    subdirs = [os.path.join(data_dir, d) for d in os.listdir(data_dir) if os.path.isdir(os.path.join(data_dir, d))]
 
     # Initialize dictionaries to store training and evaluation data
     train_data = {}
@@ -101,7 +99,7 @@ def _compute_variance_bymodel(model: object, sess: object, mode: str, monthsCons
         print(task)
         if mode == 'train':
             data = train_data
-        elif mode == 'eval':
+        elif mode == 'test':
             data = eval_data
         x, y, y_loc = Tools.load_trials(task, mode, hp['batch_size'], data, False)
         epochs = Tools.find_epochs(x)
@@ -172,7 +170,7 @@ def _compute_variance_bymodel(model: object, sess: object, mode: str, monthsCons
             h_var_all[:, i] = val.var(axis=1).mean(axis=0)
 
         result = {'h_var_all': h_var_all, 'keys': list(h_all.keys())}
-        save_name = 'variance_' + mode + '_' + data_type
+        save_name = 'variance_' + mode + '_' + data_type + '_' + data_dir.split('\\')[-1]
         if random_rotation:
             save_name += '_rr'
 
@@ -181,7 +179,7 @@ def _compute_variance_bymodel(model: object, sess: object, mode: str, monthsCons
         with open(fname, 'wb') as f:
             pickle.dump(result, f)
 
-def _compute_variance(model_dir, mode, monthsConsidered, rules=None, random_rotation=False):
+def _compute_variance(data_dir, model_dir, mode, monthsConsidered, rules=None, random_rotation=False):
     """Compute variance for all tasks.
 
     Args:
@@ -192,9 +190,9 @@ def _compute_variance(model_dir, mode, monthsConsidered, rules=None, random_rota
     model = Model(model_dir, sigma_rec=0)
     with tf.Session() as sess:
         model.restore()
-        _compute_variance_bymodel(model, sess, mode, monthsConsidered, rules, random_rotation)
+        _compute_variance_bymodel(data_dir, model, sess, mode, monthsConsidered, rules, random_rotation)
 
-def compute_variance(model_dir, mode, monthsConsidered, rules=None, random_rotation=False):
+def compute_variance(data_dir, model_dir, mode, monthsConsidered, rules=None, random_rotation=False):
     """Compute variance for all tasks.
 
     Args:
@@ -204,7 +202,7 @@ def compute_variance(model_dir, mode, monthsConsidered, rules=None, random_rotat
     """
     dirs = Tools.valid_model_dirs(model_dir)
     for d in dirs:
-        _compute_variance(d, mode, monthsConsidered, rules, random_rotation)
+        _compute_variance(data_dir, d, mode, monthsConsidered, rules, random_rotation)
 
 if __name__ == '__main__':
     pass
