@@ -98,7 +98,7 @@ def get_default_hp(ruleset):
         # number of output units
         'n_output': n_output,
         # number of recurrent units
-        'n_rnn': 32, # info: check theshold to know what amount of parameters will be actually trained (e.g. 11: 128 parameters)
+        'n_rnn': 128, # info: check theshold to know what amount of parameters will be actually trained (e.g. 11: 128 parameters)
         # random number used for several random initializations
         'rng': np.random.RandomState(seed=0),
         # number of input units
@@ -110,10 +110,27 @@ def get_default_hp(ruleset):
         # c_mask response epoch value - info: How strong is the response epoch taken into account for caclulating error, the higher the more it influences the costs and therefore the parameter changes
         'c_mask_responseValue': 5.,
         # Structural mask
-        's_mask': None # 'sc1000' None info: Make sure n_rnn has the same size as the chosen s_mask
+        's_mask': None, # 'sc1000' None info: Make sure n_rnn has the same size as the chosen s_mask
+        # Rule probabilities to be drawn
+        'rule_probs': None,
         # intelligent synapses parameters, tuple (c, ksi) -> Yang et al. only apply these in sequential training
         # 'c_intsyn': 0,
         # 'ksi_intsyn': 0,
+        # months to train and test
+        'monthsConsidered': ['month_3','month_4','month_5'],
+        # monthsTaken
+        'monthsString': '3-5',
+        # fraction of tasks represented in training data
+        # 'rule_prob_map': {"DM": 1,"DM_Anti": 1,"EF": 1,"EF_Anti": 1,"RP": 1,"RP_Anti": 1,"RP_Ctx1": 1,"RP_Ctx2": 1,"WM": 1,"WM_Anti": 1,"WM_Ctx1": 1,"WM_Ctx2": 1}
+        'rule_prob_map': {"DM": 1,"DM_Anti": 1,"EF": 1,"EF_Anti": 1,"RP": 1,"RP_Anti": 1,"RP_Ctx1": 1,"RP_Ctx2": 1,"WM": 1,"WM_Anti": 1,"WM_Ctx1": 1,"WM_Ctx2": 1},
+        # tasksTaken
+        'tasksString': 'AllTask',
+        # Decide if models are trained sequentially
+        'sequenceMode': True,
+        # Participant to take
+        'participant': 'beRNN_05',
+        # Dataset
+        'data': 'PreprocessedData_wResp_ALL' # 'data_highDim'
     }
 
     return hp
@@ -227,7 +244,7 @@ def do_eval(sess, model, log, rule_train, eval_data):
 
     return log
 
-def train(model_dir,train_data ,eval_data,hp=None,max_steps=3e6,display_step=500,ruleset='all',rule_trains=None,rule_prob_map=None,seed=0,
+def train(model_dir,train_data ,eval_data,hp=None,max_steps=1e6,display_step=500,ruleset='all',rule_trains=None,rule_prob_map=None,seed=0,
           load_dir=None,trainables=None):
     """Train the network.
 
@@ -472,38 +489,26 @@ def train(model_dir,train_data ,eval_data,hp=None,max_steps=3e6,display_step=500
 # Train model
 ########################################################################################################################
 if __name__ == '__main__':
-    for modelNumber in range(1,2): # Just do everything 10 times
+    for modelNumber in range(1,2): # Define number of iterations and models to be created for every month, respectively
 
-        monthsConsidered = ['month_3','month_4','month_5'] # info: month 3-5 most constant ones
+        hp = get_default_hp('all')
         load_dir = None
-        for month in monthsConsidered: # attention: You have to delete this if cascade training should be set OFF
+        for month in hp['monthsConsidered']: # attention: You have to delete this if cascade training should be set OFF
             # Adjust variables manually as needed
-            model_folder = 'Model'
-            participant = 'BeRNN_03'
-            model_name = f'{participant}_32RNNsoftplus_DM_sequence{modelNumber}_{month}' # Manually add months considered e.g. 1-7
+            model_name = f'model_{month}'
 
             path = 'C:\\Users\\oliver.frank\\Desktop\\BackUp' # local
             # path = 'W:\\group_csp\\analyses\\oliver.frank' # fl storage
             # path = '/data' # hitkip cluster
             # path = '/pandora/home/oliver.frank/01_Projects/RNN/multitask_BeRNN-main' # pandora server
-            # Define data path for different servers
-            preprocessedData_path = os.path.join(path, 'Data', participant, 'PreprocessedData_wResp_ALL')
 
             # Define model_dir for different servers
-            model_dir = os.path.join(f'{path}\\beRNNmodels\\barnaModels\\{participant}_32RNNsoftplus_DM_sequence{modelNumber}', model_name)
+            model_dir = os.path.join(f"{path}\\beRNNmodels\\2025_01\\{hp['participant']}_{hp['tasksString']}_{hp['monthsString']}_{hp['data']}_{hp['rnn_type']}_{hp['n_rnn']}_{hp['activation']}_iteration{modelNumber}", model_name)
+            # Define data path for different servers
+            preprocessedData_path = os.path.join(path, 'Data', hp['participant'], hp['data'])
 
             if not os.path.exists(model_dir):
                 os.makedirs(model_dir)
-
-            # # Define months taken into account for model training
-            # months = model_name.split('_')[-1].split('-')
-            # monthsConsidered = []
-            # for i in range(int(months[0]), int(months[1]) + 1):
-            #     monthsConsidered.append(str(i))
-
-            # Define probability of each task being trained
-            # rule_prob_map = {"DM": 1,"DM_Anti": 1,"EF": 1,"EF_Anti": 1,"RP": 1,"RP_Anti": 1,"RP_Ctx1": 1,"RP_Ctx2": 1,"WM": 1,"WM_Anti": 1,"WM_Ctx1": 1,"WM_Ctx2": 1}
-            rule_prob_map = {"DM": 1,"DM_Anti": 0,"EF": 0,"EF_Anti": 0,"RP": 0,"RP_Anti": 0,"RP_Ctx1": 0,"RP_Ctx2": 0,"WM": 0,"WM_Anti": 0,"WM_Ctx1": 0,"WM_Ctx2": 0}
 
             # Split the data into training and test data -----------------------------------------------------------------------
             # List of the subdirectories
@@ -539,8 +544,10 @@ if __name__ == '__main__':
                     eval_data[subdir] = eval_files
 
             # Start Training ---------------------------------------------------------------------------------------------------
-            train(model_dir=model_dir, rule_prob_map=rule_prob_map, train_data = train_data, eval_data = eval_data, load_dir = load_dir)
+            train(model_dir=model_dir, rule_prob_map=hp['rule_probs'], train_data = train_data, eval_data = eval_data, load_dir = load_dir)
 
-            load_dir = model_dir # attention: Comment out if no Cascade training should be applied
+            # info: If True previous model parameters will be taken to initialize consecutive model, creating sequential training
+            if hp['sequenceMode'] == True:
+                load_dir = model_dir
 
 

@@ -199,7 +199,7 @@ def load_trials(task,mode,batchSize,data,errorComparison):
                 else:
                     raise ValueError(f"batchSize {batchSize} is not valid")
 
-            elif mode == 'eval':
+            elif mode == 'test':
                 # Choose the triplet from the splitted data
                 if errorComparison == False:
                     currenTask_values = []

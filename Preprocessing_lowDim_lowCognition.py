@@ -415,7 +415,7 @@ def preprocess_DM(opened_xlsxFile, questionnare_files, list_allSessions, sequenc
         pref = np.arange(0, 2 * np.pi, 2 * np.pi / 32)  # fix: pref[positionList[0]] = radiant/degree = polar
         for i in range(numFixStepsAverage, totalStepsAverage):
             for j in range(0, int(numberOfTrials)):
-                if isinstance(Output[i][j][0], str) and Output[i][j][0] != 'noResponse' and Output[i][j][0] != 'NoResponse':
+                if isinstance(Output[i][j][0], str) and Output[i][j][0] != 'noResponse' and Output[i][j][0] != 'NoResponse' and safe_isnan(Output[i][j][0]) == False:
                     # Translate field into radiant
                     position = pref[outputDict[Output[i][j][0]]-1]
                     # Translate radiant into sin/cos vector indicating the target response direction for the network
@@ -859,7 +859,7 @@ def preprocess_EF(opened_xlsxFile, questionnare_files, list_allSessions, sequenc
         for k in range(numFixStepsAverage, totalStepsAverage):
             for j in range(0, newOutput.shape[1]):
                 if isinstance(Output[k][j][0], str) and Output[k][j][0] != 'noResponse' and Output[k][j][
-                    0] != 'NoResponse':
+                    0] != 'NoResponse' and safe_isnan(Output[i][j][0]) == False:
                     y_loc[k][j] = pref[outputDict[Output[k][j][0]]-1]  # radiant form direction
                 else:
                     y_loc[k][j] = float(-1)
@@ -1254,7 +1254,7 @@ def preprocess_RP(opened_xlsxFile, questionnare_files, list_allSessions, sequenc
         for i in range(numFixStepsAverage, totalStepsAverage):
             for j in range(0, int(numberOfTrials)):
                 if isinstance(Output[i][j][0], str) and Output[i][j][0] != 'screen' and Output[i][j][0] != 'noResponse' and \
-                        Output[i][j][0] != 'NoResponse' and Output[i][j][0] != 'Fixation Cross':
+                        Output[i][j][0] != 'NoResponse' and Output[i][j][0] != 'Fixation Cross' and safe_isnan(Output[i][j][0]) == False:
                     # Translate field into radiant
                     position = pref[outputDict[Output[i][j][0]]-1]
                     # Translate radiant into sin/cos vector indicating the target response direction for the network
@@ -1431,14 +1431,11 @@ def preprocess_WM(opened_xlsxFile, questionnare_files, list_allSessions, sequenc
                 currentSequenceList.append(sequence)
             finalSequenceList.append(currentSequenceList)
         # --------------------------------------------------------------------------------------------------------------
-        # Concatenate trial information for error anaylsis to response entries # info: Where the error is happening
+        # Concatenate trial information for error anaylsis to response entries
         # currentConcatResponseEntriesFinal = np.concatenate([currentConcatResponseEntries, np.array(concatedValuesAndOccurrencesList, dtype=object).T.reshape((40, 1))],axis=0)
         adjusted_concatedValuesAndOccurrencesList = [Tools.adjust_ndarray_size(arr) for arr in concatedValuesAndOccurrencesList]
-        currentConcatResponseEntriesFinal = np.concatenate([currentConcatResponseEntries, np.array(adjusted_concatedValuesAndOccurrencesList, dtype=object).reshape((40,6)).T],axis=0)
+        currentConcatResponseEntriesFinal = np.concatenate([currentConcatResponseEntries, np.array(adjusted_concatedValuesAndOccurrencesList, dtype=object).reshape((len(adjusted_concatedValuesAndOccurrencesList),6)).T],axis=0)
         # --------------------------------------------------------------------------------------------------------------
-
-        # print(currentConcatResponseEntries.shape)  # Should print (2, 40)
-        # print(np.array(concatedValuesAndOccurrencesList).T.shape)  # Should print (6, 40)
 
         # fix: Create final df for INPUT and OUPUT #####################################################################
         newOrderSequenceList = []
@@ -1703,7 +1700,8 @@ def preprocess_WM(opened_xlsxFile, questionnare_files, list_allSessions, sequenc
                 if isinstance(Output[i][j][35], str):
                     # Get the right dictionary
                     if len(opened_xlsxFile_selection['Spreadsheet'][0].split('_')) == 4 or opened_xlsxFile_selection['Spreadsheet'][0].split('_')[1] == 'Anti' or \
-                            len(opened_xlsxFile_selection['Spreadsheet'][0].split('_')) == 5 and opened_xlsxFile_selection['Spreadsheet'][0].split('_')[2] == '3stim':
+                            len(opened_xlsxFile_selection['Spreadsheet'][0].split('_')) == 5 and opened_xlsxFile_selection['Spreadsheet'][0].split('_')[2] == '3stim'\
+                            and safe_isnan(Output[i][j][0]) == False:
                         outputDict = outputDict_WM
                         chosenColumn = 0
                     else:
@@ -1790,13 +1788,14 @@ def check_permissions(file_path):
 # Preallocation of variables
 dataFolder = "Data"
 subfolders = ['DM', 'DM_Anti', 'EF', 'EF_Anti', 'RP', 'RP_Anti', 'RP_Ctx1', 'RP_Ctx2', 'WM', 'WM_Anti', 'WM_Ctx1', 'WM_Ctx2']
-preprocessing_folder = 'PreprocessedData_wResp_ALL_lowDim_lowCognition'
-participants = ['BeRNN_01','BeRNN_02','BeRNN_03','BeRNN_05']
-months = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12'] # info: add months here
+preprocessing_folder = 'data_lowhDim_lowCognition'
+participants = ['BeRNN_01','BeRNN_02','BeRNN_03','BeRNN_04','BeRNN_05']
+months = ['3', '4', '5'] # info: debugging '13' - '1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12'
 
 for participant in participants:
     # attention: change to right path
-    path = 'W:\\group_csp\\analyses\\oliver.frank'  # Fl storage
+    path = 'C:\\Users\\oliver.frank\\Desktop\\BackUp'  # local
+    # path = 'W:\\group_csp\\analyses\\oliver.frank'  # Fl storage
     # path = '/data' # hitkip cluster
     # path = '/pandora/home/oliver.frank/01_Projects/RNN/multitask_BeRNN-main' # pandora server
 
@@ -1808,9 +1807,9 @@ for participant in participants:
         os.makedirs(main_path)
 
     for folder in subfolders:
-        path = os.path.join(main_path, folder)
-        if not os.path.exists(path):
-            os.makedirs(path)
+        subpath = os.path.join(main_path, folder)
+        if not os.path.exists(subpath):
+            os.makedirs(subpath)
 
     # Processing path allocation
     processing_path = os.path.join(path,dataFolder, participant)
