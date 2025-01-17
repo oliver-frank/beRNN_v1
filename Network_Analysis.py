@@ -11,7 +11,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import networkx as nx
 # matplotlib.use('WebAgg')  # Or 'Qt5Agg', 'GTK3Agg', 'wxAgg'
-from scipy.stats import ttest_ind
+# from scipy.stats import ttest_ind
 
 import warnings
 warnings.simplefilter(action='ignore', category=FutureWarning)
@@ -25,7 +25,7 @@ from Tools import rule_name
 
 selected_hp_keys = ['rnn_type', 'activation', 'tau', 'dt', 'sigma_rec', 'sigma_x', 'w_rec_init', 'l1_h', 'l2_h', \
                     'l1_weight', 'l2_weight', 'l2_weight_init', 'learning_rate', 'n_rnn', 'c_mask_responseValue',
-                    'monthsConsidered']  # Replace with the keys you want
+                    'monthsConsidered', 'data']  # Replace with the keys you want info: 'data' only exists from 15.01.25 on
 
 def smoothed(data, window_size):
     smoothed_data = np.convolve(data, np.ones(window_size) / window_size, mode='valid')
@@ -48,6 +48,7 @@ def smoothed(data, window_size):
 def plot_performanceprogress_eval_BeRNN(model_dir, figurePath, rule_plot=None):
     # Plot Evaluation Progress
     log = Tools.load_log(model_dir)
+    # log = Tools.load_log(currentModelDirectory)
     hp = Tools.load_hp(model_dir)
 
     # co: change to [::2] if you want to have only every second validation value
@@ -66,8 +67,8 @@ def plot_performanceprogress_eval_BeRNN(model_dir, figurePath, rule_plot=None):
 
     for i, rule in enumerate(rule_plot):
         # co: add [::2] if you want to have only every second validation values
-        line = ax.plot(x_plot, np.log10(log['cost_' + rule]), color=rule_color[rule])
-        ax.plot(x_plot, log['perf_' + rule], color=rule_color[rule])
+        # line = ax.plot(x_plot, np.log10(log['cost_' + rule]), color=rule_color[rule])
+        line = ax.plot(x_plot, log['perf_' + rule], color=rule_color[rule])
         lines.append(line[0])
         labels.append(rule_name[rule])
 
@@ -138,20 +139,21 @@ def plot_performanceprogress_train_BeRNN(model_dir, figurePath, rule_plot=None):
         # rule_plot = ['DM', 'DM_Anti']
 
     for i, rule in enumerate(rule_plot):
-        y_cost = log['cost_train_' + rule][::int((len(log['cost_train_' + rule]) / len(x_plot)))][:len(x_plot)]
+        # y_cost = log['cost_train_' + rule][::int((len(log['cost_train_' + rule]) / len(x_plot)))][:len(x_plot)]
+
         y_perf = log['perf_train_' + rule][::int((len(log['perf_train_' + rule]) / len(x_plot)))][:len(x_plot)]
 
         window_size = 5  # Adjust window_size to smooth less or more, should actually be 20 so that it concolves the same amount of data (800 trials) for one one measure as in evaluation
 
-        y_cost_smoothed = smoothed(y_cost, window_size=window_size)
+        # y_cost_smoothed = smoothed(y_cost, window_size=window_size)
         y_perf_smoothed = smoothed(y_perf, window_size=window_size)
 
         # Ensure the lengths match
-        y_cost_smoothed = y_cost_smoothed[:len(x_plot)]
+        # y_cost_smoothed = y_cost_smoothed[:len(x_plot)]
         y_perf_smoothed = y_perf_smoothed[:len(x_plot)]
 
-        line = ax.plot(x_plot, np.log10(y_cost_smoothed), color=rule_color[rule])
-        ax.plot(x_plot, y_perf_smoothed, color=rule_color[rule])
+        # line = ax.plot(x_plot, np.log10(y_cost_smoothed), color=rule_color[rule])
+        line = ax.plot(x_plot, y_perf_smoothed, color=rule_color[rule])
 
         lines.append(line[0])
         labels.append(rule_name[rule])
@@ -175,9 +177,9 @@ def plot_performanceprogress_train_BeRNN(model_dir, figurePath, rule_plot=None):
                           fontsize=fs, labelspacing=0.3, loc=6, frameon=False) # info: first value influences horizontal position of legend
     plt.setp(lg.get_title(), fontsize=fs)
 
-    plt.title(model_dir.split("\\")[-1].split('_')[0:1][0] + ' ' + model_dir.split("\\")[-1].split('_')[1:2][0] + ' ' + 'TRAINING', fontsize=14)
+    plt.title(model_dir.split("\\")[-1].split('_')[0:1][0] + ' ' + model_dir.split("\\")[-1].split('_')[1:2][0] + ' ' + 'TRAIN', fontsize=14)
 
-    plt.savefig(os.path.join(figurePath, model_dir.split("\\")[-1] + ' ' + 'functionalCorrelation_TRAINING.png'), format='png', dpi=300)
+    plt.savefig(os.path.join(figurePath, model_dir.split("\\")[-1] + ' ' + 'functionalCorrelation_Train.png'), format='png', dpi=300)
 
     # plt.show()
     # plt.close()
@@ -366,8 +368,8 @@ def compute_functionalCorrelation(model_dir, figurePath, monthsConsidered, mode,
     im = ax_matrix.imshow(correlation, cmap='coolwarm', interpolation='nearest', vmin=-1, vmax=1)
 
     # Add title
-    subject = '_'.join(model_dir.split("\\")[-1].split('_')[0:4])
-    ax_matrix.set_title(f'Correlation Function - {subject}', fontsize=22, pad=20)
+    model = '_'.join(model_dir.split("\\")[-1].split('_')[0:4])
+    ax_matrix.set_title(f'Functional Correlation - {model} - {mode}', fontsize=22, pad=20)
     # Add x-axis and y-axis labels
     ax_matrix.set_xlabel('Hidden units', fontsize=16, labelpad=15)
     ax_matrix.set_ylabel('Hidden units', fontsize=16, labelpad=15)
@@ -398,7 +400,7 @@ def compute_functionalCorrelation(model_dir, figurePath, monthsConsidered, mode,
     #                          model_dir.split("\\")[-1] + '_' + 'Similarity' + '.png')
     # save_path = os.path.join('W:\\group_csp\\analyses\\oliver.frank\\beRNNmodels\\Visuals\\CorrelationFunction\\BarnaModels',
     #                          model_dir.split("\\")[-1] + '_' + 'CorrelationFunction' + '.png')
-    plt.savefig(os.path.join(figurePath, model_dir.split("\\")[-1] + '_' + 'functionalCorrelation' + '.png'), format='png', dpi=300, bbox_inches='tight')
+    plt.savefig(os.path.join(figurePath, model_dir.split("\\")[-1] + '_' + 'functionalCorrelation' + f'_{mode}' + '.png'), format='png', dpi=300, bbox_inches='tight')
 
     # plt.show()
     # plt.close()
@@ -438,7 +440,7 @@ def compute_structuralCorrelation(model_dir, figurePath, monthsConsidered, mode,
 
         # Add title
         subject = '_'.join(model_dir.split("\\")[-1].split('_')[0:4])
-        ax_matrix.set_title(f'{correlationName} - {subject}', fontsize=22, pad=20) # info: change here
+        ax_matrix.set_title(f'Structural Correlation - {model} - {mode}', fontsize=22, pad=20) # info: change here
 
         # Add x-axis and y-axis labels
         ax_matrix.set_xlabel('Hidden weights', fontsize=16, labelpad=15)
@@ -471,7 +473,7 @@ def compute_structuralCorrelation(model_dir, figurePath, monthsConsidered, mode,
         # save_path = os.path.join(
         #     'W:\\group_csp\\analyses\\oliver.frank\\beRNNmodels\\Visuals\\CorrelationStructure\\BarnaModels',
         #     model_dir.split("\\")[-1] + '_' + 'CorrelationStructure' + '.png')
-        plt.savefig(os.path.join(figurePath, model_dir.split("\\")[-1] + '_' + correlationName + '.png'),
+        plt.savefig(os.path.join(figurePath, model_dir.split("\\")[-1] + '_' + 'structuralCorrelation' + f'_{mode}' + '.png'),
                     format='png', dpi=300, bbox_inches='tight') # info: change here
 
         # plt.show()
@@ -479,125 +481,134 @@ def compute_structuralCorrelation(model_dir, figurePath, monthsConsidered, mode,
 # atm not taken into concern
 
 
-
 # info: ################################################################################################################
 # info: Individual plots ###############################################################################################
 # info: ################################################################################################################
 # Assign a color to each task
-_rule_color = {
-    'DM': 'green',
-    'DM_Anti': 'olive',
-    'EF': 'forest green',
-    'EF_Anti': 'mustard',
-    'RP': 'tan',
-    'RP_Anti': 'brown',
-    'RP_Ctx1': 'lavender',
-    'RP_Ctx2': 'aqua',
-    'WM': 'bright purple',
-    'WM_Anti': 'green blue',
-    'WM_Ctx1': 'blue',
-    'WM_Ctx2': 'indigo'
+rule_color = {
+    # **DM tasks (Yellow-Brown Family)**
+    'DM':       '#D9D0C7',    # Base Beige
+    'DM_Anti':  '#C3B8AE',    # Muted Sand
+    # 'DM_Ctx1':  '#E5D7CA',    # Soft Cream
+    # 'DM_Ctx2':  '#F2E8DD',    # Light Ivory
+
+    # **EF tasks (Orange Family)**
+    'EF':       '#F2B35E',    # Bright Orange
+    'EF_Anti':  '#E89A40',    # Warm Tangerine
+    # 'EF_Ctx1':  '#FDD69E',    # Soft Apricot
+    # 'EF_Ctx2':  '#FFE7C7',    # Light Peach
+
+    # **RP tasks (Brighter Olive Family)**
+    'RP':       '#8A7B4F',    # Brighter Olive
+    'RP_Anti':  '#716B3C',    # Deep Olive
+    'RP_Ctx1':  '#A4935F',    # Muted Olive-Gold
+    'RP_Ctx2':  '#C6B88A',    # Soft Olive Beige
+
+    # **WM tasks (Blue Family)**
+    'WM':       '#4D5D8C',    # Base Slate Blue
+    'WM_Anti':  '#3A466E',    # Deep Navy-Blue
+    'WM_Ctx1':  '#687AAE',    # Light Slate Blue
+    'WM_Ctx2':  '#A8B5D4'     # Pale Blue
 }
-rule_color = {k: 'xkcd:' + v for k, v in _rule_color.items()}
 
-participant = 'beRNN_05'
-model = 'beRNN_05_AllTask_3-5_PreprocessedData_wResp_ALL_LeakyRNN_128_softplus_iteration1'
-folder = '\\beRNNmodels\\2025_01\\'
+participant = 'beRNN_03'
+model = '\\beRNN_03_AllTask_3-5_data_lowDim_lowCognition_LeakyRNN_128_softplus_iteration1'
+trainingNumber = '\\02'
+folder = '\\beRNNmodels\\2025_01'
 folderPath = 'C:\\Users\\oliver.frank\\Desktop\\BackUp'
-finalPath = folderPath + folder + model
+finalPath = folderPath + folder + trainingNumber + model
 
-# dataDir = folderPath + '\\Data'
-dataFolder = 'PreprocessedData_wResp_ALL'
-data_dir = os.path.join('W:\\group_csp\\analyses\\oliver.frank\\Data', participant, dataFolder)
-model_list = os.listdir(finalPath)
+_model_list = os.listdir(finalPath)
+model_list = [i for i in _model_list if 'model' in i]
+dataFolder = Tools.load_hp(finalPath + f'\\{model_list[0]}')['data']
+data_dir = os.path.join('C:\\Users\\oliver.frank\\Desktop\\BackUp\\Data', participant, dataFolder)
 
 for model_dir in model_list:
-    if model_dir != 'visuals':
-        currentModelDirectory = os.path.join(finalPath, model_dir)
-        # Load hp
-        currentHP = Tools.load_hp(currentModelDirectory)
-        # Load tasks to plot
-        rule_plot = []
-        for i in currentHP['rule_prob_map']:
-            if currentHP['rule_prob_map'][i] > 0:
-                rule_plot.append(i)
+    currentModelDirectory = os.path.join(finalPath, model_dir)
+    # Load hp
+    currentHP = Tools.load_hp(currentModelDirectory)
+    # Load tasks to plot
+    rule_plot = []
+    for i in currentHP['rule_prob_map']:
+        if currentHP['rule_prob_map'][i] > 0:
+            rule_plot.append(i)
 
-        # create one directory for all visuals within model_dir
-        visualsDirectory = os.path.join(currentModelDirectory, 'visuals')
-        # Check if the directory exists
-        if not os.path.exists(visualsDirectory):
-            # If it doesn't exist, create the directory
-            os.makedirs(visualsDirectory)
-            print(f"Directory created: {visualsDirectory}")
-        else:
-            print(f"Directory already exists: {visualsDirectory}")
+    # create one directory for all visuals within model_dir
+    visualsDirectory = os.path.join(currentModelDirectory, 'visuals')
+    # Check if the directory exists
+    if not os.path.exists(visualsDirectory):
+        # If it doesn't exist, create the directory
+        os.makedirs(visualsDirectory)
+        print(f"Directory created: {visualsDirectory}")
+    else:
+        print(f"Directory already exists: {visualsDirectory}")
 
-        # Plot improvement of performance over iterating evaluation and training steps
-        plot_performanceprogress_eval_BeRNN(currentModelDirectory, visualsDirectory, rule_plot=rule_plot)
-        plot_performanceprogress_train_BeRNN(currentModelDirectory, visualsDirectory, rule_plot=rule_plot)
+    # Plot improvement of performance over iterating evaluation and training steps
+    plot_performanceprogress_eval_BeRNN(currentModelDirectory, visualsDirectory, rule_plot=rule_plot)
+    plot_performanceprogress_train_BeRNN(currentModelDirectory, visualsDirectory, rule_plot=rule_plot)
 
-        # Compute task variance on evaluation data
-        mode = 'test'
-        analysis_test = clustering.Analysis(data_dir, currentModelDirectory, mode, currentHP['monthsConsidered'], 'rule')
-        analysis_test.plot_variance(currentModelDirectory, visualsDirectory, mode) # Normalized Task Variance
-        # Compute task variance on training data
-        mode = 'train'
-        analysis_train = clustering.Analysis(data_dir, currentModelDirectory, mode, currentHP['monthsConsidered'], 'rule')
-        analysis_train.plot_variance(currentModelDirectory, visualsDirectory, mode)  # Normalized Task Variance
+    # Compute task variance on evaluation data
+    mode = 'test'
+    analysis_test = clustering.Analysis(data_dir, currentModelDirectory, mode, currentHP['monthsConsidered'], 'rule')
+    analysis_test.plot_variance(currentModelDirectory, visualsDirectory, mode) # Normalized Task Variance
+    # Compute task variance on training data
+    mode = 'train'
+    analysis_train = clustering.Analysis(data_dir, currentModelDirectory, mode, currentHP['monthsConsidered'], 'rule')
+    analysis_train.plot_variance(currentModelDirectory, visualsDirectory, mode)  # Normalized Task Variance
 
-        # Compute functional and structural Correlation with normalized and centered dot product on evaluation data
-        mode = 'test'
-        compute_functionalCorrelation(currentModelDirectory, visualsDirectory, currentHP['monthsConsidered'], mode, analysis_test)
-        # Compute functional and structural Correlation with normalized and centered dot product on evaluation data
-        mode = 'train'
-        compute_functionalCorrelation(currentModelDirectory, visualsDirectory, currentHP['monthsConsidered'], mode, analysis_train)
-        # compute_structuralCorrelation(model_dir, figurePath_structuralCorrelation, monthsConsidered, mode)
-
+    # Compute functional and structural Correlation with normalized and centered dot product on evaluation data
+    mode = 'test'
+    compute_functionalCorrelation(currentModelDirectory, visualsDirectory, currentHP['monthsConsidered'], mode, analysis_test)
+    # Compute functional and structural Correlation with normalized and centered dot product on evaluation data
+    mode = 'train'
+    compute_functionalCorrelation(currentModelDirectory, visualsDirectory, currentHP['monthsConsidered'], mode, analysis_train)
+    # compute_structuralCorrelation(model_dir, figurePath_structuralCorrelation, monthsConsidered, mode)
 
 
-# info: ################################################################################################################
-# info: Average plots ##################################################################################################
-# info: ################################################################################################################
-# Assign a color to each task
-_rule_color = {
-    'DM': 'green',
-    'DM_Anti': 'olive',
-    'EF': 'forest green',
-    'EF_Anti': 'mustard',
-    'RP': 'tan',
-    'RP_Anti': 'brown',
-    'RP_Ctx1': 'lavender',
-    'RP_Ctx2': 'aqua',
-    'WM': 'bright purple',
-    'WM_Anti': 'green blue',
-    'WM_Ctx1': 'blue',
-    'WM_Ctx2': 'indigo'
-}
-rule_color = {k: 'xkcd:' + v for k, v in _rule_color.items()}
 
-participant = 'beRNN_05'
-modelsFolder = 'beRNN_05_AllTask_3-5_PreprocessedData_wResp_ALL_LeakyRNN_128_softplus_iteration1'
-folder = '\\beRNNmodels\\2025_01\\'
-folderPath = 'C:\\Users\\oliver.frank\\Desktop\\BackUp'
-finalPath = folderPath + folder + modelsFolder
-
-model_list = os.listdir(finalPath)
-
-visualsDirectory = os.path.join(finalPath, 'visuals')
-
-if not os.path.exists(visualsDirectory):
-    # If it doesn't exist, create the directory
-    os.makedirs(visualsDirectory)
-    print(f"Directory created: {visualsDirectory}")
-else:
-    print(f"Directory already exists: {visualsDirectory}")
-
-# Plot the average performance of models on evaluation data
-mode = 'test'
-plot_aggregated_performance(model_list, mode, visualsDirectory, finalPath)
-# Plot the average performance of models on training data
-mode = 'train'
-plot_aggregated_performance(model_list, mode, visualsDirectory, finalPath)
+# # info: ################################################################################################################
+# # info: Average plots ##################################################################################################
+# # info: ################################################################################################################
+# # Assign a color to each task
+# _rule_color = {
+#     'DM': 'green',
+#     'DM_Anti': 'olive',
+#     'EF': 'forest green',
+#     'EF_Anti': 'mustard',
+#     'RP': 'tan',
+#     'RP_Anti': 'brown',
+#     'RP_Ctx1': 'lavender',
+#     'RP_Ctx2': 'aqua',
+#     'WM': 'bright purple',
+#     'WM_Anti': 'green blue',
+#     'WM_Ctx1': 'blue',
+#     'WM_Ctx2': 'indigo'
+# }
+# rule_color = {k: 'xkcd:' + v for k, v in _rule_color.items()}
+#
+# participant = 'beRNN_05'
+# modelsFolder = 'beRNN_05_AllTask_3-5_PreprocessedData_wResp_ALL_LeakyRNN_128_softplus_iteration1'
+# folder = '\\beRNNmodels\\2025_01\\'
+# folderPath = 'C:\\Users\\oliver.frank\\Desktop\\BackUp'
+# finalPath = folderPath + folder + modelsFolder
+#
+# model_list = os.listdir(finalPath)
+#
+# visualsDirectory = os.path.join(finalPath, 'visuals')
+#
+# if not os.path.exists(visualsDirectory):
+#     # If it doesn't exist, create the directory
+#     os.makedirs(visualsDirectory)
+#     print(f"Directory created: {visualsDirectory}")
+# else:
+#     print(f"Directory already exists: {visualsDirectory}")
+#
+# # Plot the average performance of models on evaluation data
+# mode = 'test'
+# plot_aggregated_performance(model_list, mode, visualsDirectory, finalPath)
+# # Plot the average performance of models on training data
+# mode = 'train'
+# plot_aggregated_performance(model_list, mode, visualsDirectory, finalPath)
 
 
 
@@ -609,15 +620,9 @@ def apply_threshold(matrix, threshold):
     matrix_thresholded = np.where(np.abs(matrix) > threshold, matrix,0)  # fix: Can you appply a 20 to 40 % of the strongest connection filter for positive and negative correlations
     return matrix_thresholded
 
-participant = 'beRNN_05'
-
-iterationFolder = '2025_01' # should contain several iterations to create statistical distributions of TMs
-folder = '\\beRNNmodels\\'
-folderPath = 'C:\\Users\\oliver.frank\\Desktop\\BackUp'
-finalPath = folderPath + folder + iterationFolder
-
-iterationList = os.listdir(finalPath)
-modelList = os.listdir(os.path.join(finalPath, iterationList[0]))[:-1] # All except for 'visuals'
+_modelList = os.listdir(finalPath)
+# _modelList = os.listdir(os.path.join(finalPath, iterationList[0]))
+modelList = [i for i in _modelList if 'model' in i] # All except for 'visuals' and 'topologicalMarkers'
 
 # Create topMarker folder
 topMarkerPath = os.path.join(finalPath, 'topologicalMarker')
@@ -633,34 +638,32 @@ for model in modelList:
     betweennessList = []
     assortativityList = []
 
-    for iteration in iterationList:
-        if iteration != 'topologicalMarker':
-            file_dir = os.path.join(finalPath, iteration, model,'visuals',f'{model}_functionalCorrelation.npy')
-            file = np.load(file_dir)
+    file_dir = os.path.join(finalPath, model,'visuals',f'{model}_functionalCorrelation.npy')
+    file = np.load(file_dir)
 
-            # Define a threshold (you can experiment with this value)
-            threshold = 0.5  # Example threshold
-            functionalCorrelation_thresholded = apply_threshold(file, threshold)
+    # Define a threshold (you can experiment with this value)
+    threshold = 0.5  # Example threshold
+    functionalCorrelation_thresholded = apply_threshold(file, threshold)
 
-            # Function to apply a threshold to the matrix
-            G = nx.from_numpy_array(functionalCorrelation_thresholded)
+    # Function to apply a threshold to the matrix
+    G = nx.from_numpy_array(functionalCorrelation_thresholded)
 
-            # The degree of a node in a graph is the count of edges connected to that node. For each node, it represents the number of
-            # direct connections (or neighbors) it has within the graph.
-            degrees = nx.degree(G) # For calculating node degrees. attention: transform into graph then apply stuff
-            # Betweenness centrality quantifies the importance of a node based on its position within the shortest paths between other nodes.
-            betweenness = nx.betweenness_centrality(G) # For betweenness centrality.
-            # Optionally calculate averages of node-based metrics
-            avg_degree = np.mean(list(dict(G.degree()).values()))
-            avg_betweenness = np.mean(list(betweenness.values()))
+    # The degree of a node in a graph is the count of edges connected to that node. For each node, it represents the number of
+    # direct connections (or neighbors) it has within the graph.
+    degrees = nx.degree(G) # For calculating node degrees. attention: transform into graph then apply stuff
+    # Betweenness centrality quantifies the importance of a node based on its position within the shortest paths between other nodes.
+    betweenness = nx.betweenness_centrality(G) # For betweenness centrality.
+    # Optionally calculate averages of node-based metrics
+    avg_degree = np.mean(list(dict(G.degree()).values()))
+    avg_betweenness = np.mean(list(betweenness.values()))
 
-            # Assortativity: Measures the tendency of nodes to connect to other nodes with similar degrees.
-            # A positive value means that high-degree nodes tend to connect to other high-degree nodes. Around 0 no relevant correlation
-            assortativity = nx.degree_assortativity_coefficient(G)
+    # Assortativity: Measures the tendency of nodes to connect to other nodes with similar degrees.
+    # A positive value means that high-degree nodes tend to connect to other high-degree nodes. Around 0 no relevant correlation
+    assortativity = nx.degree_assortativity_coefficient(G)
 
-            degreeList.append(avg_degree)
-            betweennessList.append(avg_betweenness)
-            assortativityList.append(assortativity)
+    degreeList.append(avg_degree)
+    betweennessList.append(avg_betweenness)
+    assortativityList.append(assortativity)
 
     topMarkerList = [degreeList, betweennessList, assortativityList]
     topMarkerNamesList = ['degreeList', 'betweennessList', 'assortativityList']
@@ -672,35 +675,35 @@ for model in modelList:
         # np.save(os.path.join(folderPath, f'topMarkerDistributions_monthWise_{participant}', f'{topMarkerNamesList[i]}MeanVariance_{month}.npy'), mean_variance)
 
 
-        # attention: Distributions and their visualization only possible with more than one iteration
-        plt.figure(figsize=(12, 7))
-        plt.hist(topMarkerList[i], bins=10, edgecolor='black', alpha=0.8, color='skyblue', density=True)
-        plt.axvline(mean_value, color='red', linestyle='dashed', linewidth=2, label=f'Mean: {mean_value:.2f}')
-        plt.axvline(mean_value - np.sqrt(variance_value), color='purple', linestyle='dashed', linewidth=2,
-                    label=f'-1 SD: {mean_value - np.sqrt(variance_value):.2f}')
-        plt.axvline(mean_value + np.sqrt(variance_value), color='orange', linestyle='dashed', linewidth=2,
-                    label=f'+1 SD: {mean_value + np.sqrt(variance_value):.2f}')
-
-        # Add a KDE plot for smooth density visualization
-        from scipy.stats import gaussian_kde
-
-        density = gaussian_kde(topMarkerList[i])
-        x_vals = np.linspace(min(topMarkerList[i]), max(topMarkerList[i]), 200)
-        plt.plot(x_vals, density(x_vals), color='darkblue', linewidth=2, label='Density Curve')
-
-        # Beautify plot with labels and grid
-        plt.title('Distribution of ', fontsize=16, fontweight='bold')
-        plt.xlabel('Values', fontsize=14)
-        plt.ylabel('Density', fontsize=14)
-        plt.xticks(fontsize=12)
-        plt.yticks(fontsize=12)
-        plt.legend(fontsize=12)
-        plt.grid(alpha=0.4, linestyle='--')
-
-        # Show the enhanced plot
-        plt.show()
-        plt.savefig(os.path.join(topMarkerPath, f'{topMarkerNamesList[i]}_distribution_{model}.png'),
-                    format='png', dpi=300, bbox_inches='tight')  # info: change here
+        # # attention: Distributions and their visualization only possible with more than one iteration
+        # plt.figure(figsize=(12, 7))
+        # plt.hist(topMarkerList[i], bins=10, edgecolor='black', alpha=0.8, color='skyblue', density=True)
+        # plt.axvline(mean_value, color='red', linestyle='dashed', linewidth=2, label=f'Mean: {mean_value:.2f}')
+        # plt.axvline(mean_value - np.sqrt(variance_value), color='purple', linestyle='dashed', linewidth=2,
+        #             label=f'-1 SD: {mean_value - np.sqrt(variance_value):.2f}')
+        # plt.axvline(mean_value + np.sqrt(variance_value), color='orange', linestyle='dashed', linewidth=2,
+        #             label=f'+1 SD: {mean_value + np.sqrt(variance_value):.2f}')
+        #
+        # # Add a KDE plot for smooth density visualization
+        # from scipy.stats import gaussian_kde
+        #
+        # density = gaussian_kde(topMarkerList[i])
+        # x_vals = np.linspace(min(topMarkerList[i]), max(topMarkerList[i]), 200)
+        # plt.plot(x_vals, density(x_vals), color='darkblue', linewidth=2, label='Density Curve')
+        #
+        # # Beautify plot with labels and grid
+        # plt.title('Distribution of ', fontsize=16, fontweight='bold')
+        # plt.xlabel('Values', fontsize=14)
+        # plt.ylabel('Density', fontsize=14)
+        # plt.xticks(fontsize=12)
+        # plt.yticks(fontsize=12)
+        # plt.legend(fontsize=12)
+        # plt.grid(alpha=0.4, linestyle='--')
+        #
+        # # Show the enhanced plot
+        # plt.show()
+        # plt.savefig(os.path.join(topMarkerPath, f'{topMarkerNamesList[i]}_distribution_{model}.png'),
+        #             format='png', dpi=300, bbox_inches='tight')  # info: change here
 
 
         # # Define the output directory and file name
@@ -718,103 +721,103 @@ for model in modelList:
 
 
 
-# info: ################################################################################################################
-# info: One general plot ###############################################################################################
-# info: ################################################################################################################
-# Directory containing .npy files with distributions of topMarkers over several iterations
-directory = os.path.join(finalPath, 'topologicalMarker')
-# Get all .npy files
-file_names = sorted([f for f in os.listdir(directory) if f.endswith('.npy')])
-
-# Dynamically group files based on a common identifier (e.g., part of the filename before "List")
-groups = {}
-for file in file_names:
-    key = file.split('List')[0]  # Extract the dynamic group key from filename
-    if key not in groups:
-        groups[key] = []
-    groups[key].append(os.path.join(directory, file))
-
-# Create a figure with as many topMarkers (groups) and 9 columns
-num_rows = len(groups) # top. Markers
-num_columns = len(modelList) # months
-fig, axes = plt.subplots(num_rows, num_columns,figsize=(25, 5 * num_rows), sharex=False, sharey=False)
-
-# Ensure axes is always a 2D array for consistency
-if num_rows == 1:
-    axes = [axes]
-
-# Process and plot distributions for each group
-t_test_results = {}  # Dictionary to store t-test results
-for row, (group, files) in enumerate(groups.items()):
-    t_test_results[group] = []  # Store results for this group
-
-    # Determine row-specific x and y limits
-    row_x_min, row_x_max = float('inf'), float('-inf')
-    row_y_min, row_y_max = float('inf'), float('-inf')
-
-# Process and plot distributions for each group
-for row, (group, files) in enumerate(groups.items()):
-    # Determine row-specific x and y limits
-    row_x_min, row_x_max = float('inf'), float('-inf')
-    row_y_min, row_y_max = float('inf'), float('-inf')
-
-    # First pass: Calculate row-specific axis limits
-    for file in files[:9]:  # Ensure max 9 plots per group
-        try:
-            data = np.load(file)  # Load the list of values
-            counts, bins = np.histogram(data, bins=20, density=True)
-            row_x_min = min(row_x_min, bins.min())
-            row_x_max = max(row_x_max, bins.max())
-            row_y_min = min(row_y_min, counts.min())
-            row_y_max = max(row_y_max, counts.max())
-        except Exception as e:
-            print(f"Error processing file {file}: {e}")
-
-    # Second pass: Plot with row-specific limits
-    for col, file in enumerate(files[:9]):  # Ensure max 9 plots per group
-        try:
-            data = np.load(file)  # Load the list of values
-            mean = np.mean(data)
-            variance = np.var(data)
-
-            ax = axes[row][col]
-            ax.hist(data, bins=20, density=True, alpha=0.7, color='skyblue', edgecolor='black')
-            ax.axvline(mean, color='red', linestyle='dashed', linewidth=1.5, label=f'Mean: {mean:.2f}\nVar: {variance:.2f}')
-            ax.set_title(os.path.basename(file).split('Values_')[-1].split('.')[0], fontsize=18)
-            ax.legend(fontsize=8)
-
-            # Set row-specific axis limits
-            ax.set_xlim(row_x_min, row_x_max)
-            ax.set_ylim(row_y_min, row_y_max)
-
-            # T-Test: Compare current distribution with the next
-            if col < len(files) - 1:
-                next_data = np.load(files[col + 1])
-                t_stat, p_value = ttest_ind(data, next_data, equal_var=False)
-                t_test_results[group].append((t_stat, p_value))
-                # Annotate significance if p-value is small
-                if p_value < 0.05:
-                    ax.annotate(f'* p={p_value:.2e}', xy=(0.5, 0.9), xycoords='axes fraction', fontsize=10, ha='center',
-                                color='green')
-
-        except Exception as e:
-            print(f"Error processing file {file}: {e}")
-
-# Adjust layout and show plot
-plt.tight_layout()
-plt.suptitle("Distributions Grouped Dynamically by Key", fontsize=16, fontweight='bold', y=1.02)
-plt.show()
-plt.savefig(os.path.join(directory, f'topMarkerDistributions_generalPlot.png'),
-                    format='png', dpi=300, bbox_inches='tight')  # info: change here
-
-
-# Output t-test results for each group
-for group, results in t_test_results.items():
-    print(f"T-test results for {group}:")
-    for i, (t_stat, p_value) in enumerate(results):
-        print(f"  Between plot {i} and plot {i+1}: t={t_stat:.2f}, p={p_value:.2e}")
-        if p_value < 0.05: print('significant')
-        else: print('unsignificant')
+# # info: ################################################################################################################
+# # info: One general plot ###############################################################################################
+# # info: ################################################################################################################
+# # Directory containing .npy files with distributions of topMarkers over several iterations
+# directory = os.path.join(finalPath, 'topologicalMarker')
+# # Get all .npy files
+# file_names = sorted([f for f in os.listdir(directory) if f.endswith('.npy')])
+#
+# # Dynamically group files based on a common identifier (e.g., part of the filename before "List")
+# groups = {}
+# for file in file_names:
+#     key = file.split('List')[0]  # Extract the dynamic group key from filename
+#     if key not in groups:
+#         groups[key] = []
+#     groups[key].append(os.path.join(directory, file))
+#
+# # Create a figure with as many topMarkers (groups) and 9 columns
+# num_rows = len(groups) # top. Markers
+# num_columns = len(modelList) # months
+# fig, axes = plt.subplots(num_rows, num_columns,figsize=(25, 5 * num_rows), sharex=False, sharey=False)
+#
+# # Ensure axes is always a 2D array for consistency
+# if num_rows == 1:
+#     axes = [axes]
+#
+# # Process and plot distributions for each group
+# t_test_results = {}  # Dictionary to store t-test results
+# for row, (group, files) in enumerate(groups.items()):
+#     t_test_results[group] = []  # Store results for this group
+#
+#     # Determine row-specific x and y limits
+#     row_x_min, row_x_max = float('inf'), float('-inf')
+#     row_y_min, row_y_max = float('inf'), float('-inf')
+#
+# # Process and plot distributions for each group
+# for row, (group, files) in enumerate(groups.items()):
+#     # Determine row-specific x and y limits
+#     row_x_min, row_x_max = float('inf'), float('-inf')
+#     row_y_min, row_y_max = float('inf'), float('-inf')
+#
+#     # First pass: Calculate row-specific axis limits
+#     for file in files[:9]:  # Ensure max 9 plots per group
+#         try:
+#             data = np.load(file)  # Load the list of values
+#             counts, bins = np.histogram(data, bins=20, density=True)
+#             row_x_min = min(row_x_min, bins.min())
+#             row_x_max = max(row_x_max, bins.max())
+#             row_y_min = min(row_y_min, counts.min())
+#             row_y_max = max(row_y_max, counts.max())
+#         except Exception as e:
+#             print(f"Error processing file {file}: {e}")
+#
+#     # Second pass: Plot with row-specific limits
+#     for col, file in enumerate(files[:9]):  # Ensure max 9 plots per group
+#         try:
+#             data = np.load(file)  # Load the list of values
+#             mean = np.mean(data)
+#             variance = np.var(data)
+#
+#             ax = axes[row][col]
+#             ax.hist(data, bins=20, density=True, alpha=0.7, color='skyblue', edgecolor='black')
+#             ax.axvline(mean, color='red', linestyle='dashed', linewidth=1.5, label=f'Mean: {mean:.2f}\nVar: {variance:.2f}')
+#             ax.set_title(os.path.basename(file).split('Values_')[-1].split('.')[0], fontsize=18)
+#             ax.legend(fontsize=8)
+#
+#             # Set row-specific axis limits
+#             ax.set_xlim(row_x_min, row_x_max)
+#             ax.set_ylim(row_y_min, row_y_max)
+#
+#             # T-Test: Compare current distribution with the next
+#             if col < len(files) - 1:
+#                 next_data = np.load(files[col + 1])
+#                 t_stat, p_value = ttest_ind(data, next_data, equal_var=False)
+#                 t_test_results[group].append((t_stat, p_value))
+#                 # Annotate significance if p-value is small
+#                 if p_value < 0.05:
+#                     ax.annotate(f'* p={p_value:.2e}', xy=(0.5, 0.9), xycoords='axes fraction', fontsize=10, ha='center',
+#                                 color='green')
+#
+#         except Exception as e:
+#             print(f"Error processing file {file}: {e}")
+#
+# # Adjust layout and show plot
+# plt.tight_layout()
+# plt.suptitle("Distributions Grouped Dynamically by Key", fontsize=16, fontweight='bold', y=1.02)
+# plt.show()
+# plt.savefig(os.path.join(directory, f'topMarkerDistributions_generalPlot.png'),
+#                     format='png', dpi=300, bbox_inches='tight')  # info: change here
+#
+#
+# # Output t-test results for each group
+# for group, results in t_test_results.items():
+#     print(f"T-test results for {group}:")
+#     for i, (t_stat, p_value) in enumerate(results):
+#         print(f"  Between plot {i} and plot {i+1}: t={t_stat:.2f}, p={p_value:.2e}")
+#         if p_value < 0.05: print('significant')
+#         else: print('unsignificant')
 
 
 

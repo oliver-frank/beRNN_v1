@@ -40,8 +40,8 @@ def get_default_hp(ruleset):
     num_ring = Tools.get_num_ring(ruleset)
     n_rule = Tools.get_num_rule(ruleset)
 
-    n_eachring = 32
-    n_input, n_output = 1 + num_ring * n_eachring + n_rule, n_eachring + 1
+    n_eachring = 32 # attention: 10 for lowDim - 32 for highDim
+    n_input, n_output = 1 + num_ring * n_eachring + n_rule, n_eachring + 1 # attention: n_output: n_eachring = 2 for lowDim; n_eachring = n_eachring for lowDim
     hp = {
         # batch size for training and evaluation
         'batch_size': 40, # info: Should be smaller than 40 or 40/80/120/160
@@ -58,7 +58,7 @@ def get_default_hp(ruleset):
         # Optimizer
         'optimizer': 'adam',
         # Type of activation runctions, relu, softplus, tanh, elu, linear
-        'activation': 'softplus',
+        'activation': 'relu',
         # Time constant (ms)
         'tau': 100,
         # discretization time step (ms)
@@ -74,11 +74,11 @@ def get_default_hp(ruleset):
         # a default weak regularization prevents instability (regularizing with absolute value of magnitude of coefficients, leading to sparse features)
         'l1_h': 0.0001, # info: The higher the amount of hidden_rnn, the stronger the regularization to prevent overfitting
         # l2 regularization on activity (regularizing with squared value of magnitude of coefficients, decreasing influence of features)
-        'l2_h': 0.0001, # info: These values represent lambda which controls the strength of regularization
+        'l2_h': 0.00001, # info: These values represent lambda which controls the strength of regularization
         # l2 regularization on weight
-        'l1_weight': 0.0001,
+        'l1_weight': 0.00001,
         # l2 regularization on weight
-        'l2_weight': 0.0001,
+        'l2_weight': 0.00001,
         # l2 regularization on deviation from initialization
         'l2_weight_init': 0,
         # proportion of weights to train, None or float between (0, 1) - e.g. .1 will train a random 10% weight selection, the rest stays fixed (Yang et al. range: .05-.075)
@@ -128,9 +128,9 @@ def get_default_hp(ruleset):
         # Decide if models are trained sequentially
         'sequenceMode': True,
         # Participant to take
-        'participant': 'beRNN_05',
+        'participant': 'beRNN_03',
         # Dataset
-        'data': 'PreprocessedData_wResp_ALL' # 'data_highDim'
+        'data': 'data_highDim' # 'data_highDim' , data_highDim_correctOnly , data_highDim_lowCognition , data_lowDim , data_lowDim_correctOnly , data_lowDim_lowCognition
     }
 
     return hp
@@ -151,7 +151,7 @@ def do_eval(sess, model, log, rule_train, eval_data):
         rule_train: string or list of strings, the rules being trained
     """
     hp = model.hp
-    mode = 'eval'
+    mode = 'test'
     if not hasattr(rule_train, '__iter__'):
         rule_name_print = rule_train
     else:
@@ -244,7 +244,7 @@ def do_eval(sess, model, log, rule_train, eval_data):
 
     return log
 
-def train(model_dir,train_data ,eval_data,hp=None,max_steps=1e6,display_step=500,ruleset='all',rule_trains=None,rule_prob_map=None,seed=0,
+def train(model_dir,train_data ,eval_data,hp=None,max_steps=3e6,display_step=500,ruleset='all',rule_trains=None,rule_prob_map=None,seed=0,
           load_dir=None,trainables=None):
     """Train the network.
 
@@ -497,13 +497,14 @@ if __name__ == '__main__':
             # Adjust variables manually as needed
             model_name = f'model_{month}'
 
-            path = 'C:\\Users\\oliver.frank\\Desktop\\BackUp' # local
+            # path = 'C:\\Users\\oliver.frank\\Desktop\\BackUp' # local
             # path = 'W:\\group_csp\\analyses\\oliver.frank' # fl storage
             # path = '/data' # hitkip cluster
-            # path = '/pandora/home/oliver.frank/01_Projects/RNN/multitask_BeRNN-main' # pandora server
+            path = '/pandora/home/oliver.frank/01_Projects/RNN/multitask_BeRNN-main' # pandora server
 
             # Define model_dir for different servers
-            model_dir = os.path.join(f"{path}\\beRNNmodels\\2025_01\\{hp['participant']}_{hp['tasksString']}_{hp['monthsString']}_{hp['data']}_{hp['rnn_type']}_{hp['n_rnn']}_{hp['activation']}_iteration{modelNumber}", model_name)
+            # model_dir = os.path.join(f"{path}\\beRNNmodels\\2025_01\\{hp['participant']}_{hp['tasksString']}_{hp['monthsString']}_{hp['data']}_{hp['rnn_type']}_{hp['n_rnn']}_{hp['activation']}_iteration{modelNumber}", model_name) # local
+            model_dir = os.path.join(f"{path}/beRNNmodels/2025_01/{hp['participant']}_{hp['tasksString']}_{hp['monthsString']}_{hp['data']}_{hp['rnn_type']}_{hp['n_rnn']}_{hp['activation']}_iteration{modelNumber}", model_name) # pandora
             # Define data path for different servers
             preprocessedData_path = os.path.join(path, 'Data', hp['participant'], hp['data'])
 

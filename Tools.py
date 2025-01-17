@@ -14,13 +14,13 @@ import six
 import json
 import random
 import pickle
-import shutil
-from glob import glob
+# import shutil
+# from glob import glob
 import numpy as np
 
 rules_dict = {'all' : ['DM', 'DM_Anti', 'EF', 'EF_Anti', 'RP', 'RP_Anti', 'RP_Ctx1', 'RP_Ctx2',
-              'WM', 'WM_Anti', 'WM_Ctx1', 'WM_Ctx2'],
-              'DMs_only' : ['DM', 'DM_Anti']} # fix: not very feasible because preprocessing created 77 unit input structure (could be adjusted in Tools.load_trials)
+              'WM', 'WM_Anti', 'WM_Ctx1', 'WM_Ctx2']}
+              # 'DMs_only' : ['DM', 'DM_Anti']} # fix: not very feasible because preprocessing created 77 unit input structure (could be adjusted in Tools.load_trials)
 
 rule_name = {
             'DM': 'Decison Making (DM)',

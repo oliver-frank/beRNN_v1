@@ -1788,9 +1788,9 @@ def check_permissions(file_path):
 # Preallocation of variables
 dataFolder = "Data"
 subfolders = ['DM', 'DM_Anti', 'EF', 'EF_Anti', 'RP', 'RP_Anti', 'RP_Ctx1', 'RP_Ctx2', 'WM', 'WM_Anti', 'WM_Ctx1', 'WM_Ctx2']
-preprocessing_folder = 'data_lowhDim_lowCognition'
+preprocessing_folder = 'data_lowDim_lowCognition'
 participants = ['BeRNN_01','BeRNN_02','BeRNN_03','BeRNN_04','BeRNN_05']
-months = ['3', '4', '5'] # info: debugging '13' - '1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12'
+months = ['1', '2'] # info: debugging '13' - '1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12'
 
 for participant in participants:
     # attention: change to right path

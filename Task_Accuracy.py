@@ -168,7 +168,7 @@ acc_RP_Ctx1 = percentCorrect_RP_Ctx1/count_RP_Ctx1
 acc_RP_Ctx2 = percentCorrect_RP_Ctx2/count_RP_Ctx2
 
 ########################################################################################################################
-# Plot training effect
+# Plot training effects
 ########################################################################################################################
 import os
 import pandas as pd
@@ -179,14 +179,40 @@ from Tools import rule_name
 # import matplotlib.dates as mdates
 
 # Participant list
-participant_dir = 'W:\\group_csp\\analyses\\oliver.frank\\Data'
+participant_dir = 'C:\\Users\\oliver.frank\\Desktop\\BackUp\\Data'
 # participantList = os.listdir(participant_dir)
 # participant = participantList[0] # choose which particpant to analyze
-months = ['1','2','3','4','5','6','7','8','9'] # choose which month to analyze
-strToSave = '1-9'
+months = ['1','2','3','4','5','6','7','8','9','10','11','12'] # choose which month to analyze
+strToSave = months[0] + '-' + months[-1]
 
-newParticpantList = ['BeRNN_03', 'BeRNN_05']
-# newParticpantList = ['BeRNN_05']
+newParticpantList = ['BeRNN_01', 'BeRNN_02', 'BeRNN_03', 'BeRNN_04', 'BeRNN_05'] #
+
+# Assign a color to each task
+filename_color_dict = {
+    # **DM tasks (Yellow-Brown Family)**
+    'DM':       '#D9D0C7',    # Base Beige
+    'DM_Anti':  '#C3B8AE',    # Muted Sand
+    # 'DM_Ctx1':  '#E5D7CA',    # Soft Cream
+    # 'DM_Ctx2':  '#F2E8DD',    # Light Ivory
+
+    # **EF tasks (Orange Family)**
+    'EF':       '#F2B35E',    # Bright Orange
+    'EF_Anti':  '#E89A40',    # Warm Tangerine
+    # 'EF_Ctx1':  '#FDD69E',    # Soft Apricot
+    # 'EF_Ctx2':  '#FFE7C7',    # Light Peach
+
+    # **RP tasks (Brighter Olive Family)**
+    'RP':       '#8A7B4F',    # Brighter Olive
+    'RP_Anti':  '#716B3C',    # Deep Olive
+    'RP_Ctx1':  '#A4935F',    # Muted Olive-Gold
+    'RP_Ctx2':  '#C6B88A',    # Soft Olive Beige
+
+    # **WM tasks (Blue Family)**
+    'WM':       '#4D5D8C',    # Base Slate Blue
+    'WM_Anti':  '#3A466E',    # Deep Navy-Blue
+    'WM_Ctx1':  '#687AAE',    # Light Slate Blue
+    'WM_Ctx2':  '#A8B5D4'     # Pale Blue
+}
 
 for participant in newParticpantList:
     # Create a list of all files in all defined month folders
@@ -205,23 +231,6 @@ for participant in newParticpantList:
             for file in files:
                 all_files.append(os.path.join(root, file))
 
-    # Define filenames and corresponding colors
-    _filename_color_dict = {
-                    'DM': 'green',
-                    'DM_Anti': 'olive',
-                    'EF': 'forest green',
-                    'EF_Anti': 'mustard',
-                    'RP': 'tan',
-                    'RP_Anti': 'brown',
-                    'RP_Ctx1': 'lavender',
-                    'RP_Ctx2': 'aqua',
-                    'WM': 'bright purple',
-                    'WM_Anti': 'green blue',
-                    'WM_Ctx1': 'blue',
-                    'WM_Ctx2': 'indigo'
-                    }
-    filename_color_dict = {k: 'xkcd:'+v for k, v in _filename_color_dict.items()}
-
     # Initialize empty lists to store combined x and y values
     all_x_values = []
     all_y_values = []
@@ -238,7 +247,6 @@ for participant in newParticpantList:
         # Initialize empty lists to store combined x and y values
         all_x_values = []
         all_y_values = []
-
 
         # Iterate over all files in the folder
         for filename in all_files:
@@ -284,10 +292,10 @@ for participant in newParticpantList:
     # Set custom x-axis labels
     min_date = min(all_x_values)
     max_date = max(all_x_values)
-    date_range = (max_date - min_date) / 8
+    date_range = (max_date - min_date) / 11 # info: Add one label for every newly added month - number of months  -1
 
-    x_ticks = [min_date + i * date_range for i in range(10)] # info: Add one label for every newly added month
-    x_labels = ['Start month 1', 'Start month 2', 'Start month 3', 'Start month 4', 'Start month 5', 'Start month 6', 'Start month 7', 'Start month 8', 'Start month 9', 'End month 9']
+    x_ticks = [min_date + i * date_range for i in range(12)] # info: Add one label for every newly added month - number of months
+    x_labels = ['month 1', 'month 2', 'month 3', 'month 4', 'month 5', 'month 6', 'month 7', 'month 8', 'month 9', 'month 10', 'month 11', 'month 12']
 
     fs = 18
     plt.legend(loc='center left',fontsize=fs, ncol=2, bbox_to_anchor=(1, 0.5))
