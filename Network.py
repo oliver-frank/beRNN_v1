@@ -212,6 +212,10 @@ class LeakyRNNCell(RNNCell):
             self._activation = tf.nn.relu
             self._w_in_start = 1.0
             self._w_rec_start = 0.5
+        elif activation == 'elu':  # Adding the ELU activation function
+            self._activation = tf.nn.elu
+            self._w_in_start = 1.0
+            self._w_rec_start = 0.5
         elif activation == 'power':
             self._activation = lambda x: tf.square(tf.nn.relu(x))
             self._w_in_start = 1.0

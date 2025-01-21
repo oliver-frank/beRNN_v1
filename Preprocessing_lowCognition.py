@@ -350,9 +350,9 @@ def preprocess_DM(opened_xlsxFile, questionnare_files, list_allSessions, sequenc
 
         # attention: add one unique value for every task, respectively
         if taskShorts == 'DM':
-            lowCognitionValue = 1
+            lowCognitionValue = 2
         elif taskShorts == 'DM_Anti':
-            lowCognitionValue = 3
+            lowCognitionValue = 4
         else:
             print('No task found !')
 
@@ -383,7 +383,7 @@ def preprocess_DM(opened_xlsxFile, questionnare_files, list_allSessions, sequenc
                 nonZerosOutput = np.nonzero(currentTimeStepOutput)[0]
                 # Float first fixations rows with -1
                 for k in range(0, numFixStepsAverage):
-                    y_loc[k][j] = np.float(-1)
+                    y_loc[k][j] = np.float(0.05) # info: yang et al.: -1
 
                 if len(nonZerosOutput) == 1:
                     # Get activity and model gradient activation around it
@@ -399,7 +399,7 @@ def preprocess_DM(opened_xlsxFile, questionnare_files, list_allSessions, sequenc
 
                 else:
                     for k in range(numFixStepsAverage, totalStepsAverage):
-                        y_loc[k][j] = np.float(-1)
+                        y_loc[k][j] = np.float(0.05) # info: yang et al.: -1
 
         # Change dtype of every element in matrix to float32 for later validation functions
         for i in range(0, Output.shape[0]):
@@ -747,7 +747,7 @@ def preprocess_EF(opened_xlsxFile, questionnare_files, list_allSessions, sequenc
                 nonZerosOutput = np.nonzero(currentTimeStepOutput)[0]
                 # Float first fixations rows with -1
                 for k in range(0, numFixStepsAverage):
-                    y_loc[k][j] = np.float(-1)
+                    y_loc[k][j] = np.float(0.05) # info: yang et al.: -1
 
                 if len(nonZerosOutput) == 1:
                     # Get activity and model gradient activation around it
@@ -762,7 +762,7 @@ def preprocess_EF(opened_xlsxFile, questionnare_files, list_allSessions, sequenc
                         y_loc[k][j] = pref[nonZerosOutput[0]]
                 else:
                     for k in range(numFixStepsAverage, totalStepsAverage):
-                        y_loc[k][j] = np.float(-1)
+                        y_loc[k][j] = np.float(0.05) # info: yang et al.: -1
 
         # Change dtype of every element in matrix to float32 for later validation functions
         for i in range(0, Output.shape[0]):
@@ -1116,7 +1116,7 @@ def preprocess_RP(opened_xlsxFile, questionnare_files, list_allSessions, sequenc
                 nonZerosOutput = np.nonzero(currentTimeStepOutput)[0]
                 # Float first fixations rows with -1
                 for k in range(0, numFixStepsAverage):
-                    y_loc[k][j] = np.float(-1)
+                    y_loc[k][j] = np.float(0.05) # info: yang et al.: -1
 
                 if len(nonZerosOutput) == 1:
                     # Get activity and model gradient activation around it
@@ -1131,7 +1131,7 @@ def preprocess_RP(opened_xlsxFile, questionnare_files, list_allSessions, sequenc
                         y_loc[k][j] = pref[nonZerosOutput[0]]
                 else:
                     for k in range(numFixStepsAverage, totalStepsAverage):
-                        y_loc[k][j] = np.float(-1)
+                        y_loc[k][j] = np.float(0.05) # info: yang et al.: -1
 
         # Change dtype of every element in matrix to float32 for later validation functions
         for i in range(0, Output.shape[0]):
@@ -1511,7 +1511,7 @@ def preprocess_WM(opened_xlsxFile, questionnare_files, list_allSessions, sequenc
                     nonZerosOutput = np.nonzero(currentTimeStepOutput)[0]
                     # Float first fixations rows with -1
                     for k in range(0, numFixStepsAverage):
-                        y_loc[k][j] = np.float(-1)
+                        y_loc[k][j] = np.float(0.05) # info: yang et al.: -1
 
                     if len(nonZerosOutput) == 1:
                         # Get activity and model gradient activation around it
@@ -1526,11 +1526,11 @@ def preprocess_WM(opened_xlsxFile, questionnare_files, list_allSessions, sequenc
                             y_loc[k][j] = pref[nonZerosOutput[0]]
                     else:
                         for k in range(numFixStepsAverage, totalStepsAverage):
-                                y_loc[k][j] = np.float(-1)
+                                y_loc[k][j] = np.float(0.05) # info: yang et al.: -1
         else:
             for k in range(numFixStepsAverage, totalStepsAverage):
                 for j in range(0, Output.shape[1]):
-                    y_loc[k][j] = np.float(-1)
+                    y_loc[k][j] = np.float(0.05) # info: yang et al.: -1
 
         # Change dtype of every element in matrix to float32 for later validation functions
         for i in range(0, Output.shape[0]):
@@ -1574,7 +1574,7 @@ dataFolder = "Data"
 subfolders = ['DM', 'DM_Anti', 'EF', 'EF_Anti', 'RP', 'RP_Anti', 'RP_Ctx1', 'RP_Ctx2', 'WM', 'WM_Anti', 'WM_Ctx1', 'WM_Ctx2']
 preprocessing_folder = 'data_highDim_lowCognition'
 participants = ['BeRNN_01','BeRNN_02','BeRNN_03','BeRNN_04','BeRNN_05']
-months = ['1', '2'] # info: debugging '13' - '1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12'
+months = ['4', '5'] # info: debugging '13' - '1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12'
 
 for participant in participants:
     # attention: change to right path

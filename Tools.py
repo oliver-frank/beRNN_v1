@@ -145,9 +145,9 @@ def load_trials(task,mode,batchSize,data,errorComparison):
                     truncated_arrays_y = truncate_to_smallest([y_0, y_1])
                     truncated_arrays_y_loc = truncate_to_smallest([y_loc_0, y_loc_1])
                     # Concatenate the trauncated batches
-                    x = np.concatenate((truncated_arrays_x[0], truncated_arrays_x[1]))
-                    y = np.concatenate((truncated_arrays_y[0], truncated_arrays_y[1]))
-                    y_loc = np.concatenate((truncated_arrays_y_loc[0], truncated_arrays_y_loc[1]))
+                    x = np.concatenate((truncated_arrays_x[0], truncated_arrays_x[1]), axis=1)
+                    y = np.concatenate((truncated_arrays_y[0], truncated_arrays_y[1]), axis=1)
+                    y_loc = np.concatenate((truncated_arrays_y_loc[0], truncated_arrays_y_loc[1]), axis=1)
 
                 elif numberOfBatches == 3:
                     x_0 = np.load(currentTriplets[0][0])  # Input
@@ -167,9 +167,9 @@ def load_trials(task,mode,batchSize,data,errorComparison):
                     truncated_arrays_y = truncate_to_smallest([y_0, y_1, y_2])
                     truncated_arrays_y_loc = truncate_to_smallest([y_loc_0, y_loc_1, y_loc_2])
                     # Concatenate the trauncated batches
-                    x = np.concatenate((truncated_arrays_x[0], truncated_arrays_x[1], truncated_arrays_x[2]))
-                    y = np.concatenate((truncated_arrays_y[0], truncated_arrays_y[1], truncated_arrays_y[2]))
-                    y_loc = np.concatenate((truncated_arrays_y_loc[0], truncated_arrays_y_loc[1], truncated_arrays_y_loc[2]))
+                    x = np.concatenate((truncated_arrays_x[0], truncated_arrays_x[1], truncated_arrays_x[2]), axis=1)
+                    y = np.concatenate((truncated_arrays_y[0], truncated_arrays_y[1], truncated_arrays_y[2]), axis=1)
+                    y_loc = np.concatenate((truncated_arrays_y_loc[0], truncated_arrays_y_loc[1], truncated_arrays_y_loc[2]), axis=1)
 
                 elif numberOfBatches == 4:
                     x_0 = np.load(currentTriplets[0][0])  # Input
@@ -193,9 +193,9 @@ def load_trials(task,mode,batchSize,data,errorComparison):
                     truncated_arrays_y = truncate_to_smallest([y_0, y_1, y_2, y_3])
                     truncated_arrays_y_loc = truncate_to_smallest([y_loc_0, y_loc_1, y_loc_2, y_loc_3])
                     # Concatenate the trauncated batches
-                    x = np.concatenate((truncated_arrays_x[0], truncated_arrays_x[1], truncated_arrays_x[2], truncated_arrays_x[3]))
-                    y = np.concatenate((truncated_arrays_y[0], truncated_arrays_y[1], truncated_arrays_y[2], truncated_arrays_y[3]))
-                    y_loc = np.concatenate((truncated_arrays_y_loc[0], truncated_arrays_y_loc[1], truncated_arrays_y_loc[2], truncated_arrays_y_loc[3]))
+                    x = np.concatenate((truncated_arrays_x[0], truncated_arrays_x[1], truncated_arrays_x[2], truncated_arrays_x[3]), axis=1)
+                    y = np.concatenate((truncated_arrays_y[0], truncated_arrays_y[1], truncated_arrays_y[2], truncated_arrays_y[3]), axis=1)
+                    y_loc = np.concatenate((truncated_arrays_y_loc[0], truncated_arrays_y_loc[1], truncated_arrays_y_loc[2], truncated_arrays_y_loc[3]), axis=1)
                 else:
                     raise ValueError(f"batchSize {batchSize} is not valid")
 
@@ -250,9 +250,9 @@ def load_trials(task,mode,batchSize,data,errorComparison):
                     truncated_arrays_y = truncate_to_smallest([y_0, y_1])
                     truncated_arrays_y_loc = truncate_to_smallest([y_loc_0, y_loc_1])
                     # Concatenate the trauncated batches
-                    x = np.concatenate((truncated_arrays_x[0], truncated_arrays_x[1]))
-                    y = np.concatenate((truncated_arrays_y[0], truncated_arrays_y[1]))
-                    y_loc = np.concatenate((truncated_arrays_y_loc[0], truncated_arrays_y_loc[1]))
+                    x = np.concatenate((truncated_arrays_x[0], truncated_arrays_x[1]), axis=1)
+                    y = np.concatenate((truncated_arrays_y[0], truncated_arrays_y[1]), axis=1)
+                    y_loc = np.concatenate((truncated_arrays_y_loc[0], truncated_arrays_y_loc[1]), axis=1)
 
                 elif numberOfBatches == 3:
                     x_0 = np.load(currentTriplets[0][0])  # Input
@@ -272,10 +272,10 @@ def load_trials(task,mode,batchSize,data,errorComparison):
                     truncated_arrays_y = truncate_to_smallest([y_0, y_1, y_2])
                     truncated_arrays_y_loc = truncate_to_smallest([y_loc_0, y_loc_1, y_loc_2])
                     # Concatenate the trauncated batches
-                    x = np.concatenate((truncated_arrays_x[0], truncated_arrays_x[1], truncated_arrays_x[2]))
-                    y = np.concatenate((truncated_arrays_y[0], truncated_arrays_y[1], truncated_arrays_y[2]))
+                    x = np.concatenate((truncated_arrays_x[0], truncated_arrays_x[1], truncated_arrays_x[2]), axis=1)
+                    y = np.concatenate((truncated_arrays_y[0], truncated_arrays_y[1], truncated_arrays_y[2]), axis=1)
                     y_loc = np.concatenate(
-                        (truncated_arrays_y_loc[0], truncated_arrays_y_loc[1], truncated_arrays_y_loc[2]))
+                        (truncated_arrays_y_loc[0], truncated_arrays_y_loc[1], truncated_arrays_y_loc[2]), axis=1)
 
                 elif numberOfBatches == 4:
                     x_0 = np.load(currentTriplets[0][0])  # Input
@@ -300,10 +300,10 @@ def load_trials(task,mode,batchSize,data,errorComparison):
                     truncated_arrays_y_loc = truncate_to_smallest([y_loc_0, y_loc_1, y_loc_2, y_loc_3])
                     # Concatenate the trauncated batches
                     x = np.concatenate((truncated_arrays_x[0], truncated_arrays_x[1], truncated_arrays_x[2],
-                                        truncated_arrays_x[3]))
+                                        truncated_arrays_x[3]), axis=1)
                     y = np.concatenate((truncated_arrays_y[0], truncated_arrays_y[1], truncated_arrays_y[2],
-                                        truncated_arrays_y[3]))
-                    y_loc = np.concatenate((truncated_arrays_y_loc[0], truncated_arrays_y_loc[1], truncated_arrays_y_loc[2], truncated_arrays_y_loc[3]))
+                                        truncated_arrays_y[3]), axis=1)
+                    y_loc = np.concatenate((truncated_arrays_y_loc[0], truncated_arrays_y_loc[1], truncated_arrays_y_loc[2], truncated_arrays_y_loc[3]), axis=1)
                 else:
                     raise ValueError(f"batchSize {batchSize} is not valid")
             if errorComparison == True:

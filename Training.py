@@ -41,96 +41,54 @@ def get_default_hp(ruleset):
     n_rule = Tools.get_num_rule(ruleset)
 
     n_eachring = 32 # attention: 10 for lowDim - 32 for highDim
-    n_input, n_output = 1 + num_ring * n_eachring + n_rule, n_eachring + 1 # attention: n_output: n_eachring = 2 for lowDim; n_eachring = n_eachring for lowDim
+    n_input, n_output = 1 + num_ring * n_eachring + n_rule, n_eachring + 1 # attention: n_output: n_output = 2 +1 for lowDim; n_output = n_eachring +1 for highDim
     hp = {
         # batch size for training and evaluation
-        'batch_size': 40, # info: Should be smaller than 40 or 40/80/120/160
-        # batch_size for testing
-        # 'batch_size_test': 640,
-        # input type: normal, multi
-        'in_type': 'normal',
-        # Type of RNNs: NonRecurrent, LeakyRNN, LeakyGRU, EILeakyGRU, GRU, LSTM
-        'rnn_type': 'LeakyRNN',
-        # whether rule and stimulus inputs are represented separately
-        'use_separate_input': False,
-        # Type of loss functions
-        'loss_type': 'lsq', # Cross-entropy loss
-        # Optimizer
-        'optimizer': 'adam',
-        # Type of activation runctions, relu, softplus, tanh, elu, linear
-        'activation': 'relu',
-        # Time constant (ms)
-        'tau': 100,
-        # discretization time step (ms)
-        'dt': 20,
-        # discretization time step/time constant info: dt/tau = alpha
-        'alpha': 0.2,
-        # recurrent noise - directly influencing the noise added to the network; can prevent over-fitting especially when learning time sequences
-        'sigma_rec': 0.05, # info: Can be increased with higher amount of hidden units
-        # input noise
-        'sigma_x': 0.01,
-        # leaky_rec weight initialization, diag, randortho, randgauss
-        'w_rec_init': 'randortho',
-        # a default weak regularization prevents instability (regularizing with absolute value of magnitude of coefficients, leading to sparse features)
-        'l1_h': 0.0001, # info: The higher the amount of hidden_rnn, the stronger the regularization to prevent overfitting
-        # l2 regularization on activity (regularizing with squared value of magnitude of coefficients, decreasing influence of features)
-        'l2_h': 0.00001, # info: These values represent lambda which controls the strength of regularization
-        # l2 regularization on weight
-        'l1_weight': 0.00001,
-        # l2 regularization on weight
-        'l2_weight': 0.00001,
-        # l2 regularization on deviation from initialization
-        'l2_weight_init': 0,
-        # proportion of weights to train, None or float between (0, 1) - e.g. .1 will train a random 10% weight selection, the rest stays fixed (Yang et al. range: .05-.075)
-        'p_weight_train': None,
-        # Stopping performance
-        'target_perf': 1.0,
-        # number of units each ring
-        'n_eachring': n_eachring,
-        # number of rings
-        'num_ring': num_ring,
-        # number of rules
-        'n_rule': n_rule,
-        # first input index for rule units
-        'rule_start': 1 + num_ring * n_eachring,
-        # number of input units
-        'n_input': n_input,
-        # number of output units
-        'n_output': n_output,
-        # number of recurrent units
-        'n_rnn': 128, # info: check theshold to know what amount of parameters will be actually trained (e.g. 11: 128 parameters)
-        # random number used for several random initializations
-        'rng': np.random.RandomState(seed=0),
-        # number of input units
-        'ruleset': ruleset,
-        # name to save
-        'save_name': 'test',
-        # learning rate
-        'learning_rate': 0.001, # n_rnn:256 - 0.001; n_rnn:512 - 0.0001; n_rnn:1024 - 0.00007; n_rnn:2048 - 0.00004
-        # c_mask response epoch value - info: How strong is the response epoch taken into account for caclulating error, the higher the more it influences the costs and therefore the parameter changes
-        'c_mask_responseValue': 5.,
-        # Structural mask
-        's_mask': None, # 'sc1000' None info: Make sure n_rnn has the same size as the chosen s_mask
-        # Rule probabilities to be drawn
-        'rule_probs': None,
-        # intelligent synapses parameters, tuple (c, ksi) -> Yang et al. only apply these in sequential training
-        # 'c_intsyn': 0,
+        'batch_size': 160, # 20/40/80/120/160
+        # 'batch_size_test': 640, # batch_size for testing
+        'in_type': 'normal', # input type: normal, multi
+        'rnn_type': 'LeakyRNN', # Type of RNNs: NonRecurrent, LeakyRNN, LeakyGRU, EILeakyGRU, GRU, LSTM
+        'use_separate_input': False, # whether rule and stimulus inputs are represented separately
+        'loss_type': 'lsq', # # Type of loss functions - Cross-entropy loss
+        'optimizer': 'sgd', # 'adam', 'sgd'
+        'activation': 'relu', # Type of activation runctions, relu, softplus, tanh, elu, linear
+        'tau': 50, # # Time constant (ms)- standard 100
+        'dt': 20, # discretization time step (ms)
+        'alpha': 0.2, # discretization time step/time constant - dt/tau = alpha
+        'sigma_rec': 0.05, # recurrent noise - directly influencing the noise added to the network
+        'sigma_x': 0.01, # input noise
+        'w_rec_init': 'randortho', # leaky_rec weight initialization, diag, randortho, randgauss
+        'l1_h': 0.0001, # l1 lambda (regularizing with absolute value of magnitude of coefficients, leading to sparse features)
+        'l2_h': 0.00001, # l2 lambda (regularizing with squared value of magnitude of coefficients, decreasing influence of features)
+        'l1_weight': 0.00001, # l2 regularization on weight
+        'l2_weight': 0.00001, # l2 regularization on weight
+        'l2_weight_init': 0, # l2 regularization on deviation from initialization
+        'p_weight_train': None, # proportion of weights to train, None or float between (0, 1) - e.g. .1 will train a random 10% weight selection, the rest stays fixed (Yang et al. range: .05-.075)
+        'target_perf': 1.0, # Stopping performance
+        'n_eachring': n_eachring, # number of units each ring
+        'num_ring': num_ring, # number of rings
+        'n_rule': n_rule, # number of rules
+        'rule_start': 1 + num_ring * n_eachring, # first input index for rule units
+        'n_input': n_input, # number of input units
+        'n_output': n_output, # number of output units
+        'n_rnn': 128, # number of recurrent units
+        'rng': np.random.RandomState(seed=0), # random number used for several random initializations
+        'ruleset': ruleset, # number of input units
+        'save_name': 'test', # name to save
+        'learning_rate': 0.001, # learning rate
+        'c_mask_responseValue': 5., # c_mask response epoch value - strenght response epoch is taken into account for error calculation
+        's_mask': None, # 'sc1000', None
+        'rule_probs': None, # Rule probabilities to be drawn
+        # 'c_intsyn': 0, # intelligent synapses parameters, tuple (c, ksi) -> Yang et al. only apply these in sequential training
         # 'ksi_intsyn': 0,
-        # months to train and test
-        'monthsConsidered': ['month_3','month_4','month_5'],
-        # monthsTaken
-        'monthsString': '3-5',
-        # fraction of tasks represented in training data
+        'monthsConsidered': ['month_3','month_4','month_5'], # months to train and test
+        'monthsString': '3-5', # monthsTaken
         # 'rule_prob_map': {"DM": 1,"DM_Anti": 1,"EF": 1,"EF_Anti": 1,"RP": 1,"RP_Anti": 1,"RP_Ctx1": 1,"RP_Ctx2": 1,"WM": 1,"WM_Anti": 1,"WM_Ctx1": 1,"WM_Ctx2": 1}
-        'rule_prob_map': {"DM": 1,"DM_Anti": 1,"EF": 1,"EF_Anti": 1,"RP": 1,"RP_Anti": 1,"RP_Ctx1": 1,"RP_Ctx2": 1,"WM": 1,"WM_Anti": 1,"WM_Ctx1": 1,"WM_Ctx2": 1},
-        # tasksTaken
-        'tasksString': 'AllTask',
-        # Decide if models are trained sequentially
-        'sequenceMode': True,
-        # Participant to take
-        'participant': 'beRNN_03',
-        # Dataset
-        'data': 'data_highDim' # 'data_highDim' , data_highDim_correctOnly , data_highDim_lowCognition , data_lowDim , data_lowDim_correctOnly , data_lowDim_lowCognition
+        'rule_prob_map': {"DM": 1,"DM_Anti": 1,"EF": 1,"EF_Anti": 1,"RP": 1,"RP_Anti": 1,"RP_Ctx1": 1,"RP_Ctx2": 1,"WM": 1,"WM_Anti": 1,"WM_Ctx1": 1,"WM_Ctx2": 1}, # fraction of tasks represented in training data
+        'tasksString': 'AllTask', # tasks taken
+        'sequenceMode': True, # Decide if models are trained sequentially month-wise
+        'participant': 'beRNN_01', # Participant to take
+        'data': 'data_highDim_correctOnly' # 'data_highDim' , data_highDim_correctOnly , data_highDim_lowCognition , data_lowDim , data_lowDim_correctOnly , data_lowDim_lowCognition
     }
 
     return hp
@@ -269,7 +227,7 @@ def train(model_dir,train_data ,eval_data,hp=None,max_steps=3e6,display_step=500
     default_hp = get_default_hp(ruleset)
     # default_hp = get_default_hp('all')
     if hp is not None:
-        default_hp.update(hp)
+        default_hp.update(hp) # fix: Where does this update function come from?
     hp = default_hp
     hp['seed'] = seed
     hp['rng'] = np.random.RandomState(seed)
@@ -493,20 +451,24 @@ if __name__ == '__main__':
 
         hp = get_default_hp('all')
         load_dir = None
+
+        # Define main path
+        path = 'C:\\Users\\oliver.frank\\Desktop\\BackUp'  # local
+        # path = 'W:\\group_csp\\analyses\\oliver.frank' # fl storage
+        # path = '/data' # hitkip cluster
+        # path = '/pandora/home/oliver.frank/01_Projects/RNN/multitask_BeRNN-main' # pandora
+
+        # Define data path
+        preprocessedData_path = os.path.join(path, 'Data', hp['participant'], hp['data'])  # pandora
+
         for month in hp['monthsConsidered']: # attention: You have to delete this if cascade training should be set OFF
             # Adjust variables manually as needed
             model_name = f'model_{month}'
 
-            # path = 'C:\\Users\\oliver.frank\\Desktop\\BackUp' # local
-            # path = 'W:\\group_csp\\analyses\\oliver.frank' # fl storage
-            # path = '/data' # hitkip cluster
-            path = '/pandora/home/oliver.frank/01_Projects/RNN/multitask_BeRNN-main' # pandora server
-
             # Define model_dir for different servers
             # model_dir = os.path.join(f"{path}\\beRNNmodels\\2025_01\\{hp['participant']}_{hp['tasksString']}_{hp['monthsString']}_{hp['data']}_{hp['rnn_type']}_{hp['n_rnn']}_{hp['activation']}_iteration{modelNumber}", model_name) # local
             model_dir = os.path.join(f"{path}/beRNNmodels/2025_01/{hp['participant']}_{hp['tasksString']}_{hp['monthsString']}_{hp['data']}_{hp['rnn_type']}_{hp['n_rnn']}_{hp['activation']}_iteration{modelNumber}", model_name) # pandora
-            # Define data path for different servers
-            preprocessedData_path = os.path.join(path, 'Data', hp['participant'], hp['data'])
+
 
             if not os.path.exists(model_dir):
                 os.makedirs(model_dir)
@@ -537,15 +499,15 @@ if __name__ == '__main__':
                         output_file = os.path.join(subdir, base_name + 'Output.npy')
                         file_triplets.append((input_file, yloc_file, output_file))
 
-                    # Split the file triplets
-                    train_files, eval_files = split_files(file_triplets)
+                # Split the file triplets
+                train_files, eval_files = split_files(file_triplets)
 
-                    # Store the results in the dictionaries
-                    train_data[subdir] = train_files
-                    eval_data[subdir] = eval_files
+                # Store the results in the dictionaries
+                train_data[subdir] = train_files
+                eval_data[subdir] = eval_files
 
             # Start Training ---------------------------------------------------------------------------------------------------
-            train(model_dir=model_dir, rule_prob_map=hp['rule_probs'], train_data = train_data, eval_data = eval_data, load_dir = load_dir)
+            train(model_dir=model_dir, train_data = train_data, eval_data = eval_data, load_dir = load_dir)
 
             # info: If True previous model parameters will be taken to initialize consecutive model, creating sequential training
             if hp['sequenceMode'] == True:

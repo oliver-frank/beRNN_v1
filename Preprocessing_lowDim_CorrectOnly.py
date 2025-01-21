@@ -422,8 +422,8 @@ def preprocess_DM(opened_xlsxFile, questionnare_files, list_allSessions, sequenc
                     newOutput[i][j][1] = np.sin(position)
                     newOutput[i][j][2] = np.cos(position)
                 else:
-                    newOutput[i][j][1] = np.sin(-1)  # attention: Laura Driscoll actually intented to do this, but the simulated data showed 0.05 at this point
-                    newOutput[i][j][2] = np.cos(-1)  # attention: Laura Driscoll actually intented to do this, but the simulated data showed 0.05 at this point
+                    newOutput[i][j][1] = np.sin(0.05)  # info: yang et al.: -1
+                    newOutput[i][j][2] = np.sin(0.05)  # info: yang et al.: -1
 
         # Change dtype of every element in matrix to float32 for later validation functions
         for i in range(0, newOutput.shape[0]):
@@ -440,7 +440,7 @@ def preprocess_DM(opened_xlsxFile, questionnare_files, list_allSessions, sequenc
 
         for k in range(0, numFixStepsAverage):
             for j in range (0, newOutput.shape[1]):
-                y_loc[k][j] = np.float(-1)
+                y_loc[k][j] = np.float(0.05)  # info: yang et al.: -1
 
         # Complete y_loc matrix
         for k in range(numFixStepsAverage, totalStepsAverage):
@@ -448,7 +448,7 @@ def preprocess_DM(opened_xlsxFile, questionnare_files, list_allSessions, sequenc
                 if isinstance(Output[k][j][0], str) and Output[k][j][0] != 'noResponse' and Output[k][j][0] != 'NoResponse':
                     y_loc[k][j] = pref[outputDict[correctAnswer[k][j]]-1] # radiant form direction
                 else:
-                    y_loc[k][j] = float(-1)
+                    y_loc[k][j] = np.float(0.05)  # info: yang et al.: -1
 
         # Save output data
         output_filename = participant + '-' + 'month_' + str(month) + '-' + 'batch_' + str(
@@ -838,8 +838,8 @@ def preprocess_EF(opened_xlsxFile, questionnare_files, list_allSessions, sequenc
                     newOutput[i][j][1] = np.sin(position)
                     newOutput[i][j][2] = np.cos(position)
                 else:
-                    newOutput[i][j][1] = np.sin(-1) # attention: Laura Driscoll actually intented to do this, but the simulated data showed 0.05 at this point
-                    newOutput[i][j][2] = np.cos(-1) # attention: Laura Driscoll actually intented to do this, but the simulated data showed 0.05 at this point
+                    newOutput[i][j][1] = np.sin(0.05)  # info: yang et al.: -1
+                    newOutput[i][j][2] = np.sin(0.05)  # info: yang et al.: -1
 
         # Change dtype of every element in matrix to float32 for later validation functions
         for i in range(0, newOutput.shape[0]):
@@ -855,7 +855,7 @@ def preprocess_EF(opened_xlsxFile, questionnare_files, list_allSessions, sequenc
 
         for k in range(0, numFixStepsAverage):
             for j in range(0, newOutput.shape[1]):
-                y_loc[k][j] = np.float(-1)
+                y_loc[k][j] = np.float(0.05)  # info: yang et al.: -1
 
         # Complete y_loc matrix
         for k in range(numFixStepsAverage, totalStepsAverage):
@@ -863,7 +863,7 @@ def preprocess_EF(opened_xlsxFile, questionnare_files, list_allSessions, sequenc
                 if isinstance(correctAnswer[k][j], str) and correctAnswer[k][j] != 'noResponse' and correctAnswer[k][j] != 'NoResponse':
                     y_loc[k][j] = pref[outputDict[correctAnswer[k][j]]-1]  # radiant form direction
                 else:
-                    y_loc[k][j] = float(-1)
+                    y_loc[k][j] = np.float(0.05)  # info: yang et al.: -1
 
         # Save output data
         output_filename = participant + '-' + 'month_' + str(month) + '-' + 'batch_' + str(
@@ -1082,7 +1082,7 @@ def preprocess_RP(opened_xlsxFile, questionnare_files, list_allSessions, sequenc
                     if Input[i][j][k] == correctAnswer[i][j]:
                         correctPositionList = [k] # if a stim corresponds to the objective correct answer, save the position defined by k
                     if correctAnswer[i][j] == 'noResponse':
-                        correctPositionList = [-1]
+                        correctPositionList = [0.05]
 
                 stimListList.append(stimList)
                 positionListList.append(positionList)
@@ -1248,16 +1248,16 @@ def preprocess_RP(opened_xlsxFile, questionnare_files, list_allSessions, sequenc
                 if isinstance(correctAnswer[i][j], str) and correctAnswer[i][j] != 'screen' and correctAnswer[i][j] != 'noResponse' and \
                         correctAnswer[i][j] != 'NoResponse' and correctAnswer[i][j] != 'Fixation Cross':
                     # Translate field into radiant
-                    if correctPositionListList[j][0] == -1:
-                        position = -1
+                    if correctPositionListList[j][0] == 0.05:
+                        position = 0.05
                     else:
                         position = pref[correctPositionListList[j][0]-1]
                     # Translate radiant into sin/cos vector indicating the target response direction for the network
                     newOutput[i][j][1] = np.sin(position)
                     newOutput[i][j][2] = np.cos(position)
                 else:
-                    newOutput[i][j][1] = np.sin(-1)  # attention: Laura Driscoll actually intented to do this, but the simulated data showed 0.05 at this point
-                    newOutput[i][j][2] = np.cos(-1)  # attention: Laura Driscoll actually intented to do this, but the simulated data showed 0.05 at this point
+                    newOutput[i][j][1] = np.sin(0.05)  # info: yang et al.: -1
+                    newOutput[i][j][2] = np.sin(0.05)  # info: yang et al.: -1
 
         # Change dtype of every element in matrix to float32 for later validation functions
         for i in range(0, newOutput.shape[0]):
@@ -1272,7 +1272,7 @@ def preprocess_RP(opened_xlsxFile, questionnare_files, list_allSessions, sequenc
 
         for k in range(0, numFixStepsAverage):
             for j in range(0, newOutput.shape[1]):
-                y_loc[k][j] = np.float(-1)
+                y_loc[k][j] = np.float(0.05)  # info: yang et al.: -1
 
         # Complete y_loc matrix
         for k in range(numFixStepsAverage, totalStepsAverage):
@@ -1281,7 +1281,7 @@ def preprocess_RP(opened_xlsxFile, questionnare_files, list_allSessions, sequenc
                         Output[k][j][0] != 'NoResponse' and Output[k][j][0] != 'Fixation Cross':
                     y_loc[k][j] = pref[correctPositionListList[j][0]-1]  # radiant form direction
                 else:
-                    y_loc[k][j] = float(-1)
+                    y_loc[k][j] = np.float(0.05)  # info: yang et al.: -1
 
         # Save output data
         output_filename = participant + '-' + 'month_' + str(month) + '-' + 'batch_' + str(
@@ -1515,7 +1515,7 @@ def preprocess_WM(opened_xlsxFile, questionnare_files, list_allSessions, sequenc
                 stimListList.append(stimList)
                 positionListList.append(positionList)
                 if len(correctPositionList) == 0: # e.g. noResponse for WM and WM_Anti tasks
-                    correctPositionList = [-1]
+                    correctPositionList = [0.05]
                 correctPositionListList.append(correctPositionList)
 
         if '3stim' in finalTrialsList_array[0][0][0]: stimNumber = 3
@@ -1702,12 +1702,12 @@ def preprocess_WM(opened_xlsxFile, questionnare_files, list_allSessions, sequenc
                         newOutput[i][j][2] = np.cos(position)
                     else:
                         for k in range(1, 3):  # if noResponse was given
-                            newOutput[i][j][1] = np.sin(-1)  # attention: Laura Driscoll actually intented to do this, but the simulated data showed 0.05 at this point
-                            newOutput[i][j][2] = np.cos(-1)
+                            newOutput[i][j][1] = np.sin(0.05)  # info: yang et al.: -1
+                            newOutput[i][j][2] = np.sin(0.05)  # info: yang et al.: -1
                 else:
                     for k in range(1, 3):  # if noResponse was given
-                        newOutput[i][j][1] = np.sin(-1)  # attention: Laura Driscoll actually intented to do this, but the simulated data showed 0.05 at this point
-                        newOutput[i][j][2] = np.cos(-1)  # attention: Laura Driscoll actually intented to do this, but the simulated data showed 0.05 at this point
+                        newOutput[i][j][1] = np.sin(0.05)  # info: yang et al.: -1
+                        newOutput[i][j][2] = np.sin(0.05)  # info: yang et al.: -1
 
         # Change dtype of every element in matrix to float32 for later validation functions
         for i in range(0, newOutput.shape[0]):
@@ -1724,7 +1724,7 @@ def preprocess_WM(opened_xlsxFile, questionnare_files, list_allSessions, sequenc
 
         for k in range(0, numFixStepsAverage):
             for j in range(0, newOutput.shape[1]):
-                y_loc[k][j] = np.float(-1)
+                y_loc[k][j] = np.float(0.05)  # info: yang et al.: -1
 
         # Complete y_loc matrix
         for k in range(numFixStepsAverage, totalStepsAverage):
@@ -1732,7 +1732,7 @@ def preprocess_WM(opened_xlsxFile, questionnare_files, list_allSessions, sequenc
                 if isinstance(Output[k][j][0], str) and Output[k][j][0] != 'noResponse' and Output[k][j][0] != 'NoResponse' and Output[k][j][0] != 'screen':
                     y_loc[k][j] = pref[correctPositionListList[j][0]-1]  # radiant form direction
                 else:
-                    y_loc[k][j] = float(-1)
+                    y_loc[k][j] = np.float(0.05)  # info: yang et al.: -1
 
         # Save output data
         output_filename = participant + '-' + 'month_' + str(month) + '-' + 'batch_' + str(
@@ -1773,7 +1773,7 @@ dataFolder = "Data"
 subfolders = ['DM', 'DM_Anti', 'EF', 'EF_Anti', 'RP', 'RP_Anti', 'RP_Ctx1', 'RP_Ctx2', 'WM', 'WM_Anti', 'WM_Ctx1', 'WM_Ctx2']
 preprocessing_folder = 'data_lowDim_correctOnly'
 participants = ['BeRNN_01','BeRNN_02','BeRNN_03','BeRNN_04','BeRNN_05']
-months = ['1', '2'] # info: debugging '13' - '1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12'
+months = ['4', '5'] # info: debugging '13' - '1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12'
 
 for participant in participants:
     # attention: change to right path

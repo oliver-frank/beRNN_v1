@@ -94,7 +94,7 @@ def plot_performanceprogress_eval_BeRNN(model_dir, figurePath, rule_plot=None):
                          fontsize=fs, labelspacing=0.3, loc=6, frameon=False)
     plt.setp(lg.get_title(), fontsize=fs)
     # plt.title(model_dir.split("\\")[-1]+'_EVALUATION.png') # info: Add title
-    plt.title(model_dir.split("\\")[-1].split('_')[0:1][0] + ' ' + model_dir.split("\\")[-1].split('_')[1:2][0] + ' ' + 'TEST', fontsize=14)  # info: Add title
+    plt.title(model_dir.split("\\")[-1] + ' ' + 'test', fontsize=14)  # info: Add title
     # # Add the randomness thresholds
     # # DM & RP Ctx
     # plt.axhline(y=0.2, color='green', label= 'DM & DM Anti & RP Ctx1 & RP Ctx2', linestyle=':')
@@ -113,7 +113,7 @@ def plot_performanceprogress_eval_BeRNN(model_dir, figurePath, rule_plot=None):
     #                 ,loc=6, frameon=False)
     # plt.setp(rt.get_title(), fontsize=fs)
 
-    plt.savefig(os.path.join(figurePath, model_dir.split("\\")[-1] + ' ' + '_functionalCorrelation_Test.png'), format='png', dpi=300)
+    plt.savefig(os.path.join(figurePath, model_dir.split("\\")[-1] + ' ' + '_performance_test.png'), format='png', dpi=300)
 
     # plt.show()
     # plt.close()
@@ -179,7 +179,7 @@ def plot_performanceprogress_train_BeRNN(model_dir, figurePath, rule_plot=None):
 
     plt.title(model_dir.split("\\")[-1].split('_')[0:1][0] + ' ' + model_dir.split("\\")[-1].split('_')[1:2][0] + ' ' + 'TRAIN', fontsize=14)
 
-    plt.savefig(os.path.join(figurePath, model_dir.split("\\")[-1] + ' ' + 'functionalCorrelation_Train.png'), format='png', dpi=300)
+    plt.savefig(os.path.join(figurePath, model_dir.split("\\")[-1] + ' ' + 'performance_train.png'), format='png', dpi=300)
 
     # plt.show()
     # plt.close()
@@ -512,8 +512,8 @@ rule_color = {
 }
 
 participant = 'beRNN_03'
-model = '\\beRNN_03_AllTask_3-5_data_lowDim_lowCognition_LeakyRNN_128_softplus_iteration1'
-trainingNumber = '\\02'
+model = '\\beRNN_03_AllTask_3-5_data_lowDim_lowCognition_LeakyRNN_128_relu_iteration1'
+trainingNumber = '\\03'
 folder = '\\beRNNmodels\\2025_01'
 folderPath = 'C:\\Users\\oliver.frank\\Desktop\\BackUp'
 finalPath = folderPath + folder + trainingNumber + model
