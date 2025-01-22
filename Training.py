@@ -44,15 +44,15 @@ def get_default_hp(ruleset):
     n_input, n_output = 1 + num_ring * n_eachring + n_rule, n_eachring + 1 # attention: n_output: n_output = 2 +1 for lowDim; n_output = n_eachring +1 for highDim
     hp = {
         # batch size for training and evaluation
-        'batch_size': 160, # 20/40/80/120/160
+        'batch_size': 80, # 20/40/80/120/160
         # 'batch_size_test': 640, # batch_size for testing
         'in_type': 'normal', # input type: normal, multi
         'rnn_type': 'LeakyRNN', # Type of RNNs: NonRecurrent, LeakyRNN, LeakyGRU, EILeakyGRU, GRU, LSTM
         'use_separate_input': False, # whether rule and stimulus inputs are represented separately
         'loss_type': 'lsq', # # Type of loss functions - Cross-entropy loss
-        'optimizer': 'sgd', # 'adam', 'sgd'
+        'optimizer': 'adam', # 'adam', 'sgd'
         'activation': 'relu', # Type of activation runctions, relu, softplus, tanh, elu, linear
-        'tau': 50, # # Time constant (ms)- standard 100
+        'tau': 100, # # Time constant (ms)- standard 100
         'dt': 20, # discretization time step (ms)
         'alpha': 0.2, # discretization time step/time constant - dt/tau = alpha
         'sigma_rec': 0.05, # recurrent noise - directly influencing the noise added to the network
@@ -87,8 +87,8 @@ def get_default_hp(ruleset):
         'rule_prob_map': {"DM": 1,"DM_Anti": 1,"EF": 1,"EF_Anti": 1,"RP": 1,"RP_Anti": 1,"RP_Ctx1": 1,"RP_Ctx2": 1,"WM": 1,"WM_Anti": 1,"WM_Ctx1": 1,"WM_Ctx2": 1}, # fraction of tasks represented in training data
         'tasksString': 'AllTask', # tasks taken
         'sequenceMode': True, # Decide if models are trained sequentially month-wise
-        'participant': 'beRNN_01', # Participant to take
-        'data': 'data_highDim_correctOnly' # 'data_highDim' , data_highDim_correctOnly , data_highDim_lowCognition , data_lowDim , data_lowDim_correctOnly , data_lowDim_lowCognition
+        'participant': 'beRNN_03', # Participant to take
+        'data': 'data_highDim' # 'data_highDim' , data_highDim_correctOnly , data_highDim_lowCognition , data_lowDim , data_lowDim_correctOnly , data_lowDim_lowCognition
     }
 
     return hp
@@ -453,10 +453,10 @@ if __name__ == '__main__':
         load_dir = None
 
         # Define main path
-        path = 'C:\\Users\\oliver.frank\\Desktop\\BackUp'  # local
+        # path = 'C:\\Users\\oliver.frank\\Desktop\\BackUp'  # local
         # path = 'W:\\group_csp\\analyses\\oliver.frank' # fl storage
         # path = '/data' # hitkip cluster
-        # path = '/pandora/home/oliver.frank/01_Projects/RNN/multitask_BeRNN-main' # pandora
+        path = '/pandora/home/oliver.frank/01_Projects/RNN/multitask_BeRNN-main' # pandora
 
         # Define data path
         preprocessedData_path = os.path.join(path, 'Data', hp['participant'], hp['data'])  # pandora

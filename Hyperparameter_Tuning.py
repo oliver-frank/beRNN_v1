@@ -43,38 +43,38 @@ def create_repeated_param_combinations(param_grid, sample_size):
 
 # Info: After first HPs the most probable space inheriting the best solution decreased to the following
 adjParams = {
-    'batch_size': [40, 80, 120],  # Wrap the integer in a list - [80, 120, 160]
-    'in_type': ['normal'],  # Wrap the string in a list
-    'rnn_type': ['LeakyRNN'],  # Wrap the string in a list
-    'use_separate_input': [False],  # Wrap the boolean in a list
-    'loss_type': ['lsq'],  # Wrap the string in a list
-    'optimizer': ['adam', 'sgd'],  # Wrap the string in a list
-    'activation': ['relu','softplus','elu'],  # Wrap the string in a list
-    'tau': [50, 100, 150],  # Wrap the integer in a list
-    'dt': [20],  # Wrap the integer in a list
+    'batch_size': [80, 120, 160],  # low: [80, 120, 160] - high: [40, 80, 120]
+    'in_type': ['normal'],
+    'rnn_type': ['LeakyRNN'],
+    'use_separate_input': [False],
+    'loss_type': ['lsq'],
+    'optimizer': ['adam', 'sgd'],
+    'activation': ['relu','softplus','elu'],
+    'tau': [50, 100, 150],
+    'dt': [20],
     'sigma_rec': [0.01, 0.05, 0.1],
     'sigma_x': [0.01],
-    'w_rec_init': ['randortho', 'randgauss'],  # Wrap the string in a list
-    'l1_h': [0.00005, 0.0001, 0.0005],  # Wrap the integer in a list - [0.0, 0.00005, 0.0001]
-    'l2_h': [0.000005, 0.00001, 0.00005], # [0.0, 0.000005, 0.00001]
-    'l1_weight': [0.00001, 0.00005, 0.0001],  # Wrap the integer in a list
-    'l2_weight': [0.00001, 0.00005, 0.0001], # .00001
+    'w_rec_init': ['randortho', 'randgauss'],
+    'l1_h': [0.0, 0.00005, 0.0001], # low: [0.0, 0.00005, 0.0001] - high: [0.00005, 0.0001, 0.0005]
+    'l2_h': [0.0, 0.000005, 0.00001], # low: [0.0, 0.000005, 0.00001] - high: [0.000005, 0.00001, 0.00005]
+    'l1_weight': [0.00001, 0.00005, 0.0001],
+    'l2_weight': [0.00001, 0.00005, 0.0001],
     'l2_weight_init': [0],
-    'p_weight_train': [None, 0.05, 0.1],  # Wrap None in a list
-    'learning_rate': [0.0005, 0.001, 0.0015],  # [0.001, 0.002, 0.005]
-    'n_rnn': [128, 256, 512], # [64, 128, 256]
+    'p_weight_train': [None, 0.05, 0.1],
+    'learning_rate': [0.001, 0.002, 0.005],  # low: [0.001, 0.002, 0.005] - high: [0.0005, 0.001, 0.0015]
+    'n_rnn': [128, 256, 512], # low: [64, 128, 256]
     'c_mask_responseValue': [5., 3., 1.],
-    'monthsConsidered': [['3','4','5']],  # Already a list
+    'monthsConsidered': [['3','4','5']], # list of lists
     'monthsString': ['3-5'],
     # 'rule_prob_map': {"DM": 1,"DM_Anti": 1,"EF": 1,"EF_Anti": 1,"RP": 1,"RP_Anti": 1,"RP_Ctx1": 1,"RP_Ctx2": 1,"WM": 1,"WM_Anti": 1,"WM_Ctx1": 1,"WM_Ctx2": 1}
     'rule_prob_map': {"DM": 1,"DM_Anti": 1,"EF": 1,"EF_Anti": 1,"RP": 1,"RP_Anti": 1,"RP_Ctx1": 1,"RP_Ctx2": 1,"WM": 1,"WM_Anti": 1,"WM_Ctx1": 1,"WM_Ctx2": 1}, # fraction of tasks represented in training data
     'participant': ['beRNN_01'], # Participant to take
-    'data': ['data_highDim'],
+    'data': ['data_lowDim'], # 'data_highDim' , data_highDim_correctOnly , data_highDim_lowCognition , data_lowDim , data_lowDim_correctOnly , data_lowDim_lowCognition
     'tasksString': ['AllTask'], # tasksTaken
     'sequenceMode': [True] # Decide if models are trained sequentially month-wise
 }
 # Randomly sample combinations
-sampled_combinations = create_param_combinations(adjParams, 20)
+sampled_combinations = create_param_combinations(adjParams, 50)
 
 # # Create one combination and repeat it according to sample_size
 # sampled_repeated_combinations = create_repeated_param_combinations(best_params, 5)
@@ -92,10 +92,10 @@ for modelNumber, params in enumerate(sampled_combinations): # info: either sampl
     load_dir = None
 
     # Define main path
-    path = 'C:\\Users\\oliver.frank\\Desktop\\BackUp'  # local
+    # path = 'C:\\Users\\oliver.frank\\Desktop\\BackUp'  # local
     # path = 'W:\\group_csp\\analyses\\oliver.frank' # fl storage
     # path = '/data' # hitkip cluster
-    # path = '/pandora/home/oliver.frank/01_Projects/RNN/multitask_BeRNN-main' # pandora
+    path = '/pandora/home/oliver.frank/01_Projects/RNN/multitask_BeRNN-main' # pandora
 
     # Define data path
     preprocessedData_path = os.path.join(path, 'Data', params['participant'], params['data'])
