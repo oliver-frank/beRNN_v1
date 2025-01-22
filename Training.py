@@ -40,8 +40,8 @@ def get_default_hp(ruleset):
     num_ring = Tools.get_num_ring(ruleset)
     n_rule = Tools.get_num_rule(ruleset)
 
-    n_eachring = 32 # attention: 10 for lowDim - 32 for highDim
-    n_input, n_output = 1 + num_ring * n_eachring + n_rule, n_eachring + 1 # attention: n_output: n_output = 2 +1 for lowDim; n_output = n_eachring +1 for highDim
+    n_eachring = 10 # attention: 10 for lowDim - 32 for highDim
+    n_input, n_output = 1 + num_ring * n_eachring + n_rule, 2 + 1 # attention: n_output: n_output = 2 +1 for lowDim; n_output = n_eachring +1 for highDim
     hp = {
         # batch size for training and evaluation
         'batch_size': 80, # 20/40/80/120/160
