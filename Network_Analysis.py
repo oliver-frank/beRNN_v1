@@ -177,7 +177,7 @@ def plot_performanceprogress_train_BeRNN(model_dir, figurePath, rule_plot=None):
                           fontsize=fs, labelspacing=0.3, loc=6, frameon=False) # info: first value influences horizontal position of legend
     plt.setp(lg.get_title(), fontsize=fs)
 
-    plt.title(model_dir.split("\\")[-1].split('_')[0:1][0] + ' ' + model_dir.split("\\")[-1].split('_')[1:2][0] + ' ' + 'TRAIN', fontsize=14)
+    plt.title(model_dir.split("\\")[-1] + ' ' + 'train', fontsize=14)
 
     plt.savefig(os.path.join(figurePath, model_dir.split("\\")[-1] + ' ' + 'performance_train.png'), format='png', dpi=300)
 
@@ -486,34 +486,36 @@ def compute_structuralCorrelation(model_dir, figurePath, monthsConsidered, mode,
 # info: ################################################################################################################
 # Assign a color to each task
 rule_color = {
-    # **DM tasks (Yellow-Brown Family)**
-    'DM':       '#D9D0C7',    # Base Beige
-    'DM_Anti':  '#C3B8AE',    # Muted Sand
-    # 'DM_Ctx1':  '#E5D7CA',    # Soft Cream
-    # 'DM_Ctx2':  '#F2E8DD',    # Light Ivory
+    # **DM tasks (Red Family - High Contrast)**
+    'DM':       '#A40000',    # Dark Carmine Red (Deep & Strong)
+    'DM_Anti':  '#D9001B',    # Bright Blood Red (Very Vivid)
+    'DM_Ctx1':  '#FF4C4C',    # Electric Red (Eye-Catching)
+    'DM_Ctx2':  '#FF9999',    # Soft Rose Red (Pastel Contrast)
 
-    # **EF tasks (Orange Family)**
-    'EF':       '#F2B35E',    # Bright Orange
-    'EF_Anti':  '#E89A40',    # Warm Tangerine
-    # 'EF_Ctx1':  '#FDD69E',    # Soft Apricot
-    # 'EF_Ctx2':  '#FFE7C7',    # Light Peach
+    # **EF tasks (Yellow Family - High Contrast)**
+    'EF':       '#E6B800',    # Deep Golden Yellow (Strong Base)
+    'EF_Anti':  '#FFC000',    # Vivid Amber Yellow (Bright & Warm)
+    'EF_Ctx1':  '#FFD54F',    # Pastel Sun Yellow (Soft Contrast)
+    'EF_Ctx2':  '#FFF2CC',    # Cream Yellow (Softest)
 
-    # **RP tasks (Brighter Olive Family)**
-    'RP':       '#8A7B4F',    # Brighter Olive
-    'RP_Anti':  '#716B3C',    # Deep Olive
-    'RP_Ctx1':  '#A4935F',    # Muted Olive-Gold
-    'RP_Ctx2':  '#C6B88A',    # Soft Olive Beige
+    # **RP tasks (Green Family - High Contrast)**
+    'RP':       '#005F00',    # Forest Green (Dark & Deep)
+    'RP_Anti':  '#008F00',    # Bright Leaf Green (Strong & Vivid)
+    'RP_Ctx1':  '#4CD964',    # Apple Green (Lively Contrast)
+    'RP_Ctx2':  '#A9F5A9',    # Mint Pastel Green (Softest)
 
-    # **WM tasks (Blue Family)**
-    'WM':       '#4D5D8C',    # Base Slate Blue
-    'WM_Anti':  '#3A466E',    # Deep Navy-Blue
-    'WM_Ctx1':  '#687AAE',    # Light Slate Blue
-    'WM_Ctx2':  '#A8B5D4'     # Pale Blue
+    # **WM tasks (Blue Family - High Contrast)**
+    'WM':       '#002E80',    # Deep Royal Blue (Darkest Tone)
+    'WM_Anti':  '#007FFF',    # Strong Azure Blue (Highly Visible)
+    'WM_Ctx1':  '#5CAEFF',    # Light Ocean Blue (Bright & Clear)
+    'WM_Ctx2':  '#BFDFFF'     # Ice Blue (Softest Pastel)
 }
 
+
+
 participant = 'beRNN_03'
-model = '\\beRNN_03_AllTask_3-5_data_lowDim_lowCognition_LeakyRNN_128_relu_iteration1'
-trainingNumber = '\\03'
+model = '\\beRNN_03_AllTask_3-5_data_highDim_LeakyRNN_128_relu_iteration1'
+trainingNumber = '\\00_localTraining'
 folder = '\\beRNNmodels\\2025_01'
 folderPath = 'C:\\Users\\oliver.frank\\Desktop\\BackUp'
 finalPath = folderPath + folder + trainingNumber + model

@@ -666,7 +666,7 @@ class Model(object):
             f_act = getattr(tf.nn, hp['activation'])
 
         # Recurrent activity
-        if hp['rnn_type'] == 'NonRecurrent':
+        if hp['rnn_type'] == 'NonRecurrent': # No w_rec is created and therefore no memory property within the model
             # Process each timestep with a dense layer
             flat_input = tf.reshape(self.x, [-1, n_input])
             dense_output = tf.layers.dense(flat_input, units=n_rnn, activation=f_act)
