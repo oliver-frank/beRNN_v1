@@ -46,7 +46,7 @@ def create_repeated_param_combinations(param_grid, sample_size):
 num_ring = Tools.get_num_ring('all')
 n_rule = Tools.get_num_rule('all')
 
-data = ['data_highDim']
+data = ['data_highDim'] # 'data_highDim' , data_highDim_correctOnly , data_highDim_lowCognition , data_lowDim , data_lowDim_correctOnly , data_lowDim_lowCognition
 
 if 'highDim' in data[0]:
     n_eachring = 32
@@ -87,7 +87,7 @@ adjParams = {
     # 'rule_prob_map': {"DM": 1,"DM_Anti": 1,"EF": 1,"EF_Anti": 1,"RP": 1,"RP_Anti": 1,"RP_Ctx1": 1,"RP_Ctx2": 1,"WM": 1,"WM_Anti": 1,"WM_Ctx1": 1,"WM_Ctx2": 1}
     'rule_prob_map': [{"DM": 1,"DM_Anti": 1,"EF": 1,"EF_Anti": 1,"RP": 1,"RP_Anti": 1,"RP_Ctx1": 1,"RP_Ctx2": 1,"WM": 1,"WM_Anti": 1,"WM_Ctx1": 1,"WM_Ctx2": 1}], # fraction of tasks represented in training data
     'participant': ['beRNN_03'], # Participant to take
-    'data': data, # 'data_highDim' , data_highDim_correctOnly , data_highDim_lowCognition , data_lowDim , data_lowDim_correctOnly , data_lowDim_lowCognition
+    'data': data,
     'tasksString': ['AllTask'], # tasksTaken
     'sequenceMode': [True] # Decide if models are trained sequentially month-wise
 }
