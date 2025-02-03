@@ -40,8 +40,17 @@ def get_default_hp(ruleset):
     num_ring = Tools.get_num_ring(ruleset)
     n_rule = Tools.get_num_rule(ruleset)
 
-    n_eachring = 10 # attention: 10 for lowDim - 32 for highDim
-    n_input, n_output = 1 + num_ring * n_eachring + n_rule, 2 + 1 # attention: n_output: n_output = 2 +1 for lowDim; n_output = n_eachring +1 for highDim
+    data = 'data_highDim'
+
+    if 'highDim' in data[0]:
+        n_eachring = 32
+        n_outputring = n_eachring
+        n_input, n_output = 1 + num_ring * n_eachring + n_rule, n_outputring + 1
+    else:
+        n_eachring = 10
+        n_outputring = 2
+        n_input, n_output = 1 + num_ring * n_eachring + n_rule, n_outputring + 1
+
     hp = {
         # batch size for training and evaluation
         'batch_size': 80, # 20/40/80/120/160
@@ -81,14 +90,14 @@ def get_default_hp(ruleset):
         'rule_probs': None, # Rule probabilities to be drawn
         # 'c_intsyn': 0, # intelligent synapses parameters, tuple (c, ksi) -> Yang et al. only apply these in sequential training
         # 'ksi_intsyn': 0,
-        'monthsConsidered': ['month_3','month_4','month_5'], # months to train and test
+        'monthsConsidered': ['month_3', 'month_4', 'month_5'], # months to train and test
         'monthsString': '3-5', # monthsTaken
         # 'rule_prob_map': {"DM": 1,"DM_Anti": 1,"EF": 1,"EF_Anti": 1,"RP": 1,"RP_Anti": 1,"RP_Ctx1": 1,"RP_Ctx2": 1,"WM": 1,"WM_Anti": 1,"WM_Ctx1": 1,"WM_Ctx2": 1}
         'rule_prob_map': {"DM": 1,"DM_Anti": 1,"EF": 1,"EF_Anti": 1,"RP": 1,"RP_Anti": 1,"RP_Ctx1": 1,"RP_Ctx2": 1,"WM": 1,"WM_Anti": 1,"WM_Ctx1": 1,"WM_Ctx2": 1}, # fraction of tasks represented in training data
         'tasksString': 'AllTask', # tasks taken
         'sequenceMode': True, # Decide if models are trained sequentially month-wise
         'participant': 'beRNN_03', # Participant to take
-        'data': 'data_highDim' # 'data_highDim' , data_highDim_correctOnly , data_highDim_lowCognition , data_lowDim , data_lowDim_correctOnly , data_lowDim_lowCognition
+        'data': data # 'data_highDim' , data_highDim_correctOnly , data_highDim_lowCognition , data_lowDim , data_lowDim_correctOnly , data_lowDim_lowCognition, data_timeCompressed, data_lowDim_timeCompressed
     }
 
     return hp
@@ -466,8 +475,8 @@ if __name__ == '__main__':
             model_name = f'model_{month}'
 
             # Define model_dir for different servers
-            # model_dir = os.path.join(f"{path}\\beRNNmodels\\2025_01\\{hp['participant']}_{hp['tasksString']}_{hp['monthsString']}_{hp['data']}_{hp['rnn_type']}_{hp['n_rnn']}_{hp['activation']}_iteration{modelNumber}", model_name) # local
-            model_dir = os.path.join(f"{path}/beRNNmodels/2025_01/{hp['participant']}_{hp['tasksString']}_{hp['monthsString']}_{hp['data']}_{hp['rnn_type']}_{hp['n_rnn']}_{hp['activation']}_iteration{modelNumber}", model_name) # pandora
+            # model_dir = os.path.join(f"{path}\\beRNNmodels\\2025_02\\00_localTraining\\{hp['participant']}_{hp['tasksString']}_{hp['monthsString']}_{hp['data']}_{hp['rnn_type']}_{hp['n_rnn']}_{hp['activation']}_iteration{modelNumber}", model_name) # local
+            model_dir = os.path.join(f"{path}/beRNNmodels/2025_02/{hp['participant']}_{hp['tasksString']}_{hp['monthsString']}_{hp['data']}_{hp['rnn_type']}_{hp['n_rnn']}_{hp['activation']}_iteration{modelNumber}", model_name) # pandora & hitkip VM
 
 
             if not os.path.exists(model_dir):

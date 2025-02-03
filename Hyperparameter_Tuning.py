@@ -45,12 +45,21 @@ def create_repeated_param_combinations(param_grid, sample_size):
 # Get input and output dimension for network, depending on higDim and lowDim data and ruleset (standard: 'all')
 num_ring = Tools.get_num_ring('all')
 n_rule = Tools.get_num_rule('all')
-n_eachring = 10 # attention: 10 for lowDim - 32 for highDim
-n_input, n_output = 1 + num_ring * n_eachring + n_rule, 2 + 1 # attention: n_output: n_output = 2 +1 for lowDim; n_output = n_eachring +1 for highDim
+
+data = ['data_highDim']
+
+if 'highDim' in data[0]:
+    n_eachring = 32
+    n_outputring = n_eachring
+    n_input, n_output = 1 + num_ring * n_eachring + n_rule, n_outputring + 1
+else:
+    n_eachring = 10
+    n_outputring = 2
+    n_input, n_output = 1 + num_ring * n_eachring + n_rule, n_outputring + 1
 
 # Info: After first HPs the most probable space inheriting the best solution decreased to the following
 adjParams = {
-    'batch_size': [80, 120, 160],  # low: [80, 120, 160] - high: [40, 80, 120]
+    'batch_size': [40, 80, 120],  # low: [80, 120, 160] - high: [40, 80, 120]
     'in_type': ['normal'],
     'rnn_type': ['LeakyRNN'],
     'n_input': [n_input], # number of input units
@@ -58,27 +67,27 @@ adjParams = {
     'use_separate_input': [False],
     'loss_type': ['lsq'],
     'optimizer': ['adam', 'sgd'],
-    'activation': ['relu','softplus','elu'],
-    'tau': [50, 100, 150], # Decides how fast previous information decays to calculate current state activity
+    'activation': ['relu','softplus','elu'], #
+    'tau': [50, 100, 150], # [50, 100, 150] Decides how fast previous information decays to calculate current state activity
     'dt': [20],
-    'sigma_rec': [0.01, 0.05, 0.1],
+    'sigma_rec': [0.01, 0.05, 0.1], # [0.01, 0.05, 0.1]
     'sigma_x': [0.01],
     'w_rec_init': ['randortho', 'randgauss'],
-    'l1_h': [0.0, 0.00005, 0.0001], # low: [0.0, 0.00005, 0.0001] - high: [0.00005, 0.0001, 0.0005]
-    'l2_h': [0.0, 0.000005, 0.00001], # low: [0.0, 0.000005, 0.00001] - high: [0.000005, 0.00001, 0.00005]
+    'l1_h': [0.00005, 0.0001, 0.0005], # low: [0.0, 0.00005, 0.0001] - high: [0.00005, 0.0001, 0.0005]
+    'l2_h': [0.000005, 0.00001, 0.00005], # low: [0.0, 0.000005, 0.00001] - high: [0.000005, 0.00001, 0.00005]
     'l1_weight': [0.00001, 0.00005, 0.0001],
     'l2_weight': [0.00001, 0.00005, 0.0001],
     'l2_weight_init': [0],
-    'p_weight_train': [None, 0.05, 0.1],
-    'learning_rate': [0.001, 0.002, 0.005],  # low: [0.001, 0.002, 0.005] - high: [0.0005, 0.001, 0.0015]
-    'n_rnn': [64, 128, 256], # low: [64, 128, 256] - high: [128, 256, 512]
-    'c_mask_responseValue': [5., 3., 1.],
-    'monthsConsidered': [['3','4','5']], # list of lists
+    'p_weight_train': [None, 0.05, 0.1], # [None, 0.05, 0.1]
+    'learning_rate': [0.0005, 0.001, 0.0015],  # low: [0.001, 0.002, 0.005] - high: [0.0005, 0.001, 0.0015]
+    'n_rnn': [128, 256, 512], # low: [64, 128, 256] - high: [128, 256, 512]
+    'c_mask_responseValue': [5., 3., 1.], # [5., 3., 1.]
+    'monthsConsidered': [['month_3', 'month_4', 'month_5']], # list of lists
     'monthsString': ['3-5'],
     # 'rule_prob_map': {"DM": 1,"DM_Anti": 1,"EF": 1,"EF_Anti": 1,"RP": 1,"RP_Anti": 1,"RP_Ctx1": 1,"RP_Ctx2": 1,"WM": 1,"WM_Anti": 1,"WM_Ctx1": 1,"WM_Ctx2": 1}
     'rule_prob_map': [{"DM": 1,"DM_Anti": 1,"EF": 1,"EF_Anti": 1,"RP": 1,"RP_Anti": 1,"RP_Ctx1": 1,"RP_Ctx2": 1,"WM": 1,"WM_Anti": 1,"WM_Ctx1": 1,"WM_Ctx2": 1}], # fraction of tasks represented in training data
     'participant': ['beRNN_03'], # Participant to take
-    'data': ['data_lowDim_lowCognition'], # 'data_highDim' , data_highDim_correctOnly , data_highDim_lowCognition , data_lowDim , data_lowDim_correctOnly , data_lowDim_lowCognition
+    'data': data, # 'data_highDim' , data_highDim_correctOnly , data_highDim_lowCognition , data_lowDim , data_lowDim_correctOnly , data_lowDim_lowCognition
     'tasksString': ['AllTask'], # tasksTaken
     'sequenceMode': [True] # Decide if models are trained sequentially month-wise
 }
@@ -103,8 +112,8 @@ for modelNumber, params in enumerate(sampled_combinations): # info: either sampl
     # Define main path
     # path = 'C:\\Users\\oliver.frank\\Desktop\\BackUp'  # local
     # path = 'W:\\group_csp\\analyses\\oliver.frank' # fl storage
-    # path = '/data' # hitkip cluster
-    path = '/pandora/home/oliver.frank/01_Projects/RNN/multitask_BeRNN-main' # pandora
+    path = '/data' # hitkip cluster
+    # path = '/pandora/home/oliver.frank/01_Projects/RNN/multitask_BeRNN-main' # pandora
 
     # Define data path
     preprocessedData_path = os.path.join(path, 'Data', params['participant'], params['data'])
@@ -114,8 +123,8 @@ for modelNumber, params in enumerate(sampled_combinations): # info: either sampl
         model_name = f'model_{month}'
 
         # Define model_dir for different servers
-        # model_dir = os.path.join(f"{path}\\beRNNmodels\\2025_01\\{params['participant']}_{params['tasksString']}_{params['monthsString']}_{params['data']}_{params['rnn_type']}_{params['n_rnn']}_{params['activation']}_iteration{modelNumber}", model_name) # local
-        model_dir = os.path.join(f"{path}/beRNNmodels/2025_01/{params['participant']}_{params['tasksString']}_{params['monthsString']}_{params['data']}_{params['rnn_type']}_{params['n_rnn']}_{params['activation']}_iteration{modelNumber}",model_name)  # pandora
+        # model_dir = os.path.join(f"{path}\\beRNNmodels\\2025_02\\{params['participant']}_{params['tasksString']}_{params['monthsString']}_{params['data']}_{params['rnn_type']}_{params['n_rnn']}_{params['activation']}_iteration{modelNumber}", model_name) # local
+        model_dir = os.path.join(f"{path}/beRNNmodels/2025_02/01/{params['participant']}_{params['tasksString']}_{params['monthsString']}_{params['data']}_{params['rnn_type']}_{params['n_rnn']}_{params['activation']}_iteration{modelNumber}",model_name)  # pandora & hitkip VM
 
         if not os.path.exists(model_dir):
             os.makedirs(model_dir)

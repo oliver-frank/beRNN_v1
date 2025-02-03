@@ -12,6 +12,7 @@ import matplotlib.pyplot as plt
 import networkx as nx
 # matplotlib.use('WebAgg')  # Or 'Qt5Agg', 'GTK3Agg', 'wxAgg'
 # from scipy.stats import ttest_ind
+import shutil
 
 import warnings
 warnings.simplefilter(action='ignore', category=FutureWarning)
@@ -23,7 +24,7 @@ from Tools import rule_name
 # import tensorflow as tf
 
 
-selected_hp_keys = ['rnn_type', 'activation', 'tau', 'dt', 'sigma_rec', 'sigma_x', 'w_rec_init', 'l1_h', 'l2_h', \
+selected_hp_keys = ['rnn_type', 'activation', 'optimizer', 'tau', 'dt', 'sigma_rec', 'sigma_x', 'w_rec_init', 'l1_h', 'l2_h', \
                     'l1_weight', 'l2_weight', 'l2_weight_init', 'learning_rate', 'n_rnn', 'c_mask_responseValue',
                     'monthsConsidered', 'data']  # Replace with the keys you want info: 'data' only exists from 15.01.25 on
 
@@ -45,7 +46,7 @@ def smoothed(data, window_size):
 # each representing 40 trained trials. So I should gather 5 data points of the training data to have the same smoothness
 # in the plots, window size = 5
 ########################################################################################################################
-def plot_performanceprogress_eval_BeRNN(model_dir, figurePath, rule_plot=None):
+def plot_performanceprogress_eval_BeRNN(model_dir, figurePath, figurePath_overview, model, rule_plot=None):
     # Plot Evaluation Progress
     log = Tools.load_log(model_dir)
     # log = Tools.load_log(currentModelDirectory)
@@ -113,12 +114,13 @@ def plot_performanceprogress_eval_BeRNN(model_dir, figurePath, rule_plot=None):
     #                 ,loc=6, frameon=False)
     # plt.setp(rt.get_title(), fontsize=fs)
 
-    plt.savefig(os.path.join(figurePath, model_dir.split("\\")[-1] + ' ' + '_performance_test.png'), format='png', dpi=300)
+    plt.savefig(os.path.join(figurePath, model_dir.split("\\")[-1] + '_' + model + '_performance_test.png'), format='png', dpi=300)
+    plt.savefig(os.path.join(figurePath_overview, model_dir.split("\\")[-2] + '_' + model + '_test.png'), format='png', dpi=300)
 
     # plt.show()
     # plt.close()
 
-def plot_performanceprogress_train_BeRNN(model_dir, figurePath, rule_plot=None):
+def plot_performanceprogress_train_BeRNN(model_dir, figurePath, figurePath_overview, model, rule_plot=None):
     # Plot Training Progress
     log = Tools.load_log(model_dir)
     hp = Tools.load_hp(model_dir)
@@ -179,7 +181,8 @@ def plot_performanceprogress_train_BeRNN(model_dir, figurePath, rule_plot=None):
 
     plt.title(model_dir.split("\\")[-1] + ' ' + 'train', fontsize=14)
 
-    plt.savefig(os.path.join(figurePath, model_dir.split("\\")[-1] + ' ' + 'performance_train.png'), format='png', dpi=300)
+    plt.savefig(os.path.join(figurePath, model_dir.split("\\")[-1] + '_' + model + '_performance_train.png'), format='png', dpi=300)
+    plt.savefig(os.path.join(figurePath_overview, model_dir.split("\\")[-2] + '_' + model + '_train.png'), format='png', dpi=300)
 
     # plt.show()
     # plt.close()
@@ -487,16 +490,14 @@ def compute_structuralCorrelation(model_dir, figurePath, monthsConsidered, mode,
 # Assign a color to each task
 rule_color = {
     # **DM tasks (Red Family - High Contrast)**
-    'DM':       '#A40000',    # Dark Carmine Red (Deep & Strong)
-    'DM_Anti':  '#D9001B',    # Bright Blood Red (Very Vivid)
-    'DM_Ctx1':  '#FF4C4C',    # Electric Red (Eye-Catching)
-    'DM_Ctx2':  '#FF9999',    # Soft Rose Red (Pastel Contrast)
+    'DM':       '#DC143C',
+    'DM_Anti':  '#FF0000',
 
     # **EF tasks (Yellow Family - High Contrast)**
-    'EF':       '#E6B800',    # Deep Golden Yellow (Strong Base)
-    'EF_Anti':  '#FFC000',    # Vivid Amber Yellow (Bright & Warm)
-    'EF_Ctx1':  '#FFD54F',    # Pastel Sun Yellow (Soft Contrast)
-    'EF_Ctx2':  '#FFF2CC',    # Cream Yellow (Softest)
+    # 'EF':       '#380282',
+    # 'EF_Anti':  '#7E1E9C',
+    'EF':       '#FAC205',
+    'EF_Anti':  '#FFFF00',
 
     # **RP tasks (Green Family - High Contrast)**
     'RP':       '#005F00',    # Forest Green (Dark & Deep)
@@ -511,170 +512,212 @@ rule_color = {
     'WM_Ctx2':  '#BFDFFF'     # Ice Blue (Softest Pastel)
 }
 
-
+# Define analysis
+uniqueModelAnalysis = False
 
 participant = 'beRNN_03'
-model = '\\beRNN_03_AllTask_3-5_data_highDim_LeakyRNN_128_relu_iteration1'
-trainingNumber = '\\00_localTraining'
+trainingNumber = '\\04'
 folder = '\\beRNNmodels\\2025_01'
 folderPath = 'C:\\Users\\oliver.frank\\Desktop\\BackUp'
-finalPath = folderPath + folder + trainingNumber + model
-
-_model_list = os.listdir(finalPath)
-model_list = [i for i in _model_list if 'model' in i]
-dataFolder = Tools.load_hp(finalPath + f'\\{model_list[0]}')['data']
-data_dir = os.path.join('C:\\Users\\oliver.frank\\Desktop\\BackUp\\Data', participant, dataFolder)
-
-for model_dir in model_list:
-    currentModelDirectory = os.path.join(finalPath, model_dir)
-    # Load hp
-    currentHP = Tools.load_hp(currentModelDirectory)
-    # Load tasks to plot
-    rule_plot = []
-    for i in currentHP['rule_prob_map']:
-        if currentHP['rule_prob_map'][i] > 0:
-            rule_plot.append(i)
-
-    # create one directory for all visuals within model_dir
-    visualsDirectory = os.path.join(currentModelDirectory, 'visuals')
-    # Check if the directory exists
-    if not os.path.exists(visualsDirectory):
-        # If it doesn't exist, create the directory
-        os.makedirs(visualsDirectory)
-        print(f"Directory created: {visualsDirectory}")
-    else:
-        print(f"Directory already exists: {visualsDirectory}")
-
-    # Plot improvement of performance over iterating evaluation and training steps
-    plot_performanceprogress_eval_BeRNN(currentModelDirectory, visualsDirectory, rule_plot=rule_plot)
-    plot_performanceprogress_train_BeRNN(currentModelDirectory, visualsDirectory, rule_plot=rule_plot)
-
-    # Compute task variance on evaluation data
-    mode = 'test'
-    analysis_test = clustering.Analysis(data_dir, currentModelDirectory, mode, currentHP['monthsConsidered'], 'rule')
-    analysis_test.plot_variance(currentModelDirectory, visualsDirectory, mode) # Normalized Task Variance
-    # Compute task variance on training data
-    mode = 'train'
-    analysis_train = clustering.Analysis(data_dir, currentModelDirectory, mode, currentHP['monthsConsidered'], 'rule')
-    analysis_train.plot_variance(currentModelDirectory, visualsDirectory, mode)  # Normalized Task Variance
-
-    # Compute functional and structural Correlation with normalized and centered dot product on evaluation data
-    mode = 'test'
-    compute_functionalCorrelation(currentModelDirectory, visualsDirectory, currentHP['monthsConsidered'], mode, analysis_test)
-    # Compute functional and structural Correlation with normalized and centered dot product on evaluation data
-    mode = 'train'
-    compute_functionalCorrelation(currentModelDirectory, visualsDirectory, currentHP['monthsConsidered'], mode, analysis_train)
-    # compute_structuralCorrelation(model_dir, figurePath_structuralCorrelation, monthsConsidered, mode)
+_finalPath = folderPath + folder + trainingNumber
 
 
-
-# # info: ################################################################################################################
-# # info: Average plots ##################################################################################################
-# # info: ################################################################################################################
-# # Assign a color to each task
-# _rule_color = {
-#     'DM': 'green',
-#     'DM_Anti': 'olive',
-#     'EF': 'forest green',
-#     'EF_Anti': 'mustard',
-#     'RP': 'tan',
-#     'RP_Anti': 'brown',
-#     'RP_Ctx1': 'lavender',
-#     'RP_Ctx2': 'aqua',
-#     'WM': 'bright purple',
-#     'WM_Anti': 'green blue',
-#     'WM_Ctx1': 'blue',
-#     'WM_Ctx2': 'indigo'
-# }
-# rule_color = {k: 'xkcd:' + v for k, v in _rule_color.items()}
-#
-# participant = 'beRNN_05'
-# modelsFolder = 'beRNN_05_AllTask_3-5_PreprocessedData_wResp_ALL_LeakyRNN_128_softplus_iteration1'
-# folder = '\\beRNNmodels\\2025_01\\'
-# folderPath = 'C:\\Users\\oliver.frank\\Desktop\\BackUp'
-# finalPath = folderPath + folder + modelsFolder
-#
-# model_list = os.listdir(finalPath)
-#
-# visualsDirectory = os.path.join(finalPath, 'visuals')
-#
-# if not os.path.exists(visualsDirectory):
-#     # If it doesn't exist, create the directory
-#     os.makedirs(visualsDirectory)
-#     print(f"Directory created: {visualsDirectory}")
-# else:
-#     print(f"Directory already exists: {visualsDirectory}")
-#
-# # Plot the average performance of models on evaluation data
-# mode = 'test'
-# plot_aggregated_performance(model_list, mode, visualsDirectory, finalPath)
-# # Plot the average performance of models on training data
-# mode = 'train'
-# plot_aggregated_performance(model_list, mode, visualsDirectory, finalPath)
-
-
-
-# info: ################################################################################################################
-# info: Topological Marker Analysis ####################################################################################
-# info: ################################################################################################################
-def apply_threshold(matrix, threshold):
-    # Set all values below the threshold to zero
-    matrix_thresholded = np.where(np.abs(matrix) > threshold, matrix,0)  # fix: Can you appply a 20 to 40 % of the strongest connection filter for positive and negative correlations
-    return matrix_thresholded
-
-_modelList = os.listdir(finalPath)
-# _modelList = os.listdir(os.path.join(finalPath, iterationList[0]))
-modelList = [i for i in _modelList if 'model' in i] # All except for 'visuals' and 'topologicalMarkers'
-
-# Create topMarker folder
-topMarkerPath = os.path.join(finalPath, 'topologicalMarker')
-if not os.path.exists(topMarkerPath):
+# create one directory for performance visuals of all models in _finalPath to create html document
+figurePath_overview = os.path.join(_finalPath, 'performanceOverview')
+# Check if the directory exists
+if not os.path.exists(figurePath_overview):
     # If it doesn't exist, create the directory
-    os.makedirs(topMarkerPath)
-    print(f"Directory created: {topMarkerPath}")
+    os.makedirs(figurePath_overview)
+    print(f"Directory created: {figurePath_overview}")
 else:
-    print(f"Directory already exists: {topMarkerPath}")
+    print(f"Directory already exists: {figurePath_overview}")
 
-for model in modelList:
-    degreeList = []
-    betweennessList = []
-    assortativityList = []
 
-    file_dir = os.path.join(finalPath, model,'visuals',f'{model}_functionalCorrelation.npy')
-    file = np.load(file_dir)
+if uniqueModelAnalysis == True:
+    _model_list = ['beRNN_03_AllTask_3-5_data_lowDim_correctOnly_LeakyRNN_256_elu_iteration25']
+else:
+    _model_list = os.listdir(_finalPath)
 
-    # Define a threshold (you can experiment with this value)
-    threshold = 0.5  # Example threshold
-    functionalCorrelation_thresholded = apply_threshold(file, threshold)
+for _model in _model_list:
+    try:
+        if len(_model.split('_')) == 10:
+            dataFolder = '_'.join(_model.split('_')[4:6])
+        elif len(_model.split('_')) == 11:
+            dataFolder = '_'.join(_model.split('_')[4:7])
 
-    # Function to apply a threshold to the matrix
-    G = nx.from_numpy_array(functionalCorrelation_thresholded)
+        model_dir = os.path.join(_finalPath, _model) # define unique model
 
-    # The degree of a node in a graph is the count of edges connected to that node. For each node, it represents the number of
-    # direct connections (or neighbors) it has within the graph.
-    degrees = nx.degree(G) # For calculating node degrees. attention: transform into graph then apply stuff
-    # Betweenness centrality quantifies the importance of a node based on its position within the shortest paths between other nodes.
-    betweenness = nx.betweenness_centrality(G) # For betweenness centrality.
-    # Optionally calculate averages of node-based metrics
-    avg_degree = np.mean(list(dict(G.degree()).values()))
-    avg_betweenness = np.mean(list(betweenness.values()))
+        _model_list = os.listdir(model_dir)
+        model_list = [i for i in _model_list if 'model' in i]
 
-    # Assortativity: Measures the tendency of nodes to connect to other nodes with similar degrees.
-    # A positive value means that high-degree nodes tend to connect to other high-degree nodes. Around 0 no relevant correlation
-    assortativity = nx.degree_assortativity_coefficient(G)
+        # Define right model
+        data_dir = os.path.join('C:\\Users\\oliver.frank\\Desktop\\BackUp\\Data', participant, dataFolder)
 
-    degreeList.append(avg_degree)
-    betweennessList.append(avg_betweenness)
-    assortativityList.append(assortativity)
+        for model in model_list:
+            currentModelDirectory = os.path.join(_finalPath, _model, model)
+            # Load hp
+            currentHP = Tools.load_hp(currentModelDirectory)
+            # Load tasks to plot
+            rule_plot = []
+            for i in currentHP['rule_prob_map']:
+                if currentHP['rule_prob_map'][i] > 0:
+                    rule_plot.append(i)
 
-    topMarkerList = [degreeList, betweennessList, assortativityList]
-    topMarkerNamesList = ['degreeList', 'betweennessList', 'assortativityList']
-    for i in range(0,len(topMarkerNamesList)):
-        mean_value = np.mean(topMarkerList[i])
-        variance_value = np.var(topMarkerList[i])
-        # mean_variance = np.array([mean_value, variance_value])
-        np.save(os.path.join(topMarkerPath, f'{topMarkerNamesList[i]}_{model}.npy'), topMarkerList[i])
-        # np.save(os.path.join(folderPath, f'topMarkerDistributions_monthWise_{participant}', f'{topMarkerNamesList[i]}MeanVariance_{month}.npy'), mean_variance)
+            # create one directory for all visuals within model_dir
+            visualsDirectory = os.path.join(currentModelDirectory, 'visuals')
+            # Check if the directory exists
+            if not os.path.exists(visualsDirectory):
+                # If it doesn't exist, create the directory
+                os.makedirs(visualsDirectory)
+                print(f"Directory created: {visualsDirectory}")
+            else:
+                print(f"Directory already exists: {visualsDirectory}")
+
+            # Plot improvement of performance over iterating evaluation and training steps
+            plot_performanceprogress_eval_BeRNN(currentModelDirectory, visualsDirectory, figurePath_overview, model, rule_plot=rule_plot)
+            plot_performanceprogress_train_BeRNN(currentModelDirectory, visualsDirectory, figurePath_overview, model, rule_plot=rule_plot)
+
+    except Exception as e:
+        modelFolder_error = os.path.join(_finalPath, _model, model) # only removes a month folder
+        print(e)
+        print(f'>>> Error on folder {modelFolder_error}')
+        # shutil.rmtree(modelFolder_2remove) # removes folder with and without files
+        continue
+
+    #     # Compute task variance on evaluation data
+    #     mode = 'test'
+    #     analysis_test = clustering.Analysis(data_dir, currentModelDirectory, mode, currentHP['monthsConsidered'], 'rule')
+    #     analysis_test.plot_variance(currentModelDirectory, visualsDirectory, mode) # Normalized Task Variance
+    #     # Compute task variance on training data
+    #     mode = 'train'
+    #     analysis_train = clustering.Analysis(data_dir, currentModelDirectory, mode, currentHP['monthsConsidered'], 'rule')
+    #     analysis_train.plot_variance(currentModelDirectory, visualsDirectory, mode)  # Normalized Task Variance
+    #
+    #     # Compute functional and structural Correlation with normalized and centered dot product on evaluation data
+    #     mode = 'test'
+    #     compute_functionalCorrelation(currentModelDirectory, visualsDirectory, currentHP['monthsConsidered'], mode, analysis_test)
+    #     # Compute functional and structural Correlation with normalized and centered dot product on evaluation data
+    #     mode = 'train'
+    #     compute_functionalCorrelation(currentModelDirectory, visualsDirectory, currentHP['monthsConsidered'], mode, analysis_train)
+    #     # compute_structuralCorrelation(model_dir, figurePath_structuralCorrelation, monthsConsidered, mode)
+
+
+# # # info: ################################################################################################################
+# # # info: Average plots ##################################################################################################
+# # # info: ################################################################################################################
+# # # Assign a color to each task
+# # _rule_color = {
+# #     'DM': 'green',
+# #     'DM_Anti': 'olive',
+# #     'EF': 'forest green',
+# #     'EF_Anti': 'mustard',
+# #     'RP': 'tan',
+# #     'RP_Anti': 'brown',
+# #     'RP_Ctx1': 'lavender',
+# #     'RP_Ctx2': 'aqua',
+# #     'WM': 'bright purple',
+# #     'WM_Anti': 'green blue',
+# #     'WM_Ctx1': 'blue',
+# #     'WM_Ctx2': 'indigo'
+# # }
+# # rule_color = {k: 'xkcd:' + v for k, v in _rule_color.items()}
+# #
+# # participant = 'beRNN_05'
+# # modelsFolder = 'beRNN_05_AllTask_3-5_PreprocessedData_wResp_ALL_LeakyRNN_128_softplus_iteration1'
+# # folder = '\\beRNNmodels\\2025_01\\'
+# # folderPath = 'C:\\Users\\oliver.frank\\Desktop\\BackUp'
+# # finalPath = folderPath + folder + modelsFolder
+# #
+# # model_list = os.listdir(finalPath)
+# #
+# # visualsDirectory = os.path.join(finalPath, 'visuals')
+# #
+# # if not os.path.exists(visualsDirectory):
+# #     # If it doesn't exist, create the directory
+# #     os.makedirs(visualsDirectory)
+# #     print(f"Directory created: {visualsDirectory}")
+# # else:
+# #     print(f"Directory already exists: {visualsDirectory}")
+# #
+# # # Plot the average performance of models on evaluation data
+# # mode = 'test'
+# # plot_aggregated_performance(model_list, mode, visualsDirectory, finalPath)
+# # # Plot the average performance of models on training data
+# # mode = 'train'
+# # plot_aggregated_performance(model_list, mode, visualsDirectory, finalPath)
+#
+#
+#
+# # info: ################################################################################################################
+# # info: Topological Marker Analysis ####################################################################################
+# # info: ################################################################################################################
+# def apply_threshold(matrix, threshold):
+#     # Set all values below the threshold to zero
+#     matrix_thresholded = np.where(np.abs(matrix) > threshold, matrix,0)  # fix: Can you appply a 20 to 40 % of the strongest connection filter for positive and negative correlations
+#     return matrix_thresholded
+#
+# _modelList = os.listdir(finalPath)
+# # _modelList = os.listdir(os.path.join(finalPath, iterationList[0]))
+# modelList = [i for i in _modelList if 'model' in i] # All except for 'visuals' and 'topologicalMarkers'
+#
+# # Create topMarker folder
+# topMarkerPath = os.path.join(finalPath, 'topologicalMarker')
+# if not os.path.exists(topMarkerPath):
+#     # If it doesn't exist, create the directory
+#     os.makedirs(topMarkerPath)
+#     print(f"Directory created: {topMarkerPath}")
+# else:
+#     print(f"Directory already exists: {topMarkerPath}")
+#
+# for model in modelList:
+#     degreeList = []
+#     betweennessList = []
+#     assortativityList = []
+#
+#     file_dir = os.path.join(finalPath, model,'visuals',f'{model}_functionalCorrelation.npy')
+#     file = np.load(file_dir)
+#
+#     # Define a threshold (you can experiment with this value)
+#     threshold = 0.5  # Example threshold
+#     functionalCorrelation_thresholded = apply_threshold(file, threshold)
+#
+#     # Function to apply a threshold to the matrix
+#     G = nx.from_numpy_array(functionalCorrelation_thresholded)
+#
+#     # The degree of a node in a graph is the count of edges connected to that node. For each node, it represents the number of
+#     # direct connections (or neighbors) it has within the graph.
+#     degrees = nx.degree(G) # For calculating node degrees. attention: transform into graph then apply stuff
+#     # Betweenness centrality quantifies the importance of a node based on its position within the shortest paths between other nodes.
+#     betweenness = nx.betweenness_centrality(G) # For betweenness centrality.
+#     # Optionally calculate averages of node-based metrics
+#     avg_degree = np.mean(list(dict(G.degree()).values()))
+#     avg_betweenness = np.mean(list(betweenness.values()))
+#
+#     # Assortativity: Measures the tendency of nodes to connect to other nodes with similar degrees.
+#     # A positive value means that high-degree nodes tend to connect to other high-degree nodes. Around 0 no relevant correlation
+#     assortativity = nx.degree_assortativity_coefficient(G)
+#
+#     degreeList.append(avg_degree)
+#     betweennessList.append(avg_betweenness)
+#     assortativityList.append(assortativity)
+#
+#     topMarkerList = [degreeList, betweennessList, assortativityList]
+#     topMarkerNamesList = ['degreeList', 'betweennessList', 'assortativityList']
+#     for i in range(0,len(topMarkerNamesList)):
+#         mean_value = np.mean(topMarkerList[i])
+#         variance_value = np.var(topMarkerList[i])
+#         # mean_variance = np.array([mean_value, variance_value])
+#         np.save(os.path.join(topMarkerPath, f'{topMarkerNamesList[i]}_{model}.npy'), topMarkerList[i])
+#         # np.save(os.path.join(folderPath, f'topMarkerDistributions_monthWise_{participant}', f'{topMarkerNamesList[i]}MeanVariance_{month}.npy'), mean_variance)
+
+
+
+
+
+
+
+
+
 
 
         # # attention: Distributions and their visualization only possible with more than one iteration
