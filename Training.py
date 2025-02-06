@@ -40,7 +40,8 @@ def get_default_hp(ruleset):
     num_ring = Tools.get_num_ring(ruleset)
     n_rule = Tools.get_num_rule(ruleset)
 
-    data = 'data_highDim'
+    machine = 'local' # 'local' 'pandora' 'hitkip'
+    data = 'data_highDim' # 'data_highDim' , data_highDim_correctOnly , data_highDim_lowCognition , data_lowDim , data_lowDim_correctOnly , data_lowDim_lowCognition
 
     if 'highDim' in data[0]:
         n_eachring = 32
@@ -97,7 +98,8 @@ def get_default_hp(ruleset):
         'tasksString': 'AllTask', # tasks taken
         'sequenceMode': True, # Decide if models are trained sequentially month-wise
         'participant': 'beRNN_03', # Participant to take
-        'data': data # 'data_highDim' , data_highDim_correctOnly , data_highDim_lowCognition , data_lowDim , data_lowDim_correctOnly , data_lowDim_lowCognition, data_timeCompressed, data_lowDim_timeCompressed
+        'data': data, # 'data_highDim' , data_highDim_correctOnly , data_highDim_lowCognition , data_lowDim , data_lowDim_correctOnly , data_lowDim_lowCognition, data_timeCompressed, data_lowDim_timeCompressed
+        'machine': machine
     }
 
     return hp
@@ -456,16 +458,26 @@ def train(model_dir,train_data ,eval_data,hp=None,max_steps=3e6,display_step=500
 # Train model
 ########################################################################################################################
 if __name__ == '__main__':
+    # Initialize list for all training times for each model
+    trainingTimeList = []
     for modelNumber in range(1,2): # Define number of iterations and models to be created for every month, respectively
+
+        # Measure time for every model, respectively
+        trainingTimeTotal_hours = 0
+        # Start it
+        start_time = time.perf_counter()
+        print(f'START TRAINING MODEL: {modelNumber}')
 
         hp = get_default_hp('all')
         load_dir = None
 
         # Define main path
-        # path = 'C:\\Users\\oliver.frank\\Desktop\\BackUp'  # local
-        # path = 'W:\\group_csp\\analyses\\oliver.frank' # fl storage
-        # path = '/data' # hitkip cluster
-        path = '/pandora/home/oliver.frank/01_Projects/RNN/multitask_BeRNN-main' # pandora
+        if hp['machine'] == 'local':
+            path = 'C:\\Users\\oliver.frank\\Desktop\\BackUp'
+        elif hp['machine'] == 'hitkip':
+            path = '/zi/home/oliver.frank/Desktop'
+        elif hp['machine'] == 'pandora':
+            path = '/pandora/home/oliver.frank/01_Projects/RNN/multitask_BeRNN-main'
 
         # Define data path
         preprocessedData_path = os.path.join(path, 'Data', hp['participant'], hp['data'])  # pandora
@@ -475,9 +487,10 @@ if __name__ == '__main__':
             model_name = f'model_{month}'
 
             # Define model_dir for different servers
-            # model_dir = os.path.join(f"{path}\\beRNNmodels\\2025_02\\00_localTraining\\{hp['participant']}_{hp['tasksString']}_{hp['monthsString']}_{hp['data']}_{hp['rnn_type']}_{hp['n_rnn']}_{hp['activation']}_iteration{modelNumber}", model_name) # local
-            model_dir = os.path.join(f"{path}/beRNNmodels/2025_02/{hp['participant']}_{hp['tasksString']}_{hp['monthsString']}_{hp['data']}_{hp['rnn_type']}_{hp['n_rnn']}_{hp['activation']}_iteration{modelNumber}", model_name) # pandora & hitkip VM
-
+            if hp['machine'] == 'local':
+                model_dir = os.path.join(f"{path}\\beRNNmodels\\2025_02\\00\\{hp['participant']}_{hp['tasksString']}_{hp['monthsString']}_{hp['data']}_{hp['rnn_type']}_{hp['n_rnn']}_{hp['activation']}_iteration{modelNumber}", model_name)
+            elif hp['machine'] == 'hitkip' or hp['machine'] == 'pandora':
+                model_dir = os.path.join(f"{path}/beRNNmodels/2025_02/00/{hp['participant']}_{hp['tasksString']}_{hp['monthsString']}_{hp['data']}_{hp['rnn_type']}_{hp['n_rnn']}_{hp['activation']}_iteration{modelNumber}", model_name)
 
             if not os.path.exists(model_dir):
                 os.makedirs(model_dir)
@@ -522,4 +535,20 @@ if __name__ == '__main__':
             if hp['sequenceMode'] == True:
                 load_dir = model_dir
 
+        end_time = time.perf_counter()
+        # Training time taken into account
+        elapsed_time_seconds = end_time - start_time
+        elapsed_time_minutes = elapsed_time_seconds / 60
+        elapsed_time_hours = elapsed_time_minutes / 60
 
+        print(f"TIME TAKEN TO TRAIN MODEL {modelNumber}: {elapsed_time_seconds:.2f} seconds")
+        print(f"TIME TAKEN TO TRAIN MODEL {modelNumber}: {elapsed_time_minutes:.2f} minutes")
+        print(f"TIME TAKEN TO TRAIN MODEL {modelNumber}: {elapsed_time_hours:.2f} hours")
+
+        # Accumulate trainingTime
+        trainingTimeList.append(elapsed_time_hours)
+        trainingTimeTotal_hours += elapsed_time_hours
+
+    # Save training time total and list to folder
+    file_path = model_dir.split('beRNN_')[0] + 'times.npy'
+    np.save(file_path, {"list": trainingTimeList, "float": trainingTimeTotal_hours})
