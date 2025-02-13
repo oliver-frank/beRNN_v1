@@ -69,7 +69,7 @@ def plot_performanceprogress_eval_BeRNN(model_dir, figurePath, figurePath_overvi
     for i, rule in enumerate(rule_plot):
         # co: add [::2] if you want to have only every second validation values
         # line = ax.plot(x_plot, np.log10(log['cost_' + rule]), color=rule_color[rule])
-        line = ax.plot(x_plot, log['perf_' + rule], color=rule_color[rule])
+        line = ax.plot(x_plot, log['perf_' + rule], color=rule_color[rule], linewidth=2)
         lines.append(line[0])
         labels.append(rule_name[rule])
 
@@ -155,7 +155,7 @@ def plot_performanceprogress_train_BeRNN(model_dir, figurePath, figurePath_overv
         y_perf_smoothed = y_perf_smoothed[:len(x_plot)]
 
         # line = ax.plot(x_plot, np.log10(y_cost_smoothed), color=rule_color[rule])
-        line = ax.plot(x_plot, y_perf_smoothed, color=rule_color[rule])
+        line = ax.plot(x_plot, y_perf_smoothed, color=rule_color[rule], linewidth=2)
 
         lines.append(line[0])
         labels.append(rule_name[rule])
@@ -489,36 +489,35 @@ def compute_structuralCorrelation(model_dir, figurePath, monthsConsidered, mode,
 # info: ################################################################################################################
 # Assign a color to each task
 rule_color = {
-    # **DM tasks (Red Family - High Contrast)**
-    'DM':       '#DC143C',
-    'DM_Anti':  '#FF0000',
+    # **DM tasks (Dark Purple - High Contrast)**
+    'DM':       '#0d0a29',  # Deep Black-Purple
+    'DM_Anti':  '#271258',  # Dark Blue-Purple
 
-    # **EF tasks (Yellow Family - High Contrast)**
-    # 'EF':       '#380282',
-    # 'EF_Anti':  '#7E1E9C',
-    'EF':       '#FAC205',
-    'EF_Anti':  '#FFFF00',
+    # **EF tasks (Purple-Pink Family - High Contrast)**
+    'EF':       '#491078',  # Muted Indigo
+    'EF_Anti':  '#671b80',  # Dark Magenta-Purple
 
-    # **RP tasks (Green Family - High Contrast)**
-    'RP':       '#005F00',    # Forest Green (Dark & Deep)
-    'RP_Anti':  '#008F00',    # Bright Leaf Green (Strong & Vivid)
-    'RP_Ctx1':  '#4CD964',    # Apple Green (Lively Contrast)
-    'RP_Ctx2':  '#A9F5A9',    # Mint Pastel Green (Softest)
+    # **RP tasks (Pink/Red Family - High Contrast)**
+    'RP':       '#862781',  # Rich Magenta
+    'RP_Anti':  '#a6317d',  # Strong Pink
+    'RP_Ctx1':  '#c53c74',  # Bright Pinkish-Red
+    'RP_Ctx2':  '#e34e65',  # Vivid Red
 
-    # **WM tasks (Blue Family - High Contrast)**
-    'WM':       '#002E80',    # Deep Royal Blue (Darkest Tone)
-    'WM_Anti':  '#007FFF',    # Strong Azure Blue (Highly Visible)
-    'WM_Ctx1':  '#5CAEFF',    # Light Ocean Blue (Bright & Clear)
-    'WM_Ctx2':  '#BFDFFF'     # Ice Blue (Softest Pastel)
+    # **WM tasks (Red-Orange/Yellow Family - High Contrast)**
+    'WM':       '#f66c5c',  # Warm Reddish-Orange
+    'WM_Anti':  '#fc9065',  # Vibrant Orange
+    'WM_Ctx1':  '#feb67c',  # Pastel Orange
+    'WM_Ctx2':  '#fdda9c'   # Light Yellow
 }
 
 # Define analysis
 uniqueModelAnalysis = False
 
 participant = 'beRNN_03'
-trainingNumber = '\\04'
-folder = '\\beRNNmodels\\2025_01'
-folderPath = 'C:\\Users\\oliver.frank\\Desktop\\BackUp'
+trainingNumber = '\\03'
+folder = '\\beRNNmodels\\2025_02'
+# folderPath = 'C:\\Users\\oliver.frank\\Desktop\\BackUp'
+folderPath = 'W:\\group_csp\\analyses\\oliver.frank'
 _finalPath = folderPath + folder + trainingNumber
 
 
@@ -578,7 +577,7 @@ for _model in _model_list:
             plot_performanceprogress_train_BeRNN(currentModelDirectory, visualsDirectory, figurePath_overview, model, rule_plot=rule_plot)
 
     except Exception as e:
-        modelFolder_error = os.path.join(_finalPath, _model, model) # only removes a month folder
+        modelFolder_error = os.path.join(_finalPath, _model) # only removes a month folder
         print(e)
         print(f'>>> Error on folder {modelFolder_error}')
         # shutil.rmtree(modelFolder_2remove) # removes folder with and without files

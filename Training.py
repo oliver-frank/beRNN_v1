@@ -42,6 +42,8 @@ def get_default_hp(ruleset):
 
     machine = 'local' # 'local' 'pandora' 'hitkip'
     data = 'data_highDim' # 'data_highDim' , data_highDim_correctOnly , data_highDim_lowCognition , data_lowDim , data_lowDim_correctOnly , data_lowDim_lowCognition
+    trainingBatch = '01'
+    trainingYear_Month = '2025_02'
 
     if 'highDim' in data[0]:
         n_eachring = 32
@@ -62,8 +64,8 @@ def get_default_hp(ruleset):
         'loss_type': 'lsq', # # Type of loss functions - Cross-entropy loss
         'optimizer': 'adam', # 'adam', 'sgd'
         'activation': 'relu', # Type of activation runctions, relu, softplus, tanh, elu, linear
-        'tau': 100, # # Time constant (ms)- standard 100
-        'dt': 20, # discretization time step (ms)
+        'tau': 100, # # Time constant (ms)- standard 100 : Increases with size the added noise to the recurrent weights
+        'dt': 20, # discretization time step (ms) . Divided by tau to calculate the scalar for noise multiplication - the closer tau to dt, the bigger the noise
         'alpha': 0.2, # discretization time step/time constant - dt/tau = alpha
         'sigma_rec': 0.05, # recurrent noise - directly influencing the noise added to the network
         'sigma_x': 0.01, # input noise
@@ -73,7 +75,7 @@ def get_default_hp(ruleset):
         'l1_weight': 0.00001, # l2 regularization on weight
         'l2_weight': 0.00001, # l2 regularization on weight
         'l2_weight_init': 0, # l2 regularization on deviation from initialization
-        'p_weight_train': None, # proportion of weights to train, None or float between (0, 1) - e.g. .1 will train a random 10% weight selection, the rest stays fixed (Yang et al. range: .05-.075)
+        'p_weight_train': 0.1, # proportion of weights to regularize, None or float between (0, 1) - e.g. .1 will regularize .9 of the weights and the others not
         'target_perf': 1.0, # Stopping performance
         'n_eachring': n_eachring, # number of units each ring
         'num_ring': num_ring, # number of rings
@@ -99,7 +101,9 @@ def get_default_hp(ruleset):
         'sequenceMode': True, # Decide if models are trained sequentially month-wise
         'participant': 'beRNN_03', # Participant to take
         'data': data, # 'data_highDim' , data_highDim_correctOnly , data_highDim_lowCognition , data_lowDim , data_lowDim_correctOnly , data_lowDim_lowCognition, data_timeCompressed, data_lowDim_timeCompressed
-        'machine': machine
+        'machine': machine,
+        'trainingBatch': trainingBatch,
+        'trainingYear_Month': trainingYear_Month
     }
 
     return hp
@@ -488,9 +492,9 @@ if __name__ == '__main__':
 
             # Define model_dir for different servers
             if hp['machine'] == 'local':
-                model_dir = os.path.join(f"{path}\\beRNNmodels\\2025_02\\00\\{hp['participant']}_{hp['tasksString']}_{hp['monthsString']}_{hp['data']}_{hp['rnn_type']}_{hp['n_rnn']}_{hp['activation']}_iteration{modelNumber}", model_name)
+                model_dir = os.path.join(f"{path}\\beRNNmodels\\{hp['trainingYear_Month']}\\{hp['trainingBatch']}\\{hp['participant']}_{hp['tasksString']}_{hp['monthsString']}_{hp['data']}_{hp['rnn_type']}_{hp['n_rnn']}_{hp['activation']}_iteration{modelNumber}", model_name)
             elif hp['machine'] == 'hitkip' or hp['machine'] == 'pandora':
-                model_dir = os.path.join(f"{path}/beRNNmodels/2025_02/00/{hp['participant']}_{hp['tasksString']}_{hp['monthsString']}_{hp['data']}_{hp['rnn_type']}_{hp['n_rnn']}_{hp['activation']}_iteration{modelNumber}", model_name)
+                model_dir = os.path.join(f"{path}/beRNNmodels/{hp['trainingYear_Month']}/{hp['trainingBatch']}/{hp['participant']}_{hp['tasksString']}_{hp['monthsString']}_{hp['data']}_{hp['rnn_type']}_{hp['n_rnn']}_{hp['activation']}_iteration{modelNumber}", model_name)
 
             if not os.path.exists(model_dir):
                 os.makedirs(model_dir)
@@ -552,3 +556,5 @@ if __name__ == '__main__':
     # Save training time total and list to folder
     file_path = model_dir.split('beRNN_')[0] + 'times.npy'
     np.save(file_path, {"list": trainingTimeList, "float": trainingTimeTotal_hours})
+
+
