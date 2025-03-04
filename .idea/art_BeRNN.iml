@@ -235,7 +235,7 @@
       <excludeFolder url="file://$MODULE_DIR$/Data/BeRNN_05/PreprocessedData_wResp_month3/RP_Ctx1" />
       <excludeFolder url="file://$MODULE_DIR$/Data/BeRNN_05/PreprocessedData_wResp_month3/WM_Ctx1" />
     </content>
-    <orderEntry type="jdk" jdkName="csp_frank_oliver" jdkType="Python SDK" />
+    <orderEntry type="jdk" jdkName="csp_frank_oliver_1" jdkType="Python SDK" />
     <orderEntry type="sourceFolder" forTests="false" />
   </component>
   <component name="PyDocumentationSettings">

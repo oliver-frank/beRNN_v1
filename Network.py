@@ -28,6 +28,7 @@ from tensorflow.python.ops.rnn_cell_impl import RNNCell
 
 import Tools
 
+
 ########################################################################################################################
 # Pre-Allocate helper functions
 ########################################################################################################################
@@ -92,7 +93,7 @@ def get_perf(y_hat, y_loc):
 
     original_dist = y_loc - y_hat_loc
     dist = np.minimum(abs(original_dist), 2*np.pi-abs(original_dist))
-    corr_loc = dist < 0.2*np.pi # 35 degreee margin around exact correct respond
+    corr_loc = dist < 0.2 * np.pi # 35 degreee margin around exact correct respond - default .2
 
     # Should fixate?
     should_fix = y_loc < 0
@@ -102,6 +103,40 @@ def get_perf(y_hat, y_loc):
     perf_rounded = np.round(perf, decimals=3)
     return perf_rounded
 
+def cyclic_learning_rate(global_step, mode, base_lr=1e-5, max_lr=1e-3, step_size=2000):
+    """
+    Implements a cyclic learning rate schedule.
+
+    Parameters:
+    - global_step: Current training step (tf.Variable)
+    - base_lr: Lower bound of learning rate
+    - max_lr: Upper bound of learning rate
+    - step_size: Half cycle length (in iterations)
+    - mode: 'triangular', 'triangular2', or 'exp_range'
+
+    Returns:
+    - learning_rate: Cyclically adjusted learning rate
+    """
+    # Ensure step_size is float32
+    step_size = tf.cast(step_size, tf.float32)
+
+    # Compute the cycle
+    cycle = tf.floor(1 + tf.cast(global_step, tf.float32) / (2 * step_size))
+    x = tf.abs(tf.cast(global_step, tf.float32) / step_size - 2 * cycle + 1)
+
+    # Ensure base_lr and max_lr are float32
+    base_lr = tf.cast(base_lr, tf.float32)
+    max_lr = tf.cast(max_lr, tf.float32)
+
+    if mode == 'triangular':
+        clr = base_lr + (max_lr - base_lr) * tf.maximum(tf.constant(0., dtype=tf.float32), (1 - x))
+    elif mode == 'triangular2':
+        clr = base_lr + (max_lr - base_lr) * tf.maximum(tf.constant(0., dtype=tf.float32), (1 - x)) / (2 ** (cycle - 1))
+    elif mode == 'exp_range':
+        gamma = tf.constant(0.99994, dtype=tf.float32)  # Ensure gamma is float32
+        clr = base_lr + (max_lr - base_lr) * tf.maximum(tf.constant(0., dtype=tf.float32), (1 - x)) * (gamma ** tf.cast(global_step, tf.float32))
+
+    return clr
 
 # info: lowDIM section
 def popvec_lowDIM(y):
@@ -160,6 +195,7 @@ def get_perf_lowDIM(y_hat, y_loc):
     perf = should_fix * fixating + (1-should_fix) * corr_loc * (1-fixating)
     perf_rounded = np.round(perf, decimals=3)
     return perf_rounded
+
 
 ########################################################################################################################
 # Network architectures
@@ -623,13 +659,26 @@ class Model(object):
             self.cost_reg += hp['l2_weight'] * tf.add_n(
                 [tf.nn.l2_loss(v) for v in self.weight_list])
 
+        # info: for old models before lerning rate schedule was implemented
+        if 'learning_rate_mode' not in hp:
+            hp['learning_rate_mode'] = None
+
+        if hp['learning_rate_mode'] != None:
+            # Define global step
+            self.global_step = tf.Variable(0, trainable=False, name='global_step')
+            # Define cyclic learning rate
+            hp['learning_rate'] = tf.squeeze(cyclic_learning_rate(self.global_step, hp['learning_rate_mode'], base_lr=hp['base_lr'], max_lr=hp['max_lr'], step_size=2000))
+
+        # ✅ Store the learning rate as an attribute for debugging
+        self.learning_rate = hp['learning_rate']
+
         # Create an optimizer.
         if 'optimizer' not in hp or hp['optimizer'] == 'adam':
             self.opt = tf.train.AdamOptimizer(
-                learning_rate=hp['learning_rate'])
+                learning_rate=self.learning_rate)
         elif hp['optimizer'] == 'sgd':
             self.opt = tf.train.GradientDescentOptimizer(
-                learning_rate=hp['learning_rate'])
+                learning_rate=self.learning_rate)
         # Set cost
         self.set_optimizer()
 
@@ -942,7 +991,11 @@ class Model(object):
         # gradient clipping
         capped_gvs = [(tf.clip_by_value(grad, -1., 1.), var)
                       for grad, var in self.grads_and_vars]
-        self.train_step = self.opt.apply_gradients(capped_gvs)
+        # info: necessary to check for old models before learning rate schedule was implemented
+        if not hasattr(self, 'global_step'):
+            self.train_step = self.opt.apply_gradients(capped_gvs)
+        else:
+            self.train_step = self.opt.apply_gradients(capped_gvs, global_step=self.global_step)
 
     def lesion_units(self, sess, units, verbose=False):
         """Lesion units given by units

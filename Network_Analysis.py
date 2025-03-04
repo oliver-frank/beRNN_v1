@@ -514,7 +514,7 @@ rule_color = {
 uniqueModelAnalysis = False
 
 participant = 'beRNN_03'
-trainingNumber = '\\03'
+trainingNumber = '\\20'
 folder = '\\beRNNmodels\\2025_02'
 # folderPath = 'C:\\Users\\oliver.frank\\Desktop\\BackUp'
 folderPath = 'W:\\group_csp\\analyses\\oliver.frank'

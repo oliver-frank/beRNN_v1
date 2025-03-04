@@ -9,6 +9,7 @@ import os
 import numpy as np
 # import pandas as pd
 import matplotlib.pyplot as plt
+plt.ioff() # prevents windows to pop up when figs and plots are created
 from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
 from matplotlib.patches import Rectangle, Polygon
 from matplotlib.gridspec import GridSpec
@@ -28,8 +29,8 @@ from Tools import rule_name
 # import tensorflow as tf
 
 
-selected_hp_keys = ['participant', 'rnn_type', 'data', 'activation', 'optimizer', 'loss_type', 'batch_size', 'l1_h', 'l2_h', 'l1_weight', 'l2_weight', 'l2_weight_init',
-                    'learning_rate', 'n_rnn', 'monthsConsidered', 'tau', 'sigma_rec', 'sigma_x', 'w_rec_init', 'c_mask_responseValue', 'p_weight_train'] # Replace with the keys you want info: 'data' only exists from 15.01.25 on
+selected_hp_keys = ['participant', 'rnn_type', 'data', 'activation', 'optimizer', 'loss_type', 'batch_size', 'l1_h', 'l2_h', 'l1_weight', 'l2_weight',
+                    'learning_rate', 'learning_rate_mode', 'n_rnn', 'tau', 'sigma_rec', 'sigma_x', 'w_rec_init', 'c_mask_responseValue', 'p_weight_train', 'w_mask_value'] # Replace with the keys you want info: 'data' only exists from 15.01.25 on
 
 rule_color = {
     # **DM tasks (Dark Purple - High Contrast)**
@@ -95,11 +96,12 @@ def create_legend_image():
     canvas = FigureCanvas(legend_fig)
     canvas.draw()
 
+    maskDirectory = os.path.join(os.getcwd(), 'pngs', 'legend.png')
     # Save as buffer to prevent cropping
-    legend_fig.savefig("temp_legend.png", format='png', dpi=200, bbox_inches='tight', pad_inches=0.05, transparent=True)
+    legend_fig.savefig(maskDirectory, format='png', dpi=200, bbox_inches='tight', pad_inches=0.05, transparent=True)
 
     # Load the properly saved image
-    legend_img = plt.imread("temp_legend.png")
+    legend_img = plt.imread(maskDirectory)
 
     # Close the figure
     plt.close(legend_fig)
@@ -381,9 +383,10 @@ def figureSceletton():
 
 # Paths and settings
 participant = 'beRNN_03'
-trainingNumber = '\\00'
-folder = '\\beRNNmodels\\2025_02'
+trainingNumber = '\\08'
+folder = '\\beRNNmodels\\2025_03'
 folderPath = 'W:\\group_csp\\analyses\\oliver.frank'
+# folderPath = 'C:\\Users\\oliver.frank\\Desktop\\BackUp'
 _finalPath = folderPath + folder + trainingNumber
 
 # Create overview folder
@@ -496,7 +499,6 @@ for _model in _model_list:
         plt.tight_layout()
         # plt.show()
         plt.savefig(os.path.join(overviewFolder, _model.split("\\")[-1] + '_overview.png'), format='png', dpi=100, bbox_inches='tight')
-        plt.pause(0.2)
 
         for f in figs_to_close:
             plt.close(f)

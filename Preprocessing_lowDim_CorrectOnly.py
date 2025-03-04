@@ -445,10 +445,10 @@ def preprocess_DM(opened_xlsxFile, questionnare_files, list_allSessions, sequenc
         # Complete y_loc matrix
         for k in range(numFixStepsAverage, totalStepsAverage):
             for j in range(0, newOutput.shape[1]):
-                if isinstance(Output[k][j][0], str) and Output[k][j][0] != 'noResponse' and Output[k][j][0] != 'NoResponse':
-                    y_loc[k][j] = pref[outputDict[correctAnswer[k][j]]-1] # radiant form direction
-                else:
-                    y_loc[k][j] = np.float(0.05)  # info: yang et al.: -1
+                # if isinstance(Output[k][j][0], str) and Output[k][j][0] != 'noResponse' and Output[k][j][0] != 'NoResponse':
+                y_loc[k][j] = pref[outputDict[correctAnswer[k][j]]-1] # radiant form direction
+                # else:
+                #     y_loc[k][j] = np.float(0.05)  # info: yang et al.: -1
 
         # Save output data
         output_filename = participant + '-' + 'month_' + str(month) + '-' + 'batch_' + str(
@@ -860,10 +860,10 @@ def preprocess_EF(opened_xlsxFile, questionnare_files, list_allSessions, sequenc
         # Complete y_loc matrix
         for k in range(numFixStepsAverage, totalStepsAverage):
             for j in range(0, newOutput.shape[1]):
-                if isinstance(correctAnswer[k][j], str) and correctAnswer[k][j] != 'noResponse' and correctAnswer[k][j] != 'NoResponse':
-                    y_loc[k][j] = pref[outputDict[correctAnswer[k][j]]-1]  # radiant form direction
-                else:
-                    y_loc[k][j] = np.float(0.05)  # info: yang et al.: -1
+                # if isinstance(correctAnswer[k][j], str) and correctAnswer[k][j] != 'noResponse' and correctAnswer[k][j] != 'NoResponse':
+                y_loc[k][j] = pref[outputDict[correctAnswer[k][j]]-1]  # radiant form direction
+                # else:
+                #     y_loc[k][j] = np.float(0.05)  # info: yang et al.: -1
 
         # Save output data
         output_filename = participant + '-' + 'month_' + str(month) + '-' + 'batch_' + str(
@@ -1277,11 +1277,11 @@ def preprocess_RP(opened_xlsxFile, questionnare_files, list_allSessions, sequenc
         # Complete y_loc matrix
         for k in range(numFixStepsAverage, totalStepsAverage):
             for j in range(0, newOutput.shape[1]):
-                if isinstance(Output[k][j][0], str) and Output[k][j][0] != 'screen' and Output[k][j][0] != 'noResponse' and \
-                        Output[k][j][0] != 'NoResponse' and Output[k][j][0] != 'Fixation Cross':
-                    y_loc[k][j] = pref[correctPositionListList[j][0]-1]  # radiant form direction
-                else:
-                    y_loc[k][j] = np.float(0.05)  # info: yang et al.: -1
+                # if isinstance(Output[k][j][0], str) and Output[k][j][0] != 'screen' and Output[k][j][0] != 'noResponse' and \
+                #         Output[k][j][0] != 'NoResponse' and Output[k][j][0] != 'Fixation Cross':
+                y_loc[k][j] = pref[correctPositionListList[j][0]-1]  # radiant form direction
+                # else:
+                #     y_loc[k][j] = np.float(0.05)  # info: yang et al.: -1
 
         # Save output data
         output_filename = participant + '-' + 'month_' + str(month) + '-' + 'batch_' + str(
@@ -1729,10 +1729,10 @@ def preprocess_WM(opened_xlsxFile, questionnare_files, list_allSessions, sequenc
         # Complete y_loc matrix
         for k in range(numFixStepsAverage, totalStepsAverage):
             for j in range(0, newOutput.shape[1]):
-                if isinstance(Output[k][j][0], str) and Output[k][j][0] != 'noResponse' and Output[k][j][0] != 'NoResponse' and Output[k][j][0] != 'screen':
-                    y_loc[k][j] = pref[correctPositionListList[j][0]-1]  # radiant form direction
-                else:
-                    y_loc[k][j] = np.float(0.05)  # info: yang et al.: -1
+                # if isinstance(Output[k][j][0], str) and Output[k][j][0] != 'noResponse' and Output[k][j][0] != 'NoResponse' and Output[k][j][0] != 'screen':
+                y_loc[k][j] = pref[correctPositionListList[j][0]-1]  # radiant form direction
+                # else:
+                #     y_loc[k][j] = np.float(0.05)  # info: yang et al.: -1
 
         # Save output data
         output_filename = participant + '-' + 'month_' + str(month) + '-' + 'batch_' + str(
@@ -1772,8 +1772,8 @@ def check_permissions(file_path):
 dataFolder = "Data"
 subfolders = ['DM', 'DM_Anti', 'EF', 'EF_Anti', 'RP', 'RP_Anti', 'RP_Ctx1', 'RP_Ctx2', 'WM', 'WM_Anti', 'WM_Ctx1', 'WM_Ctx2']
 preprocessing_folder = 'data_lowDim_correctOnly'
-participants = ['BeRNN_01','BeRNN_02','BeRNN_03','BeRNN_04','BeRNN_05']
-months = ['10', '11', '12'] # info: debugging '13'
+participants = ['BeRNN_03'] # 'BeRNN_01','BeRNN_02','BeRNN_03','BeRNN_04','BeRNN_05'
+months = ['3', '4', '5'] # info: debugging '13'
 
 for participant in participants:
     # attention: change to right path

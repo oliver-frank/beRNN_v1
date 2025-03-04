@@ -64,7 +64,7 @@ n_rule = Tools.get_num_rule('all')
 
 
 # attention: all other setups ##########################################################################################
-data = ['data_highDim_correctOnly'] # 'data_highDim' , data_highDim_correctOnly , data_highDim_lowCognition , data_lowDim , data_lowDim_correctOnly , data_lowDim_lowCognition
+data = ['data_lowDim_correctOnly'] # 'data_highDim' , data_highDim_correctOnly , data_highDim_lowCognition , data_lowDim , data_lowDim_correctOnly , data_lowDim_lowCognition
 
 if 'highDim' in data[0]:
     n_eachring = 32
@@ -77,28 +77,33 @@ else:
 
 # Info: After first HPs the most probable space inheriting the best solution decreased to the following
 adjParams = {
-    'batch_size': [40, 80],
+    'batch_size': [40, 80, 120],
     'in_type': ['normal'],
-    'rnn_type': ['LeakyRNN'],
+    'rnn_type': ['LeakyRNN','LeakyGRU'],
     'n_input': [n_input], # number of input units
     'n_output': [n_output], # number of output units
     'use_separate_input': [False],
     'loss_type': ['lsq'],
     'optimizer': ['adam'], # 'sgd'
-    'activation': ['relu', 'tanh'], # 'softplus','elu'
-    'tau': [20, 50, 100], # Decides how fast previous information decays to calculate current state activity
+    'activation': ['relu', 'tanh', 'softplus'], # 'elu'
+    'tau': [40, 80, 100], # Decides how fast previous information decays to calculate current state activity
     'dt': [20],
-    'sigma_rec': [0, 0.01, 0.05],
+    # 'alpha': 0.2,
+    'sigma_rec': [0, 0.05],
     'sigma_x': [0, 0.01],
     'w_rec_init': ['randortho', 'randgauss'],
-    'l1_h': [0, 0.00005, 0.0001, 0.0005],
-    'l2_h': [0, 0.000005, 0.00001, 0.00005],
-    'l1_weight': [0, 0.00001, 0.00005, 0.0001],
-    'l2_weight': [0, 0.00001, 0.00005, 0.0001],
+    'l1_h': [0, 0.00000005],
+    'l2_h': [0, 0.00000005],
+    'l1_weight': [0, 0.00000001],
+    'l2_weight': [0, 0.00000001],
     'l2_weight_init': [0],
     'p_weight_train': [None, 0.05, 0.1],
-    'learning_rate': [0.0005, 0.001, 0.002],
-    'n_rnn': [128, 256],
+    'w_mask_value': [0.1], # default .1 - value that will be multiplied with L2 regularization (combined with p_weight_train), <1 will decrease it
+    'learning_rate': [0.001, 0.0005],
+    'learning_rate_mode': [None, 'triangular', 'triangular2', 'exp_range'], # Will overwrite learning_rate if it is not None - 'triangular', 'triangular2', 'exp_range'
+    'base_lr': [0.0005],
+    'max_lr': [0.001],
+    'n_rnn': [64, 128, 256],
     'c_mask_responseValue': [5., 3., 1.],
     'monthsConsidered': [['month_3', 'month_4', 'month_5']], # list of lists
     'monthsString': ['3-5'],
@@ -109,8 +114,8 @@ adjParams = {
     'machine': ['local'], # 'local' 'pandora' 'hitkip'
     'tasksString': ['AllTask'], # tasksTaken
     'sequenceMode': [True], # Decide if models are trained sequentially month-wise
-    'trainingBatch': ['40'],
-    'trainingYear_Month': ['2025_02']
+    'trainingBatch': ['01'],
+    'trainingYear_Month': ['2025_03']
 }
 # attention: all other setups ##########################################################################################
 
@@ -125,11 +130,11 @@ sampled_combinations = create_param_combinations(adjParams, 50)
 # Training #############################################################################################################
 # Initialize list for all training times for each model
 trainingTimeList = []
+# Measure time for every model, respectively
+trainingTimeTotal_hours = 0
 # Example iteration through the grid
 for modelNumber, params in enumerate(sampled_combinations): # info: either sampled_combinations OR sampled_repeated_combinations
 
-    # Measure time for every model, respectively
-    trainingTimeTotal_hours = 0
     # Start
     start_time = time.perf_counter()
     print(f'START TRAINING MODEL: {modelNumber}')
@@ -159,11 +164,11 @@ for modelNumber, params in enumerate(sampled_combinations): # info: either sampl
         # Define model_dir for different servers
         if params['machine'] == 'local':
             model_dir = os.path.join(
-                f"{path}\\beRNNmodels\\{params['trainingYear_Month']}\\{params['trainingBatch']}\\{params['participant']}_{params['tasksString']}_{params['monthsString']}_{params['data']}_{params['rnn_type']}_{params['n_rnn']}_{params['activation']}_iteration{modelNumber}",
+                f"{path}\\beRNNmodels\\{params['trainingYear_Month']}\\{params['trainingBatch']}\\{params['participant']}_{params['tasksString']}_{params['monthsString']}_{params['data']}_iteration{modelNumber}_{params['rnn_type']}_{params['n_rnn']}_{params['activation']}",
                 model_name)
         elif params['machine'] == 'hitkip' or params['machine'] == 'pandora':
             model_dir = os.path.join(
-                f"{path}/beRNNmodels/{params['trainingYear_Month']}/{params['trainingBatch']}/{params['participant']}_{params['tasksString']}_{params['monthsString']}_{params['data']}_{params['rnn_type']}_{params['n_rnn']}_{params['activation']}_iteration{modelNumber}",
+                f"{path}/beRNNmodels/{params['trainingYear_Month']}/{params['trainingBatch']}/{params['participant']}_{params['tasksString']}_{params['monthsString']}_{params['data']}_iteration{modelNumber}_{params['rnn_type']}_{params['n_rnn']}_{params['activation']}",
                 model_name)
 
         print('MODELDIR: ', model_dir)
@@ -233,8 +238,8 @@ for modelNumber, params in enumerate(sampled_combinations): # info: either sampl
 file_path = model_dir.split('beRNN_')[0] + 'times.txt'
 
 with open(file_path, 'w') as f:
-    f.write(f"Total Training Time (hours): {trainingTimeTotal_hours}\n")
-    f.write("Training Time List (hours):\n")
+    f.write(f"training time total (hours): {trainingTimeTotal_hours}\n")
+    f.write("training time each individual model (hours):\n")
     for time in trainingTimeList:
         f.write(f"{time}\n")
 
