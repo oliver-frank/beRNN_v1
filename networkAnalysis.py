@@ -372,7 +372,7 @@ def figureSceletton():
 
 # Paths and settings
 participant = 'beRNN_03' # subfolder with model iterations
-trainingNumber = '\\2025_03_25th\\04'
+trainingNumber = '\\2025_03_21st\\02'
 folder = '\\beRNNmodels'
 # folderPath = 'W:\\group_csp\\analyses\\oliver.frank'
 folderPath = 'C:\\Users\\oliver.frank\\Desktop\\PyProjects'

@@ -101,11 +101,11 @@ def _compute_variance_bymodel(data_dir, model: object, sess: object, mode: str, 
             data = train_data
         elif mode == 'test':
             data = eval_data
-        x, y, y_loc = Tools.load_trials(task, mode, hp['batch_size'], data, False)
-        epochs = Tools.find_epochs(x)
+        x, y, y_loc = tools.load_trials(task, mode, hp['batch_size'], data, False)
+        epochs = tools.find_epochs(x)
 
         # info: ################################################################################################
-        fixation_steps = Tools.getEpochSteps(y)
+        fixation_steps = tools.getEpochSteps(y)
 
         # Creat c_mask for current batch
         if hp['loss_type'] == 'lsq':
@@ -133,7 +133,7 @@ def _compute_variance_bymodel(data_dir, model: object, sess: object, mode: str, 
 
         # info: ################################################################################################
 
-        feed_dict = Tools.gen_feed_dict(model, x, y, c_mask, hp)
+        feed_dict = tools.gen_feed_dict(model, x, y, c_mask, hp)
         h = sess.run(model.h, feed_dict=feed_dict)
 
         if random_rotation:
@@ -200,7 +200,7 @@ def compute_variance(data_dir, model_dir, mode, monthsConsidered, rules=None, ra
         rules: list of rules to compute variance, list of strings
         random_rotation: boolean. If True, rotate the neural activity.
     """
-    dirs = Tools.valid_model_dirs(model_dir)
+    dirs = tools.valid_model_dirs(model_dir)
     for d in dirs:
         _compute_variance(data_dir, d, mode, monthsConsidered, rules, random_rotation)
 

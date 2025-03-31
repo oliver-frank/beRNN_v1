@@ -62,14 +62,14 @@ save = True
 
 class Analysis(object):
     def __init__(self, data_dir, model_dir, mode, monthsConsidered, data_type, normalization_method='sum'):
-        hp = Tools.load_hp(model_dir)
+        hp = tools.load_hp(model_dir)
 
         # If not computed, use variance.py
         fname = os.path.join(model_dir, 'variance_' + mode + '_' + data_type + '_' + data_dir.split('\\')[-1] + '.pkl')
         if not os.path.exists(os.path.join(model_dir, fname)):
             variance.compute_variance(data_dir, model_dir, mode, monthsConsidered)
 
-        res = Tools.load_pickle(fname)
+        res = tools.load_pickle(fname)
         h_var_all_ = res['h_var_all']
         self.keys  = res['keys']
 
