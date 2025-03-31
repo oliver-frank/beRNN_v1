@@ -603,7 +603,7 @@ class Model(object):
         tf.reset_default_graph()  # must be in the beginning
 
         if hp is None:
-            hp = Tools.load_hp(model_dir)
+            hp = tools.load_hp(model_dir)
             if hp is None:
                 raise ValueError(
                     'No hp found for model_dir {:s}'.format(model_dir))

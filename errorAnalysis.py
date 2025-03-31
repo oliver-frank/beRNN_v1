@@ -1147,20 +1147,20 @@ def evaluate_task(model_dir, task, file_triplets):
     correct_mismatch = 0
     total_trials = 0
     # Prepare model restore
-    hp = Tools.load_hp(model_dir)
+    hp = tools.load_hp(model_dir)
     model = Model(model_dir, hp=hp)
 
     with tf.Session() as sess:
         model.restore(model_dir)
 
         for i in range(0, 100): # Info: Each iteration represents one batch - after the spliting most often you only have 4 batches for one month
-            x, y, y_loc, base_name = Tools.load_trials(task, 'test', 40, file_triplets, True)
+            x, y, y_loc, base_name = tools.load_trials(task, 'test', 40, file_triplets, True)
             ground_truth = np.load(os.path.join(base_name + 'Response.npy'), allow_pickle=True)
 
             # Sort response data
             c_mask = np.zeros((y.shape[0] * y.shape[1], y.shape[2]), dtype='float32')
             # Generate model response for the current batch
-            feed_dict = Tools.gen_feed_dict(model, x, y, c_mask, hp)
+            feed_dict = tools.gen_feed_dict(model, x, y, c_mask, hp)
             c_lsq, c_reg, modelResponse_machineForm = sess.run([model.cost_lsq, model.cost_reg, model.y_hat],feed_dict=feed_dict)
 
             perf = get_perf(modelResponse_machineForm, y_loc)
