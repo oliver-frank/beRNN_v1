@@ -596,8 +596,13 @@ if __name__ == '__main__':
         trainingTimeList.append(elapsed_time_hours)
         trainingTimeTotal_hours += elapsed_time_hours
 
-    # Save training time total and list to folder
-    file_path = model_dir.split('beRNN_')[0] + 'times.npy'
-    np.save(file_path, {"list": trainingTimeList, "float": trainingTimeTotal_hours})
+    # Save training time total and list to folder as a text file
+    file_path = os.path.join(model_dir, 'times.txt')
 
+    with open(file_path, 'w') as f:
+        f.write(f"training time total (hours): {trainingTimeTotal_hours}\n")
+        f.write("training time each individual model (hours):\n")
+        for time in trainingTimeList:
+            f.write(f"{time}\n")
 
+    print(f"Training times saved to {file_path}")

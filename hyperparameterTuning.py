@@ -234,7 +234,7 @@ for modelNumber, params in enumerate(sampled_combinations): # info: either sampl
 
 
 # Save training time total and list to folder as a text file
-file_path = model_dir.split('beRNN_')[0] + 'times.txt'
+file_path = os.path.join(model_dir, 'times.txt')
 
 with open(file_path, 'w') as f:
     f.write(f"training time total (hours): {trainingTimeTotal_hours}\n")
