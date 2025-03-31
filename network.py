@@ -283,7 +283,7 @@ class LeakyRNNCell(RNNCell):
         if self._w_rec_init == 'diag':
             w_rec0 = self._w_rec_start*np.eye(n_hidden)
         elif self._w_rec_init == 'randortho':
-            w_rec0 = self._w_rec_start*Tools.gen_ortho_matrix(n_hidden, rng=self.rng)
+            w_rec0 = self._w_rec_start*tools.gen_ortho_matrix(n_hidden, rng=self.rng)
         elif self._w_rec_init == 'randgauss':
             w_rec0 = (self._w_rec_start * self.rng.randn(n_hidden, n_hidden)/np.sqrt(n_hidden))
 
@@ -530,7 +530,7 @@ class LeakyRNNCellSeparateInput(RNNCell):
         if self._w_rec_init == 'diag':
             w_rec0 = self._w_rec_start*np.eye(n_hidden)
         elif self._w_rec_init == 'randortho':
-            w_rec0 = self._w_rec_start*Tools.gen_ortho_matrix(n_hidden,
+            w_rec0 = self._w_rec_start*tools.gen_ortho_matrix(n_hidden,
                                                               rng=self.rng)
         elif self._w_rec_init == 'randgauss':
             w_rec0 = (self._w_rec_start *

@@ -38,8 +38,8 @@ def get_default_hp(ruleset):
     Returns:
         hp : a dictionary containing training hpuration
     '''
-    num_ring = Tools.get_num_ring(ruleset)
-    n_rule = Tools.get_num_rule(ruleset)
+    num_ring = tools.get_num_ring(ruleset)
+    n_rule = tools.get_num_rule(ruleset)
 
     machine = 'local' # 'local' 'pandora' 'hitkip'
     data = 'data_highDim_correctOnly_3stimTC' # 'data_highDim' , data_highDim_correctOnly , data_highDim_lowCognition , data_lowDim , data_lowDim_correctOnly , data_lowDim_lowCognition, 'data_highDim_correctOnly_3stimTC'
@@ -150,10 +150,10 @@ def do_eval(sess, model, log, rule_train, eval_data):
 
         for i_rep in range(n_rep):
             try:
-                x,y,y_loc = Tools.load_trials(task, mode, hp['batch_size'], eval_data, False)  # y_loc is participantResponse_perfEvalForm
+                x,y,y_loc = tools.load_trials(task, mode, hp['batch_size'], eval_data, False)  # y_loc is participantResponse_perfEvalForm
 
                 # info: ################################################################################################
-                fixation_steps = Tools.getEpochSteps(y)
+                fixation_steps = tools.getEpochSteps(y)
                 if fixation_steps == None:  # if no fixation_steps could be found
                     continue
 
@@ -183,7 +183,7 @@ def do_eval(sess, model, log, rule_train, eval_data):
 
                 # info: ################################################################################################
 
-                feed_dict = Tools.gen_feed_dict(model, x, y, c_mask, hp) # y: participnt response, that gives the lable for what the network is trained for
+                feed_dict = tools.gen_feed_dict(model, x, y, c_mask, hp) # y: participnt response, that gives the lable for what the network is trained for
                 # print('passed feed_dict Evaluation')
                 # print(feed_dict)
                 # print('x',type(x),x.shape)
@@ -241,7 +241,7 @@ def do_eval(sess, model, log, rule_train, eval_data):
     # Save the model and log
     try:
         model.save()
-        Tools.save_log(log)
+        tools.save_log(log)
     except Exception as e:
         print(f"Warning: Could not save model/log due to {e}.")
 
@@ -266,7 +266,7 @@ def train(model_dir,train_data ,eval_data,hp=None,max_steps=3e6,display_step=500
         training configuration is stored at model_dir/hp.json
     """
 
-    Tools.mkdir_p(model_dir)
+    tools.mkdir_p(model_dir)
 
     # Network parameters
     default_hp = get_default_hp(ruleset)
@@ -280,7 +280,7 @@ def train(model_dir,train_data ,eval_data,hp=None,max_steps=3e6,display_step=500
     # Rules to train and test. Rules in a set are trained together
     if rule_trains is None:
         # By default, training all rules available to this ruleset
-        hp['rule_trains'] = Tools.rules_dict[ruleset]
+        hp['rule_trains'] = tools.rules_dict[ruleset]
     else:
         hp['rule_trains'] = rule_trains
     hp['rules'] = hp['rule_trains']
@@ -295,7 +295,7 @@ def train(model_dir,train_data ,eval_data,hp=None,max_steps=3e6,display_step=500
         # Set default as 1.
         rule_prob = np.array([hp['rule_prob_map'].get(r, 1.) for r in hp['rule_trains']])
         hp['rule_probs'] = list(rule_prob / np.sum(rule_prob))
-    Tools.save_hp(hp, model_dir)
+    tools.save_hp(hp, model_dir)
 
     # # info: Create structural mask to multiply with hidden layer
     # if hp['s_mask'] == 'sc1000':
@@ -419,10 +419,10 @@ def train(model_dir,train_data ,eval_data,hp=None,max_steps=3e6,display_step=500
                 task = hp['rng'].choice(hp['rule_trains'], p=hp['rule_probs'])
                 # Generate a random batch of trials; each batch has the same trial length
                 mode = 'train'
-                x,y,y_loc = Tools.load_trials(task,mode,hp['batch_size'], train_data, False) # y_loc is participantResponse_perfEvalForm
+                x,y,y_loc = tools.load_trials(task,mode,hp['batch_size'], train_data, False) # y_loc is participantResponse_perfEvalForm
 
                 # info: ################################################################################################
-                fixation_steps = Tools.getEpochSteps(y)
+                fixation_steps = tools.getEpochSteps(y)
                 if fixation_steps == None: # if no fixation_steps could be found
                     continue
                 # Creat c_mask for current batch
@@ -454,7 +454,7 @@ def train(model_dir,train_data ,eval_data,hp=None,max_steps=3e6,display_step=500
                 trialsLoaded += 1
 
                 # Generating feed_dict.
-                feed_dict = Tools.gen_feed_dict(model, x, y, c_mask, hp)
+                feed_dict = tools.gen_feed_dict(model, x, y, c_mask, hp)
                 # print('passed feed_dict Training')
                 # print(feed_dict)
 

@@ -61,8 +61,8 @@ def create_repeated_param_combinations(param_grid, sample_size):
 
 # attention: all other setups ##########################################################################################
 # Get input and output dimension for network, depending on higDim and lowDim data and ruleset (standard: 'all')
-num_ring = Tools.get_num_ring('all')
-n_rule = Tools.get_num_rule('all')
+num_ring = tools.get_num_ring('all')
+n_rule = tools.get_num_rule('all')
 # Choose right dataset
 data = ['data_lowDim_correctOnly'] # 'data_highDim' , data_highDim_correctOnly , data_highDim_lowCognition , data_lowDim , data_lowDim_correctOnly , data_lowDim_lowCognition
 

@@ -136,9 +136,9 @@ def apply_threshold(matrix, threshold):
 ########################################################################################################################
 def plot_performanceprogress_test_BeRNN(model_dir, figurePath, figurePath_overview, model, rule_plot=None):
     # Plot Evaluation Progress
-    log = Tools.load_log(model_dir)
-    # log = Tools.load_log(currentModelDirectory)
-    hp = Tools.load_hp(model_dir)
+    log = tools.load_log(model_dir)
+    # log = tools.load_log(currentModelDirectory)
+    hp = tools.load_hp(model_dir)
 
     # co: change to [::2] if you want to have only every second validation value
     # trials = log['trials'][::2]
@@ -192,8 +192,8 @@ def plot_performanceprogress_test_BeRNN(model_dir, figurePath, figurePath_overvi
 
 def plot_performanceprogress_train_BeRNN(model_dir, figurePath, figurePath_overview, model, rule_plot=None):
     # Plot Training Progress
-    log = Tools.load_log(model_dir)
-    hp = Tools.load_hp(model_dir)
+    log = tools.load_log(model_dir)
+    hp = tools.load_hp(model_dir)
 
     # co: change to [::2] if you want to have only every second validation value
     # trials = log['trials'][::2]
@@ -423,7 +423,7 @@ for _model in _model_list:
 
         for col, model in enumerate(model_list):
             currentModelDirectory = os.path.join(_finalPath, _model, model)
-            currentHP = Tools.load_hp(currentModelDirectory)
+            currentHP = tools.load_hp(currentModelDirectory)
 
             rule_plot = [i for i in currentHP['rule_prob_map'] if currentHP['rule_prob_map'][i] > 0]
             visualsDirectory = os.path.join(currentModelDirectory, 'visuals')

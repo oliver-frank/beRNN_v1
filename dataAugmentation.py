@@ -16,7 +16,7 @@ import random
 import json
 import glob
 
-# import Tools
+# import tools
 
 ########################################################################################################################
 # Preallocate variables
