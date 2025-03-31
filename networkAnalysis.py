@@ -1,5 +1,5 @@
 ########################################################################################################################
-# info: Network Analysis
+# info: networkAnalysis
 ########################################################################################################################
 
 ########################################################################################################################
@@ -7,24 +7,28 @@
 ########################################################################################################################
 import os
 import numpy as np
+import pandas as pd
 # import pandas as pd
 import matplotlib.pyplot as plt
 plt.ioff() # prevents windows to pop up when figs and plots are created
 from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
-from matplotlib.patches import Rectangle, Polygon
+# from matplotlib.patches import Rectangle, Polygon
 from matplotlib.gridspec import GridSpec
+# from scipy.stats import ttest_ind
 import networkx as nx
-import gc
+# import glob
+# import gc
+# import matplotlib
 # matplotlib.use('WebAgg')  # Or 'Qt5Agg', 'GTK3Agg', 'wxAgg'
 # from scipy.stats import ttest_ind
-import shutil
+# import shutil
 
 import warnings
 warnings.simplefilter(action='ignore', category=FutureWarning)
 
 from analysis import clustering #, variance
-import Tools
-from Tools import rule_name
+import tools
+from tools import rule_name
 # from Network import Model
 # import tensorflow as tf
 
@@ -332,13 +336,13 @@ def compute_functionalCorrelation(model_dir, figurePath, monthsConsidered, mode,
                    ha='center', va='center', transform=ax_matrix.transAxes)
     ax_matrix.text(0.5, 0.4, f'Assortativity: {assortativity:.3f}', fontsize=22, color='white', fontweight='bold',
                    ha='center', va='center', transform=ax_matrix.transAxes)
-    return fig
+    return fig, avg_degree, avg_betweenness, assortativity
     # plt.show()
     # plt.close()
 
 
 ########################################################################################################################
-# Create Overview
+# Create Overview and topologcial Marker
 ########################################################################################################################
 # Create basic sceleton for all the plots created for each individual model, respectively
 def figureSceletton():
@@ -353,23 +357,8 @@ def figureSceletton():
 
     fig.text(0.375, 0.16, 'Task', fontsize=8, fontweight='bold',
              verticalalignment='center', horizontalalignment='center', color='black')
-    fig.text(0.62, 0.16, 'Hyperparameter', fontsize=8, fontweight='bold',
+    fig.text(0.625, 0.16, 'Hyperparameter', fontsize=8, fontweight='bold',
              verticalalignment='center', horizontalalignment='center', color='black')
-
-    # # Define a small triangle (Right-pointing arrow)
-    # triangle_size = 0.01  # Adjust size of the triangle
-    # triangle_x = [0.395, 0.58, 0.395, 0.58]  # X position (closer to right side)
-    # triangle_y = [0.393, 0.393, 0.785, 0.785]  # Y position (adjust based on where you want it)
-    #
-    # for i in range(0, len(triangle_y)):
-    #     triangle = Polygon(
-    #         [[triangle_x[i] + triangle_size, triangle_y[i]],  # Triangle tip (rightmost point)
-    #          [triangle_x[i] + triangle_size / 2, triangle_y[i] + triangle_size / 2],  # Top-left corner
-    #          [triangle_x[i] + triangle_size / 2, triangle_y[i] - triangle_size / 2]],  # Bottom-left corner
-    #         closed=True, facecolor='black', edgecolor='black', transform=fig.transFigure, clip_on=False
-    #     )
-    #
-    #     fig.add_artist(triangle)
 
     # Create subplots for first 4 rows
     axs = [[fig.add_subplot(gs[row, col]) for col in range(3)] for row in range(4)]
@@ -382,34 +371,52 @@ def figureSceletton():
     return fig, axs, axs_legend
 
 # Paths and settings
-participant = 'beRNN_03'
-trainingNumber = '\\08'
-folder = '\\beRNNmodels\\2025_03'
-folderPath = 'W:\\group_csp\\analyses\\oliver.frank'
-# folderPath = 'C:\\Users\\oliver.frank\\Desktop\\BackUp'
-_finalPath = folderPath + folder + trainingNumber
+participant = 'beRNN_03' # subfolder with model iterations
+trainingNumber = '\\2025_03_25th\\04'
+folder = '\\beRNNmodels'
+# folderPath = 'W:\\group_csp\\analyses\\oliver.frank'
+folderPath = 'C:\\Users\\oliver.frank\\Desktop\\PyProjects'
+_finalPath = folderPath + folder + trainingNumber # attention
+
+# Define paths
+participant_id = participant  # Change this for each participant
+destination_dir = os.path.join(_finalPath, 'overviews', 'all_topologicalMarker_files')
+os.makedirs(destination_dir, exist_ok=True)
 
 # Create overview folder
 overviewFolder = _finalPath + '\\overviews'
 os.makedirs(overviewFolder, exist_ok=True)
 
+# Create model list for every iteration
 _model_list = os.listdir(_finalPath)
 _model_list = [i for i in _model_list if 'beRNN' in i]
 
 for _model in _model_list:
     try:
+        # info: Create top. Marker folder for every model ##############################################################
+        topMarkerPath = os.path.join(_finalPath, _model, 'topologicalMarker')
+        if not os.path.exists(topMarkerPath):
+            # If it doesn't exist, create the directory
+            os.makedirs(topMarkerPath)
+            print(f"Directory created: {topMarkerPath}")
+            print(f"Directory created: {topMarkerPath}")
+        else:
+            print(f"Directory already exists: {topMarkerPath}")
+        # info: ########################################################################################################
 
         if len(_model.split('_')) == 10:
             dataFolder = '_'.join(_model.split('_')[4:6])
         elif len(_model.split('_')) == 11:
             dataFolder = '_'.join(_model.split('_')[4:7])
+        elif len(_model.split('_')) == 12:
+            dataFolder = '_'.join(_model.split('_')[4:8])
 
         model_dir = os.path.join(_finalPath, _model)
         model_list = os.listdir(model_dir)
         model_list = [i for i in model_list if 'model' in i]
 
-        # Define right model
-        data_dir = os.path.join('C:\\Users\\oliver.frank\\Desktop\\BackUp\\Data', participant, dataFolder)
+        # Define right data
+        data_dir = os.path.join('C:\\Users\\oliver.frank\\Desktop\\PyProjects\\Data', participant, dataFolder)
 
         figs_to_close = []
         fig, axs, axs_legend = figureSceletton()
@@ -429,8 +436,25 @@ for _model in _model_list:
             analysis_test = clustering.Analysis(data_dir, currentModelDirectory, 'test', currentHP['monthsConsidered'], 'rule')
             analysis_train = clustering.Analysis(data_dir, currentModelDirectory, 'train', currentHP['monthsConsidered'], 'rule')
 
-            fig_func_test = compute_functionalCorrelation(currentModelDirectory, visualsDirectory, currentHP['monthsConsidered'], 'test', analysis_test)
-            fig_func_train = compute_functionalCorrelation(currentModelDirectory, visualsDirectory, currentHP['monthsConsidered'], 'train', analysis_train)
+            fig_func_test, avg_degree_test, avg_betweenness_test, assortativity_test = compute_functionalCorrelation(currentModelDirectory, visualsDirectory, currentHP['monthsConsidered'], 'test', analysis_test)
+            fig_func_train, avg_degree_train, avg_betweenness_train, assortativity_train = compute_functionalCorrelation(currentModelDirectory, visualsDirectory, currentHP['monthsConsidered'], 'train', analysis_train)
+
+            # info: Append test top. Markers into a list and save them in folder #######################################
+            degreeList = []
+            betweennessList = []
+            assortativityList = []
+            degreeList.append(avg_degree_test)
+            betweennessList.append(avg_betweenness_test)
+            assortativityList.append(assortativity_test)
+
+            topMarkerList = [degreeList, betweennessList, assortativityList]
+            topMarkerNamesList = ['degreeList', 'betweennessList', 'assortativityList']
+            for i in range(0, len(topMarkerNamesList)):
+                mean_value = np.mean(topMarkerList[i])
+                variance_value = np.var(topMarkerList[i])
+                # mean_variance = np.array([mean_value, variance_value])
+                np.save(os.path.join(topMarkerPath, f'{topMarkerNamesList[i]}_{model}.npy'), topMarkerList[i])
+            # info: ####################################################################################################
 
             # Convert to image arrays
             img_test = fig_to_array(fig_test)
@@ -485,15 +509,18 @@ for _model in _model_list:
         legend_ax.imshow(legend_img)
         legend_ax.axis("off")  # Hide axis
 
+        # Add Hyperparameters as Text Box with same width as legend image
+        hp_ax = fig.add_axes([0.5, 0.0455, 0.25, 0.12])  # [left, bottom, width, height]
+        hp_ax.axis("off")  # Hide axis
+
         # Add Hyperparameters as Text Box
         hp_lines = [f"{key}: {currentHP[key]}" for key in selected_hp_keys if key in currentHP]
         num_columns = 3  # Adjust based on how wide the text should be
         hp_text_formatted = "\n".join(["   ".join(hp_lines[i:i + num_columns]) for i in range(0, len(hp_lines), num_columns)])
 
-        # Position HP text BESIDE the legend (aligned inside the plot)
-        axs_legend.text(0.515, 0.46, hp_text_formatted, transform=axs_legend.transAxes, fontsize=7,
-                        verticalalignment='center', horizontalalignment='left', color='black',
-                        bbox=dict(facecolor='white', alpha=1, edgecolor='black'))
+        hp_ax.text(0.5, 0.5, hp_text_formatted, fontsize=7, verticalalignment='center',
+                   horizontalalignment='center', color='black',
+                   bbox=dict(facecolor='white', alpha=1, edgecolor='black'))
 
         # Optimize layout for full visibility without stretching
         plt.tight_layout()
@@ -508,5 +535,335 @@ for _model in _model_list:
     except Exception as e:
         print(f"Error processing model {_model}: {e}")
         continue
+
+
+# info: ################################################################################################################
+# info: One general plot ###############################################################################################
+# info: ################################################################################################################
+import os
+import glob
+import shutil
+import numpy as np
+import matplotlib.pyplot as plt
+from scipy.stats import ttest_ind
+
+# Collect all top Marker files into one destination
+_iterationList = os.listdir(_finalPath) # info: Folder of several iterations for one training batch of one participant
+iterationList = [os.path.join(_finalPath, iteration, 'topologicalMarker')
+                 for iteration in _iterationList if 'beRNN' in iteration]
+
+# Copy files into a single directory with unique iteration identifiers
+for indice, iteration in enumerate(iterationList):
+    npy_files = glob.glob(os.path.join(iteration, "*.npy"))
+
+    for file_path in npy_files:
+        file_name = os.path.basename(file_path)
+        new_file_name = f"iteration{indice}_{file_name}"  # Append iteration index
+        destination_path = os.path.join(destination_dir, new_file_name)
+
+        shutil.copy2(file_path, destination_path)  # Copy file
+
+# Dynamically group files based on a common identifier
+fileList = [f for f in os.listdir(destination_dir) if f.endswith(".npy")]
+
+# Extract markers and months from filenames
+topMarkers = sorted(set(f.split('_')[-4] for f in fileList))
+months = sorted(set(f.split('_')[-1].split('.')[0] for f in fileList))
+
+num_rows = len(topMarkers)
+num_columns = len(months)
+
+# Group files based on (marker, month)
+groups = {marker: {month: [] for month in months} for marker in topMarkers}
+for file in fileList:
+    parts = file.split('_')
+    marker = parts[-4]
+    month = parts[-1].split('.')[0]
+    if marker in groups and month in groups[marker]:
+        groups[marker][month].append(os.path.join(destination_dir, file))
+
+# Create figure and axes
+fig, axes = plt.subplots(num_rows, num_columns, figsize=(6, 1.5 * num_rows), sharex=False, sharey=False)
+
+# Ensure axes is always a 2D array
+if num_rows == 1:
+    axes = np.array([axes])
+if num_columns == 1:
+    axes = np.expand_dims(axes, axis=1)
+
+# Directory to save distributions
+distribution_dir = os.path.join(_finalPath, 'overviews', "topologicalMarker_distributions")
+os.makedirs(distribution_dir, exist_ok=True)
+
+# Dictionary to store t-test results
+t_test_results = {}
+
+# Process and plot distributions
+for row, marker in enumerate(topMarkers):
+    t_test_results[marker] = {}
+
+    for col, month in enumerate(months):
+        files = groups[marker][month]
+        ax = axes[row, col]
+
+        if files:
+            all_data = []
+            for file in files:
+                try:
+                    data = np.load(file)
+                    all_data.append(data)
+                except Exception as e:
+                    print(f"Error loading {file}: {e}")
+
+            if all_data:
+                # Convert to NumPy arrays and filter out empty data
+                all_data = [np.asarray(arr).flatten() for arr in all_data if arr.size > 0]
+
+                if all_data:
+                    if len(all_data) == 1:
+                        valid_data = all_data[0]
+                    else:
+                        valid_data = np.concatenate(all_data)
+
+                    # Save distribution for later comparisons
+                    np.save(os.path.join(distribution_dir, f"{marker}_{month}.npy"), valid_data)
+
+                    mean, variance = np.mean(valid_data), np.var(valid_data)
+
+                    # Plot histogram
+                    ax.hist(valid_data, bins=20, density=False, alpha=0.7, color='skyblue', edgecolor='black')
+                    ax.axvline(mean, color='red', linestyle='dashed', linewidth=1.5,
+                               label=f'Mean: {mean:.2f}\nVar: {variance:.2f}')
+                    ax.set_title(f"{marker} - {month}", fontsize=12)
+                    ax.legend(fontsize=6)
+
+                    ax.tick_params(axis='both', which='major', labelsize=6)  # Adjust size as needed
+                    ax.tick_params(axis='both', which='minor', labelsize=6)  # Even smaller for minor ticks
+
+                    # Store t-test results
+                    if col > 0:
+                        prev_files = groups[marker][months[col - 1]]
+
+                        prev_data_list = []
+                        for prev_file in prev_files:
+                            try:
+                                prev_data_list.append(np.load(prev_file))
+                            except Exception as e:
+                                print(f"Error loading {prev_file}: {e}")
+
+                        # Ensure previous data is valid
+                        if prev_data_list:
+                            prev_data_list = [np.asarray(arr).flatten() for arr in prev_data_list if arr.size > 0]
+                            if prev_data_list:
+                                prev_data = np.concatenate(prev_data_list) if len(prev_data_list) > 1 else prev_data_list[0]
+
+                                if len(prev_data) > 1 and len(valid_data) > 1:
+                                    t_stat, p_value = ttest_ind(prev_data, valid_data, equal_var=False)
+                                    t_test_results[marker][(months[col - 1], month)] = (t_stat, p_value)
+
+                                    if p_value < 0.05:
+                                        ax.annotate(f'* p={p_value:.2e}', xy=(0.5, 0.55), xycoords='axes fraction',
+                                                    fontsize=6, fontweight='bold', ha='center', color='red')
+                else:
+                    ax.set_title(f"{marker} - {month} (No Valid Data)", fontsize=10)
+            else:
+                ax.set_title(f"{marker} - {month} (No Data)", fontsize=10)
+        else:
+            ax.set_title(f"{marker} - {month} (No Data)", fontsize=10)
+
+# Adjust layout and save plot
+plt.tight_layout()
+plt.suptitle(f"Distributions for {participant_id}", fontsize=12, fontweight='bold', y=1.02)
+
+# Save the figure
+plot_path = os.path.join(folderPath + folder + trainingNumber, 'overviews', f"topologicalMarkers_distribution_{participant_id}.png")
+plt.savefig(plot_path, dpi=300, bbox_inches='tight')
+# plt.show()
+
+print(f"Plot saved at: {plot_path}")
+print(f"Distributions saved for participant {participant_id} in {distribution_dir}")
+
+
+# # # info: ################################################################################################################
+# # # info: Comparison - Only apply after previous analysis ################################################################
+# # # info: ################################################################################################################
+# from scipy.stats import ttest_ind, ks_2samp
+# import seaborn as sns
+#
+# destination_dir = 'C:\\Users\\oliver.frank\\Desktop\\PyProjects\\beRNNmodels\\2025_03_2\\topMarkerComparisons' # fix: must be generic
+# os.makedirs(destination_dir, exist_ok=True)
+#
+# def compare_participants(dist_1, dist_2, participant_1, participant_2):
+#     """
+#     Compare the distributions of two participants and display significance.
+#     """
+#     p_values = {}  # Store p-values for visualization
+#
+#     for marker in dist_1.keys():
+#         p_values[marker] = {}
+#
+#         for month in dist_1[marker].keys():
+#             if marker in dist_2 and month in dist_2[marker]:  # Ensure both have data
+#                 data_1 = dist_1[marker][month]
+#                 data_2 = dist_2[marker][month]
+#
+#                 if len(data_1) > 1 and len(data_2) > 1:
+#                     # Perform statistical tests
+#                     t_stat, p_ttest = ttest_ind(data_1, data_2, equal_var=False)
+#                     ks_stat, p_ks = ks_2samp(data_1, data_2)
+#
+#                     p_values[marker][month] = min(p_ttest, p_ks)  # Store min p-value
+#                 else:
+#                     p_values[marker][month] = 1.0  # No valid comparison
+#
+#     # Convert to DataFrame for visualization
+#     p_df = pd.DataFrame(p_values).T  # Transpose so markers are rows, months are columns
+#
+#     # Prepare text annotations with significance levels
+#     def format_p_value(p):
+#         if p < 0.001:
+#             return f"$\\bf{{{p:.3f}}}$***"  # Bold + ***
+#         elif p < 0.01:
+#             return f"$\\bf{{{p:.3f}}}$**"  # Bold + **
+#         elif p < 0.05:
+#             return f"$\\bf{{{p:.3f}}}$*"  # Bold + *
+#         else:
+#             return f"{p:.3f}"  # No bold
+#
+#     annotations = p_df.applymap(format_p_value)
+#
+#     # Plot heatmap of p-values
+#     plt.figure(figsize=(10, 6))
+#     ax = sns.heatmap(
+#         p_df.astype(float),
+#         annot=annotations,
+#         fmt="",
+#         cmap="magma",  # Reverse "magma" so low p-values are lighter
+#         vmin=0.001,
+#         vmax=1.0,
+#         center=0.05,
+#         cbar_kws={"shrink": 1.0},  # Fix legend error
+#         annot_kws={"fontsize": 10, "color": "white"},  # Ensure all text is white
+#     )
+#
+#     plt.title(f"Statistical Comparison: {participant_1} vs {participant_2}")
+#     plt.xlabel("Months")
+#     plt.ylabel("Topological Markers")
+#
+#     # Save and show the plot
+#     plot_path = os.path.join(destination_dir, f"topMarkerComparison_{participant_1}_{participant_2}.png")
+#     plt.savefig(plot_path, dpi=300, bbox_inches='tight')
+#     plt.show()
+#
+# def load_distributions(distribution_dir):
+#     """
+#     Load saved distributions for a given participant.
+#     """
+#     input_dir = os.path.join(distribution_dir)
+#     distributions = {}
+#
+#     if not os.path.exists(input_dir):
+#         print(f"No distributions found for {distribution_dir}")
+#         return None
+#
+#     for file in os.listdir(input_dir):
+#         if file.endswith(".npy"):
+#             marker, month = file.replace(".npy", "").split("_")
+#             if marker not in distributions:
+#                 distributions[marker] = {}
+#             distributions[marker][month] = np.load(os.path.join(input_dir, file))
+#
+#     return distributions
+#
+#
+# participant1 = "beRNN_01" # info: should be name of training batch
+# participant2 = "beRNN_05" # info: should be name of training batch
+#
+# distributions_dir_participant_01 = f"C:\\Users\\oliver.frank\\Desktop\\PyProjects\\beRNNmodels\\2025_03_2\\{participant1}\\overviews\\distributions"
+# distributions_dir_participant_02 = f"C:\\Users\\oliver.frank\\Desktop\\PyProjects\\beRNNmodels\\2025_03_2\\{participant2}\\overviews\\distributions"
+#
+# dist_1 = load_distributions(distributions_dir_participant_01)
+# dist_2 = load_distributions(distributions_dir_participant_02)
+#
+# compare_participants(dist_1, dist_2, participant1, participant2)
+
+
+########################################################################################################################
+# attention: Legacy ####################################################################################################
+########################################################################################################################
+
+# def compute_structuralCorrelation(model_dir, figurePath, monthsConsidered, mode, analysis):
+#
+#     correlationRecurrent = analysis.easy_connectivity_plot_recurrentWeightsOnly(model_dir)
+#     # correlationExcitatoryGates = analysis.easy_connectivity_plot_excitatoryGatedWeightsOnly(model_dir)
+#     # correlationInhibitoryGates = analysis.easy_connectivity_plot_inhibitoryGatedWeightsOnly(model_dir)
+#
+#     path = os.path.join(folderPath, 'structuralCorrelation_npy')
+#
+#     if not os.path.exists(path):
+#         os.makedirs(path)
+#
+#     correlationNames = ['CorrelationRecurrent'] # , 'CorrelationInhibitoryGates', 'CorrelationExcitatoryGates']
+#
+#     correlationDict = {'CorrelationRecurrent': correlationRecurrent}
+#                        # 'CorrelationInhibitoryGates': correlationInhibitoryGates,
+#                        # 'CorrelationExcitatoryGates': correlationExcitatoryGates}
+#
+#     for correlationName in correlationNames:
+#         modelName = model_dir.split('BeRNN_')[-1]
+#         np.save(os.path.join(path, f'structural{correlationName}_{modelName}'), correlationDict[correlationName])
+#
+#         # Set up the figure
+#         fig = plt.figure(figsize=(10, 10))
+#
+#         # Create the main similarity matrix plot
+#         matrix_left = 0.1
+#         matrix_bottom = 0.3
+#         matrix_width = 0.6
+#         matrix_height = 0.6
+#
+#         ax_matrix = fig.add_axes([matrix_left, matrix_bottom, matrix_width, matrix_height])
+#         im = ax_matrix.imshow(correlationDict[correlationName], cmap='coolwarm', interpolation='nearest', vmin=-1, vmax=1) # info: change here
+#
+#         # Add title
+#         subject = '_'.join(model_dir.split("\\")[-1].split('_')[0:4])
+#         ax_matrix.set_title(f'Structural Correlation - {model} - {mode}', fontsize=22, pad=20) # info: change here
+#
+#         # Add x-axis and y-axis labels
+#         ax_matrix.set_xlabel('Hidden weights', fontsize=16, labelpad=15)
+#         ax_matrix.set_ylabel('Hidden weights', fontsize=16, labelpad=15)
+#
+#         # Remove x and y ticks
+#         ax_matrix.set_xticks([])  # Disable x-ticks
+#         ax_matrix.set_yticks([])  # Disable y-ticks
+#
+#         # Create the colorbar on the right side, aligned with the matrix
+#         colorbar_left = matrix_left + matrix_width + 0.02
+#         colorbar_width = 0.03
+#
+#         ax_cb = fig.add_axes([colorbar_left, matrix_bottom, colorbar_width, matrix_height])
+#         cb = plt.colorbar(im, cax=ax_cb)
+#         cb.set_ticks([-1, 1])
+#         cb.outline.set_linewidth(0.5)
+#         cb.set_label('Correlation', fontsize=18, labelpad=0) # info: change here
+#
+#         # # Set the title above the similarity matrix, centered
+#         # if mode == 'Training':
+#         #     title = '_'.join(model_dir.split("\\")[-1].split('_')[0:4]) + '_TRAINING'
+#         # elif mode == 'Evaluation':
+#         #     title = '_'.join(model_dir.split("\\")[-1].split('_')[0:4]) + '_TEST'
+#
+#         # ax_matrix.set_title(title, fontsize=14, pad=20)
+#         # Save the figure with a tight bounding box to ensure alignment
+#         # save_path = os.path.join('W:\\group_csp\\analyses\\oliver.frank', 'BeRNNmodels\\Visuals\\Similarity\\finalReport',
+#         #                          model_dir.split("\\")[-1] + '_' + 'Similarity' + '.png')
+#         # save_path = os.path.join(
+#         #     'W:\\group_csp\\analyses\\oliver.frank\\beRNNmodels\\Visuals\\CorrelationStructure\\BarnaModels',
+#         #     model_dir.split("\\")[-1] + '_' + 'CorrelationStructure' + '.png')
+#         plt.savefig(os.path.join(figurePath, model_dir.split("\\")[-1] + '_' + 'structuralCorrelation' + f'_{mode}' + '.png'),
+#                     format='png', dpi=300, bbox_inches='tight') # info: change here
+#
+#         # plt.show()
+#         # plt.close()
 
 

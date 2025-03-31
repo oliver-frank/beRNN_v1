@@ -1,5 +1,5 @@
 ########################################################################################################################
-# info: Data Augmentation
+# info: dataAugmentation
 ########################################################################################################################
 # Augment/ Multiply data with geometrical transformations of the real collected data (Rotation, Mirroring, Randomization,
 # Pertubation). Intention was to not generate new data that equals the distribution of the original data, but to multiply
@@ -60,7 +60,7 @@ counters = {
 # Patterns to search for
 for participant in participants:
     trial_dir = os.path.join(directory, dataFolder, participant, preprocessedData_folder)
-    # patterns = ['*art_BeRNN*']
+    # patterns = ['*art_beRNN*']
     patterns = ['*Rotation*', '*Mirrored*', '*Segmentation*', '*Randomization*']
     def delete_files(trial_dir, patterns):
         for pattern in patterns:

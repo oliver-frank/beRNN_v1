@@ -1,5 +1,5 @@
 ########################################################################################################################
-# info: Network
+# info: network
 ########################################################################################################################
 # All pre-defined network architectures used to train the different models and additional helper functions.
 
@@ -26,7 +26,7 @@ from tensorflow.python.util import nest
 from tensorflow.python.ops import rnn
 from tensorflow.python.ops.rnn_cell_impl import RNNCell
 
-import Tools
+import tools
 
 
 ########################################################################################################################

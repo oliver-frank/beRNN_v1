@@ -1,5 +1,5 @@
 ########################################################################################################################
-# info: Tools
+# info: tools
 ########################################################################################################################
 # Different functions used on the whole project.
 ########################################################################################################################
@@ -104,13 +104,14 @@ def load_trials(task,mode,batchSize,data,errorComparison):
                         currenTask_values.extend(values)
                 # Select number of batches according to defined batchSize
                 currentTriplets = random.sample(currenTask_values, numberOfBatches)
-                base_name = currentTriplets[0][0].split('\\')[-1].split('Input')
+                # base_name = currentTriplets[0][0].split('\\')[-1].split('Input')
                 # print('chosenFile:  ', base_name)
                 # Load the files
                 if numberOfBatches <= 1:
                     x = np.load(currentTriplets[0][0]) # Input
                     y = np.load(currentTriplets[0][2]) # Participant Response
                     y_loc = np.load(currentTriplets[0][1]) # Ground Truth # yLoc
+
                     if batchSize < 40:
                         # randomly choose ratio for part of batch to take
                         choice = np.random.sample(['first', 'last', 'middle'])
@@ -206,11 +207,17 @@ def load_trials(task,mode,batchSize,data,errorComparison):
                     for key, values in data.items():
                         if key.endswith(task):
                             currenTask_values.extend(values)
-                    currentTriplets = random.sample(currenTask_values, numberOfBatches)
+                    if len(currenTask_values) < numberOfBatches: # info: In case there is not enough data to create batches with trials > 40
+                        currentTriplets = []
+                        for i in range(numberOfBatches):
+                            currentTriplet = random.sample(currenTask_values, 1)
+                            currentTriplets.append(currentTriplet[0])
+                    else:
+                        currentTriplets = random.sample(currenTask_values, numberOfBatches)
                 elif errorComparison == True:
-                    currentTriplets = random.sample(data, numberOfBatches) # info: for Error_Comparison.py
+                    currentTriplets = random.sample(data, numberOfBatches) # info: for errorComparison.py
                     base_name = currentTriplets[0][0].split('Input')[0]
-                    print('chosenFile:  ', base_name)
+                    # print('chosenFile:  ', base_name)
                 # Load the files
                 if numberOfBatches <= 1:
                     x = np.load(currentTriplets[0][0])  # Input
@@ -440,7 +447,8 @@ def load_hp(model_dir):
 
     # Use a different seed aftering loading,
     # since loading is typically for analysis
-    hp['rng'] = np.random.RandomState(hp['seed']+1000)
+    # hp['rng'] = np.random.RandomState(hp['seed']+1000)
+    hp['rng'] = np.random.default_rng()
     return hp
 
 def save_hp(hp, model_dir):

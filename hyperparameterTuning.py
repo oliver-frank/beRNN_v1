@@ -1,5 +1,5 @@
 ########################################################################################################################
-# info: Hyperparameter Tuning
+# info: hyperparameterTuning
 ########################################################################################################################
 # Random Grid Search of different hyperparameter sets for automated accumulated model training.
 
@@ -19,20 +19,18 @@ import itertools
 import argparse
 import json
 
-import Training
-import Tools
+import training
+import tools
 
 ########################################################################################################################
 # Create HP combinations and randomly choose a selection
 ########################################################################################################################
-def create_param_combinations(param_grid, sample_size):
-    # Create all possible combinations of parameters
-    keys, values = zip(*param_grid.items())
-    all_combinations = [dict(zip(keys, combination)) for combination in itertools.product(*values)]
-
-    # Randomly sample the specified number of combinations
-    sampled_combinations = random.sample(all_combinations, sample_size)
-
+def sample_param_combinations(param_grid, sample_size):
+    keys = list(param_grid.keys())
+    sampled_combinations = []
+    for _ in range(sample_size):
+        combo = {k: random.choice(param_grid[k]) for k in keys}
+        sampled_combinations.append(combo)
     return sampled_combinations
 
 def create_repeated_param_combinations(param_grid, sample_size):
@@ -45,25 +43,27 @@ def create_repeated_param_combinations(param_grid, sample_size):
 
     return repeated_combinations
 
-# Get input and output dimension for network, depending on higDim and lowDim data and ruleset (standard: 'all')
-num_ring = Tools.get_num_ring('all')
-n_rule = Tools.get_num_rule('all')
 
 # # attention: hitkip cluster ############################################################################################
-# # info: hps defined in .sbatch job scheduler file
-# # Set up argument parser
+# If script executed on hitkip cluster, HPs have to be defined in sbatch_HPscript.sbatch
 # parser = argparse.ArgumentParser(description="Train RNN with specific parameters.")
 # parser.add_argument("--adjParams", type=str, required=True, help="JSON-encoded parameters")
-# # Parse arguments
 # args = parser.parse_args()
+#
 # try:
 #     adjParams = json.loads(args.adjParams)
 # except json.JSONDecodeError as e:
 #     raise ValueError(f"Failed to decode adjParams JSON: {e}")
+#
+# print("Loaded Parameters:", adjParams)
 # # attention: hitkip cluster ############################################################################################
 
 
 # attention: all other setups ##########################################################################################
+# Get input and output dimension for network, depending on higDim and lowDim data and ruleset (standard: 'all')
+num_ring = Tools.get_num_ring('all')
+n_rule = Tools.get_num_rule('all')
+# Choose right dataset
 data = ['data_lowDim_correctOnly'] # 'data_highDim' , data_highDim_correctOnly , data_highDim_lowCognition , data_lowDim , data_lowDim_correctOnly , data_lowDim_lowCognition
 
 if 'highDim' in data[0]:
@@ -77,15 +77,15 @@ else:
 
 # Info: After first HPs the most probable space inheriting the best solution decreased to the following
 adjParams = {
-    'batch_size': [40, 80, 120],
+    'batch_size': [80],
     'in_type': ['normal'],
-    'rnn_type': ['LeakyRNN','LeakyGRU'],
+    'rnn_type': ['LeakyRNN'], # 'LeakyGRU'
     'n_input': [n_input], # number of input units
     'n_output': [n_output], # number of output units
     'use_separate_input': [False],
     'loss_type': ['lsq'],
     'optimizer': ['adam'], # 'sgd'
-    'activation': ['relu', 'tanh', 'softplus'], # 'elu'
+    'activation': ['relu'], # 'elu', 'tanh', 'softplus'
     'tau': [40, 80, 100], # Decides how fast previous information decays to calculate current state activity
     'dt': [20],
     # 'alpha': 0.2,
@@ -105,6 +105,7 @@ adjParams = {
     'max_lr': [0.001],
     'n_rnn': [64, 128, 256],
     'c_mask_responseValue': [5., 3., 1.],
+    's_mask': 'sc1000', # 'sc1000', None
     'monthsConsidered': [['month_3', 'month_4', 'month_5']], # list of lists
     'monthsString': ['3-5'],
     # 'rule_prob_map': {"DM": 1,"DM_Anti": 1,"EF": 1,"EF_Anti": 1,"RP": 1,"RP_Anti": 1,"RP_Ctx1": 1,"RP_Ctx2": 1,"WM": 1,"WM_Anti": 1,"WM_Ctx1": 1,"WM_Ctx2": 1}
@@ -119,13 +120,11 @@ adjParams = {
 }
 # attention: all other setups ##########################################################################################
 
-
 # Randomly sample combinations
-sampled_combinations = create_param_combinations(adjParams, 50)
+sampled_combinations = sample_param_combinations(adjParams, 50)
 
 # # Create one combination and repeat it according to sample_size
 # sampled_repeated_combinations = create_repeated_param_combinations(best_params, 5)
-
 
 # Training #############################################################################################################
 # Initialize list for all training times for each model
@@ -148,7 +147,7 @@ for modelNumber, params in enumerate(sampled_combinations): # info: either sampl
 
     # Define main path
     if params['machine'] == 'local':
-        path = 'C:\\Users\\oliver.frank\\Desktop\\BackUp'
+        path = 'C:\\Users\\oliver.frank\\Desktop\\PyProjects'
     elif params['machine'] == 'hitkip':
         path = '/zi/home/oliver.frank/Desktop'
     elif params['machine'] == 'pandora':
@@ -203,7 +202,7 @@ for modelNumber, params in enumerate(sampled_combinations): # info: either sampl
                     file_triplets.append((input_file, yloc_file, output_file))
 
             # Split the file triplets
-            train_files, eval_files = Training.split_files(file_triplets)
+            train_files, eval_files = training.split_files(file_triplets)
 
             # Store the results in the dictionaries
             train_data[subdir] = train_files
@@ -211,7 +210,7 @@ for modelNumber, params in enumerate(sampled_combinations): # info: either sampl
 
         try:
             # Start Training ---------------------------------------------------------------------------------------------------
-            Training.train(model_dir=model_dir, train_data=train_data, eval_data=eval_data, hp=params, load_dir=load_dir)
+            training.train(model_dir=model_dir, train_data=train_data, eval_data=eval_data, hp=params, load_dir=load_dir)
 
         except:
             print("An exception occurred with model number: ", modelNumber)

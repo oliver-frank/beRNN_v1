@@ -18,8 +18,8 @@ import tensorflow as tf
 import random
 
 # from task import *
-from Network import Model
-import Tools
+from network import Model
+import tools
 
 save = True
 

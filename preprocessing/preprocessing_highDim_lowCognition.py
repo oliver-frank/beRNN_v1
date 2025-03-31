@@ -1,5 +1,5 @@
 ########################################################################################################################
-# info: Preprocessing
+# info: preprocessing_highDim_lowCognition
 ########################################################################################################################
 # Preprocess the cogntive-behavioral data collected from Gorilla Experimenter into the form that can be used to train the
 # models.
@@ -9,7 +9,7 @@
 ########################################################################################################################
 import numpy as np
 import pandas as pd
-import Tools
+import tools
 import glob
 import json
 import os
@@ -348,25 +348,18 @@ def preprocess_DM(opened_xlsxFile, questionnare_files, list_allSessions, sequenc
             for j in range(0, Output.shape[1]):
                 Output[i][j][1] = float(0.05)
 
-        # attention: add one unique value for every task, respectively
+        # info: add one unique value for every task, respectively
         if taskShorts == 'DM':
             lowCognitionValue = 2
         elif taskShorts == 'DM_Anti':
             lowCognitionValue = 4
         else:
             print('No task found !')
-
-        # Define an output dictionary for specific response values
-        outputDict = {'U': lowCognitionValue, 'R': lowCognitionValue, 'L': lowCognitionValue, 'D': lowCognitionValue}
+            lowCognitionValue = np.random.choice([2,4], size=1)[0] # randomly draw one to prevent code crashing
 
         for i in range(numFixStepsAverage, totalStepsAverage):
             for j in range(0, Output.shape[1]):
-                if isinstance(Output[i][j][0], str) and Output[i][j][0] != 'noResponse' and Output[i][j][0] != 'NoResponse'\
-                        and safe_isnan(Output[i][j][0]) == False:
-                    Output[i][j][outputDict[Output[i][j][0]]] = float(0.85)
-                else:
-                    for k in range(2, 34):
-                        Output[i][j][k] = float(0.05)
+                Output[i][j][lowCognitionValue] = float(0.85)
 
         # Drop unnecessary first column with response information
         Output = np.delete(Output, [0], axis=2)
@@ -374,7 +367,7 @@ def preprocess_DM(opened_xlsxFile, questionnare_files, list_allSessions, sequenc
         y_loc = np.zeros((Output.shape[0], Output.shape[1]))
 
         # Add output gradient activation
-        for i in range(0, Output.shape[0]):
+        for i in range(numFixStepsAverage, totalStepsAverage):
             for j in range(0, Output.shape[1]):
                 currentTimeStepOutput = Output[i][j][1:33]
                 # Allocate first unit ring
@@ -385,21 +378,16 @@ def preprocess_DM(opened_xlsxFile, questionnare_files, list_allSessions, sequenc
                 for k in range(0, numFixStepsAverage):
                     y_loc[k][j] = np.float(0.05) # info: yang et al.: -1
 
-                if len(nonZerosOutput) == 1:
-                    # Get activity and model gradient activation around it
-                    currentOutputLoc = pref[nonZerosOutput[0]]
-                    currentActivation_Output = add_x_loc(currentOutputLoc, pref) + 0.05  # adding noise
-                    unitRingOutput = np.around(unitRingOutput + currentActivation_Output, decimals=2)
-                    # Store
-                    currentFinalRow = np.concatenate((Output[i][j][0:1], unitRingOutput))
-                    Output[i][j][0:33] = currentFinalRow
-                    # Complete y_loc matrix
-                    for k in range(numFixStepsAverage, totalStepsAverage):
-                        y_loc[k][j] = pref[nonZerosOutput[0]]
-
-                else:
-                    for k in range(numFixStepsAverage, totalStepsAverage):
-                        y_loc[k][j] = np.float(0.05) # info: yang et al.: -1
+                # Get activity and model gradient activation around it
+                currentOutputLoc = pref[nonZerosOutput[0]]
+                currentActivation_Output = add_x_loc(currentOutputLoc, pref) + 0.05  # adding noise
+                unitRingOutput = np.around(unitRingOutput + currentActivation_Output, decimals=2)
+                # Store
+                currentFinalRow = np.concatenate((Output[i][j][0:1], unitRingOutput))
+                Output[i][j][0:33] = currentFinalRow
+                # Complete y_loc matrix
+                for k in range(numFixStepsAverage, totalStepsAverage):
+                    y_loc[k][j] = pref[nonZerosOutput[0]]
 
         # Change dtype of every element in matrix to float32 for later validation functions
         for i in range(0, Output.shape[0]):
@@ -712,25 +700,18 @@ def preprocess_EF(opened_xlsxFile, questionnare_files, list_allSessions, sequenc
             for j in range(0, Output.shape[1]):
                 Output[i][j][1] = float(0.05)
 
-        # attention: add one unique value for every task, respectively
+        # info: add one unique value for every task, respectively
         if taskShorts == 'EF':
             lowCognitionValue = 6
         elif taskShorts == 'EF_Anti':
             lowCognitionValue = 9
         else:
             print('No task found !')
-
-        # Define an output dictionary for specific response values
-        outputDict = {'U': lowCognitionValue, 'R': lowCognitionValue, 'L': lowCognitionValue, 'D': lowCognitionValue}
+            lowCognitionValue = np.random.choice([6, 9], size=1)[0]  # randomly draw one to prevent code crashing
 
         for i in range(numFixStepsAverage, totalStepsAverage):
             for j in range(0, Output.shape[1]):
-                if isinstance(Output[i][j][0], str) and Output[i][j][0] != 'noResponse' and Output[i][j][0] != 'NoResponse'\
-                        and safe_isnan(Output[i][j][0]) == False:
-                    Output[i][j][outputDict[Output[i][j][0]]] = float(0.85)
-                else:
-                    for k in range(2, 34):
-                        Output[i][j][k] = float(0.05)
+                Output[i][j][lowCognitionValue] = float(0.85)
 
         # Drop unnecessary first column
         Output = np.delete(Output, [0], axis=2)
@@ -738,7 +719,7 @@ def preprocess_EF(opened_xlsxFile, questionnare_files, list_allSessions, sequenc
         y_loc = np.zeros((Output.shape[0], Output.shape[1]))
 
         # Add output gradient activation
-        for i in range(0, Output.shape[0]):
+        for i in range(numFixStepsAverage, totalStepsAverage):
             for j in range(0, Output.shape[1]):
                 currentTimeStepOutput = Output[i][j][1:33]
                 # Allocate first unit ring
@@ -749,20 +730,16 @@ def preprocess_EF(opened_xlsxFile, questionnare_files, list_allSessions, sequenc
                 for k in range(0, numFixStepsAverage):
                     y_loc[k][j] = np.float(0.05) # info: yang et al.: -1
 
-                if len(nonZerosOutput) == 1:
-                    # Get activity and model gradient activation around it
-                    currentOutputLoc = pref[nonZerosOutput[0]]
-                    currentActivation_Output = add_x_loc(currentOutputLoc, pref) + 0.05  # adding noise
-                    unitRingOutput = np.around(unitRingOutput + currentActivation_Output, decimals=2)
-                    # Store
-                    currentFinalRow = np.concatenate((Output[i][j][0:1], unitRingOutput))
-                    Output[i][j][0:33] = currentFinalRow
-                    # Complete y_loc matrix
-                    for k in range(numFixStepsAverage, totalStepsAverage):
-                        y_loc[k][j] = pref[nonZerosOutput[0]]
-                else:
-                    for k in range(numFixStepsAverage, totalStepsAverage):
-                        y_loc[k][j] = np.float(0.05) # info: yang et al.: -1
+                # Get activity and model gradient activation around it
+                currentOutputLoc = pref[nonZerosOutput[0]]
+                currentActivation_Output = add_x_loc(currentOutputLoc, pref) + 0.05  # adding noise
+                unitRingOutput = np.around(unitRingOutput + currentActivation_Output, decimals=2)
+                # Store
+                currentFinalRow = np.concatenate((Output[i][j][0:1], unitRingOutput))
+                Output[i][j][0:33] = currentFinalRow
+                # Complete y_loc matrix
+                for k in range(numFixStepsAverage, totalStepsAverage):
+                    y_loc[k][j] = pref[nonZerosOutput[0]]
 
         # Change dtype of every element in matrix to float32 for later validation functions
         for i in range(0, Output.shape[0]):
@@ -1073,7 +1050,7 @@ def preprocess_RP(opened_xlsxFile, questionnare_files, list_allSessions, sequenc
             for j in range(0, Output.shape[1]):
                 Output[i][j][1] = float(0.05)
 
-        # attention: add one unique value for every task, respectively
+        # info: add one unique value for every task, respectively
         if taskShorts == 'RP':
             lowCognitionValue = 12
         elif taskShorts == 'RP_Anti':
@@ -1084,22 +1061,11 @@ def preprocess_RP(opened_xlsxFile, questionnare_files, list_allSessions, sequenc
             lowCognitionValue = 21
         else:
             print('No task found !')
-
-        outputDict = {'Image 2': lowCognitionValue, 'Image 4': lowCognitionValue, 'Image 6': lowCognitionValue, 'Image 8': lowCognitionValue, 'Image 10': lowCognitionValue, 'Image 12': lowCognitionValue, 'Image 14': lowCognitionValue,\
-                'Image 16': lowCognitionValue, 'Image 18': lowCognitionValue, 'Image 20': lowCognitionValue, 'Image 22': lowCognitionValue, 'Image 24': lowCognitionValue, 'Image 26': lowCognitionValue, 'Image 28': lowCognitionValue, 'Image 30': lowCognitionValue, 'Image 32': lowCognitionValue, \
-                'Image 1': lowCognitionValue, 'Image 3': lowCognitionValue, 'Image 5': lowCognitionValue, 'Image 7': lowCognitionValue, 'Image 9': lowCognitionValue, 'Image 11': lowCognitionValue,'Image 13': lowCognitionValue, 'Image 15': lowCognitionValue, 'Image 17': lowCognitionValue, 'Image 19': lowCognitionValue, 'Image 21': lowCognitionValue,
-                'Image 23': lowCognitionValue, 'Image 25': lowCognitionValue, 'Image 27': lowCognitionValue, 'Image 29': lowCognitionValue, 'Image 31': lowCognitionValue}
-
+            lowCognitionValue = np.random.choice([12, 15, 18, 21], size=1)[0]  # randomly draw one to prevent code crashing
 
         for i in range(numFixStepsAverage, totalStepsAverage):
             for j in range(0, Output.shape[1]):
-
-                if Output[i][j][0] != 'screen' and Output[i][j][0] != 'noResponse' and Output[i][j][0] != 'NoResponse' and Output[i][j][0] != 'Fixation Cross'\
-                        and safe_isnan(Output[i][j][0]) == False:
-                    Output[i][j][outputDict[Output[i][j][0]]] = np.float32(0.85)
-                else:
-                    for k in range(2, 34):
-                        Output[i][j][k] = np.float32(0.05)
+                Output[i][j][lowCognitionValue] = np.float32(0.85)
 
         # Drop unnecessary columns
         Output = np.delete(Output, [0,34], axis=2)
@@ -1107,7 +1073,7 @@ def preprocess_RP(opened_xlsxFile, questionnare_files, list_allSessions, sequenc
         y_loc = np.zeros((Output.shape[0], Output.shape[1]))
 
         # Add output gradient activation
-        for i in range(0, Output.shape[0]):
+        for i in range(numFixStepsAverage, totalStepsAverage):
             for j in range(0, Output.shape[1]):
                 currentTimeStepOutput = Output[i][j][1:33]
                 # Allocate first unit ring
@@ -1118,20 +1084,16 @@ def preprocess_RP(opened_xlsxFile, questionnare_files, list_allSessions, sequenc
                 for k in range(0, numFixStepsAverage):
                     y_loc[k][j] = np.float(0.05) # info: yang et al.: -1
 
-                if len(nonZerosOutput) == 1:
-                    # Get activity and model gradient activation around it
-                    currentOutputLoc = pref[nonZerosOutput[0]]
-                    currentActivation_Output = add_x_loc(currentOutputLoc, pref) + 0.05  # adding noise
-                    unitRingOutput = np.around(unitRingOutput + currentActivation_Output, decimals=2)
-                    # Store
-                    currentFinalRow = np.concatenate((Output[i][j][0:1], unitRingOutput))
-                    Output[i][j][0:33] = currentFinalRow
-                    # Complete y_loc matrix
-                    for k in range(numFixStepsAverage, totalStepsAverage):
-                        y_loc[k][j] = pref[nonZerosOutput[0]]
-                else:
-                    for k in range(numFixStepsAverage, totalStepsAverage):
-                        y_loc[k][j] = np.float(0.05) # info: yang et al.: -1
+                # Get activity and model gradient activation around it
+                currentOutputLoc = pref[nonZerosOutput[0]]
+                currentActivation_Output = add_x_loc(currentOutputLoc, pref) + 0.05  # adding noise
+                unitRingOutput = np.around(unitRingOutput + currentActivation_Output, decimals=2)
+                # Store
+                currentFinalRow = np.concatenate((Output[i][j][0:1], unitRingOutput))
+                Output[i][j][0:33] = currentFinalRow
+                # Complete y_loc matrix
+                for k in range(numFixStepsAverage, totalStepsAverage):
+                    y_loc[k][j] = pref[nonZerosOutput[0]]
 
         # Change dtype of every element in matrix to float32 for later validation functions
         for i in range(0, Output.shape[0]):
@@ -1230,7 +1192,7 @@ def preprocess_WM(opened_xlsxFile, questionnare_files, list_allSessions, sequenc
         numRespStepsTotal = 0
         # Prepare response array for this batch
         currentConcatResponseEntries = concatResponseEntries[:, batchOn:batchOff]
-        # Calculate average fix, resp and total steps for this batch
+        # Calculate average fixa, resp and total steps for this batch
         for j in incrementList[batchOn:batchOff]:
             # Accumulate step numbers
             currentTrial = opened_xlsxFile_selection[j:j + 2].reset_index().drop(columns=['index'])
@@ -1293,10 +1255,6 @@ def preprocess_WM(opened_xlsxFile, questionnare_files, list_allSessions, sequenc
         # Create meta dict before deleting necessary information from current trials List
         date = str(finalTrialsList_array[0, 0, 87]).split(' ')[0]
         sleepingQualityQuestion, sleepingQualityValue, drugVectorQuestion, drugVectorValue = find_sleepingQuality_drugVector(opened_questionare, date)
-        # print('# DEBUGGING ###########################################################################################')
-        # print('>>>>>>>>>>>>>>>>>>>>>>>>     ', taskString, final_questionaire, date)
-        # print('>>>>>>>>>>>>>>>>>>>>>>>>     ', 'sleepingQualityValue:', sleepingQualityValue, 'drugVector:',drugVectorValue)
-        # print('# DEBUGGING ###########################################################################################')
         # Catch meta data now that you have all the necessary
         meta_dict = {'date_time': str(finalTrialsList_array[0, 0, 85]), 'difficultyLevel': finalTrialsList_array[0, 0, 0],
                      'timeLimit': finalTrialsList_array[0, 0, 1], 'sleepingQualityQuestion': sleepingQualityQuestion,
@@ -1448,7 +1406,7 @@ def preprocess_WM(opened_xlsxFile, questionnare_files, list_allSessions, sequenc
             for j in range(0, Output.shape[1]):
                 Output[i][j][2] = float(0.05)
 
-        # attention: add one unique value for every task, respectively
+        # info: add one unique value for every task, respectively
         if taskShorts == 'WM':
             lowCognitionValue = 24
         elif taskShorts == 'WM_Anti':
@@ -1459,78 +1417,39 @@ def preprocess_WM(opened_xlsxFile, questionnare_files, list_allSessions, sequenc
             lowCognitionValue = 31
         else:
             print('No task found !')
+            lowCognitionValue = np.random.choice([24, 27, 29, 31], size=1)[0]  # randomly draw one to prevent code crashing
 
-        # Assign field units to their according participant response value after fixation period
-        outputDict_WM = {'Image 1': lowCognitionValue, 'Image 2': lowCognitionValue, 'Image 3': lowCognitionValue, 'Image 4': lowCognitionValue, 'Image 5': lowCognitionValue, 'Image 6': lowCognitionValue, 'Image 7': lowCognitionValue,\
-            'Image 8': lowCognitionValue, 'Image 9': lowCognitionValue, 'Image 10': lowCognitionValue, 'Image 11': lowCognitionValue, 'Image 12': lowCognitionValue, 'Image 13': lowCognitionValue, 'Image 14': lowCognitionValue,\
-            'Image 15': lowCognitionValue, 'Image 16': lowCognitionValue, 'Image 17': lowCognitionValue, 'Image 18': lowCognitionValue, 'Image 19': lowCognitionValue, 'Image 20': lowCognitionValue, 'Image 21': lowCognitionValue,\
-            'Image 22': lowCognitionValue, 'Image 23': lowCognitionValue, 'Image 24': lowCognitionValue, 'Image 25': lowCognitionValue, 'Image 26': lowCognitionValue, 'Image 27': lowCognitionValue, 'Image 28': lowCognitionValue,\
-            'Image 29': lowCognitionValue, 'Image 30': lowCognitionValue, 'Image 31': lowCognitionValue, 'Image 32': lowCognitionValue}
-
-        outputDict_WM_Ctx = {'object-1591': lowCognitionValue, 'object-1593': lowCognitionValue, 'object-1595': lowCognitionValue, 'object-1597': lowCognitionValue, 'object-2365': lowCognitionValue, 'object-2313': lowCognitionValue, 'object-2391': lowCognitionValue, 'object-2339': lowCognitionValue,
-                             'object-1592': lowCognitionValue, 'object-1594': lowCognitionValue, 'object-1596': lowCognitionValue, 'object-1598': lowCognitionValue, 'object-2366': lowCognitionValue, 'object-2314': lowCognitionValue, 'object-2392': lowCognitionValue, 'object-2340': lowCognitionValue}
-
-        noResponse = 0
         for i in range(numFixStepsAverage, totalStepsAverage):
             for j in range(0, Output.shape[1]):
-                if isinstance(Output[i][j][35], str):
-                    # Get the right dictionary
-                    if len(opened_xlsxFile_selection['Spreadsheet'][0].split('_')) == 4 or opened_xlsxFile_selection['Spreadsheet'][0].split('_')[1] == 'Anti' or \
-                            len(opened_xlsxFile_selection['Spreadsheet'][0].split('_')) == 5 and opened_xlsxFile_selection['Spreadsheet'][0].split('_')[2] == '3stim':
-                        outputDict = outputDict_WM
-                        chosenColumn = 0
-                    else:
-                        outputDict = outputDict_WM_Ctx
-                        chosenColumn = 1
+                Output[i][j][lowCognitionValue] = np.float32(0.85)
 
-                    if Output[i][j][0] != 'screen' and Output[i][j][0] != 'noResponse' and Output[i][j][0] != 'NoResponse' and Output[i][j][0] != 'Fixation Cross'\
-                            and Output[i][j][1] != 'Fixation Cross' and Output[i][j][1] != 'Response' and safe_isnan(Output[i][j][0]) == False:
-                        Output[i][j][outputDict[Output[i][j][chosenColumn]]] = np.float32(0.85)
-                        noResponse = 0
-                    else:
-                        for k in range(3, 35):
-                            Output[i][j][k] = np.float32(0.05)
-                        noResponse = 1
-                else:
-                    for k in range(3, 35):
-                        Output[i][j][k] = np.float32(0.05)
-                    noResponse = 1
         # Drop unnecessary columns
         Output = np.delete(Output, [0,1,35], axis=2)
         # Pre-allocate y-loc matrix; needed for later validation
         y_loc = np.zeros((Output.shape[0], Output.shape[1]))
 
         # Add output gradient activation
-        if noResponse == 0:
-            for i in range(0, Output.shape[0]):
-                for j in range(0, Output.shape[1]):
-                    currentTimeStepOutput = Output[i][j][1:33]
-                    # Allocate first unit ring
-                    unitRingOutput = np.zeros(32, dtype='float32')
-                    # Get non-zero values of time steps
-                    nonZerosOutput = np.nonzero(currentTimeStepOutput)[0]
-                    # Float first fixations rows with -1
-                    for k in range(0, numFixStepsAverage):
-                        y_loc[k][j] = np.float(0.05) # info: yang et al.: -1
-
-                    if len(nonZerosOutput) == 1:
-                        # Get activity and model gradient activation around it
-                        currentOutputLoc = pref[nonZerosOutput[0]]
-                        currentActivation_Output = add_x_loc(currentOutputLoc, pref) + 0.05  # adding noise
-                        unitRingOutput = np.around(unitRingOutput + currentActivation_Output, decimals=2)
-                        # Store
-                        currentFinalRow = np.concatenate((Output[i][j][0:1], unitRingOutput))
-                        Output[i][j][0:33] = currentFinalRow
-                        # Complete y_loc matrix
-                        for k in range(numFixStepsAverage, totalStepsAverage):
-                            y_loc[k][j] = pref[nonZerosOutput[0]]
-                    else:
-                        for k in range(numFixStepsAverage, totalStepsAverage):
-                                y_loc[k][j] = np.float(0.05) # info: yang et al.: -1
-        else:
-            for k in range(numFixStepsAverage, totalStepsAverage):
-                for j in range(0, Output.shape[1]):
+        for i in range(numFixStepsAverage, totalStepsAverage):
+            for j in range(0, Output.shape[1]):
+                currentTimeStepOutput = Output[i][j][1:33]
+                # Allocate first unit ring
+                unitRingOutput = np.zeros(32, dtype='float32')
+                # Get non-zero values of time steps
+                nonZerosOutput = np.nonzero(currentTimeStepOutput)[0]
+                # Float first fixations rows with -1
+                for k in range(0, numFixStepsAverage):
                     y_loc[k][j] = np.float(0.05) # info: yang et al.: -1
+
+                # Get activity and model gradient activation around its
+                currentOutputLoc = pref[nonZerosOutput[0]]
+                currentActivation_Output = add_x_loc(currentOutputLoc, pref) + 0.05  # adding noise
+                unitRingOutput = np.around(unitRingOutput + currentActivation_Output, decimals=2)
+                # Store
+                currentFinalRow = np.concatenate((Output[i][j][0:1], unitRingOutput))
+                Output[i][j][0:33] = currentFinalRow
+                # Complete y_loc matrix
+                for k in range(numFixStepsAverage, totalStepsAverage):
+                    y_loc[k][j] = pref[nonZerosOutput[0]]
 
         # Change dtype of every element in matrix to float32 for later validation functions
         for i in range(0, Output.shape[0]):
@@ -1573,12 +1492,12 @@ def check_permissions(file_path):
 dataFolder = "Data"
 subfolders = ['DM', 'DM_Anti', 'EF', 'EF_Anti', 'RP', 'RP_Anti', 'RP_Ctx1', 'RP_Ctx2', 'WM', 'WM_Anti', 'WM_Ctx1', 'WM_Ctx2']
 preprocessing_folder = 'data_highDim_lowCognition'
-participants = ['BeRNN_01','BeRNN_02','BeRNN_03','BeRNN_04','BeRNN_05']
-months = ['10', '11', '12'] # info: debugging '13'
+participants = ['beRNN_01', 'beRNN_02', 'beRNN_03', 'BeRNN_04', 'beRNN_05']
+months = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12'] # info: debugging '13'
 
 for participant in participants:
     # attention: change to right path
-    path = 'C:\\Users\\oliver.frank\\Desktop\\BackUp'  # local
+    path = 'C:\\Users\\oliver.frank\\Desktop\\PyProjects'  # local
     # path = 'W:\\group_csp\\analyses\\oliver.frank'  # Fl storage
     # path = '/data' # hitkip cluster
     # path = '/pandora/home/oliver.frank/01_Projects/RNN/multitask_BeRNN-main' # pandora server

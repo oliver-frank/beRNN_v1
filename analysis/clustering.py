@@ -17,9 +17,9 @@ import matplotlib.pyplot as plt
 import tensorflow as tf
 
 # from Network_Analysis import rule_name
-from Network import Model
-import Tools
-from Tools import rule_name
+from network import Model
+import tools
+from tools import rule_name
 from analysis import variance
 
 # Colors used for clusters
@@ -77,7 +77,7 @@ class Analysis(object):
         # info: This decides the granularity of summarized nodes that will be taken to create the clusters, also very
         #  important in connection with the number of clusters created below, as they can never overcome this number of
         #  summarized nodes
-        ind_active = np.where(h_var_all_.sum(axis=1) > 0)[0] # attention: > 1e-3 - min > 0
+        ind_active = np.where(h_var_all_.sum(axis=1) > 1e-3)[0] # attention: > 1e-3 - min > 0
         h_var_all  = h_var_all_[ind_active, :]
 
         # Normalize by the total variance across tasks
@@ -97,8 +97,14 @@ class Analysis(object):
         # Clustering
         from sklearn.cluster import AgglomerativeClustering, KMeans
 
+        # fix: Sometimes n-samples < 30
+        if len(X) < 30:
+            range2 = len(X)
+        else:
+            range2 = 30
+
         # Choose number of clusters that maximize silhouette score
-        n_clusters = range(2, 30) # attention: 2,30
+        n_clusters = range(2, range2) # attention: 2,30
         scores = list()
         labels_list = list()
         for n_cluster in n_clusters:

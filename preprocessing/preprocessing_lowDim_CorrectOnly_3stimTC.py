@@ -1,5 +1,5 @@
 ########################################################################################################################
-# info: Preprocessing_lowDim
+# info: preprocessing_lowDim_CorrectOnly
 ########################################################################################################################
 # Preprocess the cogntive-behavioral data collected from Gorilla Experimenter into the form that can be used to train the
 # models.
@@ -9,14 +9,15 @@
 ########################################################################################################################
 import numpy as np
 import pandas as pd
-import Tools
+import tools
 import glob
 import json
 import os
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 
-# fix: Delete no response
+from collections import Counter
+import random
 
 ########################################################################################################################
 # Predefine functions
@@ -131,6 +132,7 @@ def preprocess_DM(opened_xlsxFile, questionnare_files, list_allSessions, sequenc
                 responseParticipantEntries.append(None)
                 responseGroundTruthEntries.append(None)
 
+    import numpy as np # attention: Only added dueto pycharm bug
     concatResponseEntries = np.array((responseParticipantEntries, responseGroundTruthEntries))
     numberBatches = len(incrementList) // batchLength
 
@@ -147,15 +149,8 @@ def preprocess_DM(opened_xlsxFile, questionnare_files, list_allSessions, sequenc
             # Accumulate step numbers
             currentTrial = opened_xlsxFile_selection[j:j + 2].reset_index().drop(columns=['index'])
 
-            if np.isnan(currentTrial['Onset Time'][0]):
-                numFixSteps = 35 # info: just an average empirical value
-            else:
-                numFixSteps = round(currentTrial['Onset Time'][0] / 20)
-
-            if np.isnan(currentTrial['Onset Time'][1]):
-                numRespSteps = numFixSteps  # fix: occures very rarely, through batchLength averagging not very influential
-            else:
-                numRespSteps = round(currentTrial['Onset Time'][1] / 20)
+            numFixSteps = 35 # info: set length of fixation steps constant
+            numRespSteps = numFixSteps # info: set length of response steps constant
 
             numFixStepsTotal += numFixSteps
             numRespStepsTotal += numRespSteps
@@ -196,7 +191,6 @@ def preprocess_DM(opened_xlsxFile, questionnare_files, list_allSessions, sequenc
         currentConcatResponseEntriesFinal = np.concatenate([currentConcatResponseEntries,np.array(concatedValuesAndOccurrencesList, dtype=object).T], axis=0)
         # --------------------------------------------------------------------------------------------------------------
 
-
         # fix: Create final df for INPUT and OUPUT #####################################################################
         newOrderSequenceList = []
         # Append all the time steps accordingly to a list
@@ -217,14 +211,19 @@ def preprocess_DM(opened_xlsxFile, questionnare_files, list_allSessions, sequenc
         # Create one input file and one output file
         Input, Output = finalTrialsList_array, finalTrialsList_array
         Input = np.delete(Input, [0, 1, 2, 3, 4, 5, 6, 8,85], axis=2) # fix: Delete all except for 33 (epoch: 1, mod1: 10, mode2: 10, taskV:12)
+        correctAnswer = Output[...,4]
         Output = np.delete(Output, np.s_[0, 1, 2, 4, 5, 6, 7,85], axis=2) # fix: Delete all except for 3 (epoch: 1, direction: 2)
         Output = np.delete(Output, np.s_[34:78], axis=2)
         Input, Output = Input[:, sequence_on:sequence_off, :], Output[:, sequence_on:sequence_off, :]
         responseEntries = currentConcatResponseEntriesFinal[:,sequence_on:sequence_off]
 
         # INPUT --------------------------------------------------------------------------------------------------------
-        # float all epoch unit values to 0
+        # float all fixation input values to 1
         for i in range(0, Input.shape[0]):
+            for j in range(0, Input.shape[1]):
+                Input[i][j][0] = float(1)
+        # float all epoch units to 0 during response
+        for i in range(numFixStepsAverage, totalStepsAverage):
             for j in range(0, Input.shape[1]):
                 Input[i][j][0] = float(0)
         # float all task values to 0
@@ -258,13 +257,42 @@ def preprocess_DM(opened_xlsxFile, questionnare_files, list_allSessions, sequenc
                     if Input[i][j][k] != '000_000.png' and Input[0][0][k].endswith('.png'):
                         stimList.append(Input[i][j][k])
                         positionList.append(k)
+
+                # info: Decrease amount of stimuli to 3 ################################################################
+                globalCounter = 0
+                if len(stimList) > 3:
+                    counts = Counter(stimList)
+
+                    # Create a new list with modified occurrences
+                    filtered_stimuli = []
+                    filtered_positions = []
+                    removed_counts = Counter()  # Track removed items
+
+                    for indice, stim in enumerate(stimList):
+                        if counts[stim] == 2 and removed_counts[stim] < 1:
+                            removed_counts[stim] += 1  # Remove one occurrence if appears three times
+                            globalCounter += 1
+                        elif counts[stim] == 3 and removed_counts[stim] < 1:
+                            removed_counts[stim] += 1  # Remove one occurrence if appears three times
+                            globalCounter += 1
+                        else:
+                            filtered_stimuli.append(stim)
+                            filtered_positions.append(positionList[indice])
+
+                    stimList = filtered_stimuli
+                    positionList = filtered_positions
+                # info: Decrease amount of stimuli to 3 ################################################################
+
                 stimListList.append(stimList)
                 positionListList.append(positionList)
 
-        stimNumber = int(finalTrialsList_array[0][0][0].split('stim')[0].split('_')[-1])
+        stimNumber = int(finalTrialsList_array[0][0][0].split('stim')[0].split('_')[-1]) - globalCounter
         indices2remove = []
         for i, list in enumerate(stimListList):
-            if len(list) < stimNumber or [j for j in list if '000' in j]: # remove wrong trials
+            if safe_isnan(list[0]) == False:
+                if len(list) < stimNumber or [j for j in list if '000' in j]:  # remove wrong trials
+                    indices2remove.append(i)
+            else:
                 indices2remove.append(i)
         # fix: ADD zero padding if number of trials < 5, so that you always have the same input structure, randomize the location of the stimuli on these 5 units
         # remove lists of lists with corresponding indices
@@ -289,7 +317,7 @@ def preprocess_DM(opened_xlsxFile, questionnare_files, list_allSessions, sequenc
             formListList.append(formList)
 
         # fix: Embed the lists information into the Input structure
-        # import numpy as np
+        import numpy as np
         pref = np.arange(0, 2 * np.pi, 2 * np.pi / 32)  # fix: pref[positionList[0]] = radiant/degree = polar
         for i, positionList in enumerate(positionListList_filtered):
             # print(positionList, i)
@@ -298,6 +326,7 @@ def preprocess_DM(opened_xlsxFile, questionnare_files, list_allSessions, sequenc
                 positionList[j] = pref[position-1] # prefs are defined between 0 and 31, positions between 1 and 32, therefore -1
             # Exchange list in list of lists
             positionListList_filtered[i] = positionList
+
 
         # Only take the first number of lists according to number of filtered trials in that batch len(listList)/totalStepsAverage
         numberOfTrials = len(positionListList_filtered)/totalStepsAverage
@@ -317,7 +346,7 @@ def preprocess_DM(opened_xlsxFile, questionnare_files, list_allSessions, sequenc
                 trialMod1vectors.append(np.array((np.sin(position), np.cos(position))) * colorListList_compressed[i][j])
                 trialMod2vectors.append(np.array((np.sin(position), np.cos(position))) * formListList_compressed[i][j])
             # Zero pad missing stim vectors, so that every trial, every task and every spreadsheet is encoded with the same input structure
-            for i in range(0, 5-len(trialMod1vectors)):
+            for i in range(0, 3-len(trialMod1vectors)): # info: only zeropad up to 3 ######################################################
                 trialMod1vectors.append(np.array([0,0]))
                 trialMod2vectors.append(np.array([0,0]))
 
@@ -335,11 +364,11 @@ def preprocess_DM(opened_xlsxFile, questionnare_files, list_allSessions, sequenc
 
 
         # Create the whole Input with new encoding
-        newInput = np.zeros((totalStepsAverage, int(numberOfTrials), 33))
+        newInput = np.zeros((totalStepsAverage, int(numberOfTrials), 25)) # info: change length of input layer to 3stim - 25 instead of 33 ##
 
         for i in range(0, Input.shape[0]):
             for j in range(0, int(numberOfTrials)):
-                newInput[i][j][0:33] = np.array(fullTrial_list[j])
+                newInput[i][j][0:25] = np.array(fullTrial_list[j])
 
         # fix: Set epoch information unit to 1 during fixation
         for i in range(0, numFixStepsAverage):
@@ -378,7 +407,6 @@ def preprocess_DM(opened_xlsxFile, questionnare_files, list_allSessions, sequenc
         print('Response solved: ', opened_xlsxFile_selection['Spreadsheet'][0], ' ',opened_xlsxFile_selection['TimeLimit'][0])
 
 
-
         # OUTPUT -------------------------------------------------------------------------------------------------------
         # Create the whole Input with new encoding
         newOutput = np.zeros((totalStepsAverage, int(numberOfTrials), 3))
@@ -398,16 +426,8 @@ def preprocess_DM(opened_xlsxFile, questionnare_files, list_allSessions, sequenc
             for j in range(0, int(numberOfTrials)):
                 newOutput[i][j][0] = float(0.05)
 
-        # attention: add one unique value for every task, respectively
-        if taskShorts == 'DM':
-            lowCognitionValue = 2
-        elif taskShorts == 'DM_Anti':
-            lowCognitionValue = 4
-        else:
-            print('No task found !')
-
         # Define an output dictionary for specific response values
-        outputDict = {'U': lowCognitionValue, 'R': lowCognitionValue, 'L': lowCognitionValue, 'D': lowCognitionValue} # info: Substracted in lowDim encoding by 1 to avoid indice error
+        outputDict = {'U': 31, 'R': 7, 'L': 23, 'D': 15} # info: Substracted in lowDim encoding by 1 to avoid indice error
 
         indices2remove_filtered = [i for i in indices2remove if i < 40]
         Output = np.delete(Output, indices2remove_filtered, axis=1)
@@ -415,15 +435,15 @@ def preprocess_DM(opened_xlsxFile, questionnare_files, list_allSessions, sequenc
         pref = np.arange(0, 2 * np.pi, 2 * np.pi / 32)  # fix: pref[positionList[0]] = radiant/degree = polar
         for i in range(numFixStepsAverage, totalStepsAverage):
             for j in range(0, int(numberOfTrials)):
-                if isinstance(Output[i][j][0], str) and Output[i][j][0] != 'noResponse' and Output[i][j][0] != 'NoResponse' and safe_isnan(Output[i][j][0]) == False:
+                if isinstance(correctAnswer[i][j], str) and correctAnswer[i][j] != 'noResponse' and correctAnswer[i][j] != 'NoResponse':
                     # Translate field into radiant
-                    position = pref[outputDict[Output[i][j][0]]-1]
+                    position = pref[outputDict[correctAnswer[i][j]]-1]
                     # Translate radiant into sin/cos vector indicating the target response direction for the network
                     newOutput[i][j][1] = np.sin(position)
                     newOutput[i][j][2] = np.cos(position)
                 else:
                     newOutput[i][j][1] = np.sin(0.05)  # info: yang et al.: -1
-                    newOutput[i][j][2] = np.cos(0.05)  # info: yang et al.: -1
+                    newOutput[i][j][2] = np.sin(0.05)  # info: yang et al.: -1
 
         # Change dtype of every element in matrix to float32 for later validation functions
         for i in range(0, newOutput.shape[0]):
@@ -440,15 +460,15 @@ def preprocess_DM(opened_xlsxFile, questionnare_files, list_allSessions, sequenc
 
         for k in range(0, numFixStepsAverage):
             for j in range (0, newOutput.shape[1]):
-                y_loc[k][j] = np.float(0.05) # info: yang et al.: -1
+                y_loc[k][j] = np.float(0.05)  # info: yang et al.: -1
 
         # Complete y_loc matrix
         for k in range(numFixStepsAverage, totalStepsAverage):
             for j in range(0, newOutput.shape[1]):
-                if isinstance(Output[k][j][0], str) and Output[k][j][0] != 'noResponse' and Output[k][j][0] != 'NoResponse':
-                    y_loc[k][j] = pref[outputDict[Output[k][j][0]]-1] # radiant form direction
+                if isinstance(correctAnswer[k][j], str) and correctAnswer[k][j] != 'noResponse' and correctAnswer[k][j] != 'NoResponse':
+                    y_loc[k][j] = pref[outputDict[correctAnswer[k][j]]-1] # radiant form direction
                 else:
-                    y_loc[k][j] = np.float(0.05) # info: yang et al.: -1
+                    y_loc[k][j] = np.float(0.05)  # info: yang et al.: -1
 
         # Save output data
         output_filename = participant + '-' + 'month_' + str(month) + '-' + 'batch_' + str(
@@ -539,6 +559,7 @@ def preprocess_EF(opened_xlsxFile, questionnare_files, list_allSessions, sequenc
                 responseParticipantEntries.append(None)
                 responseGroundTruthEntries.append(None)
 
+    import numpy as np  # attention: Only added dueto pycharm bug
     concatResponseEntries = np.array((responseParticipantEntries, responseGroundTruthEntries))
     numberBatches = len(incrementList) // batchLength
 
@@ -555,15 +576,8 @@ def preprocess_EF(opened_xlsxFile, questionnare_files, list_allSessions, sequenc
             # Accumulate step numbers
             currentTrial = opened_xlsxFile_selection[j:j + 2].reset_index().drop(columns=['index'])
 
-            if np.isnan(currentTrial['Onset Time'][0]):
-                numFixSteps = 35  # info: just an average empirical value
-            else:
-                numFixSteps = round(currentTrial['Onset Time'][0] / 20)
-
-            if np.isnan(currentTrial['Onset Time'][1]):
-                numRespSteps = numFixSteps  # fix: occures very rarely, through batchLength averagging not very influential
-            else:
-                numRespSteps = round(currentTrial['Onset Time'][1] / 20)
+            numFixSteps = 35  # info: set length of fixation steps constant
+            numRespSteps = numFixSteps  # info: set length of response steps constant
 
             numFixStepsTotal += numFixSteps
             numRespStepsTotal += numRespSteps
@@ -624,14 +638,19 @@ def preprocess_EF(opened_xlsxFile, questionnare_files, list_allSessions, sequenc
         # Create one input file and one output file
         Input, Output = finalTrialsList_array, finalTrialsList_array
         Input = np.delete(Input, [0, 1, 2, 3, 4, 5, 6, 8,85], axis=2)
+        correctAnswer = Output[...,4]
         Output = np.delete(Output, np.s_[0, 1, 2, 4, 5, 6, 7,85], axis=2)
         Output = np.delete(Output, np.s_[34:78], axis=2)
         Input, Output = Input[:, sequence_on:sequence_off, :], Output[:, sequence_on:sequence_off, :]
         responseEntries = currentConcatResponseEntriesFinal[:, sequence_on:sequence_off]
 
         # INPUT --------------------------------------------------------------------------------------------------------
-        # float all epoch unit values to 0
+        # float all fixation input values to 1
         for i in range(0, Input.shape[0]):
+            for j in range(0, Input.shape[1]):
+                Input[i][j][0] = float(1)
+        # float all epoch units to 0 during response
+        for i in range(numFixStepsAverage, totalStepsAverage):
             for j in range(0, Input.shape[1]):
                 Input[i][j][0] = float(0)
         # float all task values to 0
@@ -663,19 +682,48 @@ def preprocess_EF(opened_xlsxFile, questionnare_files, list_allSessions, sequenc
             for j in range(0, Input.shape[1]):
                 stimList = []
                 positionList = []
-                for k in range(1, 33):  # Positions for one ring are enough as they are similar on both
+                for k in range(1, 33):  # Positions for one ring are enough as they are both the same
                     if Input[i][j][k] != '000_000.png' and Input[0][0][k].endswith('.png'):
                         stimList.append(Input[i][j][k])
                         positionList.append(k)
+
+                # info: Decrease amount of stimuli to 3 ################################################################
+                globalCounter = 0
+                if len(stimList) > 3:
+                    counts = Counter(stimList)
+
+                    # Create a new list with modified occurrences
+                    filtered_stimuli = []
+                    filtered_positions = []
+                    removed_counts = Counter()  # Track removed items
+
+                    for indice, stim in enumerate(stimList):
+                        if counts[stim] == 4 and removed_counts[stim] < 2:
+                            removed_counts[stim] += 1  # Remove one occurrence if appears three times
+                            globalCounter += 1
+                        elif counts[stim] == 5 and removed_counts[stim] < 2:
+                            removed_counts[stim] += 1  # Remove one occurrence if appears three times
+                            globalCounter += 1
+                        else:
+                            filtered_stimuli.append(stim)
+                            filtered_positions.append(positionList[indice])
+
+                    stimList = filtered_stimuli
+                    positionList = filtered_positions
+                # info: Decrease amount of stimuli to 3 ################################################################
+
                 stimListList.append(stimList)
                 positionListList.append(positionList)
 
-        stimNumber = 5 # info: always 5
+        stimNumber = 3 # info: always 3
         indices2remove = []
         for i, list in enumerate(stimListList):
-            if len(list) < stimNumber or [j for j in list if '000' in j]:  # remove wrong trials
+            if safe_isnan(list[0]) == False:
+                if len(list) < stimNumber or [j for j in list if '000' in j]:  # remove wrong trials
+                    indices2remove.append(i)
+            else:
                 indices2remove.append(i)
-        # fix: ADD zero padding if number of trials < 5, so that you always have the same input structure, randomize the location of the stimuli on these 5 units
+
         # remove lists of lists with corresponding indices
         stimListList_filtered = [sublist for i, sublist in enumerate(stimListList) if i not in indices2remove]
         positionListList_filtered = [sublist for i, sublist in enumerate(positionListList) if i not in indices2remove]
@@ -700,6 +748,7 @@ def preprocess_EF(opened_xlsxFile, questionnare_files, list_allSessions, sequenc
             formListList.append(formList)
 
         # fix: Embed the lists information into the Input structure
+        import numpy as np
         pref = np.arange(0, 2 * np.pi, 2 * np.pi / 32)  # fix: pref[positionList[0]] = radiant/degree = polar
         for i, positionList in enumerate(positionListList_filtered):
             # print(positionList, i)
@@ -725,7 +774,7 @@ def preprocess_EF(opened_xlsxFile, questionnare_files, list_allSessions, sequenc
                 trialMod1vectors.append(np.array((np.sin(position), np.cos(position))) * colorListList_compressed[i][j])
                 trialMod2vectors.append(np.array((np.sin(position), np.cos(position))) * formListList_compressed[i][j])
             # Zero pad missing stim vectors, so that every trial, every task and every spreadsheet is encoded with the same input structure
-            for i in range(0, 5 - len(trialMod1vectors)):
+            for i in range(0, 3 - len(trialMod1vectors)): # info: only zeropad up to 3 ####################################################
                 trialMod1vectors.append(np.array([0, 0]))
                 trialMod2vectors.append(np.array([0, 0]))
 
@@ -737,17 +786,16 @@ def preprocess_EF(opened_xlsxFile, questionnare_files, list_allSessions, sequenc
 
             trialMod1vectors_concat = [array for vector in trialMod1vectors_randomized for array in vector]
             trialMod2vectors_concat = [array for vector in trialMod2vectors_randomized for array in vector]
-            fullTrial = [1] + trialMod1vectors_concat + trialMod2vectors_concat + Input[0][0][
-                                                                                  65:77].tolist()  # add epoch, two mod lists and task vector together
+            fullTrial = [1] + trialMod1vectors_concat + trialMod2vectors_concat + Input[0][0][65:77].tolist()  # add epoch, two mod lists and task vector together
 
             fullTrial_list.append(fullTrial)  # Add task vector before appending
 
         # Create the whole Input with new encoding
-        newInput = np.zeros((totalStepsAverage, int(numberOfTrials), 33))
+        newInput = np.zeros((totalStepsAverage, int(numberOfTrials), 25)) # info: change length of input layer to 3stim - 25 instead of 33 ##
 
         for i in range(0, Input.shape[0]):
             for j in range(0, int(numberOfTrials)):
-                newInput[i][j][0:33] = np.array(fullTrial_list[j])
+                newInput[i][j][0:25] = np.array(fullTrial_list[j])
 
         # fix: Set epoch information unit to 1 during fixation
         for i in range(0, numFixStepsAverage):
@@ -811,33 +859,25 @@ def preprocess_EF(opened_xlsxFile, questionnare_files, list_allSessions, sequenc
             for j in range(0, int(numberOfTrials)):
                 newOutput[i][j][0] = float(0.05)
 
-        # attention: add one unique value for every task, respectively
-        if taskShorts == 'EF':
-            lowCognitionValue = 6
-        elif taskShorts == 'EF_Anti':
-            lowCognitionValue = 9
-        else:
-            print('No task found !')
-
         # Define an output dictionary for specific response values
-        outputDict = {'U': lowCognitionValue, 'R': lowCognitionValue, 'L': lowCognitionValue, 'D': lowCognitionValue}  # info: Substracted in lowDim encoding by 1 to avoid indice error
+        outputDict = {'U': 31, 'R': 7, 'L': 23,
+                      'D': 15}  # info: Substracted in lowDim encoding by 1 to avoid indice error
 
-        indices2remove_filtered = [i for i in indices2remove if i < 40]
-        Output = np.delete(Output, indices2remove_filtered, axis=1)
+        # indices2remove_filtered = [i for i in indices2remove if i < 40]
+        # # Output = np.delete(Output, indices2remove_filtered, axis=1)
 
         pref = np.arange(0, 2 * np.pi, 2 * np.pi / 32)  # fix: pref[positionList[0]] = radiant/degree = polar
         for i in range(numFixStepsAverage, totalStepsAverage):
             for j in range(0, int(numberOfTrials)):
-                if isinstance(Output[i][j][0], str) and Output[i][j][0] != 'noResponse' and Output[i][j][
-                    0] != 'NoResponse':
+                if isinstance(correctAnswer[i][j], str) and correctAnswer[i][j] != 'noResponse' and correctAnswer[i][j] != 'NoResponse':
                     # Translate field into radiant
-                    position = pref[outputDict[Output[i][j][0]]-1]
+                    position = pref[outputDict[correctAnswer[i][j]]-1]
                     # Translate radiant into sin/cos vector indicating the target response direction for the network
                     newOutput[i][j][1] = np.sin(position)
                     newOutput[i][j][2] = np.cos(position)
                 else:
                     newOutput[i][j][1] = np.sin(0.05)  # info: yang et al.: -1
-                    newOutput[i][j][2] = np.cos(0.05)  # info: yang et al.: -1
+                    newOutput[i][j][2] = np.sin(0.05)  # info: yang et al.: -1
 
         # Change dtype of every element in matrix to float32 for later validation functions
         for i in range(0, newOutput.shape[0]):
@@ -853,16 +893,15 @@ def preprocess_EF(opened_xlsxFile, questionnare_files, list_allSessions, sequenc
 
         for k in range(0, numFixStepsAverage):
             for j in range(0, newOutput.shape[1]):
-                y_loc[k][j] = np.float(0.05) # info: yang et al.: -1
+                y_loc[k][j] = np.float(0.05)  # info: yang et al.: -1
 
         # Complete y_loc matrix
         for k in range(numFixStepsAverage, totalStepsAverage):
             for j in range(0, newOutput.shape[1]):
-                if isinstance(Output[k][j][0], str) and Output[k][j][0] != 'noResponse' and Output[k][j][
-                    0] != 'NoResponse' and safe_isnan(Output[i][j][0]) == False:
-                    y_loc[k][j] = pref[outputDict[Output[k][j][0]]-1]  # radiant form direction
+                if isinstance(correctAnswer[k][j], str) and correctAnswer[k][j] != 'noResponse' and correctAnswer[k][j] != 'NoResponse':
+                    y_loc[k][j] = pref[outputDict[correctAnswer[k][j]]-1]  # radiant form direction
                 else:
-                    y_loc[k][j] = np.float(0.05) # info: yang et al.: -1
+                    y_loc[k][j] = np.float(0.05)  # info: yang et al.: -1
 
         # Save output data
         output_filename = participant + '-' + 'month_' + str(month) + '-' + 'batch_' + str(
@@ -963,15 +1002,8 @@ def preprocess_RP(opened_xlsxFile, questionnare_files, list_allSessions, sequenc
             # Accumulate step numbers
             currentTrial = opened_xlsxFile_selection[j:j + 2].reset_index().drop(columns=['index'])
 
-            if np.isnan(currentTrial['Onset Time'][0]):
-                numFixSteps = 35 # info: just an average empirical value
-            else:
-                numFixSteps = round(currentTrial['Onset Time'][0] / 20)
-
-            if np.isnan(currentTrial['Onset Time'][1]):
-                numRespSteps = numFixSteps  # fix: occures very rarely, through batchLength averagging not very influential
-            else:
-                numRespSteps = round(currentTrial['Onset Time'][1] / 20)
+            numFixSteps = 35  # info: set length of fixation steps constant
+            numRespSteps = numFixSteps  # info: set length of response steps constant
 
             numFixStepsTotal += numFixSteps
             numRespStepsTotal += numRespSteps
@@ -1029,14 +1061,19 @@ def preprocess_RP(opened_xlsxFile, questionnare_files, list_allSessions, sequenc
         # Create one input file and one output file
         Input, Output = finalTrialsList_array, finalTrialsList_array
         Input = np.delete(Input, [0, 1, 2, 3, 4, 5, 6, 8, 85,86,87], axis=2) # info: 77 statt 85 ????
+        correctAnswer = Output[..., 4]
         Output = np.delete(Output, np.s_[0, 1, 2, 4, 5, 6, 7,86,87], axis=2)
         Output = np.delete(Output, np.s_[34:78], axis=2)
         Input, Output = Input[:, sequence_on:sequence_off, :], Output[:, sequence_on:sequence_off, :]
         responseEntries = currentConcatResponseEntriesFinal[:, sequence_on:sequence_off]
 
         # INPUT --------------------------------------------------------------------------------------------------------
-        # float all epoch unit values to 0
+        # float all fixation input values to 1
         for i in range(0, Input.shape[0]):
+            for j in range(0, Input.shape[1]):
+                Input[i][j][0] = float(1)
+        # float all epoch units to 0 during response
+        for i in range(numFixStepsAverage, totalStepsAverage):
             for j in range(0, Input.shape[1]):
                 Input[i][j][0] = float(0)
         # float all task values to 0
@@ -1064,22 +1101,134 @@ def preprocess_RP(opened_xlsxFile, questionnare_files, list_allSessions, sequenc
         # fix: Get all fields with not 000_000.png
         stimListList = []  # Will be taken for color and form
         positionListList = []  # Will be taken for angle
+        correctPositionListList = []
         for i in range(0, Input.shape[0]):
             for j in range(0, Input.shape[1]):
                 stimList = []
                 positionList = []
                 for k in range(1, 33):  # Positions for one ring are enough as they are similar on both
-                    if Input[i][j][k] != '000_000.png' and Input[0][0][k].endswith('.png') and safe_isnan(Input[i][j][k]) == False:
+                    if Input[i][j][k] != '000_000.png' and Input[0][0][k].endswith('.png'):
                         stimList.append(Input[i][j][k])
                         positionList.append(k)
+                    if Input[i][j][k] == correctAnswer[i][j]:
+                        correctPositionList = [k] # if a stim corresponds to the objective correct answer, save the position defined by k
+                    if correctAnswer[i][j] == 'noResponse':
+                        correctPositionList = [0.05]
+
+                # info: Decrease amount of stimuli to 3 ################################################################
+                # colors = ['red', 'rust', 'orange', 'amber', 'yellow', 'lime','green', 'moss','blue','violet','magenta','purple']
+                forms = ['triangle','pentagon','heptagon','nonagon','circle']
+
+                globalCounter = 0
+                if len(stimList) > 3:
+                    # Create a new list with modified occurrences
+                    filtered_stimuli = []
+                    filtered_positions = []
+                    task = finalSequenceList[0][0][0]['Spreadsheet']
+
+                    if 'RP_Anti' in task:
+                        counts = Counter(stimList)
+                        # Add stim with fewest occurence
+                        lowest_stim, lowest_count = min(counts.items(), key=lambda x: x[1])
+                        filtered_stimuli.append(lowest_stim)
+                        if correctPositionList[0] != positionList[0]:
+                            filtered_positions.append(positionList[0])
+                        else:
+                            filtered_positions.append(positionList[1])
+                        if correctPositionList[0] != positionList[2]:
+                            filtered_positions.append(positionList[2])
+                        else:
+                            filtered_positions.append(positionList[1])
+                        # Add correctAnswer twice
+                        filtered_stimuli.append(correctAnswer[0][j])
+                        filtered_stimuli.append(correctAnswer[0][j])
+                        filtered_positions.append(correctPositionList[0])
+                        # Add positions for stim with fewest occurence
+
+                    elif 'RP_Ctx1' in task:
+                        form_counts = Counter()
+                        for stim in stimList:
+                            for form in forms:
+                                if form in stim:
+                                    form_counts[form] += 1  # Increment count if color is found
+                        # Add two of the most common stim as incorrect stim
+                        highest_stim, highest_count = max(form_counts.items(), key=lambda x: x[1])
+                        incorrectStim = random.choice([stim for stim in stimList if highest_stim in stim])
+                        filtered_stimuli.append(incorrectStim)
+                        filtered_stimuli.append(incorrectStim)
+                        filtered_stimuli.append(correctAnswer[0][j])
+                        # Add positions for most common stim
+                        if correctPositionList[0] != positionList[0]:
+                            filtered_positions.append(positionList[0])
+                        else:
+                            filtered_positions.append(positionList[1])
+                        if correctPositionList[0] != positionList[2]:
+                            filtered_positions.append(positionList[2])
+                        else:
+                            filtered_positions.append(positionList[1])
+                        # Add postion of correctAnswer
+                        filtered_positions.append(correctPositionList[0])
+
+                    elif 'RP_Ctx2' in task:
+                        form_counts = Counter()
+                        for stim in stimList:
+                            for form in forms:
+                                if form in stim:
+                                    form_counts[form] += 1  # Increment count if color is found
+                        # Add one of the lowest common stim as incorrect stim
+                        highest_stim, highest_count = max(form_counts.items(), key=lambda x: x[1])
+                        incorrectStim = random.choice([stim for stim in stimList if highest_stim in stim])
+                        filtered_stimuli.append(incorrectStim)
+                        filtered_stimuli.append(correctAnswer[0][j])
+                        filtered_stimuli.append(correctAnswer[0][j])
+                        # Add positions for most common stim
+                        if correctPositionList[0] != positionList[0]:
+                            filtered_positions.append(positionList[0])
+                        else:
+                            filtered_positions.append(positionList[1])
+                        if correctPositionList[0] != positionList[2]:
+                            filtered_positions.append(positionList[2])
+                        else:
+                            filtered_positions.append(positionList[1])
+                        # Add postion of correctAnswer
+                        filtered_positions.append(correctPositionList[0])
+
+                    else: # RP
+                        counts = Counter(stimList)
+                        # Add most common stim
+                        highest_stim, highest_count = max(counts.items(), key=lambda x: x[1])
+                        filtered_stimuli.append(highest_stim)
+                        filtered_stimuli.append(highest_stim)
+                        # Add positions for most common stim
+                        if correctPositionList[0] != positionList[0]:
+                            filtered_positions.append(positionList[0])
+                        else:
+                            filtered_positions.append(positionList[1])
+                        if correctPositionList[0] != positionList[2]:
+                            filtered_positions.append(positionList[2])
+                        else:
+                            filtered_positions.append(positionList[1])
+                        # Add correctAnswer
+                        filtered_stimuli.append(correctAnswer[0][j])
+                        filtered_positions.append(correctPositionList[0])
+
+                    stimList = filtered_stimuli
+                    positionList = filtered_positions
+                # info: Decrease amount of stimuli to 3 ################################################################
+
                 stimListList.append(stimList)
                 positionListList.append(positionList)
+                correctPositionListList.append(correctPositionList)
 
-        stimNumber = int(finalTrialsList_array[0][0][0].split('stim')[0].split('_')[-1])
+        stimNumber = int(finalTrialsList_array[0][0][0].split('stim')[0].split('_')[-1]) - globalCounter
         indices2remove = []
         for i, list in enumerate(stimListList):
-            if len(list) < stimNumber or [j for j in list if '000' in j]:  # remove wrong trials
+            if safe_isnan(list[0]) == False:
+                if len(list) < stimNumber or [j for j in list if '000' in j]:  # remove wrong trials
+                    indices2remove.append(i)
+            else:
                 indices2remove.append(i)
+
         # fix: ADD zero padding if number of trials < 5, so that you always have the same input structure, randomize the location of the stimuli on these 5 units
         # remove lists of lists with corresponding indices
         stimListList_filtered = [sublist for i, sublist in enumerate(stimListList) if i not in indices2remove]
@@ -1134,7 +1283,7 @@ def preprocess_RP(opened_xlsxFile, questionnare_files, list_allSessions, sequenc
                 trialMod1vectors.append(np.array((np.sin(position), np.cos(position))) * colorListList_compressed[i][j])
                 trialMod2vectors.append(np.array((np.sin(position), np.cos(position))) * formListList_compressed[i][j])
             # Zero pad missing stim vectors, so that every trial, every task and every spreadsheet is encoded with the same input structure
-            for i in range(0, 5 - len(trialMod1vectors)):
+            for i in range(0, 3 - len(trialMod1vectors)): # info: only zeropad up to 3 ####################################################
                 trialMod1vectors.append(np.array([0, 0]))
                 trialMod2vectors.append(np.array([0, 0]))
 
@@ -1146,13 +1295,12 @@ def preprocess_RP(opened_xlsxFile, questionnare_files, list_allSessions, sequenc
 
             trialMod1vectors_concat = [array for vector in trialMod1vectors_randomized for array in vector]
             trialMod2vectors_concat = [array for vector in trialMod2vectors_randomized for array in vector]
-            fullTrial = [1] + trialMod1vectors_concat + trialMod2vectors_concat + Input[0][0][
-                                                                                  65:77].tolist()  # add epoch, two mod lists and task vector together
+            fullTrial = [1] + trialMod1vectors_concat + trialMod2vectors_concat + Input[0][0][65:77].tolist()  # add epoch, two mod lists and task vector together
 
             fullTrial_list.append(fullTrial)  # Add task vector before appending
 
         # Create the whole Input with new encoding
-        newInput = np.zeros((totalStepsAverage, int(numberOfTrials), 33))
+        newInput = np.zeros((totalStepsAverage, int(numberOfTrials), 25)) # info: change length of input layer to 3stim - 25 instead of 33 ##
 
         for i in range(0, Input.shape[0]):
             for j in range(0, int(numberOfTrials)):
@@ -1209,7 +1357,6 @@ def preprocess_RP(opened_xlsxFile, questionnare_files, list_allSessions, sequenc
             for j in range(0, int(numberOfTrials)):
                 for k in range(1, 3):
                     newOutput[i][j][k] = float(0.05)
-
         # float all epoch unit values to .8 during fixation
         for i in range(0, numFixStepsAverage):
             for j in range(0, int(numberOfTrials)):
@@ -1219,33 +1366,10 @@ def preprocess_RP(opened_xlsxFile, questionnare_files, list_allSessions, sequenc
             for j in range(0, int(numberOfTrials)):
                 newOutput[i][j][0] = float(0.05)
 
-        # attention: add one unique value for every task, respectively
-        if taskShorts == 'RP':
-            lowCognitionValue = 12
-        elif taskShorts == 'RP_Anti':
-            lowCognitionValue = 15
-        elif taskShorts == 'RP_Ctx1':
-            lowCognitionValue = 18
-        elif taskShorts == 'RP_Ctx2':
-            lowCognitionValue = 21
-        else:
-            print('No task found !')
-
-        outputDict = {'Image 2': lowCognitionValue, 'Image 4': lowCognitionValue, 'Image 6': lowCognitionValue,
-                      'Image 8': lowCognitionValue, 'Image 10': lowCognitionValue,
-                      'Image 12': lowCognitionValue, 'Image 14': lowCognitionValue, \
-                      'Image 16': lowCognitionValue, 'Image 18': lowCognitionValue,
-                      'Image 20': lowCognitionValue, 'Image 22': lowCognitionValue,
-                      'Image 24': lowCognitionValue, 'Image 26': lowCognitionValue, 'Image 28': lowCognitionValue,
-                      'Image 30': lowCognitionValue, 'Image 32': lowCognitionValue, \
-                      'Image 1': lowCognitionValue, 'Image 3': lowCognitionValue, 'Image 5': lowCognitionValue,
-                      'Image 7': lowCognitionValue, 'Image 9': lowCognitionValue, 'Image 11': lowCognitionValue,
-                      'Image 13': lowCognitionValue, 'Image 15': lowCognitionValue,
-                      'Image 17': lowCognitionValue, 'Image 19': lowCognitionValue,
-                      'Image 21': lowCognitionValue,
-                      'Image 23': lowCognitionValue, 'Image 25': lowCognitionValue,
-                      'Image 27': lowCognitionValue, 'Image 29': lowCognitionValue,
-                      'Image 31': lowCognitionValue}
+        # outputDict = {'Image 2': 2, 'Image 4': 4, 'Image 6': 6, 'Image 8': 8, 'Image 10': 10, 'Image 12': 12, 'Image 14': 14,\
+        #         'Image 16': 16, 'Image 18': 18, 'Image 20': 20, 'Image 22': 22, 'Image 24': 24, 'Image 26': 26, 'Image 28': 28, 'Image 30': 30, 'Image 32': 32, \
+        #         'Image 1': 1, 'Image 3': 3, 'Image 5': 5, 'Image 7': 7, 'Image 9': 9, 'Image 11': 11,'Image 13': 13, 'Image 15': 15, 'Image 17': 17, 'Image 19': 19, 'Image 21': 21,
+        #         'Image 23': 23, 'Image 25': 25, 'Image 27': 27, 'Image 29': 29, 'Image 31': 31}
 
         indices2remove_filtered = [i for i in indices2remove if i < 40]
         Output = np.delete(Output, indices2remove_filtered, axis=1)
@@ -1253,16 +1377,19 @@ def preprocess_RP(opened_xlsxFile, questionnare_files, list_allSessions, sequenc
         pref = np.arange(0, 2 * np.pi, 2 * np.pi / 32)  # fix: pref[positionList[0]] = radiant/degree = polar
         for i in range(numFixStepsAverage, totalStepsAverage):
             for j in range(0, int(numberOfTrials)):
-                if isinstance(Output[i][j][0], str) and Output[i][j][0] != 'screen' and Output[i][j][0] != 'noResponse' and \
-                        Output[i][j][0] != 'NoResponse' and Output[i][j][0] != 'Fixation Cross' and safe_isnan(Output[i][j][0]) == False:
+                if isinstance(correctAnswer[i][j], str) and correctAnswer[i][j] != 'screen' and correctAnswer[i][j] != 'noResponse' and \
+                        correctAnswer[i][j] != 'NoResponse' and correctAnswer[i][j] != 'Fixation Cross':
                     # Translate field into radiant
-                    position = pref[outputDict[Output[i][j][0]]-1]
+                    if correctPositionListList[j][0] == 0.05:
+                        position = 0.05
+                    else:
+                        position = pref[correctPositionListList[j][0]-1]
                     # Translate radiant into sin/cos vector indicating the target response direction for the network
                     newOutput[i][j][1] = np.sin(position)
                     newOutput[i][j][2] = np.cos(position)
                 else:
                     newOutput[i][j][1] = np.sin(0.05)  # info: yang et al.: -1
-                    newOutput[i][j][2] = np.cos(0.05)  # info: yang et al.: -1
+                    newOutput[i][j][2] = np.sin(0.05)  # info: yang et al.: -1
 
         # Change dtype of every element in matrix to float32 for later validation functions
         for i in range(0, newOutput.shape[0]):
@@ -1277,16 +1404,16 @@ def preprocess_RP(opened_xlsxFile, questionnare_files, list_allSessions, sequenc
 
         for k in range(0, numFixStepsAverage):
             for j in range(0, newOutput.shape[1]):
-                y_loc[k][j] = np.float(0.05) # info: yang et al.: -1
+                y_loc[k][j] = np.float(0.05)  # info: yang et al.: -1
 
         # Complete y_loc matrix
         for k in range(numFixStepsAverage, totalStepsAverage):
             for j in range(0, newOutput.shape[1]):
-                if isinstance(Output[k][j][0], str) and Output[k][j][0] != 'screen' and Output[k][j][0] != 'noResponse' and \
-                        Output[k][j][0] != 'NoResponse' and Output[k][j][0] != 'Fixation Cross':
-                    y_loc[k][j] = pref[outputDict[Output[k][j][0]]-1]  # radiant form direction
+                if isinstance(correctAnswer[k][j], str) and correctAnswer[k][j] != 'screen' and correctAnswer[k][j] != 'noResponse' and \
+                        correctAnswer[k][j] != 'NoResponse' and correctAnswer[k][j] != 'Fixation Cross':
+                    y_loc[k][j] = pref[correctPositionListList[j][0]-1]  # radiant form direction
                 else:
-                    y_loc[k][j] = np.float(0.05) # info: yang et al.: -1
+                    y_loc[k][j] = np.float(0.05)  # info: yang et al.: -1
 
         # Save output data
         output_filename = participant + '-' + 'month_' + str(month) + '-' + 'batch_' + str(
@@ -1387,15 +1514,8 @@ def preprocess_WM(opened_xlsxFile, questionnare_files, list_allSessions, sequenc
             # Accumulate step numbers
             currentTrial = opened_xlsxFile_selection[j:j + 2].reset_index().drop(columns=['index'])
 
-            if np.isnan(currentTrial['Onset Time'][0]):
-                numFixSteps = 35 # info: just an average empirical value
-            else:
-                numFixSteps = round(currentTrial['Onset Time'][0] / 20)
-
-            if np.isnan(currentTrial['Onset Time'][1]):
-                numRespSteps = numFixSteps  # fix: occures very rarely, through batchLength averagging not very influential
-            else:
-                numRespSteps = round(currentTrial['Onset Time'][1] / 20)
+            numFixSteps = 35  # info: set length of fixation steps constant
+            numRespSteps = numFixSteps  # info: set length of response steps constant
 
             numFixStepsTotal += numFixSteps
             numRespStepsTotal += numRespSteps
@@ -1461,14 +1581,19 @@ def preprocess_WM(opened_xlsxFile, questionnare_files, list_allSessions, sequenc
         # Create one input file and one output file
         Input, Output = finalTrialsList_array, finalTrialsList_array
         Input = np.delete(Input, [0,1,2,3,4,5,6,7,8,86,87,88], axis=2)
+        correctAnswer = Output[...,5]
         Output = np.delete(Output, np.s_[0,1,2,5,6,7,8,87,88], axis=2)
         Output = np.delete(Output, np.s_[34:78], axis=2)
         Input, Output = Input[:, sequence_on:sequence_off, :], Output[:, sequence_on:sequence_off, :]
         responseEntries = currentConcatResponseEntriesFinal[:, sequence_on:sequence_off]
 
         # INPUT ############################################################################################################
-        # float all epoch unit values to 0
+        # float all fixation input values to 1
         for i in range(0, Input.shape[0]):
+            for j in range(0, Input.shape[1]):
+                Input[i][j][0] = float(1)
+        # float all epoch units to 0 during response
+        for i in range(numFixStepsAverage, totalStepsAverage):
             for j in range(0, Input.shape[1]):
                 Input[i][j][0] = float(0)
         # float all task values to 0
@@ -1480,6 +1605,8 @@ def preprocess_WM(opened_xlsxFile, questionnare_files, list_allSessions, sequenc
         # Define a task dictionary for specific task-related columns
         taskDict = {'DM': 65, 'DM Anti': 66, 'EF': 67, 'EF Anti': 68, 'RP': 69, 'RP Anti': 70, 'RP Ctx1': 71,
                     'RP Ctx2': 72, 'WM': 73, 'WM Anti': 74, 'WM Ctx1': 75, 'WM Ctx2': 76}
+
+        outputDict_WM_Ctx = {'Match': 8, 'Mismatch': 24, 'noResponse': -1}
 
         # float all task values to 1
         for i in range(0, Input.shape[0]):
@@ -1495,23 +1622,36 @@ def preprocess_WM(opened_xlsxFile, questionnare_files, list_allSessions, sequenc
         # fix: Get all fields with not 000_000.png
         stimListList = []  # Will be taken for color and form
         positionListList = []  # Will be taken for angle
+        correctPositionListList = []
         for i in range(0, Input.shape[0]):
             for j in range(0, Input.shape[1]):
                 stimList = []
                 positionList = []
+                correctPositionList = []
                 for k in range(1, 33):  # Positions for one ring are enough as they are similar on both
-                    if Input[i][j][k] != '000_000.png' and Input[0][0][k].endswith('.png') and safe_isnan(Input[i][j][k]) == False:
+                    if Input[i][j][k] != '000_000.png' and Input[0][0][k].endswith('.png'):
                         stimList.append(Input[i][j][k])
                         positionList.append(k)
+                    if Input[i][j][k] == correctAnswer[i][j]:
+                        correctPositionList = [k] # if a stim corresponds to the objective correct answer, save the position defined by k
+                    if 'Ctx' in opened_xlsxFile_selection['Spreadsheet'][1]:
+                        correctPositionList = [outputDict_WM_Ctx[correctAnswer[i][j]]]
+
                 stimListList.append(stimList)
                 positionListList.append(positionList)
+                if len(correctPositionList) == 0: # e.g. noResponse for WM and WM_Anti tasks
+                    correctPositionList = [0.05]
+                correctPositionListList.append(correctPositionList)
 
         if '3stim' in finalTrialsList_array[0][0][0]: stimNumber = 3
         else: stimNumber = 2
 
         indices2remove = []
         for i, list in enumerate(stimListList):
-            if len(list) < stimNumber or [j for j in list if '000' in j]:  # remove wrong trials
+            if safe_isnan(list[0]) == False:
+                if len(list) < stimNumber or [j for j in list if '000' in j]:  # remove wrong trials
+                    indices2remove.append(i)
+            else:
                 indices2remove.append(i)
         # fix: ADD zero padding if number of trials < 5, so that you always have the same input structure, randomize the location of the stimuli on these 5 units
         # remove lists of lists with corresponding indices
@@ -1569,7 +1709,7 @@ def preprocess_WM(opened_xlsxFile, questionnare_files, list_allSessions, sequenc
                 trialMod2vectors.append(
                     np.array((np.sin(position), np.cos(position))) * formListList_compressed[i][j])
             # Zero pad missing stim vectors, so that every trial, every task and every spreadsheet is encoded with the same input structure
-            for i in range(0, 5 - len(trialMod1vectors)):
+            for i in range(0, 3 - len(trialMod1vectors)): # info: only zeropad up to 3 ######################################################
                 trialMod1vectors.append(np.array([0, 0]))
                 trialMod2vectors.append(np.array([0, 0]))
 
@@ -1585,7 +1725,7 @@ def preprocess_WM(opened_xlsxFile, questionnare_files, list_allSessions, sequenc
             fullTrial_list.append(fullTrial)  # Add task vector before appending
 
         # Create the whole Input with new encoding
-        newInput = np.zeros((totalStepsAverage, int(numberOfTrials), 33))
+        newInput = np.zeros((totalStepsAverage, int(numberOfTrials), 25)) # info: change length of input layer to 3stim - 25 instead of 33 ##
 
         for i in range(0, Input.shape[0]):
             for j in range(0, int(numberOfTrials)):
@@ -1653,77 +1793,46 @@ def preprocess_WM(opened_xlsxFile, questionnare_files, list_allSessions, sequenc
             for j in range(0, int(numberOfTrials)):
                 newOutput[i][j][0] = float(0.05)
 
-        # attention: add one unique value for every task, respectively
-        if taskShorts == 'WM':
-            lowCognitionValue = 24
-        elif taskShorts == 'WM_Anti':
-            lowCognitionValue = 27
-        elif taskShorts == 'WM_Ctx1':
-            lowCognitionValue = 29
-        elif taskShorts == 'WM_Ctx2':
-            lowCognitionValue = 31
-        else:
-            print('No task found !')
-
-        # Assign field units to their according participant response value after fixation period
-        outputDict_WM = {'Image 1': lowCognitionValue, 'Image 2': lowCognitionValue, 'Image 3': lowCognitionValue,
-                         'Image 4': lowCognitionValue, 'Image 5': lowCognitionValue, 'Image 6': lowCognitionValue,
-                         'Image 7': lowCognitionValue, \
-                         'Image 8': lowCognitionValue, 'Image 9': lowCognitionValue, 'Image 10': lowCognitionValue,
-                         'Image 11': lowCognitionValue, 'Image 12': lowCognitionValue,
-                         'Image 13': lowCognitionValue, 'Image 14': lowCognitionValue, \
-                         'Image 15': lowCognitionValue, 'Image 16': lowCognitionValue,
-                         'Image 17': lowCognitionValue, 'Image 18': lowCognitionValue,
-                         'Image 19': lowCognitionValue, 'Image 20': lowCognitionValue,
-                         'Image 21': lowCognitionValue, \
-                         'Image 22': lowCognitionValue, 'Image 23': lowCognitionValue,
-                         'Image 24': lowCognitionValue, 'Image 25': lowCognitionValue,
-                         'Image 26': lowCognitionValue, 'Image 27': lowCognitionValue,
-                         'Image 28': lowCognitionValue, \
-                         'Image 29': lowCognitionValue, 'Image 30': lowCognitionValue,
-                         'Image 31': lowCognitionValue, 'Image 32': lowCognitionValue}
-
-        outputDict_WM_Ctx = {'object-1591': lowCognitionValue, 'object-1593': lowCognitionValue,
-                             'object-1595': lowCognitionValue, 'object-1597': lowCognitionValue,
-                             'object-2365': lowCognitionValue, 'object-2313': lowCognitionValue,
-                             'object-2391': lowCognitionValue, 'object-2339': lowCognitionValue,
-                             'object-1592': lowCognitionValue, 'object-1594': lowCognitionValue,
-                             'object-1596': lowCognitionValue, 'object-1598': lowCognitionValue,
-                             'object-2366': lowCognitionValue, 'object-2314': lowCognitionValue,
-                             'object-2392': lowCognitionValue, 'object-2340': lowCognitionValue}
+        # # Assign field units to their according participant response value after fixation period
+        # outputDict_WM = {'Image 1': 1, 'Image 2': 2, 'Image 3': 3, 'Image 4': 4, 'Image 5': 5, 'Image 6': 6, 'Image 7': 7,\
+        #     'Image 8': 8, 'Image 9': 9, 'Image 10': 10, 'Image 11': 11, 'Image 12': 12, 'Image 13': 13, 'Image 14': 14,\
+        #     'Image 15': 15, 'Image 16': 16, 'Image 17': 17, 'Image 18': 18, 'Image 19': 19, 'Image 20': 20, 'Image 21': 21,\
+        #     'Image 22': 22, 'Image 23': 23, 'Image 24': 24, 'Image 25': 25, 'Image 26': 26, 'Image 27': 27, 'Image 28': 28,\
+        #     'Image 29': 29, 'Image 30': 30, 'Image 31': 31, 'Image 32': 32}
+        #
+        # outputDict_WM_Ctx = {'object-1591': 8, 'object-1593': 8, 'object-1595': 8, 'object-1597': 8, 'object-2365': 8, 'object-2313': 8, 'object-2391': 8, 'object-2339': 8,
+        #                      'object-1592': 24, 'object-1594': 24, 'object-1596': 24, 'object-1598': 24, 'object-2366': 24, 'object-2314': 24, 'object-2392': 24, 'object-2340': 24}
 
         indices2remove_filtered = [i for i in indices2remove if i < 40]
         Output = np.delete(Output, indices2remove_filtered, axis=1)
 
         for i in range(numFixStepsAverage, totalStepsAverage):
             for j in range(0, Output.shape[1]):
-                if isinstance(Output[i][j][35], str):
-                    # Get the right dictionary
-                    if len(opened_xlsxFile_selection['Spreadsheet'][0].split('_')) == 4 or opened_xlsxFile_selection['Spreadsheet'][0].split('_')[1] == 'Anti' or \
-                            len(opened_xlsxFile_selection['Spreadsheet'][0].split('_')) == 5 and opened_xlsxFile_selection['Spreadsheet'][0].split('_')[2] == '3stim'\
-                            and safe_isnan(Output[i][j][0]) == False:
-                        outputDict = outputDict_WM
-                        chosenColumn = 0
-                    else:
-                        outputDict = outputDict_WM_Ctx
-                        chosenColumn = 1
+                if isinstance(correctAnswer[i][j], str):
+                    # # Get the right dictionary
+                    # if len(opened_xlsxFile_selection['Spreadsheet'][0].split('_')) == 4 or opened_xlsxFile_selection['Spreadsheet'][0].split('_')[1] == 'Anti' or \
+                    #         len(opened_xlsxFile_selection['Spreadsheet'][0].split('_')) == 5 and opened_xlsxFile_selection['Spreadsheet'][0].split('_')[2] == '3stim':
+                    #     outputDict = outputDict_WM
+                    #     chosenColumn = 0
+                    # else:
+                    #     outputDict = outputDict_WM_Ctx
+                    #     chosenColumn = 1
 
-                    if Output[i][j][0] != 'screen' and Output[i][j][0] != 'noResponse' and Output[i][j][0] != 'NoResponse'\
-                            and Output[i][j][0] != 'Fixation Cross' and Output[i][j][0] != 'Response'\
-                            and Output[i][j][1] != 'Fixation Cross' and Output[i][j][1] != 'Response':
+                    if correctAnswer[i][j] != 'screen' and correctAnswer[i][j] != 'noResponse' and correctAnswer[i][j] != 'NoResponse'\
+                            and correctAnswer[i][j] != 'Fixation Cross' and correctAnswer[i][j] != 'Response':
                         # Translate field into radiant
-                        position = pref[outputDict[Output[i][j][chosenColumn]]-1]
+                        position = pref[correctPositionListList[j][0]-1]
                         # Translate radiant into sin/cos vector indicating the target response direction for the network
                         newOutput[i][j][1] = np.sin(position)
                         newOutput[i][j][2] = np.cos(position)
                     else:
                         for k in range(1, 3):  # if noResponse was given
                             newOutput[i][j][1] = np.sin(0.05)  # info: yang et al.: -1
-                            newOutput[i][j][2] = np.cos(0.05)  # info: yang et al.: -1
+                            newOutput[i][j][2] = np.sin(0.05)  # info: yang et al.: -1
                 else:
                     for k in range(1, 3):  # if noResponse was given
                         newOutput[i][j][1] = np.sin(0.05)  # info: yang et al.: -1
-                        newOutput[i][j][2] = np.cos(0.05)  # info: yang et al.: -1
+                        newOutput[i][j][2] = np.sin(0.05)  # info: yang et al.: -1
 
         # Change dtype of every element in matrix to float32 for later validation functions
         for i in range(0, newOutput.shape[0]):
@@ -1740,16 +1849,15 @@ def preprocess_WM(opened_xlsxFile, questionnare_files, list_allSessions, sequenc
 
         for k in range(0, numFixStepsAverage):
             for j in range(0, newOutput.shape[1]):
-                y_loc[k][j] = np.float(0.05) # info: yang et al.: -1
+                y_loc[k][j] = np.float(0.05)  # info: yang et al.: -1
 
         # Complete y_loc matrix
         for k in range(numFixStepsAverage, totalStepsAverage):
             for j in range(0, newOutput.shape[1]):
-                if isinstance(Output[k][j][0], str) and Output[k][j][0] != 'noResponse' and Output[k][j][0] != 'NoResponse' and Output[k][j][0] != 'screen'\
-                        and Output[i][j][0] != 'Fixation Cross' and Output[i][j][0] != 'Response':
-                    y_loc[k][j] = pref[outputDict[Output[k][j][chosenColumn]]-1]  # radiant form direction
+                if isinstance(correctAnswer[k][j], str) and correctAnswer[k][j] != 'noResponse' and correctAnswer[k][j] != 'NoResponse' and correctAnswer[k][j] != 'screen':
+                    y_loc[k][j] = pref[correctPositionListList[j][0]-1]  # radiant form direction
                 else:
-                    y_loc[k][j] = np.float(0.05) # info: yang et al.: -1
+                    y_loc[k][j] = np.float(0.05)  # info: yang et al.: -1
 
         # Save output data
         output_filename = participant + '-' + 'month_' + str(month) + '-' + 'batch_' + str(
@@ -1787,14 +1895,15 @@ def check_permissions(file_path):
 
 # Preallocation of variables
 dataFolder = "Data"
+# subfolders = ['DM', 'DM_Anti', 'EF', 'EF_Anti', 'RP', 'RP_Anti', 'RP_Ctx1', 'RP_Ctx2', 'WM', 'WM_Anti', 'WM_Ctx1', 'WM_Ctx2']
 subfolders = ['DM', 'DM_Anti', 'EF', 'EF_Anti', 'RP', 'RP_Anti', 'RP_Ctx1', 'RP_Ctx2', 'WM', 'WM_Anti', 'WM_Ctx1', 'WM_Ctx2']
-preprocessing_folder = 'data_lowDim_lowCognition'
-participants = ['BeRNN_03','BeRNN_04','BeRNN_05'] # 'BeRNN_01','BeRNN_02',
-months = ['3'] # info: debugging '13'
+preprocessing_folder = 'data_lowDim_correctOnly_3stimTCS'
+participants = ['beRNN_01', 'beRNN_02', 'beRNN_03', 'BeRNN_04', 'beRNN_05']
+months = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12'] # info: debugging '13'
 
 for participant in participants:
     # attention: change to right path
-    path = 'C:\\Users\\oliver.frank\\Desktop\\BackUp'  # local
+    path = 'C:\\Users\\oliver.frank\\Desktop\\PyProjects'  # local
     # path = 'W:\\group_csp\\analyses\\oliver.frank'  # Fl storage
     # path = '/data' # hitkip cluster
     # path = '/pandora/home/oliver.frank/01_Projects/RNN/multitask_BeRNN-main' # pandora server
@@ -1813,8 +1922,6 @@ for participant in participants:
 
     # Processing path allocation
     processing_path = os.path.join(path,dataFolder, participant)
-    # processing_path = os.path.join("/data", dataFolder, participant)
-    # processing_path = os.path.join("/pandora/home/oliver.frank/01_Projects/RNN/multitask_BeRNN-main, participant)
 
     # list of task names in each session; very first name is the one of the associated questionare
     list_d4fh = ['d4fh', 'b4ya', 'bert', '7py6', 'bx2n', '2p6f', '9ivx', 'fhgh', 'k1jg', '6x4x', 'aiut', 'ar8p', '627g']

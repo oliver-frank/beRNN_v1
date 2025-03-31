@@ -17,8 +17,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 import os
 
-import Tools
-from Network import Model
+import tools
+from network import Model
 
 ########################################################################################################################
 # Define functions

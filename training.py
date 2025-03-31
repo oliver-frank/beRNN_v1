@@ -1,5 +1,5 @@
 ########################################################################################################################
-# info: Training
+# info: training
 ########################################################################################################################
 # Train Models with collected data. Particpant, data and directories have to be adjusted manually.
 ########################################################################################################################
@@ -22,9 +22,10 @@ import numpy as np
 import tensorflow as tf
 import random
 
-from Network import Model, get_perf
+from network import Model, get_perf,get_perf_lowDIM
 # from analysis import variance
-import Tools
+import tools
+
 
 ########################################################################################################################
 # Predefine functions
@@ -41,11 +42,11 @@ def get_default_hp(ruleset):
     n_rule = Tools.get_num_rule(ruleset)
 
     machine = 'local' # 'local' 'pandora' 'hitkip'
-    data = 'data_lowDim_correctOnly' # 'data_highDim' , data_highDim_correctOnly , data_highDim_lowCognition , data_lowDim , data_lowDim_correctOnly , data_lowDim_lowCognition
-    trainingBatch = '00'
-    trainingYear_Month = '2025_03'
+    data = 'data_highDim_correctOnly_3stimTC' # 'data_highDim' , data_highDim_correctOnly , data_highDim_lowCognition , data_lowDim , data_lowDim_correctOnly , data_lowDim_lowCognition, 'data_highDim_correctOnly_3stimTC'
+    trainingBatch = 'beRNN_03'
+    trainingYear_Month = '2025_03_zi'
 
-    if 'highDim' in data:
+    if 'highDim' or 'timeCompressed' in data: # fix: lowDim_timeCompressed needs to be skipped here
         n_eachring = 32
         n_outputring = n_eachring
         n_input, n_output = 1 + num_ring * n_eachring + n_rule, n_outputring + 1
@@ -56,24 +57,24 @@ def get_default_hp(ruleset):
 
     hp = {
         # batch size for training and evaluation
-        'batch_size': 40, # 20/40/80/120/160
+        'batch_size': 80, # 20/40/80/120/160
         # 'batch_size_test': 640, # batch_size for testing
         'in_type': 'normal', # input type: normal, multi
-        'rnn_type': 'LeakyGRU', # Type of RNNs: NonRecurrent, LeakyRNN, LeakyGRU, EILeakyGRU | GRU, LSTM
+        'rnn_type': 'LeakyRNN', # Type of RNNs: NonRecurrent, LeakyRNN, LeakyGRU, EILeakyGRU | GRU, LSTM
         'use_separate_input': False, # whether rule and stimulus inputs are represented separately
         'loss_type': 'lsq', # # Type of loss functions - Cross-entropy loss
         'optimizer': 'adam', # 'adam', 'sgd'
-        'activation': 'softplus', # Type of activation runctions, relu, softplus, tanh, elu, linear
-        'tau': 100, # # Time constant (ms)- default 100
+        'activation': 'relu', # Type of activation runctions, relu, softplus, tanh, elu, linear
+        'tau': 50, # # Time constant (ms)- default 100
         'dt': 20, # discretization time step (ms) .
         # 'alpha': 0.2, # (redundant) discretization time step/time constant - dt/tau = alpha - ratio decides on how much previous states are taken into account for current state - low alpha more memory, high alpha more forgetting - alpha * h(t-1)
-        'sigma_rec': 0, # recurrent noise - directly influencing the noise added to the network
-        'sigma_x': 0, # input noise
+        'sigma_rec': 0.01, # recurrent noise - directly influencing the noise added to the network
+        'sigma_x': 0.01, # input noise
         'w_rec_init': 'randortho', # leaky_rec weight initialization, diag, randortho, randgauss
-        'l1_h': 0.00000001, # l1 lambda (regularizing with absolute value of magnitude of coefficients, leading to sparse features)
-        'l2_h': 0, # l2 lambda (regularizing with squared value of magnitude of coefficients, decreasing influence of features)
-        'l1_weight': 0, # l2 regularization on weight
-        'l2_weight': 0, # l2 regularization on weight
+        'l1_h': 1e-04, # l1 lambda (regularizing with absolute value of magnitude of coefficients, leading to sparse features)
+        'l2_h': 5e-06, # l2 lambda (regularizing with squared value of magnitude of coefficients, decreasing influence of features)
+        'l1_weight': 1e-05, # l2 regularization on weight
+        'l2_weight': 1e-04, # l2 regularization on weight
         'l2_weight_init': 0, # l2 regularization on deviation from initialization
         'p_weight_train': None, # proportion of weights not to be regularized, None or float between (0, 1) - 1-p_weight_train will be multiplied by w_mask_value
         'w_mask_value': 0.1, # default .1 - value that will be multiplied with L2 regularization (combined with p_weight_train), <1 will decrease it
@@ -84,11 +85,11 @@ def get_default_hp(ruleset):
         'rule_start': 1 + num_ring * n_eachring, # first input index for rule units
         'n_input': n_input, # number of input units
         'n_output': n_output, # number of output units
-        'n_rnn': 256, # number of recurrent units
-        'rng': np.random.RandomState(seed=0), # random number used for several random initializations
+        'n_rnn': 128, # number of recurrent units
+        'rng': np.random.default_rng(), # np.random.RandomState(seed=0), random number used for several random initializations
         'ruleset': ruleset, # number of input units
         'save_name': 'test', # name to save
-        'learning_rate': 0.001, # learning rate
+        'learning_rate': 0.0015, # learning rate
         'learning_rate_mode': None, # Will overwrite learning_rate if it is not None - 'triangular', 'triangular2', 'exp_range'
         'base_lr': [1e-5],
         'max_lr': [1e-3],
@@ -97,11 +98,11 @@ def get_default_hp(ruleset):
         'rule_probs': None, # Rule probabilities to be drawn
         # 'c_intsyn': 0, # intelligent synapses parameters, tuple (c, ksi) -> Yang et al. only apply these in sequential training
         # 'ksi_intsyn': 0,
-        'monthsConsidered': ['month_3', 'month_4', 'month_5'], # months to train and test
-        'monthsString': '3-5', # monthsTaken
-        # 'rule_prob_map': {"DM": 1,"DM_Anti": 1,"EF": 1,"EF_Anti": 1,"RP": 1,"RP_Anti": 1,"RP_Ctx1": 1,"RP_Ctx2": 1,"WM": 1,"WM_Anti": 1,"WM_Ctx1": 1,"WM_Ctx2": 1}
-        'rule_prob_map': {"DM": 0,"DM_Anti": 0,"EF": 0,"EF_Anti": 0,"RP": 0,"RP_Anti": 0,"RP_Ctx1": 0,"RP_Ctx2": 0,"WM": 0,"WM_Anti": 0,"WM_Ctx1": 1,"WM_Ctx2": 1}, # fraction of tasks represented in training data
-        'tasksString': 'All', # tasks taken
+        'monthsConsidered': ['month_7','month_8','month_9'], # months to train and test
+        'monthsString': '7-9', # monthsTaken
+        # 'rule_prob_map': {"DM": 1,"DM_Anti": 1,"EF": 1,"EF_Anti": 1,"RP": 1,"RP_Anti": 1,"RP_Ctx1": 1,"RP_Ctx2": 1,"WM": 1,"WM_Anti": 1,"WM_Ctx1": 1,"WM_Ctx2": 1},
+        'rule_prob_map': {"DM": 0,"DM_Anti": 1,"EF": 1,"EF_Anti": 1,"RP": 0,"RP_Anti": 0,"RP_Ctx1": 0,"RP_Ctx2": 0,"WM": 0,"WM_Anti": 0,"WM_Ctx1": 0,"WM_Ctx2": 0}, # fraction of tasks represented in training data
+        'tasksString': 'DMAntiAndEFtasks', # tasks taken
         'sequenceMode': True, # Decide if models are trained sequentially month-wise
         'participant': 'beRNN_03', # Participant to take
         'data': data, # 'data_highDim' , data_highDim_correctOnly , data_highDim_lowCognition , data_lowDim , data_lowDim_correctOnly , data_lowDim_lowCognition, data_timeCompressed, data_lowDim_timeCompressed
@@ -113,7 +114,8 @@ def get_default_hp(ruleset):
     return hp
 
 def split_files(files, split_ratio=0.8):
-    random.seed(42) # info: add seed to always shuffle similiar - would be good for NetworkAnalysis
+    # random.seed(42) # attention: add seed to always shuffle similiar - would be good for NetworkAnalysis as it iwll result in robust solutions
+    random.seed(np.random.default_rng()) # attention: add seed to always shuffle similiar - would be good for NetworkAnalysis as it iwll result in robust solutions
     random.shuffle(files)
     split_index = int(len(files) * split_ratio)
     return files[:split_index], files[split_index:]
@@ -144,60 +146,77 @@ def do_eval(sess, model, log, rule_train, eval_data):
         clsq_tmp = list()
         creg_tmp = list()
         perf_tmp = list()
+
+
         for i_rep in range(n_rep):
-            x,y,y_loc = Tools.load_trials(task, mode, hp['batch_size'], eval_data, False)  # y_loc is participantResponse_perfEvalForm
+            try:
+                x,y,y_loc = Tools.load_trials(task, mode, hp['batch_size'], eval_data, False)  # y_loc is participantResponse_perfEvalForm
 
-            # info: ################################################################################################
-            fixation_steps = Tools.getEpochSteps(y)
-            if fixation_steps == None:  # if no fixation_steps could be found
-                continue
+                # info: ################################################################################################
+                fixation_steps = Tools.getEpochSteps(y)
+                if fixation_steps == None:  # if no fixation_steps could be found
+                    continue
 
-            # Creat c_mask for current batch
-            if hp['loss_type'] == 'lsq':
-                c_mask = np.zeros((y.shape[0], y.shape[1], y.shape[2]), dtype='float32')
-                for i in range(y.shape[1]):
-                    # Fixation epoch
-                    c_mask[:fixation_steps, i, :] = 1.
-                    # Response epoch
-                    c_mask[fixation_steps:, i, :] = hp['c_mask_responseValue'] # info: 1 or 5
+                # Creat c_mask for current batch
+                if hp['loss_type'] == 'lsq':
+                    c_mask = np.zeros((y.shape[0], y.shape[1], y.shape[2]), dtype='float32')
+                    for i in range(y.shape[1]):
+                        # Fixation epoch
+                        c_mask[:fixation_steps, i, :] = 1.
+                        # Response epoch
+                        c_mask[fixation_steps:, i, :] = hp['c_mask_responseValue'] # info: 1 or 5
 
-                # self.c_mask[:, :, 0] *= self.n_eachring # Fixation is important
-                # c_mask[:, :, 0] *= 2.  # Fixation is important
-                c_mask = c_mask.reshape((y.shape[0]*y.shape[1], y.shape[2]))
+                    # self.c_mask[:, :, 0] *= self.n_eachring # Fixation is important
+                    # c_mask[:, :, 0] *= 2.  # Fixation is important
+                    c_mask = c_mask.reshape((y.shape[0]*y.shape[1], y.shape[2]))
 
-            else:
-                c_mask = np.zeros((y.shape[0], y.shape[1]), dtype='float32')
-                for i in range(y.shape[1]):
-                    # Fixation epoch
-                    c_mask[:fixation_steps, i, :] = 1.
-                    # Response epoch
-                    c_mask[fixation_steps:, i, :] = hp['c_mask_responseValue'] # info: 1 or 5
+                else:
+                    c_mask = np.zeros((y.shape[0], y.shape[1]), dtype='float32')
+                    for i in range(y.shape[1]):
+                        # Fixation epoch
+                        c_mask[:fixation_steps, i, :] = 1.
+                        # Response epoch
+                        c_mask[fixation_steps:, i, :] = hp['c_mask_responseValue'] # info: 1 or 5
 
-                c_mask = c_mask.reshape((y.shape[0] * y.shape[1],))
-                c_mask /= c_mask.mean()
+                    c_mask = c_mask.reshape((y.shape[0] * y.shape[1],))
+                    c_mask /= c_mask.mean()
 
-            # info: ################################################################################################
+                # info: ################################################################################################
 
-            feed_dict = Tools.gen_feed_dict(model, x, y, c_mask, hp) # y: participnt response, that gives the lable for what the network is trained for
-            # print('passed feed_dict Evaluation')
-            # print(feed_dict)
-            # print('x',type(x),x.shape)
-            # print('y',type(y),y.shape)
-            # print('y_loc',type(y_loc),y_loc.shape)
-            c_lsq, c_reg, y_hat_test = sess.run([model.cost_lsq, model.cost_reg, model.y_hat],feed_dict=feed_dict)
-            # print('passed sess.run')
-            # Cost is first summed over time,
-            # and averaged across batch and units
-            # We did the averaging over time through c_mask
-            perf_test = np.mean(get_perf(y_hat_test, y_loc)) # info: y_loc is participant response as groundTruth
-            print('perf_test   ', perf_test)
-            clsq_tmp.append(c_lsq)
-            creg_tmp.append(c_reg)
-            perf_tmp.append(perf_test)
+                feed_dict = Tools.gen_feed_dict(model, x, y, c_mask, hp) # y: participnt response, that gives the lable for what the network is trained for
+                # print('passed feed_dict Evaluation')
+                # print(feed_dict)
+                # print('x',type(x),x.shape)
+                # print('y',type(y),y.shape)
+                # print('y_loc',type(y_loc),y_loc.shape)
+                c_lsq, c_reg, y_hat_test = sess.run([model.cost_lsq, model.cost_reg, model.y_hat],feed_dict=feed_dict)
+                # print('passed sess.run')
+                # Cost is first summed over time,
+                # and averaged across batch and units
+                # We did the averaging over time through c_mask
+
+                if 'lowDim' in hp['data']:
+                    perf_test = np.mean(get_perf_lowDIM(y_hat_test, y_loc))
+                else:
+                    perf_test = np.mean(get_perf(y_hat_test, y_loc)) # info: y_loc is participant response as groundTruth
+                print('perf_test   ', perf_test)
+                clsq_tmp.append(c_lsq)
+                creg_tmp.append(c_reg)
+                perf_tmp.append(perf_test)
+
+            except Exception as e:
+                print(f"Error during evaluation of task {task}, iteration {i_rep}: {e}")
+                continue  # Skip iteration on error
+
+        # If no valid results were collected, continue with next task
+        if not clsq_tmp or not perf_tmp:
+            print(f"Skipping task {task} as no valid data was processed.")
+            continue
 
         log['cost_' + task].append(np.mean(clsq_tmp, dtype=np.float64))
         log['creg_' + task].append(np.mean(creg_tmp, dtype=np.float64))
         log['perf_' + task].append(np.mean(perf_tmp, dtype=np.float64))
+
         print('{:15s}'.format(task) +
               '| cost {:0.6f}'.format(np.mean(clsq_tmp)) +
               '| c_reg {:0.6f}'.format(np.mean(creg_tmp)) +
@@ -209,15 +228,22 @@ def do_eval(sess, model, log, rule_train, eval_data):
         rule_tmp = rule_train
     else:
         rule_tmp = [rule_train]
-    perf_tests_mean = np.mean([log['perf_' + r][-1] for r in rule_tmp])
-    log['perf_avg'].append(perf_tests_mean)
 
-    perf_tests_min = np.min([log['perf_' + r][-1] for r in rule_tmp])
-    log['perf_min'].append(perf_tests_min)
+    try:
+        perf_tests_mean = np.mean([log['perf_' + r][-1] for r in rule_tmp])
+        log['perf_avg'].append(perf_tests_mean)
+        perf_tests_min = np.min([log['perf_' + r][-1] for r in rule_tmp])
+        log['perf_min'].append(perf_tests_min)
+    except KeyError as e:
+        print(f"Warning: Could not compute final performance due to missing key {e}.")
+        return log
 
-    # Saving the model
-    model.save()
-    Tools.save_log(log)
+    # Save the model and log
+    try:
+        model.save()
+        Tools.save_log(log)
+    except Exception as e:
+        print(f"Warning: Could not save model/log due to {e}.")
 
     return log
 
@@ -249,7 +275,7 @@ def train(model_dir,train_data ,eval_data,hp=None,max_steps=3e6,display_step=500
         default_hp.update(hp) # fix: Where does this update function come from?
     hp = default_hp
     hp['seed'] = seed
-    hp['rng'] = np.random.RandomState(seed)
+    hp['rng'] = np.random.default_rng()
 
     # Rules to train and test. Rules in a set are trained together
     if rule_trains is None:
@@ -271,34 +297,33 @@ def train(model_dir,train_data ,eval_data,hp=None,max_steps=3e6,display_step=500
         hp['rule_probs'] = list(rule_prob / np.sum(rule_prob))
     Tools.save_hp(hp, model_dir)
 
-    # info: Create structural mask to multiply with hidden layer
-    if hp['s_mask'] == 'sc1000':
-        import scipy.io
-        sc1000 = scipy.io.loadmat('C:\\Users\\oliver.frank\\Desktop\\BackUp\\art_BeRNN\\sc1000')
-        # sc100 = scipy.io.loadmat('C:\\Users\\oliver.frank\\Desktop\\BackUp\\art_BeRNN\\sc100')
-        # sc1000 = scipy.io.loadmat('/zi/home/oliver.frank/Desktop/RNN/multitask_BeRNN-main/sc1000')
-        sc1000_mask = sc1000['mat_zero']
-        # sc100_mask = sc100['shaefer_rsn']
-
-        # info: quadratic mask matrix necessary, maskSize = numberHiddenUnits !
-        maskSize = sc1000_mask.shape[0]
-        for i in range(0, maskSize):
-            for j in range(0, maskSize):
-                sc1000_mask[i, j] = 1 if sc1000_mask[i, j] > 11 else 0
+    # # info: Create structural mask to multiply with hidden layer
+    # if hp['s_mask'] == 'sc1000':
+    #     import scipy.io
+    #     sc = scipy.io.loadmat('C:\\Users\\oliver.frank\\Desktop\\PyProjects\\art_beRNN\\masks\\sc1000')
+    #     # sc = scipy.io.loadmat('C:\\Users\\oliver.frank\\Desktop\\PyProjects\\art_beRNN\\masks\\sc100')
+    #     sc_mask = sc['mat_zero'] # 1000
+    #     # sc_mask = sc['shaefer_rsn'] # 100
+    #
+    #     # info: quadratic mask matrix necessary - attention: maskSize = numberHiddenUnits !
+    #     maskSize = sc_mask.shape[0]
+    #     for i in range(0, maskSize):
+    #         for j in range(0, maskSize):
+    #             sc_mask[i, j] = 1 if sc_mask[i, j] > 11 else 0
 
         # import numpy as np
-        count_ones = np.count_nonzero(sc1000_mask[0,:] == 1) # info: 495 hidden units are trained
-
+        # count_ones = np.count_nonzero(sc_mask[0,:] == 1) # info: 495 hidden units are trained if threshold = ß
+        #
         # # info: Visualize the structural matrix
         # import matplotlib.pyplot as plt
         #
         # plt.figure(figsize=(8, 8))
-        # plt.imshow(sc1000_mask, aspect='auto', cmap='coolwarm')
+        # plt.imshow(sc_mask, aspect='auto', cmap='coolwarm')
         # plt.colorbar()
         # plt.title("Visualization of a 1000x1000 ndarray")
         # plt.show()
-        #
-        # hp['s_mask'] = sc1000_mask
+
+        # hp['s_mask'] = sc_mask
     # elif # fix: Add other structural masks here
 
 
@@ -439,14 +464,18 @@ def train(model_dir,train_data ,eval_data,hp=None,max_steps=3e6,display_step=500
                 # print(f"Step {step}, Learning Rate: {current_lr}")
 
 
-                sess.run(model.train_step, feed_dict=feed_dict) # info: Trainables are actualized - train_step should represent the step in Training.py and the global_step in Network.py
+                sess.run(model.train_step, feed_dict=feed_dict) # info: Trainables are actualized - train_step should represent the step in training.py and the global_step in network.py
 
                 # Get Training performance in a similiar fashion as in do_eval
                 clsq_train_tmp = list()
                 creg_train_tmp = list()
                 perf_train_tmp = list()
                 c_lsq_train, c_reg_train, y_hat_train = sess.run([model.cost_lsq, model.cost_reg, model.y_hat], feed_dict=feed_dict)
-                perf_train = np.round(np.mean(get_perf(y_hat_train, y_loc)),3) # info: y_loc is participant response as groundTruth
+
+                if 'lowDim' in hp['data']:
+                    perf_train = np.round(np.mean(get_perf_lowDIM(y_hat_train, y_loc)),3)  # info: y_loc is participant response as groundTruth
+                else:
+                    perf_train = np.round(np.mean(get_perf(y_hat_train, y_loc)),3) # info: y_loc is participant response as groundTruth
                 print('perf_train   ', perf_train)
                 clsq_train_tmp.append(c_lsq_train)
                 creg_train_tmp.append(c_reg_train)
@@ -489,7 +518,7 @@ if __name__ == '__main__':
 
         # Define main path
         if hp['machine'] == 'local':
-            path = 'C:\\Users\\oliver.frank\\Desktop\\BackUp'
+            path = 'C:\\Users\\oliver.frank\\Desktop\\PyProjects'
         elif hp['machine'] == 'hitkip':
             path = '/zi/home/oliver.frank/Desktop'
         elif hp['machine'] == 'pandora':
@@ -544,6 +573,8 @@ if __name__ == '__main__':
                 train_data[subdir] = train_files
                 eval_data[subdir] = eval_files
 
+            # info: If you want to initialize the new model with an old one
+            # load_dir = 'C:\\Users\\oliver.frank\\Desktop\\PyProjects\\beRNNmodels\\2025_03\\sc_mask_final\\beRNN_03_All_3-5_data_highDim_correctOnly_iteration1_LeakyRNN_1000_relu\\model_month_3'
             # Start Training ---------------------------------------------------------------------------------------------------
             train(model_dir=model_dir, train_data = train_data, eval_data = eval_data, load_dir = load_dir)
 

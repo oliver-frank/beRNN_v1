@@ -1,28 +1,29 @@
 ########################################################################################################################
-# info: Error Distribution
+# info: errorDistribution
 ########################################################################################################################
 # Several functions to create a distribution of error classes for the particpant's behavior on the different task.
 # The classes to be shown can be manually chosen by the user and can be rough- (few classes) or fine- (many classes)
-# grained. For a nice readable overview it is recommended to choose only a few lasses for the fine-grained distribution.
+# grained.
 
 ########################################################################################################################
 # Import necessary libraries and modules
 ########################################################################################################################
 import numpy as np
-import os
+# import os
 import json
 import glob
 import itertools
-import matplotlib.pyplot as plt
-import seaborn as sns
+# import matplotlib.pyplot as plt
+# import seaborn as sns
 
 # attention: Fine Granularity doesn't work right at the moment - will be fixed soon
 import os
 import matplotlib.pyplot as plt
+plt.ioff() # prevents windows to pop up when figs and plots are created
 import seaborn as sns
 
 
-def plot_errorDistribution_relative(errors_dict, directory, task, granularity):
+def plot_errorDistribution_relative(errors_dict, directory, participant, task, granularity, titleAdd):
     # Prepare data for plotting
     categories = list(errors_dict.keys())
     total_occurrences = sum(len(values) for values in errors_dict.values())
@@ -33,23 +34,39 @@ def plot_errorDistribution_relative(errors_dict, directory, task, granularity):
     # Filter out categories with no occurrences for labeling
     labels = [cat if len(errors_dict[cat]) > 0 else '' for cat in categories]
 
-    participant = directory.split('\\')[5] + ' '
-
     # Set up the color palette
     palette = sns.color_palette("coolwarm", len(categories))
 
     # Create the bar chart
     # fig, ax = plt.subplots(figsize=(12, len(categories) * 0.5))  # Adjust figure size as needed
-    fig, ax = plt.subplots(figsize=(8, 8))
-    sns.barplot(y=categories, x=occurrences, palette=palette, ax=ax)
+    fig, ax = plt.subplots(figsize=(4, 8))
+    # sns.barplot(y=categories, x=occurrences, palette=palette, ax=ax)
+
+    # Reverse the order for a nicer top-down view
+    categories = categories[::-1]
+    occurrences = occurrences[::-1]
+    colors = palette[::-1]
+    if granularity == 'rough':
+        bar_thickness = 0.8  # Adjust this for finer/thicker bars (1.0 = full spacing)
+    elif granularity == 'fine':
+        bar_thickness = 20.0
+
+    # Draw horizontal bars manually
+    for i, (cat, val, color) in enumerate(zip(categories, occurrences, colors)):
+        ax.barh(i, val, color=color, height=bar_thickness)
+
+    # Set y-ticks to match the categories
+    ax.set_yticks(range(len(categories)))
+    ax.set_yticklabels(labels[::-1], fontsize=8)
 
     # Set labels and titles
-    ax.set_xlabel('Relative Occurrences (%)', fontsize=14, labelpad=10)
-    ax.set_title(f'Relative Error Category Occurrences: {participant}{task}', fontsize=16, pad=20)
+    ax.set_xlabel('Relative Occurrences (%)', fontsize=10, labelpad=10)
+    ax.tick_params(axis='x', labelsize=8)
+    ax.set_title(f'{participant} {task} {titleAdd}', fontsize=12, pad=20)
 
-    # Keep the tick labels on the left
-    ax.set_yticks(range(len(categories)))
-    ax.set_yticklabels(labels, fontsize=12)
+    # # Keep the tick labels on the left
+    # ax.set_yticks(range(len(categories)))
+    # ax.set_yticklabels(labels, fontsize=12)
 
     # Add gridlines for better readability
     ax.grid(True, axis='x', linestyle='--', alpha=0.6)
@@ -62,7 +79,7 @@ def plot_errorDistribution_relative(errors_dict, directory, task, granularity):
 
     # Move the y-axis label to the right side
     ax_right = ax.twinx()  # Create a twin Axes sharing the x-axis
-    ax_right.set_ylabel('Error Categories', fontsize=14, labelpad=10)
+    ax_right.set_ylabel('Error Categories', fontsize=10, labelpad=10)
     ax_right.yaxis.set_label_position("right")  # Move the label to the right
     ax_right.yaxis.tick_right()  # Ensure ticks are not visible on the right
 
@@ -75,13 +92,23 @@ def plot_errorDistribution_relative(errors_dict, directory, task, granularity):
     plt.subplots_adjust(left=0.3, right=0.95, bottom=0.1, top=0.9)
 
     # Save plot with bbox_inches='tight' to prevent label cutoff
-    save_path = os.path.join(directory.split('PreprocessedData')[0], 'ErrorGraphics',
-                             f'{participant}{task}_relative.png')
+    save_path = os.path.join(directory.split('\\data')[0], 'ErrorGraphics', task, f'errorDistribution_{participant}_{task}_{titleAdd}_relative.png')
     os.makedirs(os.path.dirname(save_path), exist_ok=True)
     plt.savefig(save_path, dpi=100, bbox_inches='tight')
 
     # Show plot
-    plt.show()
+    # plt.show()
+
+    # info: For fine granularity return the names of the categories with highest occurrences
+    if granularity == 'rough':
+        # Count occurrences per category
+        category_counts = {cat: len(values) for cat, values in errors_dict.items()}
+        # Sort categories by count in descending order
+        sorted_categories = sorted(category_counts.items(), key=lambda x: x[1], reverse=True)
+        # Extract top 3 category names
+        top_four_categories = [cat for cat, count in sorted_categories[:4]]
+
+        return top_four_categories
 
 def sort_rows_descending(array): # Higher value on 4th
     for col in range(array.shape[1]):
@@ -139,7 +166,7 @@ def get_fine_grained_error(sortedResponse, errors_dict_fineGrained, task):
 
         elif task == 'RP' or task == 'RP_Anti' or task == 'RP_Ctx1' or task == 'RP_Ctx2':
             # Wrongly chosen distraction
-            if sortedResponse[0, i] == '000_000.png': # errors where the wrong stim was hitten
+            if sortedResponse[0, i] == '000_000.png' or sortedResponse[0, i] == 'BEGIN' or sortedResponse[0, i] == 'nan' or sortedResponse[0, i] == None: # errors where the wrong stim was hitten
                 continue
             elif sortedResponse[0, i] == 'NoResponse':
                 errorComponent_1 = 'distract' + 'NoResponse'
@@ -187,6 +214,7 @@ def get_fine_grained_error(sortedResponse, errors_dict_fineGrained, task):
                     errorComponent_2 = 'ClassRed'
                 elif sortedResponse[0, i].split('_')[0] in colorDict['ClassGreen']:
                     errorComponent_2 = 'ClassGreen'
+
             # Missed correct stimulus
             correctColorClass = next((cls for cls, colors in colorDict.items() if sortedResponse[2, i].split('_')[0] in colors), None)
             distractColorClass = next((cls for cls, colors in colorDict.items() if sortedResponse[3, i].split('_')[0] in colors), None)
@@ -202,7 +230,7 @@ def get_fine_grained_error(sortedResponse, errors_dict_fineGrained, task):
             else:
                 errorComponent_4 = 'diffForm'
 
-            # errorComponent_5 = opened_meta_file['difficultyLevel'].split('trials_')[1]
+            # errorComponent_3 = opened_meta_file['difficultyLevel'].split('trials_')[1] # info: Don't count 3stim extra as there would be too many error classes
 
             # Concatenate error components
             currentChosenList = f'{errorComponent_1}{errorComponent_2}_{errorComponent_3}_{errorComponent_4}'
@@ -256,24 +284,43 @@ def get_fine_grained_error(sortedResponse, errors_dict_fineGrained, task):
             else:
                 continue
 
-            errorComponent_3 = opened_meta_file['difficultyLevel'].split('trials_')[1]
-
-            if sortedResponse[0, i] == 'noResponse' or sortedResponse[0, i] == 'NoResponse':
-                errorComponent_4 = 'response' + 'NoResponse'  # Form
+            # Missed correct stimulus
+            correctColorClass = next(
+                (cls for cls, colors in colorDict.items() if sortedResponse[2, i].split('_')[0] in colors), None)
+            distractColorClass = next(
+                (cls for cls, colors in colorDict.items() if sortedResponse[3, i].split('_')[0] in colors), None)
+            if correctColorClass == distractColorClass:
+                errorComponent_3 = 'simColor'
             else:
-                errorComponent_4 = 'response' + sortedResponse[0, i]
+                errorComponent_3 = 'diffColor'
+
+            correctFormClass = next((cls for cls, forms in formDict.items() if
+                                     sortedResponse[2, i].split('_')[1].split('.')[0] in forms), None)
+            distractFormClass = next((cls for cls, forms in formDict.items() if
+                                      sortedResponse[3, i].split('_')[1].split('.')[0] in forms), None)
+            if correctFormClass == distractFormClass:
+                errorComponent_4 = 'simForm'
+            else:
+                errorComponent_4 = 'diffForm'
+
+            # errorComponent_3 = opened_meta_file['difficultyLevel'].split('trials_')[1] # info: Don't count 3stim extra as there would be too many error classes
+            if sortedResponse[0, i] == 'noResponse':
+                errorComponent_5 = 'response' + 'NoResponse'
+            else:
+                errorComponent_5 = 'response' + sortedResponse[0, i]
 
             # Concatenate error components
-            currentChosenList = f'{errorComponent_1}_{errorComponent_2}_{errorComponent_3}_{errorComponent_4}'
+            currentChosenList = f'{errorComponent_1}_{errorComponent_2}_{errorComponent_3}_{errorComponent_4}_{errorComponent_5}'
             errors_dict_fineGrained[currentChosenList].append(sortedResponse[:, i])
     return errors_dict_fineGrained
 
-participant = 'BeRNN_05'
-focusedMonths = ['month_2','month_3','month_4','month_5','month_6', 'month_7', 'month_8', 'month_9']
-directory = f'W:\\group_csp\\analyses\\oliver.frank\\Data\\{participant}\\PreprocessedData_wResp_ALL\\'
+participant = 'beRNN_01'
+focusedMonths = ['month_1','month_2','month_3','month_4','month_5','month_6','month_7','month_8','month_9','month_10','month_11','month_12' ]
+directory = f'C:\\Users\\oliver.frank\\Desktop\\PyProjects\\Data\\{participant}\\data_highDim' # info: whole script made for original dataset only
+
 
 ########################################################################################################################
-# Decision Making
+# info: Decision Making
 ########################################################################################################################
 def get_errors_DM(Response, errors_dict, distract_dict, opposite_dict, strength_dict):
 
@@ -312,10 +359,11 @@ list3 = ['strengthDiff0', 'strengthDiff25', 'strengthDiff5', 'strengthDiff75']
 # Generating all combinations of categorical names
 categorical_names = ['_'.join(combination) for combination in itertools.product(list1, list2, list3)]
 
+########################################################################################################################
 # DM -------------------------------------------------------------------------------------------------------------------
 errors_dict_DM = {name: [] for name in categorical_names}
 # Get list of necessary files in directory
-participantDirectory = directory + 'DM'
+participantDirectory = os.path.join(directory, 'DM')
 npy_files = glob.glob(os.path.join(participantDirectory, '*Response.npy'))
 selected_months_files = [file for file in npy_files if any(month in file for month in focusedMonths)]
 
@@ -326,34 +374,33 @@ for npy_file in selected_months_files:
     sortedResponse = sort_rows_descending(Response)
     errors_dict_DM = get_errors_DM(sortedResponse, errors_dict_DM, distract_dict, opposite_dict, strength_dict)
 # Visualize results
-# plot_errorDistribution(errors_dict_DM,participantDirectory,'DM', 'rough')
-plot_errorDistribution_relative(errors_dict_DM,participantDirectory,'DM', 'rough')
-Response = np.load(npy_files[0], allow_pickle=True)
+top_four_categories = plot_errorDistribution_relative(errors_dict_DM, participantDirectory, participant, 'DM', 'rough', titleAdd = 'all')
 
-# # DM - Fine Graining ---------------------------------------------------------------------------------------------------
-# list1 = ['distractLeft', 'distractRight', 'distractUp', 'distractDown']
-# list2 = ['Lowest', 'Low', 'Strong', 'Strongest']
-# list3 = ['correctLeft', 'correctRight', 'correctUp', 'correctDown']
-# list4 = ['Lowest', 'Low', 'Strong', 'Strongest']
-# list5 = ['responseNoResponse', 'responseNan', 'responseL', 'responseR', 'responseU', 'responseD']
-# # Generating all combinations of categorical names
-# categorical_names_fineGrained = ['_'.join(combination) for combination in itertools.product(list1, list2, list3, list4, list5)]
-# # info: DM error key pair - has to be added manually
-# list_error_keys = ['distractOrtho_responseOrtho_strengthDiff25', 'distractOrtho_responseOrtho_strengthDiff0']
-#
-# for j in list_error_keys:
-#     error_key_values = errors_dict_DM[j]
-#     sortedResponse = sort_rows_descending(np.column_stack(error_key_values))
-#     # Creating dict with created names
-#     errors_dict_fineGrained = {name: [] for name in categorical_names_fineGrained}
-#     errors_dict_fineGrained = get_fine_grained_error(sortedResponse, errors_dict_fineGrained, 'DM')
-#     # plot_errorDistribution(errors_dict_fineGrained, participantDirectory, 'DM_fineGrained ' + j, 'fine')
-#     plot_errorDistribution_relative(errors_dict_fineGrained, participantDirectory, 'DM_fineGrained ' + j, 'fine')
+# DM - Fine Graining ---------------------------------------------------------------------------------------------------
+list1 = ['distractLeft', 'distractRight', 'distractUp', 'distractDown']
+list2 = ['Lowest', 'Low', 'Strong', 'Strongest']
+list3 = ['correctLeft', 'correctRight', 'correctUp', 'correctDown']
+list4 = ['Lowest', 'Low', 'Strong', 'Strongest']
+list5 = ['responseNoResponse', 'responseNan', 'responseL', 'responseR', 'responseU', 'responseD']
+# Generating all combinations of categorical names
+categorical_names_fineGrained = ['_'.join(combination) for combination in itertools.product(list1, list2, list3, list4, list5)]
+# Define the four error classes to plot in fine granularity
+list_error_keys = [top_four_categories[0], top_four_categories[1], top_four_categories[2], top_four_categories[3]]
 
+for j in list_error_keys:
+    error_key_values = errors_dict_DM[j]
+    sortedResponse = sort_rows_descending(np.column_stack(error_key_values))
+    # Creating dict with created names
+    errors_dict_fineGrained = {name: [] for name in categorical_names_fineGrained}
+    errors_dict_fineGrained = get_fine_grained_error(sortedResponse, errors_dict_fineGrained, 'DM')
+    # Visualize results
+    plot_errorDistribution_relative(errors_dict_fineGrained, participantDirectory, participant, 'DM', 'fine', titleAdd = j)
+
+########################################################################################################################
 # DM Anti --------------------------------------------------------------------------------------------------------------
 errors_dict_DM_Anti = {name: [] for name in categorical_names}
 # Get list of necessary files in directory
-participantDirectory = directory + 'DM_Anti'
+participantDirectory = os.path.join(directory, 'DM_Anti')
 npy_files = glob.glob(os.path.join(participantDirectory, '*Response.npy'))
 selected_months_files = [file for file in npy_files if any(month in file for month in focusedMonths)]
 
@@ -363,31 +410,31 @@ for npy_file in selected_months_files:
     sortedResponse = sort_rows_ascending(Response)
     errors_dict_DM_Anti = get_errors_DM(sortedResponse, errors_dict_DM_Anti, distract_dict, opposite_dict, strength_dict)
 # Visualize results
-# plot_errorDistribution(errors_dict_DM_Anti,participantDirectory,'DM_Anti', grainity='rough')
-plot_errorDistribution_relative(errors_dict_DM_Anti,participantDirectory,'DM_Anti', 'rough')
+top_four_categories = plot_errorDistribution_relative(errors_dict_DM_Anti,participantDirectory, participant, 'DM_Anti', 'rough', titleAdd = 'all')
 
-# # DM Anti - Fine Graining ----------------------------------------------------------------------------------------------
-# list1 = ['distractLeft', 'distractRight', 'distractUp', 'distractDown']
-# list2 = ['Lowest', 'Low', 'Strong', 'Strongest']
-# list3 = ['correctLeft', 'correctRight', 'correctUp', 'correctDown']
-# list4 = ['Lowest', 'Low', 'Strong', 'Strongest']
-# list5 = ['responseNoResponse', 'responseL', 'responseR', 'responseU', 'responseD']
-# # Generating all combinations of categorical names
-# categorical_names_fineGrained = ['_'.join(combination) for combination in itertools.product(list1, list2, list3, list4, list5)]
-# # info: DM error key pair - has to be added manually
-# list_error_keys = ['distractOrtho_responseOrtho_strengthDiff25', 'distractOrtho_responseOrtho_strengthDiff0']
-#
-# for j in list_error_keys:
-#     error_key_values = errors_dict_DM_Anti[j]
-#     sortedResponse = sort_rows_ascending(np.column_stack(error_key_values))
-#     # Creating dict with created names
-#     errors_dict_fineGrained = {name: [] for name in categorical_names_fineGrained}
-#     errors_dict_fineGrained = get_fine_grained_error(sortedResponse, errors_dict_fineGrained, 'DM_Anti')
-#     # plot_errorDistribution(errors_dict_fineGrained, participantDirectory, 'DM_Anti_fineGrained ' + j, 'fine')
-#     plot_errorDistribution_relative(errors_dict_fineGrained, participantDirectory, 'DM_Anti_fineGrained ' + j, 'fine')
+# DM Anti - Fine Graining ----------------------------------------------------------------------------------------------
+list1 = ['distractLeft', 'distractRight', 'distractUp', 'distractDown']
+list2 = ['Lowest', 'Low', 'Strong', 'Strongest']
+list3 = ['correctLeft', 'correctRight', 'correctUp', 'correctDown']
+list4 = ['Lowest', 'Low', 'Strong', 'Strongest']
+list5 = ['responseNoResponse', 'responseNoresponse', 'responseNan', 'responseL', 'responseR', 'responseU', 'responseD']
+# Generating all combinations of categorical names
+categorical_names_fineGrained = ['_'.join(combination) for combination in itertools.product(list1, list2, list3, list4, list5)]
+# Define the four error classes to plot in fine granularity
+list_error_keys = [top_four_categories[0], top_four_categories[1], top_four_categories[2], top_four_categories[3]]
+
+for j in list_error_keys:
+    error_key_values = errors_dict_DM_Anti[j]
+    sortedResponse = sort_rows_ascending(np.column_stack(error_key_values))
+    # Creating dict with created names
+    errors_dict_fineGrained = {name: [] for name in categorical_names_fineGrained}
+    errors_dict_fineGrained = get_fine_grained_error(sortedResponse, errors_dict_fineGrained, 'DM_Anti')
+    # Visualize results
+    plot_errorDistribution_relative(errors_dict_fineGrained, participantDirectory, participant, 'DM_Anti', 'fine', titleAdd=j)
+
 
 ########################################################################################################################
-# Executive Function
+# Executive Functioning
 ########################################################################################################################
 # Define dicts
 distract_dict = {'up.png':'U', 'down.png':'D', 'left.png':'L', 'right.png':'R', 'X.png':'X'}
@@ -431,10 +478,11 @@ def get_errors_EF(Response, errors_dict, distract_dict, opposite_dict):
 
     return errors_dict
 
+########################################################################################################################
 # EF -------------------------------------------------------------------------------------------------------------------
 errors_dict_EF = {name: [] for name in categorical_names}
 # Get list of necessary files in directory
-participantDirectory = directory + 'EF'
+participantDirectory = os.path.join(directory, 'EF')
 npy_files = glob.glob(os.path.join(participantDirectory, '*Response.npy'))
 selected_months_files = [file for file in npy_files if any(month in file for month in focusedMonths)]
 
@@ -445,33 +493,33 @@ for npy_file in selected_months_files:
     sortedResponse = sort_rows_ascending(Response)
     errors_dict_EF = get_errors_EF(sortedResponse, errors_dict_EF, distract_dict, opposite_dict)
 # Visualize results
-# plot_errorDistribution(errors_dict_EF,participantDirectory,'EF', grainity='rough')
-plot_errorDistribution_relative(errors_dict_EF,participantDirectory,'EF', 'rough')
+top_four_categories = plot_errorDistribution_relative(errors_dict_EF, participantDirectory, participant, 'EF', 'rough', titleAdd = 'all')
 
-# # EF - Fine Graining ---------------------------------------------------------------------------------------------------
-# list1 = ['distractX', 'distractLeft', 'distractRight', 'distractUp', 'distractDown']
-# list2 = ['Green', 'Red']
-# list3 = ['noResponse', 'correctLeft', 'correctRight', 'correctUp', 'correctDown']
-# list4 = ['Green', 'Red']
-# list5 = ['responsenoResponse', 'responseL', 'responseR', 'responseU', 'responseD']
-# # Generating all combinations of categorical names
-# categorical_names_fineGrained = ['_'.join(combination) for combination in itertools.product(list1, list2, list3, list4, list5)]
-# # info: DM error key pair - has to be added manually
-# list_error_keys = ['distractSame_colorsDiff_responseOrtho', 'distractOpposite_colorsDiff_responseOrtho']
-#
-# for j in list_error_keys:
-#     error_key_values = errors_dict_EF[j]
-#     sortedResponse = sort_rows_ascending(np.column_stack(error_key_values))
-#     # Creating dict with created names
-#     errors_dict_fineGrained = {name: [] for name in categorical_names_fineGrained}
-#     errors_dict_fineGrained = get_fine_grained_error(sortedResponse, errors_dict_fineGrained, 'EF')
-#     # plot_errorDistribution(errors_dict_fineGrained, participantDirectory, 'EF_fineGrained ' + j, 'fine')
-#     plot_errorDistribution_relative(errors_dict_fineGrained, participantDirectory, 'EF_fineGrained ' + j, 'fine')
+# EF - Fine Graining ---------------------------------------------------------------------------------------------------
+list1 = ['distractX', 'distractLeft', 'distractRight', 'distractUp', 'distractDown']
+list2 = ['Green', 'Red']
+list3 = ['noResponse', 'correctLeft', 'correctRight', 'correctUp', 'correctDown']
+list4 = ['Green', 'Red']
+list5 = ['responsenoResponse', 'responsenan', 'responseL', 'responseR', 'responseU', 'responseD']
+# Generating all combinations of categorical names
+categorical_names_fineGrained = ['_'.join(combination) for combination in itertools.product(list1, list2, list3, list4, list5)]
+# Define the four error classes to plot in fine granularity
+list_error_keys = [top_four_categories[0], top_four_categories[1], top_four_categories[2], top_four_categories[3]]
 
+for j in list_error_keys:
+    error_key_values = errors_dict_EF[j]
+    sortedResponse = sort_rows_ascending(np.column_stack(error_key_values))
+    # Creating dict with created names
+    errors_dict_fineGrained = {name: [] for name in categorical_names_fineGrained}
+    errors_dict_fineGrained = get_fine_grained_error(sortedResponse, errors_dict_fineGrained, 'EF')
+    # Visualize results
+    plot_errorDistribution_relative(errors_dict_fineGrained, participantDirectory, participant, 'EF', 'fine', titleAdd=j)
+
+########################################################################################################################
 # EF Anti --------------------------------------------------------------------------------------------------------------
 errors_dict_EF_Anti = {name: [] for name in categorical_names}
 # Get list of necessary files in directory
-participantDirectory = directory + 'EF_Anti'
+participantDirectory = os.path.join(directory, 'EF_Anti')
 npy_files = glob.glob(os.path.join(participantDirectory, '*Response.npy'))
 selected_months_files = [file for file in npy_files if any(month in file for month in focusedMonths)]
 
@@ -482,28 +530,28 @@ for npy_file in selected_months_files:
     sortedResponse = sort_rows_ascending(Response)
     errors_dict_EF_Anti = get_errors_EF(Response, errors_dict_EF_Anti, distract_dict, opposite_dict)
 # Visualize results
-# plot_errorDistribution(errors_dict_EF_Anti,participantDirectory,'EF_Anti', grainity='rough')
-plot_errorDistribution_relative(errors_dict_EF_Anti,participantDirectory,'EF_Anti', 'rough')
+top_four_categories = plot_errorDistribution_relative(errors_dict_EF_Anti, participantDirectory, participant, 'EF_Anti', 'rough', titleAdd = 'all')
 
-# # EF Anti - Fine Graining ----------------------------------------------------------------------------------------------
-# list1 = ['distractX', 'distractLeft', 'distractRight', 'distractUp', 'distractDown']
-# list2 = ['Green', 'Red']
-# list3 = ['noResponse', 'correctLeft', 'correctRight', 'correctUp', 'correctDown']
-# list4 = ['Green', 'Red']
-# list5 = ['responsenoResponse', 'responseL', 'responseR', 'responseU', 'responseD']
-# # Generating all combinations of categorical names
-# categorical_names_fineGrained = ['_'.join(combination) for combination in itertools.product(list1, list2, list3, list4, list5)]
-# # info: DM error key pair - has to be added manually
-# list_error_keys = ['distractSame_colorsSame_responseOrtho', 'distractSame_colorsDiff_responseOrtho']
-#
-# for j in list_error_keys:
-#     error_key_values = errors_dict_EF_Anti[j]
-#     sortedResponse = sort_rows_ascending(np.column_stack(error_key_values))
-#     # Creating dict with created names
-#     errors_dict_fineGrained = {name: [] for name in categorical_names_fineGrained}
-#     errors_dict_fineGrained = get_fine_grained_error(sortedResponse, errors_dict_fineGrained, 'EF_Anti')
-#     # plot_errorDistribution(errors_dict_fineGrained, participantDirectory, 'EF_Anti_fineGrained ' + j, 'fine')
-#     plot_errorDistribution_relative(errors_dict_fineGrained, participantDirectory, 'EF_Anti_fineGrained ' + j, 'fine')
+# EF Anti - Fine Graining ----------------------------------------------------------------------------------------------
+list1 = ['distractX', 'distractLeft', 'distractRight', 'distractUp', 'distractDown']
+list2 = ['Green', 'Red']
+list3 = ['noResponse', 'correctLeft', 'correctRight', 'correctUp', 'correctDown']
+list4 = ['Green', 'Red']
+list5 = ['responsenoResponse', 'responsenan', 'responseL', 'responseR', 'responseU', 'responseD']
+# Generating all combinations of categorical names
+categorical_names_fineGrained = ['_'.join(combination) for combination in itertools.product(list1, list2, list3, list4, list5)]
+# Define the four error classes to plot in fine granularity
+list_error_keys = [top_four_categories[0], top_four_categories[1], top_four_categories[2], top_four_categories[3]]
+
+for j in list_error_keys:
+    error_key_values = errors_dict_EF_Anti[j]
+    sortedResponse = sort_rows_ascending(np.column_stack(error_key_values))
+    # Creating dict with created names
+    errors_dict_fineGrained = {name: [] for name in categorical_names_fineGrained}
+    errors_dict_fineGrained = get_fine_grained_error(sortedResponse, errors_dict_fineGrained, 'EF_Anti')
+    # Visualize results
+    plot_errorDistribution_relative(errors_dict_fineGrained, participantDirectory, participant, 'EF_Anti', 'fine', titleAdd=j)
+
 
 ########################################################################################################################
 # Relational Processing
@@ -549,10 +597,11 @@ def get_errors_RP(Response, errors_dict, opened_meta_file):
 
     return errors_dict
 
+########################################################################################################################
 # RP -------------------------------------------------------------------------------------------------------------------
 errors_dict_RP = {name: [] for name in categorical_names}
 # Get list of necessary files in directory
-participantDirectory = directory + 'RP'
+participantDirectory = os.path.join(directory, 'RP')
 npy_files = glob.glob(os.path.join(participantDirectory, '*Response.npy'))
 meta_files = glob.glob(os.path.join(participantDirectory, '*Meta.json'))
 selected_months_files = [file for file in npy_files if any(month in file for month in focusedMonths)]
@@ -566,32 +615,32 @@ for npy_file, meta_file in zip(selected_months_files, selected_meta_files):
     Response = np.load(npy_file, allow_pickle=True)
     errors_dict_RP = get_errors_RP(Response, errors_dict_RP, opened_meta_file)
 # Visualize results
-# plot_errorDistribution(errors_dict_RP,participantDirectory,'RP', grainity='rough')
-plot_errorDistribution_relative(errors_dict_RP,participantDirectory,'RP', 'rough')
+top_four_categories = plot_errorDistribution_relative(errors_dict_RP,participantDirectory, participant, 'RP', 'rough', titleAdd = 'all')
 
-# # RP - Fine Graining ---------------------------------------------------------------------------------------------------
-# list1 = ['distractCircle', 'distractNonagon', 'distractHeptagon', 'distractPentagon', 'distractTriangle', 'distractNoResponse']
-# list2 = ['Amber', 'Blue', 'Green', 'Lime', 'Magenta', 'Moss', 'Orange', 'Purple', 'Red', 'Rust', 'Violet', 'Yellow']
-# list3 = ['correctCircle', 'correctNonagon', 'correctHeptagon', 'correctPentagon', 'correctTriangle']
-# list4 = ['Similiar', 'NonSimiliar']
-# # Generating all combinations of categorical names
-# categorical_names_fineGrained = ['_'.join(combination) for combination in itertools.product(list1, list2, list3, list4)]
-# # info: DM error key pair - has to be added manually
-# list_error_keys = ['noResponse', 'distractClassRedNonagon']
-#
-# for j in list_error_keys:
-#     error_key_values = errors_dict_RP[j]
-#     sortedResponse = np.column_stack(error_key_values)
-#     # Creating dict with created names
-#     errors_dict_fineGrained = {name: [] for name in categorical_names_fineGrained}
-#     errors_dict_fineGrained = get_fine_grained_error(sortedResponse, errors_dict_fineGrained, 'RP')
-#     # plot_errorDistribution(errors_dict_fineGrained, participantDirectory, 'RP_fineGrained ' + j, 'fine')
-#     plot_errorDistribution_relative(errors_dict_fineGrained, participantDirectory, 'RP_fineGrained ' + j, 'fine')
+# RP - Fine Graining ---------------------------------------------------------------------------------------------------
+list1 = ['distractCircle', 'distractNonagon', 'distractHeptagon', 'distractPentagon', 'distractTriangle', 'distractNoResponse']
+list2 = ['Amber', 'Blue', 'Green', 'Lime', 'Magenta', 'Moss', 'Orange', 'Purple', 'Red', 'Rust', 'Violet', 'Yellow']
+list3 = ['correctCircle', 'correctNonagon', 'correctHeptagon', 'correctPentagon', 'correctTriangle']
+list4 = ['Similiar', 'NonSimiliar']
+# Generating all combinations of categorical names
+categorical_names_fineGrained = ['_'.join(combination) for combination in itertools.product(list1, list2, list3, list4)]
+# Define the four error classes to plot in fine granularity
+list_error_keys = [top_four_categories[0], top_four_categories[1], top_four_categories[2], top_four_categories[3]]
 
+for j in list_error_keys:
+    error_key_values = errors_dict_RP[j]
+    sortedResponse = np.column_stack(error_key_values)
+    # Creating dict with created names
+    errors_dict_fineGrained = {name: [] for name in categorical_names_fineGrained}
+    errors_dict_fineGrained = get_fine_grained_error(sortedResponse, errors_dict_fineGrained, 'RP')
+    # Visualize results
+    plot_errorDistribution_relative(errors_dict_fineGrained, participantDirectory, participant, 'RP', 'fine', titleAdd=j)
+
+########################################################################################################################
 # RP Anti --------------------------------------------------------------------------------------------------------------
 errors_dict_RP_Anti = {name: [] for name in categorical_names}
 # Get list of necessary files in directory
-participantDirectory = directory + 'RP_Anti'
+participantDirectory = os.path.join(directory, 'RP_Anti')
 npy_files = glob.glob(os.path.join(participantDirectory, '*Response.npy'))
 meta_files = glob.glob(os.path.join(participantDirectory, '*Meta.json'))
 selected_months_files = [file for file in npy_files if any(month in file for month in focusedMonths)]
@@ -605,32 +654,32 @@ for npy_file, meta_file in zip(selected_months_files, selected_meta_files):
     Response = np.load(npy_file, allow_pickle=True)
     errors_dict_RP_Anti = get_errors_RP(Response, errors_dict_RP_Anti, opened_meta_file)
 # Visualize results
-# plot_errorDistribution(errors_dict_RP_Anti,participantDirectory,'RP_Anti', grainity='rough')
-plot_errorDistribution_relative(errors_dict_RP_Anti,participantDirectory,'RP_Anti', 'rough')
+top_four_categories = plot_errorDistribution_relative(errors_dict_RP_Anti,participantDirectory, participant, 'RP_Anti', 'rough', titleAdd = 'all')
 
-# # RP Anti - Fine Graining ----------------------------------------------------------------------------------------------
-# list1 = ['distractCircle', 'distractNonagon', 'distractHeptagon', 'distractPentagon', 'distractTriangle', 'distractNoResponse']
-# list2 = ['Amber', 'Blue', 'Green', 'Lime', 'Magenta', 'Moss', 'Orange', 'Purple', 'Red', 'Rust', 'Violet', 'Yellow']
-# list3 = ['correctCircle', 'correctNonagon', 'correctHeptagon', 'correctPentagon', 'correctTriangle']
-# list4 = ['Similiar', 'NonSimiliar']
-# # Generating all combinations of categorical names
-# categorical_names_fineGrained = ['_'.join(combination) for combination in itertools.product(list1, list2, list3, list4)]
-# # info: DM error key pair - has to be added manually
-# list_error_keys = ['noResponse', 'distractClassBlueNonagon', 'distractClassYellowHeptagon', 'distractClassRedHeptagon']
-#
-# for j in list_error_keys:
-#     error_key_values = errors_dict_RP_Anti[j]
-#     sortedResponse = np.column_stack(error_key_values)
-#     # Creating dict with created names
-#     errors_dict_fineGrained = {name: [] for name in categorical_names_fineGrained}
-#     errors_dict_fineGrained = get_fine_grained_error(sortedResponse, errors_dict_fineGrained, 'RP_Anti')
-#     # plot_errorDistribution(errors_dict_fineGrained, participantDirectory, 'RP_Anti_fineGrained ' + j, 'fine')
-#     plot_errorDistribution_relative(errors_dict_fineGrained, participantDirectory, 'RP_Anti_fineGrained ' + j, 'fine')
+# RP Anti - Fine Graining ----------------------------------------------------------------------------------------------
+list1 = ['distractCircle', 'distractNonagon', 'distractHeptagon', 'distractPentagon', 'distractTriangle', 'distractNoResponse']
+list2 = ['Amber', 'Blue', 'Green', 'Lime', 'Magenta', 'Moss', 'Orange', 'Purple', 'Red', 'Rust', 'Violet', 'Yellow']
+list3 = ['correctCircle', 'correctNonagon', 'correctHeptagon', 'correctPentagon', 'correctTriangle']
+list4 = ['Similiar', 'NonSimiliar']
+# Generating all combinations of categorical names
+categorical_names_fineGrained = ['_'.join(combination) for combination in itertools.product(list1, list2, list3, list4)]
+# Define the four error classes to plot in fine granularity
+list_error_keys = [top_four_categories[0], top_four_categories[1], top_four_categories[2], top_four_categories[3]]
 
+for j in list_error_keys:
+    error_key_values = errors_dict_RP_Anti[j]
+    sortedResponse = np.column_stack(error_key_values)
+    # Creating dict with created names
+    errors_dict_fineGrained = {name: [] for name in categorical_names_fineGrained}
+    errors_dict_fineGrained = get_fine_grained_error(sortedResponse, errors_dict_fineGrained, 'RP_Anti')
+    # Visualize results
+    plot_errorDistribution_relative(errors_dict_fineGrained, participantDirectory, participant, 'RP_Anti', 'fine', titleAdd=j)
+
+########################################################################################################################
 # RP Ctx1 --------------------------------------------------------------------------------------------------------------
 errors_dict_RP_Ctx1 = {name: [] for name in categorical_names}
 # Get list of necessary files in directory
-participantDirectory = directory + 'RP_Ctx1'
+participantDirectory = os.path.join(directory, 'RP_Ctx1')
 npy_files = glob.glob(os.path.join(participantDirectory, '*Response.npy'))
 meta_files = glob.glob(os.path.join(participantDirectory, '*Meta.json'))
 selected_months_files = [file for file in npy_files if any(month in file for month in focusedMonths)]
@@ -644,32 +693,32 @@ for npy_file, meta_file in zip(selected_months_files, selected_meta_files):
     Response = np.load(npy_file, allow_pickle=True)
     errors_dict_RP_Ctx1 = get_errors_RP(Response, errors_dict_RP_Ctx1, opened_meta_file)
 # Visualize results
-# plot_errorDistribution(errors_dict_RP_Ctx1,participantDirectory,'RP_Ctx1', grainity='rough')
-plot_errorDistribution_relative(errors_dict_RP_Ctx1,participantDirectory,'RP_Ctx1', 'rough')
+top_four_categories = plot_errorDistribution_relative(errors_dict_RP_Ctx1,participantDirectory, participant, 'RP_Ctx1', 'rough', titleAdd = 'all')
 
-# # RP Ctx1 - Fine Graining ----------------------------------------------------------------------------------------------
-# list1 = ['distractCircle', 'distractNonagon', 'distractHeptagon', 'distractPentagon', 'distractTriangle', 'distractNoResponse']
-# list2 = ['Amber', 'Blue', 'Green', 'Lime', 'Magenta', 'Moss', 'Orange', 'Purple', 'Red', 'Rust', 'Violet', 'Yellow']
-# list3 = ['correctCircle', 'correctNonagon', 'correctHeptagon', 'correctPentagon', 'correctTriangle']
-# list4 = ['Similiar', 'NonSimiliar']
-# # Generating all combinations of categorical names
-# categorical_names_fineGrained = ['_'.join(combination) for combination in itertools.product(list1, list2, list3, list4)]
-# # info: DM error key pair - has to be added manually
-# list_error_keys = ['noResponse']
-#
-# for j in list_error_keys:
-#     error_key_values = errors_dict_RP_Ctx1[j]
-#     sortedResponse = np.column_stack(error_key_values)
-#     # Creating dict with created names
-#     errors_dict_fineGrained = {name: [] for name in categorical_names_fineGrained}
-#     errors_dict_fineGrained = get_fine_grained_error(sortedResponse, errors_dict_fineGrained, 'RP_Ctx1')
-#     # plot_errorDistribution(errors_dict_fineGrained, participantDirectory, 'RP_Ctx1_fineGrained ' + j, 'fine')
-#     plot_errorDistribution_relative(errors_dict_fineGrained, participantDirectory, 'RP_Ctx1_fineGrained ' + j, 'fine')
+# RP Ctx1 - Fine Graining ----------------------------------------------------------------------------------------------
+list1 = ['distractCircle', 'distractNonagon', 'distractHeptagon', 'distractPentagon', 'distractTriangle', 'distractNoResponse']
+list2 = ['Amber', 'Blue', 'Green', 'Lime', 'Magenta', 'Moss', 'Orange', 'Purple', 'Red', 'Rust', 'Violet', 'Yellow']
+list3 = ['correctCircle', 'correctNonagon', 'correctHeptagon', 'correctPentagon', 'correctTriangle']
+list4 = ['Similiar', 'NonSimiliar']
+# Generating all combinations of categorical names
+categorical_names_fineGrained = ['_'.join(combination) for combination in itertools.product(list1, list2, list3, list4)]
+# Define the four error classes to plot in fine granularity
+list_error_keys = [top_four_categories[0], top_four_categories[1], top_four_categories[2], top_four_categories[3]]
 
+for j in list_error_keys:
+    error_key_values = errors_dict_RP_Ctx1[j]
+    sortedResponse = np.column_stack(error_key_values)
+    # Creating dict with created names
+    errors_dict_fineGrained = {name: [] for name in categorical_names_fineGrained}
+    errors_dict_fineGrained = get_fine_grained_error(sortedResponse, errors_dict_fineGrained, 'RP_Ctx1')
+    # Visualize results
+    plot_errorDistribution_relative(errors_dict_fineGrained, participantDirectory, participant, 'RP_Ctx1', 'fine', titleAdd=j)
+
+########################################################################################################################
 # RP Ctx2 --------------------------------------------------------------------------------------------------------------
 errors_dict_RP_Ctx2 = {name: [] for name in categorical_names}
 # Get list of necessary files in directory
-participantDirectory = directory + 'RP_Ctx2'
+participantDirectory = os.path.join(directory, 'RP_Ctx2')
 npy_files = glob.glob(os.path.join(participantDirectory, '*Response.npy'))
 meta_files = glob.glob(os.path.join(participantDirectory, '*Meta.json'))
 selected_months_files = [file for file in npy_files if any(month in file for month in focusedMonths)]
@@ -683,27 +732,27 @@ for npy_file, meta_file in zip(selected_months_files, selected_meta_files):
     Response = np.load(npy_file, allow_pickle=True)
     errors_dict_RP_Ctx2 = get_errors_RP(Response, errors_dict_RP_Ctx2, opened_meta_file)
 # Visualize results
-# plot_errorDistribution(errors_dict_RP_Ctx2,participantDirectory,'RP_Ctx2 ', grainity='rough')
-plot_errorDistribution_relative(errors_dict_RP_Ctx2,participantDirectory,'RP_Ctx2 ', 'rough')
+top_four_categories = plot_errorDistribution_relative(errors_dict_RP_Ctx2,participantDirectory, participant, 'RP_Ctx2', 'rough', titleAdd = 'all')
 
-# # RP Ctx2 - Fine Graining ----------------------------------------------------------------------------------------------
-# list1 = ['distractCircle', 'distractNonagon', 'distractHeptagon', 'distractPentagon', 'distractTriangle', 'distractNoResponse']
-# list2 = ['Amber', 'Blue', 'Green', 'Lime', 'Magenta', 'Moss', 'Orange', 'Purple', 'Red', 'Rust', 'Violet', 'Yellow']
-# list3 = ['correctCircle', 'correctNonagon', 'correctHeptagon', 'correctPentagon', 'correctTriangle']
-# list4 = ['Similiar', 'NonSimiliar']
-# # Generating all combinations of categorical names
-# categorical_names_fineGrained = ['_'.join(combination) for combination in itertools.product(list1, list2, list3, list4)]
-# # info: DM error key pair - has to be added manually
-# list_error_keys = ['noResponse', 'distractClassGreenHeptagon', 'distractClassRedNonagon', 'distractClassYellowNonagon']
-#
-# for j in list_error_keys:
-#     error_key_values = errors_dict_RP_Ctx2[j]
-#     sortedResponse = np.column_stack(error_key_values)
-#     # Creating dict with created names
-#     errors_dict_fineGrained = {name: [] for name in categorical_names_fineGrained}
-#     errors_dict_fineGrained = get_fine_grained_error(sortedResponse, errors_dict_fineGrained, 'RP_Ctx2')
-#     # plot_errorDistribution(errors_dict_fineGrained, participantDirectory, 'RP_Ctx2_fineGrained ' + j, 'fine')
-#     plot_errorDistribution_relative(errors_dict_fineGrained, participantDirectory, 'RP_Ctx2_fineGrained ' + j, 'fine')
+# RP Ctx2 - Fine Graining ----------------------------------------------------------------------------------------------
+list1 = ['distractCircle', 'distractNonagon', 'distractHeptagon', 'distractPentagon', 'distractTriangle', 'distractNoResponse']
+list2 = ['Amber', 'Blue', 'Green', 'Lime', 'Magenta', 'Moss', 'Orange', 'Purple', 'Red', 'Rust', 'Violet', 'Yellow']
+list3 = ['correctCircle', 'correctNonagon', 'correctHeptagon', 'correctPentagon', 'correctTriangle']
+list4 = ['Similiar', 'NonSimiliar']
+# Generating all combinations of categorical names
+categorical_names_fineGrained = ['_'.join(combination) for combination in itertools.product(list1, list2, list3, list4)]
+# Define the four error classes to plot in fine granularity
+list_error_keys = [top_four_categories[0], top_four_categories[1], top_four_categories[2], top_four_categories[3]]
+
+for j in list_error_keys:
+    error_key_values = errors_dict_RP_Ctx2[j]
+    sortedResponse = np.column_stack(error_key_values)
+    # Creating dict with created names
+    errors_dict_fineGrained = {name: [] for name in categorical_names_fineGrained}
+    errors_dict_fineGrained = get_fine_grained_error(sortedResponse, errors_dict_fineGrained, 'RP_Ctx2')
+    # Visualize results
+    plot_errorDistribution_relative(errors_dict_fineGrained, participantDirectory, participant, 'RP_Ctx2', 'fine', titleAdd=j)
+
 
 ########################################################################################################################
 # Working Memory
@@ -733,14 +782,14 @@ categorical_names_WM = categorical_names_WM_1 + categorical_names_WM_2
 # Create categorical names for WM_Ctx tasks
 list1 = ['formClassCombi_CircleCircle', 'formClassCombi_CirclePolygon', 'formClassCombi_CircleTriangle',\
          'formClassCombi_PolygonPolygon', 'formClassCombi_PolygonTriangle', 'formClassCombi_TriangleTriangle']
-list2 = ['diffColor_diffForm', 'simColor_diffForm','diffColor_simForm', 'simColor_simForm']
-# list3 = ['3stim']
+list2 = ['3stim'] # info: naming for ctx tasks accidentally different than above
+list3 = ['diffColor_diffForm', 'simColor_diffForm','diffColor_simForm', 'simColor_simForm']
 list4 = ['responseMatch', 'responseMismatch', 'responseNoResponse']
 
-# categorical_names_WM_Ctx_1 = ['_'.join(combination) for combination in itertools.product(list1, list2, list3, list4)]
-categorical_names_WM_Ctx_2 = ['_'.join(combination) for combination in itertools.product(list1, list2, list4)]
+categorical_names_WM_Ctx_1 = ['_'.join(combination) for combination in itertools.product(list1, list2, list3, list4)]
+categorical_names_WM_Ctx_2 = ['_'.join(combination) for combination in itertools.product(list1, list3, list4)]
 
-categorical_names_WM_Ctx = categorical_names_WM_Ctx_2 # + categorical_names_WM_Ctx_1
+categorical_names_WM_Ctx = categorical_names_WM_Ctx_2 + categorical_names_WM_Ctx_1
 
 # shows current trial in detail and similiarity in form and color to previous trials
 def get_errors_WM(Response, errors_dict, opened_meta_file):
@@ -815,7 +864,7 @@ def get_errors_WM_Ctx(Response, errors_dict, opened_meta_file):
                      Stim1.split('_')[1].split('.')[0] in formDict['ClassTriangle'] and Stim2.split('_')[1].split('.')[0] in formDict['ClassPolygon']:
                     errorComponent_1 = 'formClassCombi_PolygonTriangle'
             except Exception as e:
-                print('Error occured: ', e)
+                print('Error occured: ', e) # info: Happens rarely if accidentally one of two stims is None
                 continue
 
             errorComponent_2 = opened_meta_file['difficultyLevel'].split('trials_')[1]
@@ -832,9 +881,10 @@ def get_errors_WM_Ctx(Response, errors_dict, opened_meta_file):
 
     return errors_dict
 
+########################################################################################################################
 # WM -------------------------------------------------------------------------------------------------------------------
 errors_dict_WM = {name: [] for name in categorical_names_WM}
-participantDirectory = directory + 'WM'
+participantDirectory = os.path.join(directory, 'WM')
 npy_files = glob.glob(os.path.join(participantDirectory, '*Response.npy'))
 meta_files = glob.glob(os.path.join(participantDirectory, '*Meta.json'))
 selected_npy_files = [file for file in npy_files if any(month in file for month in focusedMonths)]
@@ -849,32 +899,32 @@ for npy_file, meta_file in zip(selected_npy_files, selected_meta_files):
     # Sort the correct stim on the 2nd row
     sortedResponse = sort_rows_correctOn2(Response)
     errors_dict_WM = get_errors_WM(sortedResponse, errors_dict_WM, opened_meta_file)
-# # Visualize results
-# plot_errorDistribution(errors_dict_WM, participantDirectory,'WM', grainity='rough')
-plot_errorDistribution_relative(errors_dict_WM, participantDirectory,'WM', 'rough')
+# Visualize results
+top_four_categories = plot_errorDistribution_relative(errors_dict_WM,participantDirectory, participant, 'WM', 'rough', titleAdd = 'all')
 
-# # WM - Fine Graining ---------------------------------------------------------------------------------------------------
-# list1 = ['distract', 'noResponse']
-# list2 = ['Circle', 'Nonagon', 'Heptagon', 'Pentagon', 'Triangle']
-# list3 = ['ClassYellow', 'ClassGreen', 'ClassBlue', 'ClassRed']
-# list4 = ['_simColor_simForm', '_simColor_diffForm', '_diffColor_simForm', '_diffColor_diffForm']
-# # Generating all combinations of categorical names
-# categorical_names_fineGrained = [''.join(combination) for combination in itertools.product(list1, list2, list3, list4)]
-# # info: DM error key pairs that you want to check out - has to be added manually
-# list_error_keys = ['noResponse_simColor_simForm']
-#
-# for j in list_error_keys:
-#     error_key_values = errors_dict_WM[j]
-#     sortedResponse = np.column_stack(error_key_values)
-#     # Creating dict with created names
-#     errors_dict_fineGrained = {name: [] for name in categorical_names_fineGrained}
-#     errors_dict_fineGrained = get_fine_grained_error(sortedResponse, errors_dict_fineGrained, 'WM')
-#     # plot_errorDistribution(errors_dict_fineGrained, participantDirectory, 'WM_fineGrained ' + j, 'fine')
-#     plot_errorDistribution_relative(errors_dict_fineGrained, participantDirectory, 'WM_fineGrained ' + j, 'fine')
+# WM - Fine Graining ---------------------------------------------------------------------------------------------------
+list1 = ['distract', 'noResponse']
+list2 = ['Circle', 'Nonagon', 'Heptagon', 'Pentagon', 'Triangle']
+list3 = ['ClassYellow', 'ClassGreen', 'ClassBlue', 'ClassRed']
+list4 = ['_simColor_simForm', '_simColor_diffForm', '_diffColor_simForm', '_diffColor_diffForm']
+# Generating all combinations of categorical names
+categorical_names_fineGrained = [''.join(combination) for combination in itertools.product(list1, list2, list3, list4)]
+# Define the four error classes to plot in fine granularity
+list_error_keys = [top_four_categories[0], top_four_categories[1], top_four_categories[2], top_four_categories[3]]
 
+for j in list_error_keys:
+    error_key_values = errors_dict_WM[j]
+    sortedResponse = np.column_stack(error_key_values)
+    # Creating dict with created names
+    errors_dict_fineGrained = {name: [] for name in categorical_names_fineGrained}
+    errors_dict_fineGrained = get_fine_grained_error(sortedResponse, errors_dict_fineGrained, 'WM')
+    # Visualize results
+    plot_errorDistribution_relative(errors_dict_fineGrained, participantDirectory, participant, 'WM', 'fine', titleAdd=j)
+
+########################################################################################################################
 # WM Anti --------------------------------------------------------------------------------------------------------------
 errors_dict_WM_Anti = {name: [] for name in categorical_names_WM}
-participantDirectory = directory + 'WM_Anti'
+participantDirectory = os.path.join(directory, 'WM_Anti')
 npy_files = glob.glob(os.path.join(participantDirectory, '*Response.npy'))
 meta_files = glob.glob(os.path.join(participantDirectory, '*Meta.json'))
 selected_npy_files = [file for file in npy_files if any(month in file for month in focusedMonths)]
@@ -890,112 +940,303 @@ for npy_file, meta_file in zip(selected_npy_files, selected_meta_files):
     sortedResponse = sort_rows_correctOn2(Response)
     errors_dict_WM_Anti = get_errors_WM(sortedResponse, errors_dict_WM_Anti, opened_meta_file)
 # Visualize results
-# plot_errorDistribution(errors_dict_WM_Anti,participantDirectory,'WM_Anti', grainity='rough')
-plot_errorDistribution_relative(errors_dict_WM_Anti,participantDirectory,'WM_Anti', 'rough')
+top_four_categories = plot_errorDistribution_relative(errors_dict_WM_Anti,participantDirectory, participant, 'WM_Anti', 'rough', titleAdd = 'all')
 
-# # WM Anti - Fine Graining ----------------------------------------------------------------------------------------------
-# list1 = ['distract', 'noResponse']
-# list2 = ['Circle', 'Nonagon', 'Heptagon', 'Pentagon', 'Triangle']
-# list3 = ['ClassYellow', 'ClassGreen', 'ClassBlue', 'ClassRed']
-# list4 = ['_simColor_simForm', '_simColor_diffForm', '_diffColor_simForm', '_diffColor_diffForm']
-# # Generating all combinations of categorical names
-# categorical_names_fineGrained = [''.join(combination) for combination in itertools.product(list1, list2, list3, list4)]
-# # info: DM error key pair - has to be added manually
-# list_error_keys = ['noResponse_simColor_simForm']
-#
-# for j in list_error_keys:
-#     error_key_values = errors_dict_WM_Anti[j]
-#     sortedResponse = np.column_stack(error_key_values)
-#     # Creating dict with created names
-#     errors_dict_fineGrained = {name: [] for name in categorical_names_fineGrained}
-#     errors_dict_fineGrained = get_fine_grained_error(sortedResponse, errors_dict_fineGrained, 'WM_Anti')
-#     # plot_errorDistribution(errors_dict_fineGrained, participantDirectory, 'WM_Anti_fineGrained ' + j, 'fine')
-#     plot_errorDistribution_relative(errors_dict_fineGrained, participantDirectory, 'WM_Anti_fineGrained ' + j, 'fine')
+# WM Anti - Fine Graining ----------------------------------------------------------------------------------------------
+list1 = ['distract', 'noResponse']
+list2 = ['Circle', 'Nonagon', 'Heptagon', 'Pentagon', 'Triangle']
+list3 = ['ClassYellow', 'ClassGreen', 'ClassBlue', 'ClassRed']
+list4 = ['_simColor_simForm', '_simColor_diffForm', '_diffColor_simForm', '_diffColor_diffForm']
+# Generating all combinations of categorical names
+categorical_names_fineGrained = [''.join(combination) for combination in itertools.product(list1, list2, list3, list4)]
+# Define the four error classes to plot in fine granularity
+list_error_keys = [top_four_categories[0], top_four_categories[1], top_four_categories[2], top_four_categories[3]]
 
+for j in list_error_keys:
+    error_key_values = errors_dict_WM_Anti[j]
+    sortedResponse = np.column_stack(error_key_values)
+    # Creating dict with created names
+    errors_dict_fineGrained = {name: [] for name in categorical_names_fineGrained}
+    errors_dict_fineGrained = get_fine_grained_error(sortedResponse, errors_dict_fineGrained, 'WM_Anti')
+    # Visualize results
+    plot_errorDistribution_relative(errors_dict_fineGrained, participantDirectory, participant, 'WM_Anti', 'fine', titleAdd=j)
 
-# attention: Got to fixx the WM Ctx1 and Ctx2 analysis
-# # WM Ctx1 --------------------------------------------------------------------------------------------------------------
-# errors_dict_WM_Ctx1 = {name: [] for name in categorical_names_WM_Ctx}
-# participantDirectory = directory + 'WM_Ctx1'
-# npy_files = glob.glob(os.path.join(participantDirectory, '*Response.npy'))
-# meta_files = glob.glob(os.path.join(participantDirectory, '*Meta.json'))
-# selected_npy_files = [file for file in npy_files if any(month in file for month in focusedMonths)]
-# selected_meta_files = [file for file in meta_files if any(month in file for month in focusedMonths)]
-#
-# for npy_file, meta_file in zip(selected_npy_files, selected_meta_files):
-#     # Load the JSON content from the file
-#     with open(meta_file, 'r') as file:
-#         opened_meta_file = json.load(file)
-#     # Use the function
-#     Response = np.load(npy_file, allow_pickle=True)
-#     errors_dict_WM_Ctx1 = get_errors_WM_Ctx(Response, errors_dict_WM_Ctx1, opened_meta_file)
-# # Visualize results
-# # plot_errorDistribution(errors_dict_WM_Ctx1,participantDirectory,'WM_Ctx1', grainity='rough')
-# plot_errorDistribution_relative(errors_dict_WM_Ctx1,participantDirectory,'WM_Ctx1', 'rough')
-#
-# # # WM Ctx1 - Fine Graining ----------------------------------------------------------------------------------------------
-# # list1 = ['formClassCombi']
-# # list2 = ['CircleCircle', 'PolygonPolygon', 'TriangleTriangle',\
-# #          'CirclePolygon', 'CircleTriangle', 'PolygonTriangle']
-# # list3 = ['colorClassCombi']
-# # list4 = ['YellowYellow', 'GreenGreen', 'BlueBlue', 'RedRed', 'YellowGreen', 'YellowBlue', 'YellowRed',\
-# #          'GreenBlue', 'GreenRed', 'BlueRed']
-# # list5 = ['simColor_simForm', 'simColor_diffForm', 'diffColor_simForm', 'diffColor_diffForm']
-# # list6 = ['responseMatch', 'responseMismatch', 'responseNoResponse']
-# # # Generating all combinations of categorical names
-# # categorical_names_fineGrained = ['_'.join(combination) for combination in itertools.product(list1, list2, list3, list4, list5, list6)]
-# # # info: DM error key pair - has to be added manually
-# # list_error_keys = ['formClassCombi_CirclePolygon_simColor_simForm_responseMatch', 'formClassCombi_CirclePolygon_simColor_simForm_responseMatch']
-# #
-# # for j in list_error_keys:
-# #     error_key_values = errors_dict_WM_Ctx1[j]
-# #     sortedResponse = np.column_stack(error_key_values)
-# #     # Creating dict with created names
-# #     errors_dict_fineGrained = {name: [] for name in categorical_names_fineGrained}
-# #     errors_dict_fineGrained = get_fine_grained_error(sortedResponse, errors_dict_fineGrained, 'WM_Ctx1')
-# #     # plot_errorDistribution(errors_dict_fineGrained, participantDirectory, 'WM_Ctx1_fineGrained ' + j, 'fine')
-# #     plot_errorDistribution_relative(errors_dict_fineGrained, participantDirectory, 'WM_Ctx1_fineGrained ' + j, 'fine')
-#
-# # WM Ctx2 --------------------------------------------------------------------------------------------------------------
-# errors_dict_WM_Ctx2 = {name: [] for name in categorical_names_WM_Ctx}
-# participantDirectory = directory + 'WM_Ctx2'
-# npy_files = glob.glob(os.path.join(participantDirectory, '*Response.npy'))
-# meta_files = glob.glob(os.path.join(participantDirectory, '*Meta.json'))
-# selected_npy_files = [file for file in npy_files if any(month in file for month in focusedMonths)]
-# selected_meta_files = [file for file in meta_files if any(month in file for month in focusedMonths)]
-#
-# for npy_file, meta_file in zip(selected_npy_files, selected_meta_files):
-#     # Load the JSON content from the file
-#     with open(meta_file, 'r') as file:
-#         opened_meta_file = json.load(file)
-#     # Use the function
-#     Response = np.load(npy_file, allow_pickle=True)
-#     errors_dict_WM_Ctx2 = get_errors_WM_Ctx(Response, errors_dict_WM_Ctx2, opened_meta_file)
-# # Visualize results
-# # plot_errorDistribution(errors_dict_WM_Ctx2,participantDirectory,'WM_Ctx2', grainity='rough')
-# plot_errorDistribution_relative(errors_dict_WM_Ctx2,participantDirectory,'WM_Ctx2', 'rough')
-#
-# # # WM Ctx2 - Fine Graining ----------------------------------------------------------------------------------------------
-# # list1 = ['formClassCombi']
-# # list2 = ['CircleCircle', 'PolygonPolygon', 'TriangleTriangle',\
-# #          'CirclePolygon', 'CircleTriangle', 'PolygonTriangle']
-# # list3 = ['colorClassCombi']
-# # list4 = ['YellowYellow', 'GreenGreen', 'BlueBlue', 'RedRed', 'YellowGreen', 'YellowBlue', 'YellowRed',\
-# #          'GreenBlue', 'GreenRed', 'BlueRed']
-# # list5 = ['simColor_simForm', 'simColor_diffForm', 'diffColor_simForm', 'diffColor_diffForm']
-# # list6 = ['responseMatch', 'responseMismatch', 'responseNoResponse']
-# # # Generating all combinations of categorical names
-# # categorical_names_fineGrained = ['_'.join(combination) for combination in itertools.product(list1, list2, list3, list4, list5, list6)]
-# # # info: DM error key pair - has to be added manually
-# # list_error_keys = ['formClassCombi_CirclePolygon_simColor_simForm_responseMatch']
-# #
-# # for j in list_error_keys:
-# #     error_key_values = errors_dict_WM_Ctx2[j]
-# #     sortedResponse = np.column_stack(error_key_values)
-# #     # Creating dict with created names
-# #     errors_dict_fineGrained = {name: [] for name in categorical_names_fineGrained}
-# #     errors_dict_fineGrained = get_fine_grained_error(sortedResponse, errors_dict_fineGrained, 'WM_Ctx2')
-# #     # plot_errorDistribution(errors_dict_fineGrained, participantDirectory, 'WM_Ctx2_fineGrained ' + j, 'fine')
-# #     plot_errorDistribution_relative(errors_dict_fineGrained, participantDirectory, 'WM_Ctx2_fineGrained ' + j, 'fine')
+#######################################################################################################################
+# WM Ctx1 --------------------------------------------------------------------------------------------------------------
+errors_dict_WM_Ctx1 = {name: [] for name in categorical_names_WM_Ctx}
+participantDirectory = os.path.join(directory, 'WM_Ctx1')
+npy_files = glob.glob(os.path.join(participantDirectory, '*Response.npy'))
+meta_files = glob.glob(os.path.join(participantDirectory, '*Meta.json'))
+selected_npy_files = [file for file in npy_files if any(month in file for month in focusedMonths)]
+selected_meta_files = [file for file in meta_files if any(month in file for month in focusedMonths)]
+
+for npy_file, meta_file in zip(selected_npy_files, selected_meta_files):
+    # Load the JSON content from the file
+    with open(meta_file, 'r') as file:
+        opened_meta_file = json.load(file)
+    # Use the function
+    Response = np.load(npy_file, allow_pickle=True)
+    errors_dict_WM_Ctx1 = get_errors_WM_Ctx(Response, errors_dict_WM_Ctx1, opened_meta_file)
+# Visualize results
+top_four_categories = plot_errorDistribution_relative(errors_dict_WM_Ctx1,participantDirectory, participant, 'WM_Ctx1', 'rough', titleAdd = 'all')
+
+# WM Ctx1 - Fine Graining ----------------------------------------------------------------------------------------------
+list1 = ['formClassCombi']
+list2 = ['CircleCircle', 'PolygonPolygon', 'TriangleTriangle',\
+         'CirclePolygon', 'CircleTriangle', 'PolygonTriangle']
+list3 = ['colorClassCombi']
+list4 = ['YellowYellow', 'GreenGreen', 'BlueBlue', 'RedRed', 'YellowGreen', 'YellowBlue', 'YellowRed',\
+         'GreenBlue', 'GreenRed', 'BlueRed']
+list5 = ['simColor_simForm', 'simColor_diffForm', 'diffColor_simForm', 'diffColor_diffForm']
+list6 = ['responseMatch', 'responseMismatch', 'responseNoResponse']
+# Generating all combinations of categorical names
+categorical_names_fineGrained = ['_'.join(combination) for combination in itertools.product(list1, list2, list3, list4, list5, list6)]
+# Define the four error classes to plot in fine granularity
+list_error_keys = [top_four_categories[0], top_four_categories[1], top_four_categories[2], top_four_categories[3]]
+
+for j in list_error_keys:
+    error_key_values = errors_dict_WM_Ctx1[j]
+    sortedResponse = np.column_stack(error_key_values)
+    # Creating dict with created names
+    errors_dict_fineGrained = {name: [] for name in categorical_names_fineGrained}
+    errors_dict_fineGrained = get_fine_grained_error(sortedResponse, errors_dict_fineGrained, 'WM_Ctx1')
+    # plot_errorDistribution(errors_dict_fineGrained, participantDirectory, 'WM_Ctx1_fineGrained ' + j, 'fine')
+    plot_errorDistribution_relative(errors_dict_fineGrained, participantDirectory, participant, 'WM_Ctx1', 'fine', titleAdd=j)
+
+########################################################################################################################
+# WM Ctx2 --------------------------------------------------------------------------------------------------------------
+errors_dict_WM_Ctx2 = {name: [] for name in categorical_names_WM_Ctx}
+participantDirectory = os.path.join(directory, 'WM_Ctx2')
+npy_files = glob.glob(os.path.join(participantDirectory, '*Response.npy'))
+meta_files = glob.glob(os.path.join(participantDirectory, '*Meta.json'))
+selected_npy_files = [file for file in npy_files if any(month in file for month in focusedMonths)]
+selected_meta_files = [file for file in meta_files if any(month in file for month in focusedMonths)]
+
+for npy_file, meta_file in zip(selected_npy_files, selected_meta_files):
+    # Load the JSON content from the file
+    with open(meta_file, 'r') as file:
+        opened_meta_file = json.load(file)
+    # Use the function
+    Response = np.load(npy_file, allow_pickle=True)
+    errors_dict_WM_Ctx2 = get_errors_WM_Ctx(Response, errors_dict_WM_Ctx2, opened_meta_file)
+# Visualize results
+top_four_categories = plot_errorDistribution_relative(errors_dict_WM_Ctx2,participantDirectory, participant, 'WM_Ctx2', 'rough', titleAdd = 'all')
+
+# WM Ctx2 - Fine Graining ----------------------------------------------------------------------------------------------
+list1 = ['formClassCombi']
+list2 = ['CircleCircle', 'PolygonPolygon', 'TriangleTriangle',\
+         'CirclePolygon', 'CircleTriangle', 'PolygonTriangle']
+list3 = ['colorClassCombi']
+list4 = ['YellowYellow', 'GreenGreen', 'BlueBlue', 'RedRed', 'YellowGreen', 'YellowBlue', 'YellowRed',\
+         'GreenBlue', 'GreenRed', 'BlueRed']
+list5 = ['simColor_simForm', 'simColor_diffForm', 'diffColor_simForm', 'diffColor_diffForm']
+list6 = ['responseMatch', 'responseMismatch', 'responseNoResponse']
+# Generating all combinations of categorical names
+categorical_names_fineGrained = ['_'.join(combination) for combination in itertools.product(list1, list2, list3, list4, list5, list6)]
+# Define the four error classes to plot in fine granularity
+list_error_keys = [top_four_categories[0], top_four_categories[1], top_four_categories[2], top_four_categories[3]]
+
+for j in list_error_keys:
+    error_key_values = errors_dict_WM_Ctx2[j]
+    sortedResponse = np.column_stack(error_key_values)
+    # Creating dict with created names
+    errors_dict_fineGrained = {name: [] for name in categorical_names_fineGrained}
+    errors_dict_fineGrained = get_fine_grained_error(sortedResponse, errors_dict_fineGrained, 'WM_Ctx2')
+    # Visualize results
+    plot_errorDistribution_relative(errors_dict_fineGrained, participantDirectory, participant, 'WM_Ctx2', 'fine',titleAdd=j)
 
 
+
+########################################################################################################################
+# info: errorComparison
+########################################################################################################################
+# Creates a contingency table that compares and classifies participant and model response as match (particpantResponse ==
+# modelResponse) or mismatch (particpantResponse != modelResponse).
+# The first word of the class represents the particpant's objective success in responding right or wrong to a trial and
+# the second the model's success to reproduce this behavior.
+########################################################################################################################
+
+########################################################################################################################
+# Import necessary libraries and modules
+########################################################################################################################
+from __future__ import division
+import warnings
+warnings.simplefilter(action='ignore', category=FutureWarning)
+
+import os
+import numpy as np
+import tensorflow as tf
+import matplotlib.pyplot as plt
+import seaborn as sns
+from mpl_toolkits.axes_grid1 import make_axes_locatable
+from network import Model, get_perf
+from training import split_files
+import tools
+import glob
+
+########################################################################################################################
+# Functions
+########################################################################################################################
+def evaluate_model_responses(directory, dataDirectory, models, tasks):
+    for task in tasks:
+        accumulated_data_percentage = None
+        model_count = 0
+        # modelDirectories
+        figurePath = os.path.join(directory, 'contingencyTable')
+        # Create directory for saving figures if it doesn't exist
+        if not os.path.exists(figurePath):
+            os.makedirs(figurePath)
+
+        # mode = 'Average' for the future
+        mode = 'Individual'
+
+        for model_dir in models:
+            # Info: Adjust for test and training data if training was random seeded
+            file_triplets = get_file_triplets(dataDirectory, task, model_dir)
+            correct_match, error_match, correct_mismatch, error_mismatch, total_trials = evaluate_task(model_dir, task, file_triplets)
+
+            # Calculate percentages for the contingency table
+            data_percentage = np.round(
+                np.array([[correct_match / total_trials * 100, correct_mismatch / total_trials * 100],
+                          [error_match / total_trials * 100, error_mismatch / total_trials * 100]]), 2)
+
+            # Accumulate the percentages
+            if accumulated_data_percentage is None:
+                accumulated_data_percentage = data_percentage
+            else:
+                accumulated_data_percentage += data_percentage
+
+            model_count += 1
+
+        # Average the accumulated percentages
+        average_data_percentage = accumulated_data_percentage / model_count
+
+        ratioCorrect = average_data_percentage[0][0] / average_data_percentage[0][1]
+        ratioError = average_data_percentage[1][0] / average_data_percentage[1][1]
+
+        # Visualize the averaged contingency table
+        visualize_contingency_table(average_data_percentage, task, figurePath, mode, model_dir=model_dir, ratio_correct=ratioCorrect, ratio_error=ratioError)
+
+def get_file_triplets(trial_dir, task, model_dir):
+    dir = os.path.join(trial_dir, task)
+    npy_files_Input = glob.glob(os.path.join(dir, '*Input.npy'))
+    # Filter file_triplets for month taken into account
+    monthConsidered = model_dir.split('_')[-1]
+
+    monthConsidered_string = 'month_' + monthConsidered
+    filtered_npy_files_Input = [file for file in npy_files_Input if monthConsidered_string in file]
+
+    file_triplets = []
+    for file in filtered_npy_files_Input:
+        base_name = file.split('Input')[0]
+        input_file = os.path.join(dir, base_name + 'Input.npy')
+        yloc_file = os.path.join(dir, base_name + 'yLoc.npy')
+        output_file = os.path.join(dir, base_name + 'Output.npy')
+        file_triplets.append((input_file, yloc_file, output_file))
+
+    # Split the file triplets and take both as the files are shuffeld randomly each time anyway atm
+    train_files, eval_files = split_files(file_triplets)
+    all_files = train_files + eval_files
+
+    return all_files
+
+def evaluate_task(model_dir, task, file_triplets):
+    error_match = 0
+    error_mismatch = 0
+    correct_match = 0
+    correct_mismatch = 0
+    total_trials = 0
+    # Prepare model restore
+    hp = Tools.load_hp(model_dir)
+    model = Model(model_dir, hp=hp)
+
+    with tf.Session() as sess:
+        model.restore(model_dir)
+
+        for i in range(0, 100): # Info: Each iteration represents one batch - after the spliting most often you only have 4 batches for one month
+            x, y, y_loc, base_name = Tools.load_trials(task, 'test', 40, file_triplets, True)
+            ground_truth = np.load(os.path.join(base_name + 'Response.npy'), allow_pickle=True)
+
+            # Sort response data
+            c_mask = np.zeros((y.shape[0] * y.shape[1], y.shape[2]), dtype='float32')
+            # Generate model response for the current batch
+            feed_dict = Tools.gen_feed_dict(model, x, y, c_mask, hp)
+            c_lsq, c_reg, modelResponse_machineForm = sess.run([model.cost_lsq, model.cost_reg, model.y_hat],feed_dict=feed_dict)
+
+            perf = get_perf(modelResponse_machineForm, y_loc)
+
+            for i in range(0,len(perf)):
+                if perf[i] == 1:  # Model response matches participant response
+                    if ground_truth[0, i] == ground_truth[1, i]:
+                        correct_match += 1
+                    else:
+                        error_match += 1
+                elif perf[i] == 0:  # Model response does not match participant response
+                    if ground_truth[0, i] == ground_truth[1, i]:
+                        correct_mismatch += 1
+                    else:
+                        error_mismatch += 1
+            total_trials += len(perf)
+
+    return correct_match, error_match, correct_mismatch, error_mismatch, total_trials
+
+def visualize_contingency_table(data, task, figure_path, mode, model_dir, ratio_correct, ratio_error):
+    # Define labels for the table
+    row_labels = ['Participant Response Correct', 'Participant Response Incorrect']
+    col_labels = ['Model Response Correct', 'Model Response Incorrect']
+
+    # Increase the figure size for better alignment and spacing
+    fig, ax = plt.subplots(figsize=(12, 10))  # Increased size for the table
+
+    # Create a divider to manage the color bar size relative to the heatmap
+    divider = make_axes_locatable(ax)
+    cax = divider.append_axes("right", size="5%", pad=0.1)
+
+    # Plot the contingency table with clear annotations
+    sns.heatmap(data, annot=True, fmt='.0f', cmap='coolwarm', cbar=True,
+                xticklabels=col_labels, yticklabels=row_labels, ax=ax,
+                linewidths=0, linecolor='black', annot_kws={"fontsize": 30, "color": "white"}, square=True,
+                cbar_ax=cax,
+                vmin=0, vmax=100)
+
+    # Set axis labels with adequate spacing and no rotation
+    ax.set_xticklabels(col_labels, fontsize=16)
+    ax.set_yticklabels(row_labels, fontsize=16, rotation=90)
+
+    # Configure the color bar
+    cbar = ax.collections[0].colorbar
+    cbar.ax.tick_params(labelsize=12)
+
+    # Add ratio text to the right of the heatmap, making it closer but avoiding overlap
+    ax.text(2.3, 0.5, f'Ratio Correct: {ratio_correct:.2f}', va='center', fontsize=18, color='black',
+            bbox=dict(facecolor='white', edgecolor='black', boxstyle='round,pad=0.5'))
+    ax.text(2.3, 1.5, f'Ratio Error: {ratio_error:.2f}', va='center', fontsize=18, color='black',
+            bbox=dict(facecolor='white', edgecolor='black', boxstyle='round,pad=0.5'))
+
+    # Add title directly above the heatmap in the center
+    subject = '_'.join(model_dir.split('\\')[-2].split('_')[0:2])
+    plt.suptitle(f'{mode} Contingency Table (%) - {task} - {subject}', fontsize=18, y=.95, x=.4)
+
+    # Adjust layout to fit all elements within the figure bounds
+    plt.tight_layout(rect=[0, 0, .9, .95])  # Adjusted the layout to accommodate the title
+
+    # Save the plot ensuring all elements are included
+
+    save_path = os.path.join(figure_path, f'{mode}_Contingency_{task}_{subject}.png')
+    os.makedirs(os.path.dirname(save_path), exist_ok=True)
+    plt.savefig(save_path, format='png', dpi=300, bbox_inches='tight', pad_inches=0.2)
+
+    # Display the plot
+    # plt.show()
+
+########################################################################################################################
+# Model evaluation for chosen tasks
+########################################################################################################################
+# Directory has to point exactly on the model folder of interest
+directory = 'C:\\Users\\oliver.frank\\Desktop\\PyProjects\\beRNNmodels\\2025_03_4\\beRNN_03\\beRNN_03_All_3-5_data_highDim_correctOnly_iteration1_LeakyRNN_128_relu'
+dataDirectory = 'C:\\Users\\oliver.frank\\Desktop\\PyProjects\\Data\\beRNN_01\\data_highDim_correctOnly' # add right participant and dataset
+modelsList = [os.path.join(directory, item) for item in os.listdir(directory) if 'model' in item]
+
+# Tasks to evaluate
+tasks = ['DM', 'RP', 'EF', 'WM']
+evaluate_model_responses(directory, dataDirectory, modelsList, tasks)

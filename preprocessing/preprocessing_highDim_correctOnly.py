@@ -1,5 +1,5 @@
 ########################################################################################################################
-# info: Preprocessing_CorrectOnly
+# info: preprocessing_highDim_CorrectOnly
 ########################################################################################################################
 # Preprocess the cogntive-behavioral data collected from Gorilla Experimenter into the form that can be used to train the
 # models.
@@ -9,7 +9,7 @@
 ########################################################################################################################
 import numpy as np
 import pandas as pd
-import Tools
+import tools
 import glob
 import json
 import os
@@ -358,11 +358,11 @@ def preprocess_DM(opened_xlsxFile, questionnare_files, list_allSessions, sequenc
 
         for i in range(numFixStepsAverage, totalStepsAverage):
             for j in range(0, Output.shape[1]):
-                if isinstance(correctAnswer[i][j], str) and correctAnswer[i][j] != 'noResponse' and correctAnswer[i][j] != 'NoResponse':
-                    Output[i][j][outputDict[correctAnswer[i][j]]] = float(0.85)
-                else:
-                    for k in range(2, 34):
-                        Output[i][j][k] = float(0.05)
+                # if isinstance(correctAnswer[i][j], str) and correctAnswer[i][j] != 'noResponse' and correctAnswer[i][j] != 'NoResponse':
+                Output[i][j][outputDict[correctAnswer[i][j]]] = float(0.85)
+                # else:
+                #     for k in range(2, 34):
+                #         Output[i][j][k] = float(0.05)
 
         # Drop unnecessary first column with response information
         Output = np.delete(Output, [0], axis=2)
@@ -1594,12 +1594,12 @@ def check_permissions(file_path):
 dataFolder = "Data"
 subfolders = ['DM', 'DM_Anti', 'EF', 'EF_Anti', 'RP', 'RP_Anti', 'RP_Ctx1', 'RP_Ctx2', 'WM', 'WM_Anti', 'WM_Ctx1', 'WM_Ctx2']
 preprocessing_folder = 'data_highDim_correctOnly'
-participants = ['BeRNN_01','BeRNN_02','BeRNN_03','BeRNN_04','BeRNN_05']
-months = ['10', '11', '12'] # info: debugging '13'
+participants = ['beRNN_01', 'beRNN_02', 'beRNN_03', 'beRNN_04', 'beRNN_05']
+months = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12'] # info: debugging '13'
 
 for participant in participants:
     # attention: change to right path
-    path = 'C:\\Users\\oliver.frank\\Desktop\\BackUp'  # local
+    path = 'C:\\Users\\oliver.frank\\Desktop\\PyProjects'  # local
     # path = 'W:\\group_csp\\analyses\\oliver.frank'  # Fl storage
     # path = '/data' # hitkip cluster
     # path = '/pandora/home/oliver.frank/01_Projects/RNN/multitask_BeRNN-main' # pandora server

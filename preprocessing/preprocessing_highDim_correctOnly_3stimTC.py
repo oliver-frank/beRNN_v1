@@ -1,5 +1,5 @@
 ########################################################################################################################
-# info: Preprocessing_lowDim_timeCompressed
+# info: preprocessing_CorrectOnly
 ########################################################################################################################
 # Preprocess the cogntive-behavioral data collected from Gorilla Experimenter into the form that can be used to train the
 # models.
@@ -9,14 +9,15 @@
 ########################################################################################################################
 import numpy as np
 import pandas as pd
-import Tools
+import tools
 import glob
 import json
 import os
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 
-# fix: Delete no response
+from collections import Counter
+import random
 
 ########################################################################################################################
 # Predefine functions
@@ -138,11 +139,26 @@ def preprocess_DM(opened_xlsxFile, questionnare_files, list_allSessions, sequenc
     for batchNumber in range(numberBatches):
         batchOn = batchNumber * batchLength
         batchOff = batchNumber * batchLength + batchLength
-        numFixStepsAverage = 1
-        numRespStepsAverage = 1
-        totalStepsAverage = numFixStepsAverage + numRespStepsAverage
+        numFixStepsTotal = 0
+        numRespStepsTotal = 0
         # Prepare response array for this batch
         currentConcatResponseEntries = concatResponseEntries[:,batchOn:batchOff]
+        # Calculate average fix, resp and total steps for this batch
+        for j in incrementList[batchOn:batchOff]:
+            # Accumulate step numbers
+            currentTrial = opened_xlsxFile_selection[j:j + 2].reset_index().drop(columns=['index'])
+
+            numFixSteps = 35  # info: set length of fixation steps constant
+            numRespSteps = numFixSteps  # info: set length of response steps constant
+
+            numFixStepsTotal += numFixSteps
+            numRespStepsTotal += numRespSteps
+            # Calculate average after cumulative addition of whole batch
+            if j == incrementList[batchOff - 1]:
+                numFixStepsAverage = int(numFixStepsTotal / batchLength)
+                numRespStepsAverage = int(numRespStepsTotal / batchLength)
+                totalStepsAverage = numFixStepsAverage + numRespStepsAverage
+                # print(numFixStepsAverage,numRespStepsAverage,totalStepsAverage)
 
         finalSequenceList = []
         concatedValuesAndOccurrencesList = []
@@ -173,16 +189,14 @@ def preprocess_DM(opened_xlsxFile, questionnare_files, list_allSessions, sequenc
         # Concatenate trial information for error anaylsis to response entries
         currentConcatResponseEntriesFinal = np.concatenate([currentConcatResponseEntries,np.array(concatedValuesAndOccurrencesList, dtype=object).T], axis=0)
         # --------------------------------------------------------------------------------------------------------------
-
-
-        # fix: Create final df for INPUT and OUPUT #####################################################################
+        # Create final df for INPUT and OUPUT
         newOrderSequenceList = []
         # Append all the time steps accordingly to a list
         for j in range(0, totalStepsAverage):
             for i in range(0, len(finalSequenceList)):
                 newOrderSequenceList.append(finalSequenceList[i][j])
 
-        # info: Create lowDim form #####################################################################################
+        # Create Yang form
         finalTrialsList_array = np.array(newOrderSequenceList).reshape((len(finalSequenceList[0]), len(finalSequenceList), 86))
         # Create meta dict before deleting necessary information from current trials List
         date = str(finalTrialsList_array[0, 0, 85]).split(' ')[0]
@@ -194,15 +208,20 @@ def preprocess_DM(opened_xlsxFile, questionnare_files, list_allSessions, sequenc
                      'drugVectorValue': drugVectorValue}
         # Create one input file and one output file
         Input, Output = finalTrialsList_array, finalTrialsList_array
-        Input = np.delete(Input, [0, 1, 2, 3, 4, 5, 6, 8,85], axis=2) # fix: Delete all except for 33 (epoch: 1, mod1: 10, mode2: 10, taskV:12)
-        Output = np.delete(Output, np.s_[0, 1, 2, 4, 5, 6, 7,85], axis=2) # fix: Delete all except for 3 (epoch: 1, direction: 2)
+        Input = np.delete(Input, [0, 1, 2, 3, 4, 5, 6, 8,85], axis=2)
+        correctAnswer = Output[..., 4]
+        Output = np.delete(Output, np.s_[0, 1, 2, 4, 5, 6, 7,85], axis=2)
         Output = np.delete(Output, np.s_[34:78], axis=2)
         Input, Output = Input[:, sequence_on:sequence_off, :], Output[:, sequence_on:sequence_off, :]
         responseEntries = currentConcatResponseEntriesFinal[:,sequence_on:sequence_off]
 
         # INPUT --------------------------------------------------------------------------------------------------------
-        # float all epoch unit values to 0
+        # float all fixation input values to 1
         for i in range(0, Input.shape[0]):
+            for j in range(0, Input.shape[1]):
+                Input[i][j][0] = float(1)
+        # float all epoch units to 0 during response
+        for i in range(numFixStepsAverage, totalStepsAverage):
             for j in range(0, Input.shape[1]):
                 Input[i][j][0] = float(0)
         # float all task values to 0
@@ -211,7 +230,7 @@ def preprocess_DM(opened_xlsxFile, questionnare_files, list_allSessions, sequenc
                 for k in range(65, Input.shape[2]):
                     Input[i][j][k] = float(0)
 
-        # Define a task dictionary for specific task-related columns fix: 21-33
+        # Define a task dictionary for specific task-related columns
         taskDict = {'DM': 65, 'DM Anti': 66, 'EF': 67, 'EF Anti': 68, 'RP': 69, 'RP Anti': 70, 'RP Ctx1': 71,
                     'RP Ctx2': 72, 'WM': 73, 'WM Anti': 74, 'WM Ctx1': 75, 'WM Ctx2': 76}
 
@@ -225,226 +244,210 @@ def preprocess_DM(opened_xlsxFile, questionnare_files, list_allSessions, sequenc
                     Input[i][j][taskDict[opened_xlsxFile_selection['Spreadsheet'][0].split('_')[0] + ' ' + opened_xlsxFile_selection['Spreadsheet'][0].split('_')[1]]] = float(1)
                     taskShorts = opened_xlsxFile_selection['Spreadsheet'][0].split('_')[0] + '_' + opened_xlsxFile_selection['Spreadsheet'][0].split('_')[1]
 
-        # fix: Get all fields with not 000_000.png
-        stimListList = [] # Will be taken for color and form
-        positionListList = [] # Will be taken for angle
+        # float all 000_000's on field units to 0
         for i in range(0, Input.shape[0]):
             for j in range(0, Input.shape[1]):
-                stimList = []
-                positionList = []
-                for k in range(1, 33): # Positions for one ring are enough as they are similar on both
-                    if Input[i][j][k] != '000_000.png' and Input[0][0][k].endswith('.png'):
-                        stimList.append(Input[i][j][k])
-                        positionList.append(k)
-                stimListList.append(stimList)
-                positionListList.append(positionList)
-
-        stimNumber = int(finalTrialsList_array[0][0][0].split('stim')[0].split('_')[-1])
-        indices2remove = []
-        for i, list in enumerate(stimListList):
-            if len(list) < stimNumber or [j for j in list if '000' in j]: # remove wrong trials
-                indices2remove.append(i)
-        # fix: ADD zero padding if number of trials < 5, so that you always have the same input structure, randomize the location of the stimuli on these 5 units
-        # remove lists of lists with corresponding indices
-        stimListList_filtered = [sublist for i, sublist in enumerate(stimListList) if i not in indices2remove]
-        positionListList_filtered = [sublist for i, sublist in enumerate(positionListList) if i not in indices2remove]
+                for k in range(1, 65):
+                    if Input[i][j][k] == '000_000.png':
+                        Input[i][j][k] = float(0)
 
         # Define modulation dictionaries for specific columns
         mod1Dict = {'lowest': float(0.25), 'low': float(0.5), 'strong': float(0.75), 'strongest': float(1.0)}
-        # Define modulation dictionaries for specific columns fix: Eventuell mit sin/cos value austauschen
-        mod2Dict = {'right': float(0.25), 'down': float(0.5), 'left': float(0.75), 'up': float(1.0)}
-
-        # Transform stim into color and form encoding
-        colorListList = []
-        formListList = []
-        for stimList in stimListList_filtered:
-            colorList = []
-            formList = []
-            for stim in stimList:
-                colorList.append(mod1Dict[stim.split('.png')[0].split('_')[0]])
-                formList.append(mod2Dict[stim.split('.png')[0].split('_')[1]])
-            colorListList.append(colorList)
-            formListList.append(formList)
-
-        # fix: Embed the lists information into the Input structure
-        # import numpy as np
-        pref = np.arange(0, 2 * np.pi, 2 * np.pi / 32)  # fix: pref[positionList[0]] = radiant/degree = polar
-        for i, positionList in enumerate(positionListList_filtered):
-            # print(positionList, i)
-            # Exchange values is lists
-            for j, position in enumerate(positionList):
-                positionList[j] = pref[position-1] # prefs are defined between 0 and 31, positions between 1 and 32, therefore -1
-            # Exchange list in list of lists
-            positionListList_filtered[i] = positionList
-
-        # Only take the first number of lists according to number of filtered trials in that batch len(listList)/totalStepsAverage
-        numberOfTrials = len(positionListList_filtered)/totalStepsAverage
-        positionListList_filtered_compressed = positionListList_filtered[0:int(numberOfTrials)]
-        colorListList_compressed = colorListList[0:int(numberOfTrials)]
-        formListList_compressed = formListList[0:int(numberOfTrials)]
-        # fix: colorListList
-        # fix: formListList
-        # fix: positionListList
-
-        # info: i is batch size here
-        fullTrial_list = []
-        for i, positionList in enumerate(positionListList_filtered_compressed):
-            trialMod1vectors = []
-            trialMod2vectors = []
-            for j, position in enumerate(positionList):
-                trialMod1vectors.append(np.array((np.sin(position), np.cos(position))) * colorListList_compressed[i][j])
-                trialMod2vectors.append(np.array((np.sin(position), np.cos(position))) * formListList_compressed[i][j])
-            # Zero pad missing stim vectors, so that every trial, every task and every spreadsheet is encoded with the same input structure
-            for i in range(0, 5-len(trialMod1vectors)):
-                trialMod1vectors.append(np.array([0,0]))
-                trialMod2vectors.append(np.array([0,0]))
-
-            # Ensure exact same permutation for both vectors
-            permutation_indices = np.random.permutation(len(trialMod1vectors))
-            # Apply it
-            trialMod1vectors_randomized = [trialMod1vectors[i] for i in permutation_indices]
-            trialMod2vectors_randomized = [trialMod2vectors[i] for i in permutation_indices]
-
-            trialMod1vectors_concat = [array for vector in trialMod1vectors_randomized for array in vector]
-            trialMod2vectors_concat = [array for vector in trialMod2vectors_randomized for array in vector]
-            fullTrial = [1] + trialMod1vectors_concat + trialMod2vectors_concat + Input[0][0][65:77].tolist() # add epoch, two mod lists and task vector together
-
-            fullTrial_list.append(fullTrial) # Add task vector before appending
-
-
-        # Create the whole Input with new encoding
-        newInput = np.zeros((totalStepsAverage, int(numberOfTrials), 33))
+        # mod1Dict = {'lowest': float(0.5), 'low': float(1), 'strong': float(1.5), 'strongest': float(2)}
 
         for i in range(0, Input.shape[0]):
-            for j in range(0, int(numberOfTrials)):
-                newInput[i][j][0:33] = np.array(fullTrial_list[j])
+            for j in range(0, Input.shape[1]):
+                for k in range(1, 33):
+                    if Input[i][j][k] != 0 and safe_isnan(Input[i][j][k]) == False:
+                        Input[i][j][k] = mod1Dict[Input[i][j][k].split('_')[0]]
 
-        # fix: Set epoch information unit to 1 during fixation
+        # Define modulation dictionaries for specific columns
+        mod2Dict = {'right.png': float(0.25), 'down.png': float(0.5), 'left.png': float(0.75), 'up.png': float(1.0)}
+        # mod2Dict = {'right.png': float(0.5), 'down.png': float(1), 'left.png': float(1.5), 'up.png': float(2)}
+
+        for i in range(0, Input.shape[0]):
+            for j in range(0, Input.shape[1]):
+                for k in range(33, 65):
+                    if Input[i][j][k] != 0 and safe_isnan(Input[i][j][k]) == False:
+                        Input[i][j][k] = mod2Dict[Input[i][j][k].split('_')[1]]
+
+        # float all field values of fixation period to 0
         for i in range(0, numFixStepsAverage):
-            for j in range(0, int(numberOfTrials)):
-                    newInput[i][j][0] = float(1)
-        # fix: Set epoch information unit to 0 during response
-        for i in range(numFixStepsAverage, totalStepsAverage):
-            for j in range(0, int(numberOfTrials)):
-                newInput[i][j][0] = float(0)
-        # fix: Set all modality untis to 0 during fixation
-        for i in range(0, numFixStepsAverage):
-            for j in range(0, int(numberOfTrials)):
-                for k in range(1, 21): #
-                    newInput[i][j][k] = float(0)
+            for j in range(0, Input.shape[1]):
+                for k in range(1, 65):
+                    Input[i][j][k] = float(0)
+
+        # Add input gradient activation
+        num_ring, n_eachring, n_rule = 2, 32, 12
+        n_input, n_output = 1 + num_ring * n_eachring + n_rule, n_eachring + 1
+        pref = np.arange(0, 2 * np.pi, 2 * np.pi / 32)
+
+        for i in range(0, Input.shape[0]):
+            for j in range(0, Input.shape[1]):
+                currentTimeStepModOne = Input[i][j][1:33]
+                currentTimeStepModTwo = Input[i][j][33:65]
+                # Allocate first unit ring
+                unitRingMod1 = np.zeros(32, dtype='float32')
+                unitRingMod2 = np.zeros(32, dtype='float32')
+
+                # Get non-zero values of time steps on both modalities and also directly fix distance between units issue
+                NonZero_Mod1 = np.nonzero(currentTimeStepModOne)[0]
+                NonZero_Mod2 = np.nonzero(currentTimeStepModTwo)[0]
+
+                # info: Get non-zero values for decreasing stims to 3
+                NonZero_Values_Mod1 = currentTimeStepModOne[NonZero_Mod1]
+                NonZero_Values_Mod2 = currentTimeStepModTwo[NonZero_Mod2]
+                # info: Concatenate the stim components
+                concatenated_stims = [f"{NonZero_Values_Mod1[i]}_{NonZero_Values_Mod2[i]}" for i in range(len(NonZero_Values_Mod1))]
+                # info: Initialize for final 3stim list
+                NonZero_Mod1_final = []
+                NonZero_Mod2_final = []
+
+                if len(NonZero_Mod1) != 0:
+
+                    # info: Decrease amount of stimuli to 3 ################################################################
+                    globalCounter = 0
+                    if len(concatenated_stims) > 3:
+                        counts = Counter(concatenated_stims)
+
+                        # Create a new list with modified occurrences
+                        removed_counts = Counter()  # Track removed items
+
+                        for indice, stim in enumerate(concatenated_stims):
+                            if counts[stim] == 2 and removed_counts[stim] < 1:
+                                removed_counts[stim] += 1  # Remove one occurrence if appears two times
+                                globalCounter += 1
+                            elif counts[stim] == 3 and removed_counts[stim] < 1:
+                                removed_counts[stim] += 1  # Remove one occurrence if appears three times
+                                globalCounter += 1
+                            else:
+                                NonZero_Mod1_final.append(NonZero_Mod1[indice])
+                                NonZero_Mod2_final.append(NonZero_Mod2[indice])
+                        # info: Keep consecutive variable naming flow
+                        NonZero_Mod1 = NonZero_Mod1_final
+                        NonZero_Mod2 = NonZero_Mod2_final
+                    # info: Decrease amount of stimuli to 3 ################################################################
+
+                    # Accumulating all activities for both unit rings together
+                    for k in range(0, len(NonZero_Mod1)):
+                        currentStimLoc_Mod1 = pref[NonZero_Mod1[k]]
+                        currentStimStrength_Mod1 = currentTimeStepModOne[NonZero_Mod1[k]]
+                        currentStimLoc_Mod2 = pref[NonZero_Mod2[k]]
+                        currentStimStrength_Mod2 = currentTimeStepModTwo[NonZero_Mod2[k]]
+                        # add one gradual activated stim to final form
+                        currentActivation_Mod1 = add_x_loc(currentStimLoc_Mod1, pref) * currentStimStrength_Mod1
+                        currentActivation_Mod2 = add_x_loc(currentStimLoc_Mod2, pref) * currentStimStrength_Mod2
+                        # Add all activations for one trial together
+                        unitRingMod1 = np.around(unitRingMod1 + currentActivation_Mod1, decimals=2)
+                        unitRingMod2 = np.around(unitRingMod2 + currentActivation_Mod2, decimals=2)
+
+                    # Store
+                    currentFinalRow = np.concatenate((Input[i][j][0:1], unitRingMod1, unitRingMod2, Input[i][j][65:78]))
+                    Input[i][j][0:78] = currentFinalRow
 
         # Change dtype of every element in matrix to float32 for later validation functions
-        for i in range(0, newInput.shape[0]):
-            for j in range(0, newInput.shape[1]):
-                for k in range(0, newInput.shape[2]):
-                    newInput[i][j][k] = np.float32(newInput[i][j][k])
+        for i in range(0, Input.shape[0]):
+            for j in range(0, Input.shape[1]):
+                for k in range(0, Input.shape[2]):
+                    Input[i][j][k] = np.float32(Input[i][j][k])
         # Also change dtype for entire array
-        newInput = newInput.astype('float32')
+        Input = Input.astype('float32')
 
         # Save input data
         os.chdir(os.path.join(os.getcwd(), main_path, taskShorts))
-        input_filename = participant + '-' + 'month_' + str(month) + '-' + 'batch_' + str(batchNumber) + '-' + taskShorts + '-' + \
-                         xlsxFile.split('_')[3].split('-')[0] + '_' + xlsxFile.split('_')[3].split('-')[1] + '-' + 'Input'
-        np.save(input_filename, newInput)
+        input_filename = participant+'-'+'month_'+str(month)+'-' + 'batch_' + str(batchNumber) + '-' + taskShorts + '-' + \
+                         xlsxFile.split('_')[3].split('-')[0]+'_'+ xlsxFile.split('_')[3].split('-')[1]+'-'+'Input'
+        np.save(input_filename, Input)
         # Save response information for later error class detection
         response_filename = participant + '-' + 'month_' + str(month) + '-' + 'batch_' + str(batchNumber) + '-' + taskShorts + '-' + \
-                            xlsxFile.split('_')[3].split('-')[0] + '_' + xlsxFile.split('_')[3].split('-')[1] + '-' + 'Response'
+                         xlsxFile.split('_')[3].split('-')[0] + '_' + xlsxFile.split('_')[3].split('-')[1] + '-' + 'Response'
         np.save(response_filename, responseEntries)
 
         # Sanity check
-        print('Input solved: ', opened_xlsxFile_selection['Spreadsheet'][0], ' ',opened_xlsxFile_selection['TimeLimit'][0])
-        print('Response solved: ', opened_xlsxFile_selection['Spreadsheet'][0], ' ',opened_xlsxFile_selection['TimeLimit'][0])
-
-
+        print('Input solved: ', opened_xlsxFile_selection['Spreadsheet'][0], ' ', opened_xlsxFile_selection['TimeLimit'][0])
+        print('Response solved: ', opened_xlsxFile_selection['Spreadsheet'][0], ' ', opened_xlsxFile_selection['TimeLimit'][0])
 
         # OUTPUT -------------------------------------------------------------------------------------------------------
-        # Create the whole Input with new encoding
-        newOutput = np.zeros((totalStepsAverage, int(numberOfTrials), 3))
-
         # float all field units during fixation epoch on 0.05
         for i in range(0, numFixStepsAverage):
-            for j in range(0, int(numberOfTrials)):
-                for k in range(1, 3):
-                    newOutput[i][j][k] = float(0.05)
-
-        # float all epoch unit values to .8 during fixation
-        for i in range(0, numFixStepsAverage):
-            for j in range(0, int(numberOfTrials)):
-                newOutput[i][j][0] = float(0.8)
-        # float all epoch unit values to 0 during response
+            for j in range(0, Output.shape[1]):
+                for k in range(2, 34):
+                    Output[i][j][k] = float(0.05)
+        # float all field units of response epoch to 0
         for i in range(numFixStepsAverage, totalStepsAverage):
-            for j in range(0, int(numberOfTrials)):
-                newOutput[i][j][0] = float(0.05)
+            for j in range(0, Output.shape[1]):
+                for k in range(2, 34):
+                    Output[i][j][k] = float(0)
+        # float all fixation outputs during response period to 0.05
+        for i in range(numFixStepsAverage, totalStepsAverage):
+            for j in range(0, Output.shape[1]):
+                Output[i][j][1] = float(0.05)
 
         # Define an output dictionary for specific response values
-        outputDict = {'U': 31, 'R': 7, 'L': 23, 'D': 15} # info: Substracted in lowDim encoding by 1 to avoid indice error
+        outputDict = {'U': 32, 'R': 8, 'L': 24, 'D': 16}
 
-        indices2remove_filtered = [i for i in indices2remove if i < 40]
-        Output = np.delete(Output, indices2remove_filtered, axis=1)
-
-        pref = np.arange(0, 2 * np.pi, 2 * np.pi / 32)  # fix: pref[positionList[0]] = radiant/degree = polar
         for i in range(numFixStepsAverage, totalStepsAverage):
-            for j in range(0, int(numberOfTrials)):
-                if isinstance(Output[i][j][0], str) and Output[i][j][0] != 'noResponse' and Output[i][j][0] != 'NoResponse'\
-                        and safe_isnan(Output[i][j][0]) == False:
-                    # Translate field into radiant
-                    position = pref[outputDict[Output[i][j][0]]-1]
-                    # Translate radiant into sin/cos vector indicating the target response direction for the network
-                    newOutput[i][j][1] = np.sin(position)
-                    newOutput[i][j][2] = np.cos(position)
-                else:
-                    newOutput[i][j][1] = np.sin(0.05) # info: yang et al.: -1
-                    newOutput[i][j][2] = np.sin(0.05) # info: yang et al.: -1
+            for j in range(0, Output.shape[1]):
+                # if isinstance(correctAnswer[i][j], str) and correctAnswer[i][j] != 'noResponse' and correctAnswer[i][j] != 'NoResponse':
+                Output[i][j][outputDict[correctAnswer[i][j]]] = float(0.85)
+                # else:
+                #     for k in range(2, 34):
+                #         Output[i][j][k] = float(0.05)
 
-        # Change dtype of every element in matrix to float32 for later validation functions
-        for i in range(0, newOutput.shape[0]):
-            for j in range(0, newOutput.shape[1]):
-                for k in range(0, newOutput.shape[2]):
-                    newOutput[i][j][k] = np.float32(newOutput[i][j][k])
-        # Also change dtype for entire array
-        newOutput = newOutput.astype('float32')
-
-
-        # info: Create y_loc
+        # Drop unnecessary first column with response information
+        Output = np.delete(Output, [0], axis=2)
         # Pre-allocate y-loc matrix; needed for later validation
-        y_loc = np.zeros((newOutput.shape[0], newOutput.shape[1]))
+        y_loc = np.zeros((Output.shape[0], Output.shape[1]))
 
-        for k in range(0, numFixStepsAverage):
-            for j in range (0, newOutput.shape[1]):
-                y_loc[k][j] = np.float(0.05) # info: yang et al.: -1
-
-        # Complete y_loc matrix
-        for k in range(numFixStepsAverage, totalStepsAverage):
-            for j in range(0, newOutput.shape[1]):
-                if isinstance(Output[k][j][0], str) and Output[k][j][0] != 'noResponse' and Output[k][j][0] != 'NoResponse':
-                    y_loc[k][j] = pref[outputDict[Output[k][j][0]]-1] # radiant form direction
-                else:
+        # Add output gradient activation
+        for i in range(0, Output.shape[0]):
+            for j in range(0, Output.shape[1]):
+                currentTimeStepOutput = Output[i][j][1:33]
+                # Allocate first unit ring
+                unitRingOutput = np.zeros(32, dtype='float32')
+                # Get non-zero values of time steps
+                nonZerosOutput = np.nonzero(currentTimeStepOutput)[0]
+                # Float first fixations rows with -1
+                for k in range(0, numFixStepsAverage):
                     y_loc[k][j] = np.float(0.05) # info: yang et al.: -1
 
+                if len(nonZerosOutput) == 1:
+                    # Get activity and model gradient activation around it
+                    currentOutputLoc = pref[nonZerosOutput[0]]
+                    currentActivation_Output = add_x_loc(currentOutputLoc, pref) + 0.05  # adding noise
+                    unitRingOutput = np.around(unitRingOutput + currentActivation_Output, decimals=2)
+                    # Store
+                    currentFinalRow = np.concatenate((Output[i][j][0:1], unitRingOutput))
+                    Output[i][j][0:33] = currentFinalRow
+                    # Complete y_loc matrix
+                    for k in range(numFixStepsAverage, totalStepsAverage):
+                        y_loc[k][j] = pref[outputDict[correctAnswer[i][j]]-1]
+
+        # Change dtype of every element in matrix to float32 for later validation functions
+        for i in range(0, Output.shape[0]):
+            for j in range(0, Output.shape[1]):
+                for k in range(0, Output.shape[2]):
+                    Output[i][j][k] = np.float32(Output[i][j][k])
+        # Also change dtype for entire array
+        Output = Output.astype('float32')
+
         # Save output data
-        output_filename = participant + '-' + 'month_' + str(month) + '-' + 'batch_' + str(
-            batchNumber) + '-' + taskShorts + '-' + \
-                          xlsxFile.split('_')[3].split('-')[0] + '_' + xlsxFile.split('_')[3].split('-')[
-                              1] + '-' + 'Output'
-        np.save(output_filename, newOutput)
+        output_filename = participant + '-' + 'month_' + str(month) + '-' + 'batch_' + str(batchNumber) + '-' + taskShorts + '-' + \
+                          xlsxFile.split('_')[3].split('-')[0] + '_' + xlsxFile.split('_')[3].split('-')[1] + '-' + 'Output'
+        np.save(output_filename, Output)
         # Save y_loc data
-        yLoc_filename = participant + '-' + 'month_' + str(month) + '-' + 'batch_' + str(
-            batchNumber) + '-' + taskShorts + '-' + \
-                        xlsxFile.split('_')[3].split('-')[0] + '_' + xlsxFile.split('_')[3].split('-')[1] + '-' + 'yLoc'
+        yLoc_filename = participant + '-' + 'month_' + str(month) + '-' + 'batch_' + str(batchNumber) + '-' + taskShorts + '-' + \
+                          xlsxFile.split('_')[3].split('-')[0] + '_' + xlsxFile.split('_')[3].split('-')[1] + '-' + 'yLoc'
         np.save(yLoc_filename, y_loc)
         # Save meta data
-        meta_filename = participant + '-' + 'month_' + str(month) + '-' + 'batch_' + str(
-            batchNumber) + '-' + taskShorts + '-' + \
-                        xlsxFile.split('_')[3].split('-')[0] + '_' + xlsxFile.split('_')[3].split('-')[1] + '-' + 'Meta'
+        meta_filename = participant + '-' + 'month_' + str(month) + '-' + 'batch_' + str(batchNumber) + '-' + taskShorts + '-' + \
+                          xlsxFile.split('_')[3].split('-')[0] + '_' + xlsxFile.split('_')[3].split('-')[1] + '-' + 'Meta'
         with open('{}.json'.format(meta_filename), 'w') as json_file:
             json.dump(meta_dict, json_file)
 
         # Sanity check
         print('Meta solved:', 'sleepingQualityValue: ', meta_dict['sleepingQualityValue'])
-        print('Output solved: ', opened_xlsxFile_selection['Spreadsheet'][0], ' ',
-              opened_xlsxFile_selection['TimeLimit'][0])
-
-        # print('Stop')
+        print('Output solved: ', opened_xlsxFile_selection['Spreadsheet'][0], ' ', opened_xlsxFile_selection['TimeLimit'][0])
 
 ########################################################################################################################
 # info: EF tasks
@@ -517,11 +520,26 @@ def preprocess_EF(opened_xlsxFile, questionnare_files, list_allSessions, sequenc
     for batchNumber in range(numberBatches):
         batchOn = batchNumber * batchLength
         batchOff = batchNumber * batchLength + batchLength
-        numFixStepsAverage = 1
-        numRespStepsAverage = 1
-        totalStepsAverage = numFixStepsAverage + numRespStepsAverage
+        numFixStepsTotal = 0
+        numRespStepsTotal = 0
         # Prepare response array for this batch
         currentConcatResponseEntries = concatResponseEntries[:, batchOn:batchOff]
+        # Calculate average fix, resp and total steps for this batch
+        for j in incrementList[batchOn:batchOff]:
+            # Accumulate step numbers
+            currentTrial = opened_xlsxFile_selection[j:j + 2].reset_index().drop(columns=['index'])
+
+            numFixSteps = 35  # info: set length of fixation steps constant
+            numRespSteps = numFixSteps  # info: set length of response steps constant
+
+            numFixStepsTotal += numFixSteps
+            numRespStepsTotal += numRespSteps
+            # Calculate average after cumulative addition of whole batch
+            if j == incrementList[batchOff - 1]:
+                numFixStepsAverage = int(numFixStepsTotal / batchLength)
+                numRespStepsAverage = int(numRespStepsTotal / batchLength)
+                totalStepsAverage = numFixStepsAverage + numRespStepsAverage
+                # print(numFixStepsAverage,numRespStepsAverage,totalStepsAverage)
 
         finalSequenceList = []
         concatedValuesAndOccurrencesList = []
@@ -560,7 +578,7 @@ def preprocess_EF(opened_xlsxFile, questionnare_files, list_allSessions, sequenc
             for i in range(0, len(finalSequenceList)):
                 newOrderSequenceList.append(finalSequenceList[i][j])
 
-        # info: Create lowDim form #####################################################################################
+        # Create Yang form
         finalTrialsList_array = np.array(newOrderSequenceList).reshape((len(finalSequenceList[0]), len(finalSequenceList), 86))
         # Create meta dict before deleting necessary information from current trials List
         date = str(finalTrialsList_array[0, 0, 85]).split(' ')[0]
@@ -573,14 +591,19 @@ def preprocess_EF(opened_xlsxFile, questionnare_files, list_allSessions, sequenc
         # Create one input file and one output file
         Input, Output = finalTrialsList_array, finalTrialsList_array
         Input = np.delete(Input, [0, 1, 2, 3, 4, 5, 6, 8,85], axis=2)
+        correctAnswer = Output[...,4]
         Output = np.delete(Output, np.s_[0, 1, 2, 4, 5, 6, 7,85], axis=2)
         Output = np.delete(Output, np.s_[34:78], axis=2)
         Input, Output = Input[:, sequence_on:sequence_off, :], Output[:, sequence_on:sequence_off, :]
         responseEntries = currentConcatResponseEntriesFinal[:, sequence_on:sequence_off]
 
         # INPUT --------------------------------------------------------------------------------------------------------
-        # float all epoch unit values to 0
+        # float all fixation input values to 1
         for i in range(0, Input.shape[0]):
+            for j in range(0, Input.shape[1]):
+                Input[i][j][0] = float(1)
+        # float all epoch units to 0 during response
+        for i in range(numFixStepsAverage, totalStepsAverage):
             for j in range(0, Input.shape[1]):
                 Input[i][j][0] = float(0)
         # float all task values to 0
@@ -589,7 +612,7 @@ def preprocess_EF(opened_xlsxFile, questionnare_files, list_allSessions, sequenc
                 for k in range(65, Input.shape[2]):
                     Input[i][j][k] = float(0)
 
-        # Define a task dictionary for specific task-related columns fix: 21-33
+        # Define a task dictionary for specific task-related columns
         taskDict = {'DM': 65, 'DM Anti': 66, 'EF': 67, 'EF Anti': 68, 'RP': 69, 'RP Anti': 70, 'RP Ctx1': 71,
                     'RP Ctx2': 72, 'WM': 73, 'WM Anti': 74, 'WM Ctx1': 75, 'WM Ctx2': 76}
 
@@ -600,233 +623,208 @@ def preprocess_EF(opened_xlsxFile, questionnare_files, list_allSessions, sequenc
                     Input[i][j][taskDict[opened_xlsxFile_selection['Spreadsheet'][0].split('_')[0]]] = float(1)
                     taskShorts = opened_xlsxFile_selection['Spreadsheet'][0].split('_')[0]
                 else:
-                    Input[i][j][taskDict[opened_xlsxFile_selection['Spreadsheet'][0].split('_')[0] + ' ' +
-                                         opened_xlsxFile_selection['Spreadsheet'][0].split('_')[1]]] = float(1)
-                    taskShorts = opened_xlsxFile_selection['Spreadsheet'][0].split('_')[0] + '_' + \
-                                 opened_xlsxFile_selection['Spreadsheet'][0].split('_')[1]
+                    Input[i][j][taskDict[opened_xlsxFile_selection['Spreadsheet'][0].split('_')[0] + ' ' + opened_xlsxFile_selection['Spreadsheet'][0].split('_')[1]]] = float(1)
+                    taskShorts = opened_xlsxFile_selection['Spreadsheet'][0].split('_')[0] + '_' + opened_xlsxFile_selection['Spreadsheet'][0].split('_')[1]
 
-        # fix: Get all fields with not 000_000.png
-        stimListList = []  # Will be taken for color and form
-        positionListList = []  # Will be taken for angle
+        # float all 000_000's on field units to 0
         for i in range(0, Input.shape[0]):
             for j in range(0, Input.shape[1]):
-                stimList = []
-                positionList = []
-                for k in range(1, 33):  # Positions for one ring are enough as they are similar on both
-                    if Input[i][j][k] != '000_000.png' and Input[0][0][k].endswith('.png'):
-                        stimList.append(Input[i][j][k])
-                        positionList.append(k)
-                stimListList.append(stimList)
-                positionListList.append(positionList)
-
-        stimNumber = 5 # info: always 5
-        indices2remove = []
-        for i, list in enumerate(stimListList):
-            if len(list) < stimNumber or [j for j in list if '000' in j]:  # remove wrong trials
-                indices2remove.append(i)
-        # fix: ADD zero padding if number of trials < 5, so that you always have the same input structure, randomize the location of the stimuli on these 5 units
-        # remove lists of lists with corresponding indices
-        stimListList_filtered = [sublist for i, sublist in enumerate(stimListList) if i not in indices2remove]
-        positionListList_filtered = [sublist for i, sublist in enumerate(positionListList) if i not in indices2remove]
+                for k in range(1, 65):
+                    if Input[i][j][k] == '000_000.png':
+                        Input[i][j][k] = float(0)
 
         # Define modulation dictionaries for specific columns
         mod1Dict = {'green': float(0.5), 'red': float(1.0)}
         # mod1Dict = {'green': float(1.0), 'red': float(2.0)}
-        # Define modulation dictionaries for specific columns
-        mod2Dict = {'right': float(0.2), 'down': float(0.4), 'left': float(0.6), 'up': float(0.8), 'X': float(1.0)}
-        # mod2Dict = {'right.png': float(0.4), 'down.png': float(0.8), 'left.png': float(1.2), 'up.png': float(1.6), 'X.png': float(2.0)}
-
-        # Transform stim into color and form encoding
-        colorListList = []
-        formListList = []
-        for stimList in stimListList_filtered:
-            colorList = []
-            formList = []
-            for stim in stimList:
-                colorList.append(mod1Dict[stim.split('.png')[0].split('_')[0]])
-                formList.append(mod2Dict[stim.split('.png')[0].split('_')[1]])
-            colorListList.append(colorList)
-            formListList.append(formList)
-
-        # fix: Embed the lists information into the Input structure
-        pref = np.arange(0, 2 * np.pi, 2 * np.pi / 32)  # fix: pref[positionList[0]] = radiant/degree = polar
-        for i, positionList in enumerate(positionListList_filtered):
-            # print(positionList, i)
-            # Exchange values is lists
-            for j, position in enumerate(positionList):
-                positionList[j] = pref[position-1]
-            # Exchange list in list of lists
-            positionListList_filtered[i] = positionList
-
-        # Only take the first number of lists according to number of filtered trials in that batch len(listList)/totalStepsAverage
-        numberOfTrials = len(positionListList_filtered) / totalStepsAverage
-        positionListList_filtered_compressed = positionListList_filtered[0:int(numberOfTrials)]
-        colorListList_compressed = colorListList[0:int(numberOfTrials)]
-        formListList_compressed = formListList[0:int(numberOfTrials)]
-        # attention: for different input encoding style you can just put these compressed lists together as fullTrial
-
-        # info: i is batch size here
-        fullTrial_list = []
-        for i, positionList in enumerate(positionListList_filtered_compressed):
-            trialMod1vectors = []
-            trialMod2vectors = []
-            for j, position in enumerate(positionList):
-                trialMod1vectors.append(np.array((np.sin(position), np.cos(position))) * colorListList_compressed[i][j])
-                trialMod2vectors.append(np.array((np.sin(position), np.cos(position))) * formListList_compressed[i][j])
-            # Zero pad missing stim vectors, so that every trial, every task and every spreadsheet is encoded with the same input structure
-            for i in range(0, 5 - len(trialMod1vectors)):
-                trialMod1vectors.append(np.array([0, 0]))
-                trialMod2vectors.append(np.array([0, 0]))
-
-            # Ensure exact same permutation for both vectors
-            permutation_indices = np.random.permutation(len(trialMod1vectors))
-            # Apply it
-            trialMod1vectors_randomized = [trialMod1vectors[i] for i in permutation_indices]
-            trialMod2vectors_randomized = [trialMod2vectors[i] for i in permutation_indices]
-
-            trialMod1vectors_concat = [array for vector in trialMod1vectors_randomized for array in vector]
-            trialMod2vectors_concat = [array for vector in trialMod2vectors_randomized for array in vector]
-            fullTrial = [1] + trialMod1vectors_concat + trialMod2vectors_concat + Input[0][0][
-                                                                                  65:77].tolist()  # add epoch, two mod lists and task vector together
-
-            fullTrial_list.append(fullTrial)  # Add task vector before appending
-
-        # Create the whole Input with new encoding
-        newInput = np.zeros((totalStepsAverage, int(numberOfTrials), 33))
 
         for i in range(0, Input.shape[0]):
-            for j in range(0, int(numberOfTrials)):
-                newInput[i][j][0:33] = np.array(fullTrial_list[j])
+            for j in range(0, Input.shape[1]):
+                for k in range(1, 33):
+                    if Input[i][j][k] != 0 and safe_isnan(Input[i][j][k]) == False:
+                        Input[i][j][k] = mod1Dict[Input[i][j][k].split('_')[0]]
 
-        # fix: Set epoch information unit to 1 during fixation
+        # Define modulation dictionaries for specific columns
+        mod2Dict = {'right.png': float(0.2), 'down.png': float(0.4), 'left.png': float(0.6), 'up.png': float(0.8), 'X.png': float(1.0)}
+        # mod2Dict = {'right.png': float(0.4), 'down.png': float(0.8), 'left.png': float(1.2), 'up.png': float(1.6), 'X.png': float(2.0)}
+
+        for i in range(0, Input.shape[0]):
+            for j in range(0, Input.shape[1]):
+                for k in range(33, 65):
+                    if Input[i][j][k] != 0 and safe_isnan(Input[i][j][k]) == False:
+                        Input[i][j][k] = mod2Dict[Input[i][j][k].split('_')[1]]
+
+        # float all field values of fixation period to 0
         for i in range(0, numFixStepsAverage):
-            for j in range(0, int(numberOfTrials)):
-                newInput[i][j][0] = float(1)
-        # fix: Set epoch information unit to 0 during response
-        for i in range(numFixStepsAverage, totalStepsAverage):
-            for j in range(0, int(numberOfTrials)):
-                newInput[i][j][0] = float(0)
-        # fix: Set all modality untis to 0 during fixation
-        for i in range(0, numFixStepsAverage):
-            for j in range(0, int(numberOfTrials)):
-                for k in range(1, 21):  #
-                    newInput[i][j][k] = float(0)
+            for j in range(0, Input.shape[1]):
+                for k in range(1, 65):
+                    Input[i][j][k] = float(0)
+
+        # Add input gradient activation
+        # Create default hyperparameters for network
+        num_ring, n_eachring, n_rule = 2, 32, 12
+        n_input, n_output = 1 + num_ring * n_eachring + n_rule, n_eachring + 1
+        pref = np.arange(0, 2 * np.pi, 2 * np.pi / 32)
+
+        for i in range(0, Input.shape[0]):
+            for j in range(0, Input.shape[1]):
+                currentTimeStepModOne = Input[i][j][1:33]
+                currentTimeStepModTwo = Input[i][j][33:65]
+                # Allocate first unit ring
+                unitRingMod1 = np.zeros(32, dtype='float32')
+                unitRingMod2 = np.zeros(32, dtype='float32')
+
+                # Get non-zero values of time steps on both modalities (distance issue was already fixed by design in spreadsheets)
+                NonZero_Mod1 = np.nonzero(currentTimeStepModOne)[0]
+                NonZero_Mod2 = np.nonzero(currentTimeStepModTwo)[0]
+
+                # info: Get non-zero values for decreasing stims to 3
+                NonZero_Values_Mod1 = currentTimeStepModOne[NonZero_Mod1]
+                NonZero_Values_Mod2 = currentTimeStepModTwo[NonZero_Mod2]
+                # info: Concatenate the stim components
+                concatenated_stims = [f"{NonZero_Values_Mod1[i]}_{NonZero_Values_Mod2[i]}" for i in
+                                      range(len(NonZero_Values_Mod1))]
+                # info: Initialize for final 3stim list
+                NonZero_Mod1_final = []
+                NonZero_Mod2_final = []
+
+                if len(NonZero_Mod1) != 0:
+
+                    # info: Decrease amount of stimuli to 3 ################################################################
+                    if len(concatenated_stims) > 3:
+
+                        # info: Just add the second, third and fourth stim
+                        NonZero_Mod1_final.append(NonZero_Mod1[1])
+                        NonZero_Mod2_final.append(NonZero_Mod2[1])
+                        NonZero_Mod1_final.append(NonZero_Mod1[2])
+                        NonZero_Mod2_final.append(NonZero_Mod2[2])
+                        NonZero_Mod1_final.append(NonZero_Mod1[3])
+                        NonZero_Mod2_final.append(NonZero_Mod2[3])
+                        
+                        # info: Keep consecutive variable naming flow
+                        NonZero_Mod1 = NonZero_Mod1_final
+                        NonZero_Mod2 = NonZero_Mod2_final
+                    # info: Decrease amount of stimuli to 3 ################################################################
+
+                    # Accumulating all activities for both unit rings together
+                    for k in range(0, len(NonZero_Mod1)):
+                        currentStimLoc_Mod1 = pref[NonZero_Mod1[k]]
+                        currentStimStrength_Mod1 = currentTimeStepModOne[NonZero_Mod1[k]]
+                        currentStimLoc_Mod2 = pref[NonZero_Mod2[k]]
+                        currentStimStrength_Mod2 = currentTimeStepModTwo[NonZero_Mod2[k]]
+                        # add one gradual activated stim to final form
+                        currentActivation_Mod1 = add_x_loc(currentStimLoc_Mod1, pref) * currentStimStrength_Mod1
+                        currentActivation_Mod2 = add_x_loc(currentStimLoc_Mod2, pref) * currentStimStrength_Mod2
+                        # Add all activations for one trial together
+                        unitRingMod1 = np.around(unitRingMod1 + currentActivation_Mod1, decimals=2)
+                        unitRingMod2 = np.around(unitRingMod2 + currentActivation_Mod2, decimals=2)
+
+                    # Store
+                    currentFinalRow = np.concatenate((Input[i][j][0:1], unitRingMod1, unitRingMod2, Input[i][j][65:78]))
+                    Input[i][j][0:78] = currentFinalRow
 
         # Change dtype of every element in matrix to float32 for later validation functions
-        for i in range(0, newInput.shape[0]):
-            for j in range(0, newInput.shape[1]):
-                for k in range(0, newInput.shape[2]):
-                    newInput[i][j][k] = np.float32(newInput[i][j][k])
+        for i in range(0, Input.shape[0]):
+            for j in range(0, Input.shape[1]):
+                for k in range(0, Input.shape[2]):
+                    Input[i][j][k] = np.float32(Input[i][j][k])
         # Also change dtype for entire array
-        newInput = newInput.astype('float32')
+        Input = Input.astype('float32')
 
         # Save input data
         os.chdir(os.path.join(os.getcwd(), main_path, taskShorts))
-        input_filename = participant + '-' + 'month_' + str(month) + '-' + 'batch_' + str(
-            batchNumber) + '-' + taskShorts + '-' + \
-                         xlsxFile.split('_')[3].split('-')[0] + '_' + xlsxFile.split('_')[3].split('-')[
-                             1] + '-' + 'Input'
-        np.save(input_filename, newInput)
+        input_filename = (participant + '-' + 'month_' + str(month) + '-' + 'batch_' + str(batchNumber) + '-' + taskShorts + '-' + \
+                          xlsxFile.split('_')[3].split('-')[0] + '_' + xlsxFile.split('_')[3].split('-')[1] + '-' + 'Input')
+        np.save(input_filename, Input)
         # Save response information for later error class detection
-        response_filename = participant + '-' + 'month_' + str(month) + '-' + 'batch_' + str(
-            batchNumber) + '-' + taskShorts + '-' + \
-                            xlsxFile.split('_')[3].split('-')[0] + '_' + xlsxFile.split('_')[3].split('-')[
-                                1] + '-' + 'Response'
+        response_filename = participant + '-' + 'month_' + str(month) + '-' + 'batch_' + str(batchNumber) + '-' + taskShorts + '-' + \
+                            xlsxFile.split('_')[3].split('-')[0] + '_' + xlsxFile.split('_')[3].split('-')[1] + '-' + 'Response'
         np.save(response_filename, responseEntries)
 
         # Sanity check
-        print('Input solved: ', opened_xlsxFile_selection['Spreadsheet'][0], ' ',
-              opened_xlsxFile_selection['TimeLimit'][0])
-        print('Response solved: ', opened_xlsxFile_selection['Spreadsheet'][0], ' ',
-              opened_xlsxFile_selection['TimeLimit'][0])
-
+        print('Input solved: ', opened_xlsxFile_selection['Spreadsheet'][0], ' ', opened_xlsxFile_selection['TimeLimit'][0])
+        print('Response solved: ', opened_xlsxFile_selection['Spreadsheet'][0], ' ', opened_xlsxFile_selection['TimeLimit'][0])
 
         # OUTPUT -------------------------------------------------------------------------------------------------------
-        # Create the whole Input with new encoding
-        newOutput = np.zeros((totalStepsAverage, int(numberOfTrials), 3))
-
         # float all field units during fixation epoch on 0.05
         for i in range(0, numFixStepsAverage):
-            for j in range(0, int(numberOfTrials)):
-                for k in range(1, 3):
-                    newOutput[i][j][k] = float(0.05)
-
-        # float all epoch unit values to .8 during fixation
-        for i in range(0, numFixStepsAverage):
-            for j in range(0, int(numberOfTrials)):
-                newOutput[i][j][0] = float(0.8)
-        # float all epoch unit values to 0 during response
+            for j in range(0, Output.shape[1]):
+                for k in range(2, 34):
+                    Output[i][j][k] = float(0.05)
+        # float all field units of response epoch to 0
         for i in range(numFixStepsAverage, totalStepsAverage):
-            for j in range(0, int(numberOfTrials)):
-                newOutput[i][j][0] = float(0.05)
+            for j in range(0, Output.shape[1]):
+                for k in range(2, 34):
+                    Output[i][j][k] = float(0)
+        # float all fixation outputs during response period to 0.05
+        for i in range(numFixStepsAverage, totalStepsAverage):
+            for j in range(0, Output.shape[1]):
+                Output[i][j][1] = float(0.05)
 
         # Define an output dictionary for specific response values
-        outputDict = {'U': 31, 'R': 7, 'L': 23, 'D': 15}  # info: Substracted in lowDim encoding by 1 to avoid indice error
+        outputDict = {'U': 32, 'R': 8, 'L': 24, 'D': 16}
 
-        indices2remove_filtered = [i for i in indices2remove if i < 40]
-        Output = np.delete(Output, indices2remove_filtered, axis=1)
-
-        pref = np.arange(0, 2 * np.pi, 2 * np.pi / 32)  # fix: pref[positionList[0]] = radiant/degree = polar
         for i in range(numFixStepsAverage, totalStepsAverage):
-            for j in range(0, int(numberOfTrials)):
-                if isinstance(Output[i][j][0], str) and Output[i][j][0] != 'noResponse' and Output[i][j][
-                    0] != 'NoResponse':
-                    # Translate field into radiant
-                    position = pref[outputDict[Output[i][j][0]]-1]
-                    # Translate radiant into sin/cos vector indicating the target response direction for the network
-                    newOutput[i][j][1] = np.sin(position)
-                    newOutput[i][j][2] = np.cos(position)
+            for j in range(0, Output.shape[1]):
+                if isinstance(correctAnswer[i][j], str) and correctAnswer[i][j] != 'noResponse' and correctAnswer[i][j] != 'NoResponse':
+                    Output[i][j][outputDict[correctAnswer[i][j]]] = float(0.85)
                 else:
-                    newOutput[i][j][1] = np.sin(0.05)  # info: yang et al.: -1
-                    newOutput[i][j][2] = np.sin(0.05)  # info: yang et al.: -1
+                    for k in range(2, 34):
+                        Output[i][j][k] = float(0.05)
 
-        # Change dtype of every element in matrix to float32 for later validation functions
-        for i in range(0, newOutput.shape[0]):
-            for j in range(0, newOutput.shape[1]):
-                for k in range(0, newOutput.shape[2]):
-                    newOutput[i][j][k] = np.float32(newOutput[i][j][k])
-        # Also change dtype for entire array
-        newOutput = newOutput.astype('float32')
+        # Drop unnecessary first column
+        Output = np.delete(Output, [0], axis=2)
+        # Pre-allocate y-loc matrix; needed for later validation - Ground Truth
+        y_loc = np.zeros((Output.shape[0], Output.shape[1]))
 
-        # info: Create y_loc
-        # Pre-allocate y-loc matrix; needed for later validation
-        y_loc = np.zeros((newOutput.shape[0], newOutput.shape[1]))
-
-        for k in range(0, numFixStepsAverage):
-            for j in range(0, newOutput.shape[1]):
-                y_loc[k][j] = np.float(0.05) # info: yang et al.: -1
-
-        # Complete y_loc matrix
-        for k in range(numFixStepsAverage, totalStepsAverage):
-            for j in range(0, newOutput.shape[1]):
-                if isinstance(Output[k][j][0], str) and Output[k][j][0] != 'noResponse' and Output[k][j][
-                    0] != 'NoResponse' and safe_isnan(Output[k][j][0]) == False:
-                    y_loc[k][j] = pref[outputDict[Output[k][j][0]]-1]  # radiant form direction
-                else:
+        # Add output gradient activation
+        for i in range(0, Output.shape[0]):
+            for j in range(0, Output.shape[1]):
+                currentTimeStepOutput = Output[i][j][1:33]
+                # Allocate first unit ring
+                unitRingOutput = np.zeros(32, dtype='float32')
+                # Get non-zero values of time steps
+                nonZerosOutput = np.nonzero(currentTimeStepOutput)[0]
+                # Float first fixations rows with -1
+                for k in range(0, totalStepsAverage):
                     y_loc[k][j] = np.float(0.05) # info: yang et al.: -1
 
+                if len(nonZerosOutput) == 1:
+                    # Get activity and model gradient activation around it
+                    currentOutputLoc = pref[nonZerosOutput[0]]
+                    currentActivation_Output = add_x_loc(currentOutputLoc, pref) + 0.05  # adding noise
+                    unitRingOutput = np.around(unitRingOutput + currentActivation_Output, decimals=2)
+                    # Store
+                    currentFinalRow = np.concatenate((Output[i][j][0:1], unitRingOutput))
+                    Output[i][j][0:33] = currentFinalRow
+                    # Complete y_loc matrix
+                    for k in range(numFixStepsAverage, totalStepsAverage):
+                        y_loc[k][j] = pref[outputDict[correctAnswer[i][j]]-1]
+
+        # Change dtype of every element in matrix to float32 for later validation functions
+        for i in range(0, Output.shape[0]):
+            for j in range(0, Output.shape[1]):
+                for k in range(0, Output.shape[2]):
+                    Output[i][j][k] = np.float32(Output[i][j][k])
+        # Also change dtype for entire array
+        Output = Output.astype('float32')
+
         # Save output data
-        output_filename = participant + '-' + 'month_' + str(month) + '-' + 'batch_' + str(
-            batchNumber) + '-' + taskShorts + '-' + \
-                          xlsxFile.split('_')[3].split('-')[0] + '_' + xlsxFile.split('_')[3].split('-')[
-                              1] + '-' + 'Output'
-        np.save(output_filename, newOutput)
+        output_filename = participant + '-' + 'month_' + str(month) + '-' + 'batch_' + str(batchNumber) + '-' + taskShorts + '-' + \
+                          xlsxFile.split('_')[3].split('-')[0] + '_' + xlsxFile.split('_')[3].split('-')[1] + '-' + 'Output'
+        np.save(output_filename, Output)
         # Save y_loc data
-        yLoc_filename = participant + '-' + 'month_' + str(month) + '-' + 'batch_' + str(
-            batchNumber) + '-' + taskShorts + '-' + \
+        yLoc_filename = participant + '-' + 'month_' + str(month) + '-' + 'batch_' + str(batchNumber) + '-' + taskShorts + '-' + \
                         xlsxFile.split('_')[3].split('-')[0] + '_' + xlsxFile.split('_')[3].split('-')[1] + '-' + 'yLoc'
         np.save(yLoc_filename, y_loc)
         # Save meta data
-        meta_filename = participant + '-' + 'month_' + str(month) + '-' + 'batch_' + str(
-            batchNumber) + '-' + taskShorts + '-' + \
+        meta_filename = participant + '-' + 'month_' + str(month) + '-' + 'batch_' + str(batchNumber) + '-' + taskShorts + '-' + \
                         xlsxFile.split('_')[3].split('-')[0] + '_' + xlsxFile.split('_')[3].split('-')[1] + '-' + 'Meta'
         with open('{}.json'.format(meta_filename), 'w') as json_file:
             json.dump(meta_dict, json_file)
 
         # Sanity check
         print('Meta solved:', 'sleepingQualityValue: ', meta_dict['sleepingQualityValue'])
-        print('Output solved: ', opened_xlsxFile_selection['Spreadsheet'][0], ' ',
-              opened_xlsxFile_selection['TimeLimit'][0])
+        print('Output solved: ', opened_xlsxFile_selection['Spreadsheet'][0], ' ', opened_xlsxFile_selection['TimeLimit'][0])
 
 ########################################################################################################################
 # info: RP tasks
@@ -895,11 +893,26 @@ def preprocess_RP(opened_xlsxFile, questionnare_files, list_allSessions, sequenc
     for batchNumber in range(numberBatches):
         batchOn = batchNumber * batchLength
         batchOff = batchNumber * batchLength + batchLength
-        numFixStepsAverage = 1
-        numRespStepsAverage = 1
-        totalStepsAverage = numFixStepsAverage + numRespStepsAverage
+        numFixStepsTotal = 0
+        numRespStepsTotal = 0
         # Prepare response array for this batch
         currentConcatResponseEntries = concatResponseEntries[:, batchOn:batchOff]
+        # Calculate average fix, resp and total steps for this batch
+        for j in incrementList[batchOn:batchOff]:
+            # Accumulate step numbers
+            currentTrial = opened_xlsxFile_selection[j:j + 2].reset_index().drop(columns=['index'])
+
+            numFixSteps = 35  # info: set length of fixation steps constant
+            numRespSteps = numFixSteps  # info: set length of response steps constant
+
+            numFixStepsTotal += numFixSteps
+            numRespStepsTotal += numRespSteps
+            # Calculate average after cumulative addition of whole batch
+            if j == incrementList[batchOff - 1]:
+                numFixStepsAverage = int(numFixStepsTotal / batchLength)
+                numRespStepsAverage = int(numRespStepsTotal / batchLength)
+                totalStepsAverage = numFixStepsAverage + numRespStepsAverage
+                # print(numFixStepsAverage,numRespStepsAverage,totalStepsAverage)
 
         finalSequenceList = []
         concatedValuesAndOccurrencesList = []
@@ -928,14 +941,14 @@ def preprocess_RP(opened_xlsxFile, questionnare_files, list_allSessions, sequenc
         currentConcatResponseEntriesFinal = np.concatenate([currentConcatResponseEntries, np.array(concatedValuesAndOccurrencesList, dtype=object).T],axis=0)
         # --------------------------------------------------------------------------------------------------------------
 
-        # fix: Create final df for INPUT and OUPUT #####################################################################
+        # Create final df for INPUT and OUPUT
         newOrderSequenceList = []
         # Append all the time steps accordingly to a list
         for j in range(0, totalStepsAverage):
             for i in range(0, len(finalSequenceList)):
                 newOrderSequenceList.append(finalSequenceList[i][j])
 
-        # info: Create lowDim form #####################################################################################
+        # Create Yang form
         finalTrialsList_array = np.array(newOrderSequenceList).reshape((len(finalSequenceList[0]), len(finalSequenceList), 88))
         # Create meta dict before deleting necessary information from current trials List
         date = str(finalTrialsList_array[0,0,86]).split(' ')[0]
@@ -948,14 +961,21 @@ def preprocess_RP(opened_xlsxFile, questionnare_files, list_allSessions, sequenc
         # Create one input file and one output file
         Input, Output = finalTrialsList_array, finalTrialsList_array
         Input = np.delete(Input, [0, 1, 2, 3, 4, 5, 6, 8, 85,86,87], axis=2) # info: 77 statt 85 ????
+        correctAnswer = Output[..., 4]
+        Output_copy = np.delete(Output, np.s_[0, 1, 2, 3, 4, 5, 6, 7,8], axis=2)
+        Output_copy = np.delete(Output_copy, np.s_[32:], axis=2)
         Output = np.delete(Output, np.s_[0, 1, 2, 4, 5, 6, 7,86,87], axis=2)
         Output = np.delete(Output, np.s_[34:78], axis=2)
         Input, Output = Input[:, sequence_on:sequence_off, :], Output[:, sequence_on:sequence_off, :]
         responseEntries = currentConcatResponseEntriesFinal[:, sequence_on:sequence_off]
 
         # INPUT --------------------------------------------------------------------------------------------------------
-        # float all epoch unit values to 0
+        # float all fixation input values to 1
         for i in range(0, Input.shape[0]):
+            for j in range(0, Input.shape[1]):
+                Input[i][j][0] = float(1)
+        # float all epoch units to 0 during response
+        for i in range(numFixStepsAverage, totalStepsAverage):
             for j in range(0, Input.shape[1]):
                 Input[i][j][0] = float(0)
         # float all task values to 0
@@ -975,237 +995,329 @@ def preprocess_RP(opened_xlsxFile, questionnare_files, list_allSessions, sequenc
                     Input[i][j][taskDict[opened_xlsxFile_selection['Spreadsheet'][0].split('_')[0]]] = float(1)
                     taskShorts = opened_xlsxFile_selection['Spreadsheet'][0].split('_')[0]
                 else:
-                    Input[i][j][taskDict[opened_xlsxFile_selection['Spreadsheet'][0].split('_')[0] + ' ' +
-                                         opened_xlsxFile_selection['Spreadsheet'][0].split('_')[1]]] = float(1)
-                    taskShorts = opened_xlsxFile_selection['Spreadsheet'][0].split('_')[0] + '_' + \
-                                 opened_xlsxFile_selection['Spreadsheet'][0].split('_')[1]
+                    Input[i][j][taskDict[opened_xlsxFile_selection['Spreadsheet'][0].split('_')[0] + ' ' + opened_xlsxFile_selection['Spreadsheet'][0].split('_')[1]]] = float(1)
+                    taskShorts = opened_xlsxFile_selection['Spreadsheet'][0].split('_')[0] + '_' + opened_xlsxFile_selection['Spreadsheet'][0].split('_')[1]
 
-        # fix: Get all fields with not 000_000.png
-        stimListList = []  # Will be taken for color and form
-        positionListList = []  # Will be taken for angle
+        # float all 000_000's on field units to 0
         for i in range(0, Input.shape[0]):
             for j in range(0, Input.shape[1]):
-                stimList = []
-                positionList = []
-                for k in range(1, 33):  # Positions for one ring are enough as they are similar on both
-                    if Input[i][j][k] != '000_000.png' and Input[0][0][k].endswith('.png') and safe_isnan(Input[i][j][k]) == False:
-                        stimList.append(Input[i][j][k])
-                        positionList.append(k)
-                stimListList.append(stimList)
-                positionListList.append(positionList)
-
-        stimNumber = int(finalTrialsList_array[0][0][0].split('stim')[0].split('_')[-1])
-        indices2remove = []
-        for i, list in enumerate(stimListList):
-            if len(list) < stimNumber or [j for j in list if '000' in j]:  # remove wrong trials
-                indices2remove.append(i)
-        # fix: ADD zero padding if number of trials < 5, so that you always have the same input structure, randomize the location of the stimuli on these 5 units
-        # remove lists of lists with corresponding indices
-        stimListList_filtered = [sublist for i, sublist in enumerate(stimListList) if i not in indices2remove]
-        positionListList_filtered = [sublist for i, sublist in enumerate(positionListList) if i not in indices2remove]
+                for k in range(1, 65):
+                    if Input[i][j][k] == '000_000.png':
+                        Input[i][j][k] = float(0)
 
         # Define modulation dictionaries for specific columns
         mod1Dict = {'red': 0.08, 'rust': 0.17, 'orange': 0.25, 'amber': 0.33, 'yellow': 0.42, 'lime': 0.5, 'green': 0.58, \
                     'moss': 0.66, 'blue': 0.75, 'violet': 0.83, 'magenta': 0.92, 'purple': 1.0}
-
-        # Define modulation dictionaries for specific columns
-        mod2Dict = {'triangle': float(0.2), 'pentagon': float(0.4), 'heptagon': float(0.6),
-                    'nonagon': float(0.8), 'circle': float(1.0)}
-
-        # Transform stim into color and form encoding
-        colorListList = []
-        formListList = []
-        for stimList in stimListList_filtered:
-            colorList = []
-            formList = []
-            for stim in stimList:
-                colorList.append(mod1Dict[stim.split('.png')[0].split('_')[0]])
-                formList.append(mod2Dict[stim.split('.png')[0].split('_')[1]])
-            colorListList.append(colorList)
-            formListList.append(formList)
-
-        # fix: Embed the lists information into the Input structure
-        # import numpy as np
-        pref = np.arange(0, 2 * np.pi, 2 * np.pi / 32)  # fix: pref[positionList[0]] = radiant/degree = polar
-        for i, positionList in enumerate(positionListList_filtered):
-            # print(positionList, i)
-            # Exchange values is lists
-            for j, position in enumerate(positionList):
-                positionList[j] = pref[position-1]
-            # Exchange list in list of lists
-            positionListList_filtered[i] = positionList
-
-        # Only take the first number of lists according to number of filtered trials in that batch len(listList)/totalStepsAverage
-        numberOfTrials = len(positionListList_filtered) / totalStepsAverage
-        positionListList_filtered_compressed = positionListList_filtered[0:int(numberOfTrials)]
-        colorListList_compressed = colorListList[0:int(numberOfTrials)]
-        formListList_compressed = formListList[0:int(numberOfTrials)]
-        # fix: colorListList
-        # fix: formListList
-        # fix: positionListList
-
-        # info: i is batch size here
-        fullTrial_list = []
-        for i, positionList in enumerate(positionListList_filtered_compressed):
-            trialMod1vectors = []
-            trialMod2vectors = []
-            for j, position in enumerate(positionList):
-                trialMod1vectors.append(np.array((np.sin(position), np.cos(position))) * colorListList_compressed[i][j])
-                trialMod2vectors.append(np.array((np.sin(position), np.cos(position))) * formListList_compressed[i][j])
-            # Zero pad missing stim vectors, so that every trial, every task and every spreadsheet is encoded with the same input structure
-            for i in range(0, 5 - len(trialMod1vectors)):
-                trialMod1vectors.append(np.array([0, 0]))
-                trialMod2vectors.append(np.array([0, 0]))
-
-            # Ensure exact same permutation for both vectors
-            permutation_indices = np.random.permutation(len(trialMod1vectors))
-            # Apply it
-            trialMod1vectors_randomized = [trialMod1vectors[i] for i in permutation_indices]
-            trialMod2vectors_randomized = [trialMod2vectors[i] for i in permutation_indices]
-
-            trialMod1vectors_concat = [array for vector in trialMod1vectors_randomized for array in vector]
-            trialMod2vectors_concat = [array for vector in trialMod2vectors_randomized for array in vector]
-            fullTrial = [1] + trialMod1vectors_concat + trialMod2vectors_concat + Input[0][0][
-                                                                                  65:77].tolist()  # add epoch, two mod lists and task vector together
-
-            fullTrial_list.append(fullTrial)  # Add task vector before appending
-
-        # Create the whole Input with new encoding
-        newInput = np.zeros((totalStepsAverage, int(numberOfTrials), 33))
+        # mod1Dict = {'red': 0.16, 'rust': 0.32, 'orange': 0.5, 'amber': 0.66, 'yellow': 0.84, 'lime': 1.0,'green': 1.16, \
+        #             'moss': 1.32, 'blue': 1.5, 'violet': 1.66, 'magenta': 1.84, 'purple': 2.0}
 
         for i in range(0, Input.shape[0]):
-            for j in range(0, int(numberOfTrials)):
-                newInput[i][j][0:33] = np.array(fullTrial_list[j])
+            for j in range(0, Input.shape[1]):
+                for k in range(1, 33):
+                    if Input[i][j][k] != 0 and safe_isnan(Input[i][j][k]) == False:
+                        Input[i][j][k] = mod1Dict[Input[i][j][k].split('_')[0]]
 
-        # fix: Set epoch information unit to 1 during fixation
+        # Define modulation dictionaries for specific columns
+        # mod2Dict = {'triangle.png': float(0.4), 'pentagon.png': float(0.8), 'heptagon.png': float(1.2), 'nonagon.png': float(1.6), 'circle.png': float(2.0)}
+        mod2Dict = {'triangle.png': float(0.2), 'pentagon.png': float(0.4), 'heptagon.png': float(0.6), 'nonagon.png': float(0.8), 'circle.png': float(1.0)} # info: changed circle encoding from 1.0 to 0.999 for being unique in form counts
+
+        for i in range(0, Input.shape[0]):
+            for j in range(0, Input.shape[1]):
+                for k in range(33, 65):
+                    if Input[i][j][k] != 0 and safe_isnan(Input[i][j][k]) == False:
+                        Input[i][j][k] = mod2Dict[Input[i][j][k].split('_')[1]]
+
+        # float all field values of fixation period to 0
         for i in range(0, numFixStepsAverage):
-            for j in range(0, int(numberOfTrials)):
-                newInput[i][j][0] = float(1)
-        # fix: Set epoch information unit to 0 during response
-        for i in range(numFixStepsAverage, totalStepsAverage):
-            for j in range(0, int(numberOfTrials)):
-                newInput[i][j][0] = float(0)
-        # fix: Set all modality untis to 0 during fixation
-        for i in range(0, numFixStepsAverage):
-            for j in range(0, int(numberOfTrials)):
-                for k in range(1, 21):  #
-                    newInput[i][j][k] = float(0)
+            for j in range(0, Input.shape[1]):
+                for k in range(1, 65):
+                    Input[i][j][k] = float(0)
+
+        # Add input gradient activation
+        # Create default hyperparameters for network
+        num_ring, n_eachring, n_rule = 2, 32, 12
+        n_input, n_output = 1 + num_ring * n_eachring + n_rule, n_eachring + 1
+        pref = np.arange(0, 2 * np.pi, 2 * np.pi / 32)
+
+        for i in range(0, Input.shape[0]):
+            for j in range(0, Input.shape[1]):
+                currentTimeStepModOne = Input[i][j][1:33]
+                currentTimeStepModTwo = Input[i][j][33:65]
+                # Allocate first unit ring
+                unitRingMod1 = np.zeros(32, dtype='float32')
+                unitRingMod2 = np.zeros(32, dtype='float32')
+
+                # Get non-zero values of time steps on both modalities and also directly fix distance between units issue
+                NonZero_Mod1 = np.nonzero(currentTimeStepModOne)[0]
+                NonZero_Mod2 = np.nonzero(currentTimeStepModTwo)[0]
+
+                # info: Get non-zero values for decreasing stims to 3
+                NonZero_Values_Mod1 = currentTimeStepModOne[NonZero_Mod1]
+                NonZero_Values_Mod2 = currentTimeStepModTwo[NonZero_Mod2]
+                # info: Concatenate the stim components
+                concatenated_stims = [f"{NonZero_Values_Mod1[i]}_{NonZero_Values_Mod2[i]}" for i in range(len(NonZero_Values_Mod1))]
+                # info: Initialize for final 3stim list
+                NonZero_Mod1_final = []
+                NonZero_Mod2_final = []
+                # info: Define correct response
+                np.random.seed(j) # j representing the number of trials, where each has a different correct repsonse
+                correctResponseIndice = random.choice(np.where(Output_copy[i][j][0:32] == correctAnswer[i][j]))[0]
+
+                # if len(correctResponseIndice) == 0:
+                #     print('Stop')
+
+                if len(NonZero_Mod1) != 0:
+
+                    # info: Decrease amount of stimuli to 3 ################################################################
+                    # colors = ['red', 'rust', 'orange', 'amber', 'yellow', 'lime','green', 'moss','blue','violet','magenta','purple']
+                    forms = ['_0.2', '_0.4', '_0.6', '_0.8', '_1.0']
+
+                    # globalCounter = 0
+                    if len(concatenated_stims) > 3:
+                        # Create a new list with modified occurrences
+                        # filtered_stimuli = []
+                        # filtered_positions = []
+                        task = finalSequenceList[0][0][0]['Spreadsheet']
+
+                        if 'RP_Anti' in task:
+                            counts = Counter(concatenated_stims)
+                            # Add one of the wrong stims once
+                            lowest_stim, lowest_count = min(counts.items(), key=lambda x: x[1])
+                            indice_lowest_stim = random.choice([i for i, stim in enumerate(concatenated_stims) if lowest_stim in stim])
+                            NonZero_Mod1_final.append(NonZero_Mod1[indice_lowest_stim])
+                            NonZero_Mod2_final.append(NonZero_Mod2[indice_lowest_stim])
+                            # Add the correct stim twice with its two different positions
+                            NonZero_Mod1_final.append(correctResponseIndice)
+                            NonZero_Mod2_final.append(correctResponseIndice)
+                            # Randomly choose second position form
+                            highest_stim, highest_count = max(counts.items(), key=lambda x: x[1])
+                            randomIndice = correctResponseIndice
+                            while randomIndice == correctResponseIndice:
+                                randomIndice = random.choice([i for i, stim in enumerate(concatenated_stims) if highest_stim in stim])
+                            NonZero_Mod1_final.append(NonZero_Mod1[randomIndice])
+                            NonZero_Mod2_final.append(NonZero_Mod2[randomIndice])
+
+                        elif 'RP_Ctx1' in task:
+                            form_counts = Counter()
+                            for stim in concatenated_stims:
+                                for form in forms:
+                                    if form in stim:
+                                        form_counts[form] += 1  # Increment count if color is found
+
+                            # Add the lowest stim once as the correct stim
+                            NonZero_Mod1_final.append(correctResponseIndice)
+                            NonZero_Mod2_final.append(correctResponseIndice)
+                            # Add one of the most common stims twice as incorrect stims
+                            highest_stim, highest_count = max(form_counts.items(), key=lambda x: x[1])
+                            indice_highest_stim = [i for i, stim in enumerate(concatenated_stims) if highest_stim in stim] # attention: It is probably that one
+                            NonZero_Mod1_final.append(NonZero_Mod1[indice_highest_stim[0]])
+                            NonZero_Mod2_final.append(NonZero_Mod2[indice_highest_stim[0]])
+                            NonZero_Mod1_final.append(NonZero_Mod1[indice_highest_stim[1]])
+                            NonZero_Mod2_final.append(NonZero_Mod2[indice_highest_stim[1]])
+
+                        elif 'RP_Ctx2' in task:
+                            form_counts = Counter()
+                            for stim in concatenated_stims:
+                                for form in forms:
+                                    if form in stim:
+                                        form_counts[form] += 1  # Increment count if color is found
+                            # Add the correct stim twice with its two different positions
+                            NonZero_Mod1_final.append(correctResponseIndice)
+                            NonZero_Mod2_final.append(correctResponseIndice)
+                            # Randomly choose second position from NonZero_Mod1
+                            randomIndice = correctResponseIndice
+                            while randomIndice == correctResponseIndice:
+                                randomIndice = random.choice(NonZero_Mod1)
+                            NonZero_Mod1_final.append(randomIndice)
+                            NonZero_Mod2_final.append(randomIndice)
+                            # Add one of the lowest stims once as the incorrect stim
+                            lowest_stim, lowest_count = min(form_counts.items(), key=lambda x: x[1])
+                            indice_lowest_stim = random.choice([i for i, stim in enumerate(concatenated_stims) if lowest_stim in stim])
+                            NonZero_Mod1_final.append(NonZero_Mod1[indice_lowest_stim])
+                            NonZero_Mod2_final.append(NonZero_Mod2[indice_lowest_stim])
+
+                        else: # RP
+                            counts = Counter(concatenated_stims)
+                            # Add the correct stim once
+                            NonZero_Mod1_final.append(correctResponseIndice)
+                            NonZero_Mod2_final.append(correctResponseIndice)
+                            # Add one of the wrong stims twice
+                            highest_stim, highest_count = max(counts.items(), key=lambda x: x[1])
+                            indice_highest_stim = [i for i, stim in enumerate(concatenated_stims) if highest_stim in stim]
+                            NonZero_Mod1_final.append(NonZero_Mod1[indice_highest_stim[0]])
+                            NonZero_Mod2_final.append(NonZero_Mod2[indice_highest_stim[0]])
+                            NonZero_Mod1_final.append(NonZero_Mod1[indice_highest_stim[1]])
+                            NonZero_Mod2_final.append(NonZero_Mod2[indice_highest_stim[1]])
+
+                        # info: Keep consecutive variable naming flow
+                        NonZero_Mod1 = NonZero_Mod1_final
+                        NonZero_Mod2 = NonZero_Mod2_final
+
+                    # info: Decrease amount of stimuli to 3 ################################################################
+
+
+
+                # Accumulating all activities for both unit rings together
+                for k in range(0, len(NonZero_Mod1)):
+                    currentStimLoc_Mod1 = pref[NonZero_Mod1[k]]
+                    currentStimStrength_Mod1 = currentTimeStepModOne[NonZero_Mod1[k]]
+                    currentStimLoc_Mod2 = pref[NonZero_Mod2[k]]
+                    currentStimStrength_Mod2 = currentTimeStepModTwo[NonZero_Mod2[k]]
+                    # add one gradual activated stim to final form
+                    currentActivation_Mod1 = add_x_loc(currentStimLoc_Mod1, pref) * currentStimStrength_Mod1
+                    currentActivation_Mod2 = add_x_loc(currentStimLoc_Mod2, pref) * currentStimStrength_Mod2
+                    # Add all activations for one trial together
+                    unitRingMod1 = np.around(unitRingMod1 + currentActivation_Mod1, decimals=2)
+                    unitRingMod2 = np.around(unitRingMod2 + currentActivation_Mod2, decimals=2)
+                # Store
+                currentFinalRow = np.concatenate((Input[i][j][0:1], unitRingMod1, unitRingMod2, Input[i][j][65:78]))
+                Input[i][j][0:78] = currentFinalRow
 
         # Change dtype of every element in matrix to float32 for later validation functions
-        for i in range(0, newInput.shape[0]):
-            for j in range(0, newInput.shape[1]):
-                for k in range(0, newInput.shape[2]):
-                    newInput[i][j][k] = np.float32(newInput[i][j][k])
+        for i in range(0, Input.shape[0]):
+            for j in range(0, Input.shape[1]):
+                for k in range(0, Input.shape[2]):
+                    Input[i][j][k] = np.float32(Input[i][j][k])
         # Also change dtype for entire array
-        newInput = newInput.astype('float32')
+        Input = Input.astype('float32')
 
         # Save input data
         os.chdir(os.path.join(os.getcwd(), main_path, taskShorts))
-        input_filename = participant + '-' + 'month_' + str(month) + '-' + 'batch_' + str(
-            batchNumber) + '-' + taskShorts + '-' + \
-                         xlsxFile.split('_')[3].split('-')[0] + '_' + xlsxFile.split('_')[3].split('-')[
-                             1] + '-' + 'Input'
-        np.save(input_filename, newInput)
+        input_filename = (participant + '-' + 'month_' + str(month) + '-' + 'batch_' + str(batchNumber) + '-' + taskShorts + '-' + \
+                          xlsxFile.split('_')[3].split('-')[0] + '_' + xlsxFile.split('_')[3].split('-')[1] + '-' + 'Input')
+        np.save(input_filename, Input)
         # Save response information for later error class detection
-        response_filename = participant + '-' + 'month_' + str(month) + '-' + 'batch_' + str(
-            batchNumber) + '-' + taskShorts + '-' + \
-                            xlsxFile.split('_')[3].split('-')[0] + '_' + xlsxFile.split('_')[3].split('-')[
-                                1] + '-' + 'Response'
+        response_filename = participant + '-' + 'month_' + str(month) + '-' + 'batch_' + str(batchNumber) + '-' + taskShorts + '-' + \
+                            xlsxFile.split('_')[3].split('-')[0] + '_' + xlsxFile.split('_')[3].split('-')[1] + '-' + 'Response'
         np.save(response_filename, responseEntries)
 
         # Sanity check
-        print('Input solved: ', opened_xlsxFile_selection['Spreadsheet'][0], ' ',
-              opened_xlsxFile_selection['TimeLimit'][0])
-        print('Response solved: ', opened_xlsxFile_selection['Spreadsheet'][0], ' ',
-              opened_xlsxFile_selection['TimeLimit'][0])
+        print('Input solved: ', opened_xlsxFile_selection['Spreadsheet'][0], ' ', opened_xlsxFile_selection['TimeLimit'][0])
+        print('Response solved: ', opened_xlsxFile_selection['Spreadsheet'][0], ' ', opened_xlsxFile_selection['TimeLimit'][0])
 
         # OUTPUT -------------------------------------------------------------------------------------------------------
-        # Create the whole Input with new encoding
-        newOutput = np.zeros((totalStepsAverage, int(numberOfTrials), 3))
-
         # float all field units during fixation epoch on 0.05
         for i in range(0, numFixStepsAverage):
-            for j in range(0, int(numberOfTrials)):
-                for k in range(1, 3):
-                    newOutput[i][j][k] = float(0.05)
-
-        # float all epoch unit values to .8 during fixation
-        for i in range(0, numFixStepsAverage):
-            for j in range(0, int(numberOfTrials)):
-                newOutput[i][j][0] = float(0.8)
-        # float all epoch unit values to 0 during response
+            for j in range(0, Output.shape[1]):
+                for k in range(2, 34):
+                    Output[i][j][k] = float(0.05)
+        # float all field units of response epoch to 0
         for i in range(numFixStepsAverage, totalStepsAverage):
-            for j in range(0, int(numberOfTrials)):
-                newOutput[i][j][0] = float(0.05)
-
-        outputDict = {'Image 2': 2, 'Image 4': 4, 'Image 6': 6, 'Image 8': 8, 'Image 10': 10, 'Image 12': 12, 'Image 14': 14,\
-                'Image 16': 16, 'Image 18': 18, 'Image 20': 20, 'Image 22': 22, 'Image 24': 24, 'Image 26': 26, 'Image 28': 28, 'Image 30': 30, 'Image 32': 32, \
-                'Image 1': 1, 'Image 3': 3, 'Image 5': 5, 'Image 7': 7, 'Image 9': 9, 'Image 11': 11,'Image 13': 13, 'Image 15': 15, 'Image 17': 17, 'Image 19': 19, 'Image 21': 21,
-                'Image 23': 23, 'Image 25': 25, 'Image 27': 27, 'Image 29': 29, 'Image 31': 31}
-
-        indices2remove_filtered = [i for i in indices2remove if i < 40]
-        Output = np.delete(Output, indices2remove_filtered, axis=1)
-
-        pref = np.arange(0, 2 * np.pi, 2 * np.pi / 32)  # fix: pref[positionList[0]] = radiant/degree = polar
+            for j in range(0, Output.shape[1]):
+                for k in range(2, 34):
+                    Output[i][j][k] = float(0)
+        # float all fixation outputs during response period to 0.05
         for i in range(numFixStepsAverage, totalStepsAverage):
-            for j in range(0, int(numberOfTrials)):
-                if isinstance(Output[i][j][0], str) and Output[i][j][0] != 'screen' and Output[i][j][0] != 'noResponse' and \
-                        Output[i][j][0] != 'NoResponse' and Output[i][j][0] != 'Fixation Cross' and safe_isnan(Output[i][j][0]) == False:
-                    # Translate field into radiant
-                    position = pref[outputDict[Output[i][j][0]]-1]
-                    # Translate radiant into sin/cos vector indicating the target response direction for the network
-                    newOutput[i][j][1] = np.sin(position)
-                    newOutput[i][j][2] = np.cos(position)
-                else:
-                    newOutput[i][j][1] = np.sin(0.05)  # info: yang et al.: -1
-                    newOutput[i][j][2] = np.sin(0.05)  # info: yang et al.: -1
+            for j in range(0, Output.shape[1]):
+                Output[i][j][1] = float(0.05)
 
-        # Change dtype of every element in matrix to float32 for later validation functions
-        for i in range(0, newOutput.shape[0]):
-            for j in range(0, newOutput.shape[1]):
-                for k in range(0, newOutput.shape[2]):
-                    newOutput[i][j][k] = np.float32(newOutput[i][j][k])
+        # outputDict = {'Image 2': 2, 'Image 4': 4, 'Image 6': 6, 'Image 8': 8, 'Image 10': 10, 'Image 12': 12, 'Image 14': 14,\
+        #         'Image 16': 16, 'Image 18': 18, 'Image 20': 20, 'Image 22': 22, 'Image 24': 24, 'Image 26': 26, 'Image 28': 28, 'Image 30': 30, 'Image 32': 32, \
+        #         'Image 1': 1, 'Image 3': 3, 'Image 5': 5, 'Image 7': 7, 'Image 9': 9, 'Image 11': 11,'Image 13': 13, 'Image 15': 15, 'Image 17': 17, 'Image 19': 19, 'Image 21': 21,
+        #         'Image 23': 23, 'Image 25': 25, 'Image 27': 27, 'Image 29': 29, 'Image 31': 31}
 
-        # Also change dtype for entire array
-        newOutput = newOutput.astype('float32')
+
+        # for i in range(numFixStepsAverage, totalStepsAverage):
+        #     for j in range(0, Output.shape[1]):
+
+                # if correctAnswer[i][j] != 'screen' and correctAnswer[i][j] != 'noResponse' and correctAnswer[i][j] != 'NoResponse' and correctAnswer[i][j] != 'Fixation Cross':
+                #     Output[i][j][outputDict[Output[i][j][0]]] = np.float32(0.85)
+                # else:
+                #     for k in range(2, 34):
+                #         Output[i][j][k] = np.float32(0.05)
+
+        # Drop unnecessary columns
+        Output = np.delete(Output, [0,34], axis=2)
         # Pre-allocate y-loc matrix; needed for later validation
         y_loc = np.zeros((Output.shape[0], Output.shape[1]))
 
-        for k in range(0, numFixStepsAverage):
-            for j in range(0, newOutput.shape[1]):
-                y_loc[k][j] = np.float(0.05) # info: yang et al.: -1
+        # Add output gradient activation
+        for i in range(numFixStepsAverage, totalStepsAverage):
+            for j in range(0, Output.shape[1]):
+                # currentTimeStepOutput = Output[i][j][1:33]
 
-        # Complete y_loc matrix
-        for k in range(numFixStepsAverage, totalStepsAverage):
-            for j in range(0, newOutput.shape[1]):
-                if isinstance(Output[k][j][0], str) and Output[k][j][0] != 'screen' and Output[k][j][0] != 'noResponse' and \
-                        Output[k][j][0] != 'NoResponse' and Output[k][j][0] != 'Fixation Cross':
-                    y_loc[k][j] = pref[outputDict[Output[k][j][0]]-1]  # radiant form direction
+                if correctAnswer[i][j] != 'screen' and correctAnswer[i][j] != 'noResponse' and correctAnswer[i][j] != 'NoResponse' and correctAnswer[i][j] != 'Fixation Cross':
+                    # response = [l for l in range(0,len(Output_copy)) if currentTimeStepOutput[l] == correctAnswer[i][j]]
+                    # info: changed for 3stimTC
+                    np.random.seed(j)  # j representing the number of trials, where each has a different correct repsonse
+                    indice = random.choice(np.where(Output_copy[i][j][0:32] == correctAnswer[i][j]))[0]
+
+                    # Allocate first unit ring
+                    unitRingOutput = np.zeros(32, dtype='float32')
+                    # Get non-zero values of time steps
+                    # nonZerosOutput = np.nonzero(currentTimeStepOutput)[0]
+                    # Float first fixations rows with -1
+                    for k in range(0, numFixStepsAverage):
+                        y_loc[k][j] = np.float(0.05) # info: yang et al.: -1
+
+                    # if len(indice) == 1:
+                    # Get activity and model gradient activation around it
+                    currentOutputLoc = pref[indice]
+                    currentActivation_Output = add_x_loc(currentOutputLoc, pref) + 0.05  # adding noise
+                    unitRingOutput = np.around(unitRingOutput + currentActivation_Output, decimals=2)
+                    # Store
+                    currentFinalRow = np.concatenate((Output[i][j][0:1], unitRingOutput))
+                    Output[i][j][0:33] = currentFinalRow
+                    # Complete y_loc matrix
+                    for k in range(0, numFixStepsAverage):
+                        y_loc[k][j] = np.float(0.05) # info: yang et al.: -1
+                    for k in range(numFixStepsAverage, totalStepsAverage):
+                        y_loc[k][j] = pref[indice]
+
+                    # elif len(indice) == 0: # info: If the correctAnswer doesn't match any of the stims in Output
+                    #     for k in range(0, 33):
+                    #         Output[i][j][k] = np.float32(0.05)
+                    #     # Float first fixations rows with -1
+                    #     for k in range(0, totalStepsAverage):
+                    #         y_loc[k][j] = np.float(0.05) # info: yang et al.: -1
+                    #
+                    # else:
+                    #     # Get activity and model gradient activation around it
+                    #     currentOutputLoc = pref[indice[0]]
+                    #     currentActivation_Output = add_x_loc(currentOutputLoc, pref) + 0.05  # adding noise
+                    #     unitRingOutput = np.around(unitRingOutput + currentActivation_Output, decimals=2)
+                    #     # Store
+                    #     currentFinalRow = np.concatenate((Output[i][j][0:1], unitRingOutput))
+                    #     Output[i][j][0:33] = currentFinalRow
+                    #     # Complete y_loc matrix
+                    #     # Float first fixations rows with -1
+                    #     for k in range(0, numFixStepsAverage):
+                    #         y_loc[k][j] = np.float(0.05) # info: yang et al.: -1
+                    #     for k in range(numFixStepsAverage, totalStepsAverage):
+                    #         y_loc[k][j] = pref[indice[0]]
+
                 else:
-                    y_loc[k][j] = np.float(0.05) # info: yang et al.: -1
+                    for k in range(2, 34):
+                        Output[i][j][k] = np.float32(0.05)
+                    # Float first fixations rows with -1
+                    for k in range(0, totalStepsAverage):
+                        y_loc[k][j] = np.float(0.05) # info: yang et al.: -1
+
+        # Change dtype of every element in matrix to float32 for later validation functions
+        for i in range(0, Output.shape[0]):
+            for j in range(0, Output.shape[1]):
+                for k in range(0, Output.shape[2]):
+                    Output[i][j][k] = np.float32(Output[i][j][k])
+        # Also change dtype for entire array
+        Output = Output.astype('float32')
 
         # Save output data
-        output_filename = participant + '-' + 'month_' + str(month) + '-' + 'batch_' + str(
-            batchNumber) + '-' + taskShorts + '-' + \
-                          xlsxFile.split('_')[3].split('-')[0] + '_' + xlsxFile.split('_')[3].split('-')[
-                              1] + '-' + 'Output'
-        np.save(output_filename, newOutput)
+        output_filename = participant + '-' + 'month_' + str(month) + '-' + 'batch_' + str(batchNumber) + '-' + taskShorts + '-' + \
+                          xlsxFile.split('_')[3].split('-')[0] + '_' + xlsxFile.split('_')[3].split('-')[1] + '-' + 'Output'
+        np.save(output_filename, Output)
         # Save y_loc data
-        yLoc_filename = participant + '-' + 'month_' + str(month) + '-' + 'batch_' + str(
-            batchNumber) + '-' + taskShorts + '-' + \
+        yLoc_filename = participant + '-' + 'month_' + str(month) + '-' + 'batch_' + str(batchNumber) + '-' + taskShorts + '-' + \
                         xlsxFile.split('_')[3].split('-')[0] + '_' + xlsxFile.split('_')[3].split('-')[1] + '-' + 'yLoc'
         np.save(yLoc_filename, y_loc)
         # Save meta data
-        meta_filename = participant + '-' + 'month_' + str(month) + '-' + 'batch_' + str(
-            batchNumber) + '-' + taskShorts + '-' + \
+        meta_filename = participant + '-' + 'month_' + str(month) + '-' + 'batch_' + str(batchNumber) + '-' + taskShorts + '-' + \
                         xlsxFile.split('_')[3].split('-')[0] + '_' + xlsxFile.split('_')[3].split('-')[1] + '-' + 'Meta'
         with open('{}.json'.format(meta_filename), 'w') as json_file:
             json.dump(meta_dict, json_file)
 
         # Sanity check
         print('Meta solved:', 'sleepingQualityValue: ', meta_dict['sleepingQualityValue'])
-        print('Output solved: ', opened_xlsxFile_selection['Spreadsheet'][0], ' ',
-              opened_xlsxFile_selection['TimeLimit'][0])
+        print('Output solved: ', opened_xlsxFile_selection['Spreadsheet'][0], ' ', opened_xlsxFile_selection['TimeLimit'][0])
 
 ########################################################################################################################
 # info: WM tasks
@@ -1271,14 +1383,28 @@ def preprocess_WM(opened_xlsxFile, questionnare_files, list_allSessions, sequenc
     numberBatches = len(incrementList) // batchLength
 
     # Split the data into batches based on the fixation timing component
-    for batchNumber in range(numberBatches): # info: here moregen weitermachen mit debugging
+    for batchNumber in range(numberBatches):
         batchOn = batchNumber * batchLength
         batchOff = batchNumber * batchLength + batchLength
-        numFixStepsAverage = 1
-        numRespStepsAverage = 1
-        totalStepsAverage = numFixStepsAverage + numRespStepsAverage
+        numFixStepsTotal = 0
+        numRespStepsTotal = 0
         # Prepare response array for this batch
         currentConcatResponseEntries = concatResponseEntries[:, batchOn:batchOff]
+        # Calculate average fix, resp and total steps for this batch
+        for j in incrementList[batchOn:batchOff]:
+            # Accumulate step numbers
+            currentTrial = opened_xlsxFile_selection[j:j + 2].reset_index().drop(columns=['index'])
+
+            numFixSteps = 35  # info: set length of fixation steps constant
+            numRespSteps = numFixSteps  # info: set length of response steps constant
+
+            numFixStepsTotal += numFixSteps
+            numRespStepsTotal += numRespSteps
+            if j == incrementList[batchOff - 1]:
+                numFixStepsAverage = int(numFixStepsTotal / batchLength)
+                numRespStepsAverage = int(numRespStepsTotal / batchLength)
+                totalStepsAverage = numFixStepsAverage + numRespStepsAverage
+                # print(numFixStepsAverage,numRespStepsAverage,totalStepsAverage)
 
         finalSequenceList = []
         concatedValuesAndOccurrencesList = []
@@ -1312,7 +1438,7 @@ def preprocess_WM(opened_xlsxFile, questionnare_files, list_allSessions, sequenc
         currentConcatResponseEntriesFinal = np.concatenate([currentConcatResponseEntries, np.array(adjusted_concatedValuesAndOccurrencesList, dtype=object).reshape((len(adjusted_concatedValuesAndOccurrencesList),6)).T],axis=0)
         # --------------------------------------------------------------------------------------------------------------
 
-        # fix: Create final df for INPUT and OUPUT #####################################################################
+        # Create final df for INPUT and OUPUT
         newOrderSequenceList = []
         # Append all the time steps accordingly to a list
         for j in range(0, totalStepsAverage):
@@ -1336,14 +1462,21 @@ def preprocess_WM(opened_xlsxFile, questionnare_files, list_allSessions, sequenc
         # Create one input file and one output file
         Input, Output = finalTrialsList_array, finalTrialsList_array
         Input = np.delete(Input, [0,1,2,3,4,5,6,7,8,86,87,88], axis=2)
+        correctAnswer = Output[..., 5]
+        Output_copy = np.delete(Output, np.s_[0, 1, 2, 3, 4, 5, 6, 7, 8, 9], axis=2)
+        Output_copy = np.delete(Output_copy, np.s_[32:], axis=2)
         Output = np.delete(Output, np.s_[0,1,2,5,6,7,8,87,88], axis=2)
         Output = np.delete(Output, np.s_[34:78], axis=2)
         Input, Output = Input[:, sequence_on:sequence_off, :], Output[:, sequence_on:sequence_off, :]
         responseEntries = currentConcatResponseEntriesFinal[:, sequence_on:sequence_off]
 
         # INPUT ############################################################################################################
-        # float all epoch unit values to 0
+        # float all fixation input values to 1
         for i in range(0, Input.shape[0]):
+            for j in range(0, Input.shape[1]):
+                Input[i][j][0] = float(1)
+        # float all epoch units to 0 during response
+        for i in range(numFixStepsAverage, totalStepsAverage):
             for j in range(0, Input.shape[1]):
                 Input[i][j][0] = float(0)
         # float all task values to 0
@@ -1367,257 +1500,229 @@ def preprocess_WM(opened_xlsxFile, questionnare_files, list_allSessions, sequenc
                     Input[i][j][taskDict[opened_xlsxFile_selection['Spreadsheet'][0].split('_')[0] + ' ' + opened_xlsxFile_selection['Spreadsheet'][0].split('_')[1]]] = float(1)
                     taskShorts = opened_xlsxFile_selection['Spreadsheet'][0].split('_')[0] + '_' + opened_xlsxFile_selection['Spreadsheet'][0].split('_')[1]
 
-        # fix: Get all fields with not 000_000.png
-        stimListList = []  # Will be taken for color and form
-        positionListList = []  # Will be taken for angle
+        # float all 000_000's on field units to 0
         for i in range(0, Input.shape[0]):
             for j in range(0, Input.shape[1]):
-                stimList = []
-                positionList = []
-                for k in range(1, 33):  # Positions for one ring are enough as they are similar on both
-                    if Input[i][j][k] != '000_000.png' and Input[0][0][k].endswith('.png') and safe_isnan(Input[i][j][k]) == False:
-                        stimList.append(Input[i][j][k])
-                        positionList.append(k)
-                stimListList.append(stimList)
-                positionListList.append(positionList)
-
-        if '3stim' in finalTrialsList_array[0][0][0]: stimNumber = 3
-        else: stimNumber = 2
-
-        indices2remove = []
-        for i, list in enumerate(stimListList):
-            if len(list) < stimNumber or [j for j in list if '000' in j]:  # remove wrong trials
-                indices2remove.append(i)
-        # fix: ADD zero padding if number of trials < 5, so that you always have the same input structure, randomize the location of the stimuli on these 5 units
-        # remove lists of lists with corresponding indices
-        stimListList_filtered = [sublist for i, sublist in enumerate(stimListList) if i not in indices2remove]
-        positionListList_filtered = [sublist for i, sublist in enumerate(positionListList) if i not in indices2remove]
+                for k in range(1, 65):
+                    if Input[i][j][k] == '000_000.png':
+                        Input[i][j][k] = float(0)
 
         # Define modulation dictionaries for specific columns
         # mod1Dict = {'red': 0.16, 'rust': 0.34, 'orange': 0.5, 'amber': 0.66, 'yellow': 0.84, 'lime': 1.0, 'green': 1.16, \
         #             'moss': 1.34, 'blue': 1.5, 'violet': 1.66, 'magenta': 1.84, 'purple': 2.0}
         mod1Dict = {'red': 0.08, 'rust': 0.17, 'orange': 0.25, 'amber': 0.33, 'yellow': 0.42, 'lime': 0.5, 'green': 0.58, \
                     'moss': 0.66, 'blue': 0.75, 'violet': 0.83, 'magenta': 0.92, 'purple': 1.0}
-        # Define modulation dictionaries for specific columns
-        mod2Dict = {'triangle': float(0.2), 'pentagon': float(0.4), 'heptagon': float(0.6), 'nonagon': float(0.8), 'circle': float(1.0)}
-        # mod2Dict = {'triangle.png': float(0.4), 'pentagon.png': float(0.8), 'heptagon.png': float(1.2), 'nonagon.png': float(1.6), 'circle.png': float(2.0)}
-
-        # Transform stim into color and form encoding
-        colorListList = []
-        formListList = []
-        for stimList in stimListList_filtered:
-            colorList = []
-            formList = []
-            for stim in stimList:
-                colorList.append(mod1Dict[stim.split('.png')[0].split('_')[0]])
-                formList.append(mod2Dict[stim.split('.png')[0].split('_')[1]])
-            colorListList.append(colorList)
-            formListList.append(formList)
-
-        # fix: Embed the lists information into the Input structure
-        pref = np.arange(0, 2 * np.pi, 2 * np.pi / 32)  # fix: pref[positionList[0]] = radiant/degree = polar
-        for i, positionList in enumerate(positionListList_filtered):
-            # print(positionList, i)
-            # Exchange values is lists
-            for j, position in enumerate(positionList):
-                positionList[j] = pref[position-1]
-            # Exchange list in list of lists
-            positionListList_filtered[i] = positionList
-
-        # Only take the first number of lists according to number of filtered trials in that batch len(listList)/totalStepsAverage
-        numberOfTrials = len(positionListList_filtered) / totalStepsAverage
-        positionListList_filtered_compressed = positionListList_filtered[0:int(numberOfTrials)]
-        colorListList_compressed = colorListList[0:int(numberOfTrials)]
-        formListList_compressed = formListList[0:int(numberOfTrials)]
-        # fix: colorListList
-        # fix: formListList
-        # fix: positionListList
-
-        # info: i is batch size here
-        fullTrial_list = []
-        for i, positionList in enumerate(positionListList_filtered_compressed):
-            trialMod1vectors = []
-            trialMod2vectors = []
-            for j, position in enumerate(positionList):
-                trialMod1vectors.append(
-                    np.array((np.sin(position), np.cos(position))) * colorListList_compressed[i][j])
-                trialMod2vectors.append(
-                    np.array((np.sin(position), np.cos(position))) * formListList_compressed[i][j])
-            # Zero pad missing stim vectors, so that every trial, every task and every spreadsheet is encoded with the same input structure
-            for i in range(0, 5 - len(trialMod1vectors)):
-                trialMod1vectors.append(np.array([0, 0]))
-                trialMod2vectors.append(np.array([0, 0]))
-
-            # Ensure exact same permutation for both vectors
-            permutation_indices = np.random.permutation(len(trialMod1vectors))
-            # Apply it
-            trialMod1vectors_randomized = [trialMod1vectors[i] for i in permutation_indices]
-            trialMod2vectors_randomized = [trialMod2vectors[i] for i in permutation_indices]
-
-            trialMod1vectors_concat = [array for vector in trialMod1vectors_randomized for array in vector]
-            trialMod2vectors_concat = [array for vector in trialMod2vectors_randomized for array in vector]
-            fullTrial = [1] + trialMod1vectors_concat + trialMod2vectors_concat + Input[0][0][65:77].tolist()  # add epoch, two mod lists and task vector together
-            fullTrial_list.append(fullTrial)  # Add task vector before appending
-
-        # Create the whole Input with new encoding
-        newInput = np.zeros((totalStepsAverage, int(numberOfTrials), 33))
 
         for i in range(0, Input.shape[0]):
-            for j in range(0, int(numberOfTrials)):
-                newInput[i][j][0:33] = np.array(fullTrial_list[j])
+            for j in range(0, Input.shape[1]):
+                for k in range(1, 33):
+                    if Input[i][j][k] != 0 and safe_isnan(Input[i][j][k]) == False:
+                        Input[i][j][k] = mod1Dict[Input[i][j][k].split('_')[0]]
 
-        # fix: Set epoch information unit to 1 during fixation (already done)
+        # Define modulation dictionaries for specific columns
+        mod2Dict = {'triangle.png': float(0.2), 'pentagon.png': float(0.4), 'heptagon.png': float(0.6), 'nonagon.png': float(0.8), 'circle.png': float(1.0)}
+        # mod2Dict = {'triangle.png': float(0.4), 'pentagon.png': float(0.8), 'heptagon.png': float(1.2), 'nonagon.png': float(1.6), 'circle.png': float(2.0)}
+
+        for i in range(0, Input.shape[0]):
+            for j in range(0, Input.shape[1]):
+                for k in range(33, 65):
+                    if Input[i][j][k] != 0 and safe_isnan(Input[i][j][k]) == False:
+                        Input[i][j][k] = mod2Dict[Input[i][j][k].split('_')[1]]
+
+        # float all field values of fixation period to 0
         for i in range(0, numFixStepsAverage):
-            for j in range(0, int(numberOfTrials)):
-                newInput[i][j][0] = float(1)
-        # fix: Set epoch information unit to 0 during response
-        for i in range(numFixStepsAverage, totalStepsAverage):
-            for j in range(0, int(numberOfTrials)):
-                newInput[i][j][0] = float(0)
-        # fix: Set all modality untis to 0 during fixation
-        for i in range(0, numFixStepsAverage):
-            for j in range(0, int(numberOfTrials)):
-                for k in range(1, 21):  #
-                    newInput[i][j][k] = float(0)
+            for j in range(0, Input.shape[1]):
+                for k in range(1, 65):
+                    Input[i][j][k] = float(0)
+
+        # Add input gradient activation
+        # Create default hyperparameters for network
+        num_ring, n_eachring, n_rule = 2, 32, 12
+        n_input, n_output = 1 + num_ring * n_eachring + n_rule, n_eachring + 1
+        pref = np.arange(0, 2 * np.pi, 2 * np.pi / 32)
+
+        for i in range(0, Input.shape[0]):
+            for j in range(0, Input.shape[1]):
+                currentTimeStepModOne = Input[i][j][1:33]
+                currentTimeStepModTwo = Input[i][j][33:65]
+                # Allocate first unit ring
+                unitRingMod1 = np.zeros(32, dtype='float32')
+                unitRingMod2 = np.zeros(32, dtype='float32')
+
+                # Get non-zero values of time steps on both modalities and also directly fix distance between units issue
+                NonZero_Mod1 = np.nonzero(currentTimeStepModOne)[0]
+                NonZero_Mod2 = np.nonzero(currentTimeStepModTwo)[0]
+                if len(NonZero_Mod1) != 0:
+                    # Accumulating all activities for both unit rings together
+                    for k in range(0, len(NonZero_Mod1)):
+                        currentStimLoc_Mod1 = pref[NonZero_Mod1[k]]
+                        currentStimStrength_Mod1 = currentTimeStepModOne[NonZero_Mod1[k]]
+                        currentStimLoc_Mod2 = pref[NonZero_Mod2[k]]
+                        currentStimStrength_Mod2 = currentTimeStepModTwo[NonZero_Mod2[k]]
+                        # add one gradual activated stim to final form
+                        currentActivation_Mod1 = add_x_loc(currentStimLoc_Mod1, pref) * currentStimStrength_Mod1
+                        currentActivation_Mod2 = add_x_loc(currentStimLoc_Mod2, pref) * currentStimStrength_Mod2
+                        # Add all activations for one trial together
+                        unitRingMod1 = np.around(unitRingMod1 + currentActivation_Mod1, decimals=2)
+                        unitRingMod2 = np.around(unitRingMod2 + currentActivation_Mod2, decimals=2)
+
+                    # Store
+                    currentFinalRow = np.concatenate((Input[i][j][0:1], unitRingMod1, unitRingMod2, Input[i][j][65:78]))
+                    Input[i][j][0:78] = currentFinalRow
 
         # Change dtype of every element in matrix to float32 for later validation functions
-        for i in range(0, newInput.shape[0]):
-            for j in range(0, newInput.shape[1]):
-                for k in range(0, newInput.shape[2]):
-                    newInput[i][j][k] = np.float32(newInput[i][j][k])
-
+        for i in range(0, Input.shape[0]):
+            for j in range(0, Input.shape[1]):
+                for k in range(0, Input.shape[2]):
+                    Input[i][j][k] = np.float32(Input[i][j][k])
         # Also change dtype for entire array
-        newInput = newInput.astype('float32')
+        Input = Input.astype('float32')
 
         # Save input data
         os.chdir(os.path.join(os.getcwd(), main_path, taskShorts))
-        input_filename = participant + '-' + 'month_' + str(month) + '-' + 'batch_' + str(
-            batchNumber) + '-' + taskShorts + '-' + \
-                         xlsxFile.split('_')[3].split('-')[0] + '_' + xlsxFile.split('_')[3].split('-')[
-                             1] + '-' + 'Input'
-        np.save(input_filename, newInput)
+        input_filename = (participant + '-' + 'month_' + str(month) + '-' + 'batch_' + str(batchNumber) + '-' + taskShorts + '-' + \
+                    xlsxFile.split('_')[3].split('-')[0] + '_' + xlsxFile.split('_')[3].split('-')[1] + '-' + 'Input')
+        np.save(input_filename, Input)
         # Save response information for later error class detection
-        response_filename = participant + '-' + 'month_' + str(month) + '-' + 'batch_' + str(
-            batchNumber) + '-' + taskShorts + '-' + \
-                            xlsxFile.split('_')[3].split('-')[0] + '_' + xlsxFile.split('_')[3].split('-')[
-                                1] + '-' + 'Response'
+        response_filename = participant + '-' + 'month_' + str(month) + '-' + 'batch_' + str(batchNumber) + '-' + taskShorts + '-' + \
+                            xlsxFile.split('_')[3].split('-')[0] + '_' + xlsxFile.split('_')[3].split('-')[1] + '-' + 'Response'
         np.save(response_filename, responseEntries)
 
         # Sanity check
-        print('Input solved: ', opened_xlsxFile_selection['Spreadsheet'][0], ' ',
-              opened_xlsxFile_selection['TimeLimit'][0])
-        print('Response solved: ', opened_xlsxFile_selection['Spreadsheet'][0], ' ',
-              opened_xlsxFile_selection['TimeLimit'][0])
+        print('Input solved: ', opened_xlsxFile_selection['Spreadsheet'][0], ' ', opened_xlsxFile_selection['TimeLimit'][0])
+        print('Response solved: ', opened_xlsxFile_selection['Spreadsheet'][0], ' ', opened_xlsxFile_selection['TimeLimit'][0])
 
         # OUTPUT ###########################################################################################################
-        # Create the whole Input with new encoding
-        newOutput = np.zeros((totalStepsAverage, int(numberOfTrials), 3))
-
         # float all field units during fixation epoch on 0.05
-        for i in range(0, numFixStepsAverage):
-            for j in range(0, int(numberOfTrials)):
-                for k in range(1, 3):
-                    newOutput[i][j][k] = float(0.05)
-
-        # float all epoch unit values to .8 during fixation
-        for i in range(0, numFixStepsAverage):
-            for j in range(0, int(numberOfTrials)):
-                newOutput[i][j][0] = float(0.8)
-        # float all epoch unit values to 0 during response
-        for i in range(numFixStepsAverage, totalStepsAverage):
-            for j in range(0, int(numberOfTrials)):
-                newOutput[i][j][0] = float(0.05)
-
-        # Assign field units to their according participant response value after fixation period
-        outputDict_WM = {'Image 1': 1, 'Image 2': 2, 'Image 3': 3, 'Image 4': 4, 'Image 5': 5, 'Image 6': 6, 'Image 7': 7,\
-            'Image 8': 8, 'Image 9': 9, 'Image 10': 10, 'Image 11': 11, 'Image 12': 12, 'Image 13': 13, 'Image 14': 14,\
-            'Image 15': 15, 'Image 16': 16, 'Image 17': 17, 'Image 18': 18, 'Image 19': 19, 'Image 20': 20, 'Image 21': 21,\
-            'Image 22': 22, 'Image 23': 23, 'Image 24': 24, 'Image 25': 25, 'Image 26': 26, 'Image 27': 27, 'Image 28': 28,\
-            'Image 29': 29, 'Image 30': 30, 'Image 31': 31, 'Image 32': 32}
-
-        outputDict_WM_Ctx = {'object-1591': 8, 'object-1593': 8, 'object-1595': 8, 'object-1597': 8, 'object-2365': 8, 'object-2313': 8, 'object-2391': 8, 'object-2339': 8,
-                             'object-1592': 24, 'object-1594': 24, 'object-1596': 24, 'object-1598': 24, 'object-2366': 24, 'object-2314': 24, 'object-2392': 24, 'object-2340': 24}
-
-        indices2remove_filtered = [i for i in indices2remove if i < 40]
-        Output = np.delete(Output, indices2remove_filtered, axis=1)
-
+        for i in range(0, totalStepsAverage):
+            for j in range(0, Output.shape[1]):
+                for k in range(3, 35):
+                    Output[i][j][k] = float(0.05)
+        # float all field units of response epoch to 0
         for i in range(numFixStepsAverage, totalStepsAverage):
             for j in range(0, Output.shape[1]):
-                if isinstance(Output[i][j][35], str):
-                    # Get the right dictionary
-                    if len(opened_xlsxFile_selection['Spreadsheet'][0].split('_')) == 4 or opened_xlsxFile_selection['Spreadsheet'][0].split('_')[1] == 'Anti' or \
-                            len(opened_xlsxFile_selection['Spreadsheet'][0].split('_')) == 5 and opened_xlsxFile_selection['Spreadsheet'][0].split('_')[2] == '3stim':
-                        outputDict = outputDict_WM
-                        chosenColumn = 0
-                    else:
-                        outputDict = outputDict_WM_Ctx
-                        chosenColumn = 1
+                for k in range(3, 35):
+                    Output[i][j][k] = float(0)
+        # float all fixation outputs during response period to 0.05
+        for i in range(numFixStepsAverage, totalStepsAverage):
+            for j in range(0, Output.shape[1]):
+                Output[i][j][2] = float(0.05)
 
-                    if Output[i][j][0] != 'screen' and Output[i][j][0] != 'noResponse' and Output[i][j][0] != 'NoResponse'\
-                            and Output[i][j][0] != 'Fixation Cross' and Output[i][j][0] != 'Response'\
-                            and Output[i][j][1] != 'Fixation Cross' and Output[i][j][1] != 'Response' and safe_isnan(Output[i][j][0]) == False:
-                        # Translate field into radiant
-                        position = pref[outputDict[Output[i][j][chosenColumn]]-1]
-                        # Translate radiant into sin/cos vector indicating the target response direction for the network
-                        newOutput[i][j][1] = np.sin(position)
-                        newOutput[i][j][2] = np.cos(position)
-                    else:
-                        for k in range(1, 3):  # if noResponse was given
-                            newOutput[i][j][1] = np.sin(0.05)  # info: yang et al.: -1
-                            newOutput[i][j][2] = np.sin(0.05)  # info: yang et al.: -1
-                else:
-                    for k in range(1, 3):  # if noResponse was given
-                        newOutput[i][j][1] = np.sin(0.05)  # info: yang et al.: -1
-                        newOutput[i][j][2] = np.sin(0.05)  # info: yang et al.: -1
+        # # Assign field units to their according participant response value after fixation period
+        # outputDict_WM = {'Image 1': 1, 'Image 2': 2, 'Image 3': 3, 'Image 4': 4, 'Image 5': 5, 'Image 6': 6, 'Image 7': 7,\
+        #     'Image 8': 8, 'Image 9': 9, 'Image 10': 10, 'Image 11': 11, 'Image 12': 12, 'Image 13': 13, 'Image 14': 14,\
+        #     'Image 15': 15, 'Image 16': 16, 'Image 17': 17, 'Image 18': 18, 'Image 19': 19, 'Image 20': 20, 'Image 21': 21,\
+        #     'Image 22': 22, 'Image 23': 23, 'Image 24': 24, 'Image 25': 25, 'Image 26': 26, 'Image 27': 27, 'Image 28': 28,\
+        #     'Image 29': 29, 'Image 30': 30, 'Image 31': 31, 'Image 32': 32}
+        #
+        # outputDict_WM_Ctx = {'object-1591': 8, 'object-1593': 8, 'object-1595': 8, 'object-1597': 8, 'object-2365': 8, 'object-2313': 8, 'object-2391': 8, 'object-2339': 8,
+        #                      'object-1592': 24, 'object-1594': 24, 'object-1596': 24, 'object-1598': 24, 'object-2366': 24, 'object-2314': 24, 'object-2392': 24, 'object-2340': 24}
 
-        # Change dtype of every element in matrix to float32 for later validation functions
-        for i in range(0, newOutput.shape[0]):
-            for j in range(0, newOutput.shape[1]):
-                for k in range(0, newOutput.shape[2]):
-                    newOutput[i][j][k] = np.float32(newOutput[i][j][k])
-        # Also change dtype for entire array
-        newOutput = newOutput.astype('float32')
+        outputDict_WM_Ctx = {'Match': 8, 'Mismatch': 24}
+
+        # for i in range(numFixStepsAverage, totalStepsAverage):
+        #     for j in range(0, Output.shape[1]):
+        #         if isinstance(Output[i][j][35], str):
+        #             # Get the right dictionary
+        #             if len(opened_xlsxFile_selection['Spreadsheet'][0].split('_')) == 4 or opened_xlsxFile_selection['Spreadsheet'][0].split('_')[1] == 'Anti' or \
+        #                     len(opened_xlsxFile_selection['Spreadsheet'][0].split('_')) == 5 and opened_xlsxFile_selection['Spreadsheet'][0].split('_')[2] == '3stim':
+        #                 outputDict = outputDict_WM
+        #                 chosenColumn = 0
+        #             else:
+        #                 outputDict = outputDict_WM_Ctx
+        #                 chosenColumn = 1
+        #
+        #         else:
+        #             for k in range(3, 35):
+        #                 Output[i][j][k] = np.float32(0.05)
 
         # Drop unnecessary columns
-        # Output = np.delete(Output, [0,1,35], axis=2)
+        Output = np.delete(Output, [0,1,35], axis=2)
         # Pre-allocate y-loc matrix; needed for later validation
         y_loc = np.zeros((Output.shape[0], Output.shape[1]))
 
-        for k in range(0, numFixStepsAverage):
-            for j in range(0, newOutput.shape[1]):
-                y_loc[k][j] = np.float(0.05) # info: yang et al.: -1
+        # Add output gradient activation
+        for i in range(0, Output.shape[0]):
+            for j in range(0, Output.shape[1]):
+                if correctAnswer[i][j] != 'screen' and correctAnswer[i][j] != 'noResponse' and correctAnswer[i][
+                    j] != 'NoResponse' and correctAnswer[i][j] != 'Fixation Cross' and correctAnswer[i][j] != 'Response':
+                    # Get indices with correctAnswer
+                    if 'Ctx' in input_filename:
+                        indice = [outputDict_WM_Ctx[correctAnswer[i][j]]]
+                    else:
+                        indice = np.where(Output_copy[i][j][0:32] == correctAnswer[i][j])
 
-        # Complete y_loc matrix
-        for k in range(numFixStepsAverage, totalStepsAverage):
-            for j in range(0, newOutput.shape[1]):
-                if isinstance(Output[k][j][0], str) and Output[k][j][0] != 'noResponse' and Output[k][j][0] != 'NoResponse' and Output[k][j][0] != 'screen'\
-                        and Output[i][j][0] != 'Fixation Cross' and Output[i][j][0] != 'Response':
-                    y_loc[k][j] = pref[outputDict[Output[k][j][chosenColumn]]-1]  # radiant form direction
+                    # Allocate first unit ring
+                    unitRingOutput = np.zeros(32, dtype='float32')
+                    # Get non-zero values of time steps
+                    # nonZerosOutput = np.nonzero(currentTimeStepOutput)[0]
+                    # Float first fixations rows with -1
+
+                    if len(indice) == 1:
+                        # Get activity and model gradient activation around it
+                        currentOutputLoc = pref[indice]
+                        currentActivation_Output = add_x_loc(currentOutputLoc, pref) + 0.05  # adding noise
+                        unitRingOutput = np.around(unitRingOutput + currentActivation_Output, decimals=2)
+                        # Store
+                        currentFinalRow = np.concatenate((Output[i][j][0:1], unitRingOutput))
+                        Output[i][j][0:33] = currentFinalRow
+                        # Complete y_loc matrix
+                        for k in range(0, numFixStepsAverage):
+                            y_loc[k][j] = np.float(0.05) # info: yang et al.: -1
+                        for k in range(numFixStepsAverage, totalStepsAverage):
+                            y_loc[k][j] = pref[indice]
+
+                    elif len(indice) == 0: # info: If the correctAnswer doesn't match any of the stims in Output
+                        for k in range(0, 33):
+                            Output[i][j][k] = np.float32(0.05)
+                        # Float first fixations rows with -1
+                        for k in range(0, totalStepsAverage):
+                            y_loc[k][j] = np.float(0.05) # info: yang et al.: -1
+
+                    else:
+                        # Get activity and model gradient activation around it
+                        currentOutputLoc = pref[indice[0]]
+                        currentActivation_Output = add_x_loc(currentOutputLoc, pref) + 0.05  # adding noise
+                        unitRingOutput = np.around(unitRingOutput + currentActivation_Output, decimals=2)
+                        # Store
+                        currentFinalRow = np.concatenate((Output[i][j][0:1], unitRingOutput))
+                        Output[i][j][0:33] = currentFinalRow
+                        # Complete y_loc matrix
+                        for k in range(0, numFixStepsAverage):
+                            y_loc[k][j] = np.float(0.05) # info: yang et al.: -1
+                        for k in range(numFixStepsAverage, totalStepsAverage):
+                            y_loc[k][j] = pref[indice[0]]
                 else:
-                    y_loc[k][j] = np.float(0.05) # info: yang et al.: -1
+                    for k in range(1, 33):
+                        Output[i][j][k] = np.float32(0.05)
+                    for k in range(0, totalStepsAverage):
+                        y_loc[k][j] = np.float(0.05) # info: yang et al.: -1
+
+        # Change dtype of every element in matrix to float32 for later validation functions
+        for i in range(0, Output.shape[0]):
+            for j in range(0, Output.shape[1]):
+                for k in range(0, Output.shape[2]):
+                    Output[i][j][k] = np.float32(Output[i][j][k])
+        # Also change dtype for entire array
+        Output = Output.astype('float32')
 
         # Save output data
-        output_filename = participant + '-' + 'month_' + str(month) + '-' + 'batch_' + str(
-            batchNumber) + '-' + taskShorts + '-' + \
-                          xlsxFile.split('_')[3].split('-')[0] + '_' + xlsxFile.split('_')[3].split('-')[
-                              1] + '-' + 'Output'
-        np.save(output_filename, newOutput)
+        output_filename = participant + '-' + 'month_' + str(month) + '-' + 'batch_' + str(batchNumber) + '-' + taskShorts + '-' + \
+                          xlsxFile.split('_')[3].split('-')[0] + '_' + xlsxFile.split('_')[3].split('-')[1] + '-' + 'Output'
+        np.save(output_filename, Output)
         # Save y_loc data
-        yLoc_filename = participant + '-' + 'month_' + str(month) + '-' + 'batch_' + str(
-            batchNumber) + '-' + taskShorts + '-' + \
+        yLoc_filename = participant + '-' + 'month_' + str(month) + '-' + 'batch_' + str(batchNumber) + '-' + taskShorts + '-' + \
                         xlsxFile.split('_')[3].split('-')[0] + '_' + xlsxFile.split('_')[3].split('-')[1] + '-' + 'yLoc'
         np.save(yLoc_filename, y_loc)
         # Save meta data
-        meta_filename = participant + '-' + 'month_' + str(month) + '-' + 'batch_' + str(
-            batchNumber) + '-' + taskShorts + '-' + \
+        meta_filename = participant + '-' + 'month_' + str(month) + '-' + 'batch_' + str(batchNumber) + '-' + taskShorts + '-' + \
                         xlsxFile.split('_')[3].split('-')[0] + '_' + xlsxFile.split('_')[3].split('-')[1] + '-' + 'Meta'
         with open('{}.json'.format(meta_filename), 'w') as json_file:
             json.dump(meta_dict, json_file)
 
         # Sanity check
         print('Meta solved:', 'sleepingQualityValue: ', meta_dict['sleepingQualityValue'])
-        print('Output solved: ', opened_xlsxFile_selection['Spreadsheet'][0], ' ',
-              opened_xlsxFile_selection['TimeLimit'][0])
+        print('Output solved: ', opened_xlsxFile_selection['Spreadsheet'][0], ' ', opened_xlsxFile_selection['TimeLimit'][0])
 
 ########################################################################################################################
 # info: Execute Preprocessing
@@ -1633,13 +1738,13 @@ def check_permissions(file_path):
 # Preallocation of variables
 dataFolder = "Data"
 subfolders = ['DM', 'DM_Anti', 'EF', 'EF_Anti', 'RP', 'RP_Anti', 'RP_Ctx1', 'RP_Ctx2', 'WM', 'WM_Anti', 'WM_Ctx1', 'WM_Ctx2']
-preprocessing_folder = 'data_lowDim_timeCompressed'
-participants = ['BeRNN_01','BeRNN_02','BeRNN_03','BeRNN_04','BeRNN_05']
+preprocessing_folder = 'data_highDim_correctOnly_3stimTC'
+participants = ['beRNN_01', 'beRNN_02', 'beRNN_03', 'BeRNN_04', 'beRNN_05']
 months = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12'] # info: debugging '13'
 
 for participant in participants:
     # attention: change to right path
-    path = 'C:\\Users\\oliver.frank\\Desktop\\BackUp'  # local
+    path = 'C:\\Users\\oliver.frank\\Desktop\\PyProjects'  # local
     # path = 'W:\\group_csp\\analyses\\oliver.frank'  # Fl storage
     # path = '/data' # hitkip cluster
     # path = '/pandora/home/oliver.frank/01_Projects/RNN/multitask_BeRNN-main' # pandora server

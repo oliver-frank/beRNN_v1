@@ -1,8 +1,9 @@
 # ########################################################################################################################
-# # info: Task Accuracy
+# # info: taskAccuracy
 # ########################################################################################################################
 # # Monthly evaluation of task performance for individual participant. Training effect plot shows change of pefromance over
 # # the whole data collection period.
+
 
 # ########################################################################################################################
 # # Import necessary libraries and modules
@@ -12,6 +13,7 @@ import pandas as pd
 import warnings
 with warnings.catch_warnings():
     warnings.filterwarnings("ignore", category=FutureWarning)
+
 
 ########################################################################################################################
 # TaskAccuracy
@@ -45,7 +47,7 @@ for i in list_testParticipant_month:
         # print(currentFile['UTC Date and Time'])
         if currentFile['Task Name'][0] != '000_state_questions' and currentFile['Task Name'][0] != '000_session_completion': # avoid files with state questions and session completion
             # print(currentFile.iloc[0,28].split('_trials_')[0])
-            # print('W:/AG_CSP/Projekte/art_BeRNN/02_Daten/BeRNN_main/' + participant + month + i)
+            # print('W:/AG_CSP/Projekte/art_beRNN/02_Daten/BeRNN_main/' + participant + month + i)
             if currentFile['Spreadsheet'][0].split('_trials_')[0] == 'DM':
                 # percentCorrect_DM += currentFile['Store: PercentCorrectDM'][len(currentFile['Store: PercentCorrectDM'])-3]
                 # count_DM += 1
@@ -167,6 +169,7 @@ acc_RP_Anti = percentCorrect_RP_Anti/count_RP_Anti
 acc_RP_Ctx1 = percentCorrect_RP_Ctx1/count_RP_Ctx1
 acc_RP_Ctx2 = percentCorrect_RP_Ctx2/count_RP_Ctx2
 
+
 ########################################################################################################################
 # Plot training effects
 ########################################################################################################################
@@ -174,7 +177,7 @@ import os
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
-from Tools import rule_name
+from tools import rule_name
 # from scipy.stats import linregress
 # import matplotlib.dates as mdates
 
@@ -185,33 +188,29 @@ participant_dir = 'C:\\Users\\oliver.frank\\Desktop\\BackUp\\Data'
 months = ['1','2','3','4','5','6','7','8','9','10','11','12'] # choose which month to analyze
 strToSave = months[0] + '-' + months[-1]
 
-newParticpantList = ['BeRNN_01', 'BeRNN_02', 'BeRNN_03', 'BeRNN_04', 'BeRNN_05'] #
+newParticpantList = ['BeRNN_01'] #
 
 # Assign a color to each task
 filename_color_dict = {
-    # **DM tasks (Yellow-Brown Family)**
-    'DM':       '#D9D0C7',    # Base Beige
-    'DM_Anti':  '#C3B8AE',    # Muted Sand
-    # 'DM_Ctx1':  '#E5D7CA',    # Soft Cream
-    # 'DM_Ctx2':  '#F2E8DD',    # Light Ivory
+    # **DM tasks (Dark Purple - High Contrast)**
+    'DM': '#0d0a29',  # Deep Black-Purple
+    'DM_Anti': '#271258',  # Dark Blue-Purple
 
-    # **EF tasks (Orange Family)**
-    'EF':       '#F2B35E',    # Bright Orange
-    'EF_Anti':  '#E89A40',    # Warm Tangerine
-    # 'EF_Ctx1':  '#FDD69E',    # Soft Apricot
-    # 'EF_Ctx2':  '#FFE7C7',    # Light Peach
+    # **EF tasks (Purple-Pink Family - High Contrast)**
+    'EF': '#491078',  # Muted Indigo
+    'EF_Anti': '#671b80',  # Dark Magenta-Purple
 
-    # **RP tasks (Brighter Olive Family)**
-    'RP':       '#8A7B4F',    # Brighter Olive
-    'RP_Anti':  '#716B3C',    # Deep Olive
-    'RP_Ctx1':  '#A4935F',    # Muted Olive-Gold
-    'RP_Ctx2':  '#C6B88A',    # Soft Olive Beige
+    # **RP tasks (Pink/Red Family - High Contrast)**
+    'RP': '#862781',  # Rich Magenta
+    'RP_Anti': '#a6317d',  # Strong Pink
+    'RP_Ctx1': '#c53c74',  # Bright Pinkish-Red
+    'RP_Ctx2': '#e34e65',  # Vivid Red
 
-    # **WM tasks (Blue Family)**
-    'WM':       '#4D5D8C',    # Base Slate Blue
-    'WM_Anti':  '#3A466E',    # Deep Navy-Blue
-    'WM_Ctx1':  '#687AAE',    # Light Slate Blue
-    'WM_Ctx2':  '#A8B5D4'     # Pale Blue
+    # **WM tasks (Red-Orange/Yellow Family - High Contrast)**
+    'WM': '#f66c5c',  # Warm Reddish-Orange
+    'WM_Anti': '#fc9065',  # Vibrant Orange
+    'WM_Ctx1': '#feb67c',  # Pastel Orange
+    'WM_Ctx2': '#fdda9c'  # Light Yellow
 }
 
 for participant in newParticpantList:
@@ -236,7 +235,7 @@ for participant in newParticpantList:
     all_y_values = []
 
     # Set the figure size with increased y-length
-    plt.figure(figsize=(15, 8))
+    plt.figure(figsize=(15, 6))
 
     for task in filename_color_dict:
         print(task, filename_color_dict[task])
