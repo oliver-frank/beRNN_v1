@@ -42,11 +42,11 @@ def get_default_hp(ruleset):
     n_rule = tools.get_num_rule(ruleset)
 
     machine = 'local' # 'local' 'pandora' 'hitkip'
-    data = 'data_highDim_correctOnly_3stimTC' # 'data_highDim' , data_highDim_correctOnly , data_highDim_lowCognition , data_lowDim , data_lowDim_correctOnly , data_lowDim_lowCognition, 'data_highDim_correctOnly_3stimTC'
-    trainingBatch = 'beRNN_03'
-    trainingYear_Month = '2025_03_zi'
+    data = 'data_lowDim_correctOnly' # 'data_highDim' , data_highDim_correctOnly , data_highDim_lowCognition , data_lowDim , data_lowDim_correctOnly , data_lowDim_lowCognition, 'data_highDim_correctOnly_3stimTC'
+    trainingBatch = 'test'
+    trainingYear_Month = '2025_04_lowDimTests'
 
-    if 'highDim' or 'timeCompressed' in data: # fix: lowDim_timeCompressed needs to be skipped here
+    if 'highDim' in data: # fix: lowDim_timeCompressed needs to be skipped here
         n_eachring = 32
         n_outputring = n_eachring
         n_input, n_output = 1 + num_ring * n_eachring + n_rule, n_outputring + 1
@@ -64,17 +64,17 @@ def get_default_hp(ruleset):
         'use_separate_input': False, # whether rule and stimulus inputs are represented separately
         'loss_type': 'lsq', # # Type of loss functions - Cross-entropy loss
         'optimizer': 'adam', # 'adam', 'sgd'
-        'activation': 'relu', # Type of activation runctions, relu, softplus, tanh, elu, linear
-        'tau': 50, # # Time constant (ms)- default 100
+        'activation': 'tanh', # Type of activation runctions, relu, softplus, tanh, elu, linear
+        'tau': 100, # # Time constant (ms)- default 100
         'dt': 20, # discretization time step (ms) .
         # 'alpha': 0.2, # (redundant) discretization time step/time constant - dt/tau = alpha - ratio decides on how much previous states are taken into account for current state - low alpha more memory, high alpha more forgetting - alpha * h(t-1)
-        'sigma_rec': 0.01, # recurrent noise - directly influencing the noise added to the network
+        'sigma_rec': 0.05, # recurrent noise - directly influencing the noise added to the network
         'sigma_x': 0.01, # input noise
         'w_rec_init': 'randortho', # leaky_rec weight initialization, diag, randortho, randgauss
-        'l1_h': 1e-04, # l1 lambda (regularizing with absolute value of magnitude of coefficients, leading to sparse features)
-        'l2_h': 5e-06, # l2 lambda (regularizing with squared value of magnitude of coefficients, decreasing influence of features)
-        'l1_weight': 1e-05, # l2 regularization on weight
-        'l2_weight': 1e-04, # l2 regularization on weight
+        'l1_h': 0, # l1 lambda (regularizing with absolute value of magnitude of coefficients, leading to sparse features)
+        'l2_h': 0, # l2 lambda (regularizing with squared value of magnitude of coefficients, decreasing influence of features)
+        'l1_weight': 0, # l2 regularization on weight
+        'l2_weight': 0, # l2 regularization on weight
         'l2_weight_init': 0, # l2 regularization on deviation from initialization
         'p_weight_train': None, # proportion of weights not to be regularized, None or float between (0, 1) - 1-p_weight_train will be multiplied by w_mask_value
         'w_mask_value': 0.1, # default .1 - value that will be multiplied with L2 regularization (combined with p_weight_train), <1 will decrease it
@@ -85,12 +85,12 @@ def get_default_hp(ruleset):
         'rule_start': 1 + num_ring * n_eachring, # first input index for rule units
         'n_input': n_input, # number of input units
         'n_output': n_output, # number of output units
-        'n_rnn': 128, # number of recurrent units
+        'n_rnn': 256, # number of recurrent units
         'rng': np.random.default_rng(), # np.random.RandomState(seed=0), random number used for several random initializations
         'ruleset': ruleset, # number of input units
         'save_name': 'test', # name to save
-        'learning_rate': 0.0015, # learning rate
-        'learning_rate_mode': None, # Will overwrite learning_rate if it is not None - 'triangular', 'triangular2', 'exp_range'
+        'learning_rate': 0.001, # learning rate
+        'learning_rate_mode': None, # Will overwrite learning_rate if it is not None - 'triangular', 'triangular2', 'exp_range', 'decay'
         'base_lr': [1e-5],
         'max_lr': [1e-3],
         'c_mask_responseValue': 5., # c_mask response epoch value - strenght response epoch is taken into account for error calculation
@@ -98,13 +98,13 @@ def get_default_hp(ruleset):
         'rule_probs': None, # Rule probabilities to be drawn
         # 'c_intsyn': 0, # intelligent synapses parameters, tuple (c, ksi) -> Yang et al. only apply these in sequential training
         # 'ksi_intsyn': 0,
-        'monthsConsidered': ['month_7','month_8','month_9'], # months to train and test
-        'monthsString': '7-9', # monthsTaken
+        'monthsConsidered': ['month_1'], # months to train and test
+        'monthsString': '1', # monthsTaken
         # 'rule_prob_map': {"DM": 1,"DM_Anti": 1,"EF": 1,"EF_Anti": 1,"RP": 1,"RP_Anti": 1,"RP_Ctx1": 1,"RP_Ctx2": 1,"WM": 1,"WM_Anti": 1,"WM_Ctx1": 1,"WM_Ctx2": 1},
-        'rule_prob_map': {"DM": 0,"DM_Anti": 1,"EF": 1,"EF_Anti": 1,"RP": 0,"RP_Anti": 0,"RP_Ctx1": 0,"RP_Ctx2": 0,"WM": 0,"WM_Anti": 0,"WM_Ctx1": 0,"WM_Ctx2": 0}, # fraction of tasks represented in training data
-        'tasksString': 'DMAntiAndEFtasks', # tasks taken
+        'rule_prob_map': {"DM": 1,"DM_Anti": 1,"EF": 1,"EF_Anti": 1,"RP": 1,"RP_Anti": 1,"RP_Ctx1": 1,"RP_Ctx2": 1,"WM": 1,"WM_Anti": 1,"WM_Ctx1": 1,"WM_Ctx2": 1}, # fraction of tasks represented in training data
+        'tasksString': 'Alltask', # tasks taken
         'sequenceMode': True, # Decide if models are trained sequentially month-wise
-        'participant': 'beRNN_03', # Participant to take
+        'participant': 'beRNN_01', # Participant to take
         'data': data, # 'data_highDim' , data_highDim_correctOnly , data_highDim_lowCognition , data_lowDim , data_lowDim_correctOnly , data_lowDim_lowCognition, data_timeCompressed, data_lowDim_timeCompressed
         'machine': machine,
         'trainingBatch': trainingBatch,
@@ -458,19 +458,13 @@ def train(model_dir,train_data ,eval_data,hp=None,max_steps=3e6,display_step=500
                 # print('passed feed_dict Training')
                 # print(feed_dict)
 
-
-                # current_lr = sess.run(hp['learning_rate']) # info: For debugging with learning_rate change
-                # # current_lr = hp['learning_rate'] # info: For debugging without leraning_rate change
-                # print(f"Step {step}, Learning Rate: {current_lr}")
-
-
                 sess.run(model.train_step, feed_dict=feed_dict) # info: Trainables are actualized - train_step should represent the step in training.py and the global_step in network.py
 
                 # Get Training performance in a similiar fashion as in do_eval
                 clsq_train_tmp = list()
                 creg_train_tmp = list()
                 perf_train_tmp = list()
-                c_lsq_train, c_reg_train, y_hat_train = sess.run([model.cost_lsq, model.cost_reg, model.y_hat], feed_dict=feed_dict)
+                c_lsq_train, c_reg_train, y_hat_train = sess.run([model.cost_lsq, model.cost_reg, model.y_hat], feed_dict=feed_dict) # info: lsq+reg = total_loss - updates the network parameters
 
                 if 'lowDim' in hp['data']:
                     perf_train = np.round(np.mean(get_perf_lowDIM(y_hat_train, y_loc)),3)  # info: y_loc is participant response as groundTruth
@@ -606,3 +600,5 @@ if __name__ == '__main__':
             f.write(f"{time}\n")
 
     print(f"Training times saved to {file_path}")
+
+

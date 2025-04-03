@@ -45,7 +45,7 @@ def create_repeated_param_combinations(param_grid, sample_size):
 
 
 # # attention: hitkip cluster ############################################################################################
-# If script executed on hitkip cluster, HPs have to be defined in sbatch_HPscript.sbatch
+# # If script executed on hitkip cluster, HPs have to be defined in sbatch_HPscript.sbatch
 # parser = argparse.ArgumentParser(description="Train RNN with specific parameters.")
 # parser.add_argument("--adjParams", type=str, required=True, help="JSON-encoded parameters")
 # args = parser.parse_args()

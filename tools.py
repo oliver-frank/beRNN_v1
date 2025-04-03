@@ -316,6 +316,12 @@ def load_trials(task,mode,batchSize,data,errorComparison):
             if errorComparison == True:
                 return x,y,y_loc,base_name
             else:
+                if 'lowDim' in key:
+                    # Increase scale of input representation by factor x to help network differentiate better between stimuli
+                    for timeStep in range(0,x.shape[0]):
+                        for trial in range(0,x.shape[1]):
+                            x[timeStep,trial,:] = x[timeStep,trial,:] * 2
+
                 return x,y,y_loc
         except Exception as e:
             print(f"An error occurred: {e}. Retrying...")
