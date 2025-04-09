@@ -37,7 +37,6 @@ def is_weight(v):
     """Check if Tensorflow variable v is a connection weight."""
     return ('kernel' in v.name or 'weight' in v.name)
 
-
 def popvec(y):
     """Population vector read out.
 
@@ -60,7 +59,6 @@ def popvec(y):
                      temp_cos)  # This line computes the arctangent of the normalized sine and cosine components, resulting in the angle (location) in radians for each trial in batch
     return np.mod(loc, 2 * np.pi)
 
-
 def tf_popvec(y):
     """Population vector read-out in tensorflow."""
 
@@ -73,7 +71,6 @@ def tf_popvec(y):
     temp_sin = tf.reduce_sum(y * sin_pref, axis=-1) / temp_sum
     loc = tf.atan2(temp_sin, temp_cos)
     return tf.mod(loc, 2 * np.pi)
-
 
 def get_perf(y_hat, y_loc):
     """Get performance.
@@ -110,7 +107,6 @@ def get_perf(y_hat, y_loc):
     perf = should_fix * fixating + (1 - should_fix) * corr_loc * (1 - fixating)
     perf_rounded = np.round(perf, decimals=3)
     return perf_rounded
-
 
 def cyclic_learning_rate(global_step, mode, base_lr=1e-5, max_lr=1e-3, step_size=2000, decay_rate=0.999,
                          decay_steps=10000):
@@ -154,7 +150,6 @@ def cyclic_learning_rate(global_step, mode, base_lr=1e-5, max_lr=1e-3, step_size
 
     return clr
 
-
 # info: lowDIM section
 def popvec_lowDIM(y):
     """Population vector read out.
@@ -171,13 +166,11 @@ def popvec_lowDIM(y):
     loc = np.arctan2(y[:, 0], y[:, 1])
     return np.mod(loc, 2 * np.pi)  # check this? January 22 2019
 
-
 def tf_popvec_lowDIM(y):
     """Population vector read-out in tensorflow."""
 
     loc = tf.atan2(y[:, 0], y[:, 1])
     return tf.mod(loc + np.pi, 2 * np.pi)  # check this? January 22 2019
-
 
 def get_perf_lowDIM(y_hat, y_loc):
     """Get performance.

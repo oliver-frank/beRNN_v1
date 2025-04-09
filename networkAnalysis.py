@@ -371,8 +371,8 @@ def figureSceletton():
     return fig, axs, axs_legend
 
 # Paths and settings
-participant = 'beRNN_01' # subfolder with model iterations
-trainingNumber = '\\2025_04_lowDimTests\\03'
+participant = 'beRNN_03' # subfolder with model iterations
+trainingNumber = '\\2025_04_2layerTest\\03'
 folder = '\\beRNNmodels'
 # folderPath = 'W:\\group_csp\\analyses\\oliver.frank'
 folderPath = 'C:\\Users\\oliver.frank\\Desktop\\PyProjects'
