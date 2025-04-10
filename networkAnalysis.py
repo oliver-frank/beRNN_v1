@@ -33,7 +33,7 @@ from tools import rule_name
 # import tensorflow as tf
 
 
-selected_hp_keys = ['participant', 'rnn_type', 'data', 'activation', 'optimizer', 'loss_type', 'batch_size', 'l1_h', 'l2_h', 'l1_weight', 'l2_weight',
+selected_hp_keys = ['participant', 'rnn_type', 'data', 'multiLayer', 'n_rnn_per_layer', 'activations_per_layer', 'activation', 'optimizer', 'loss_type', 'batch_size', 'l1_h', 'l2_h', 'l1_weight', 'l2_weight',
                     'learning_rate', 'learning_rate_mode', 'n_rnn', 'tau', 'sigma_rec', 'sigma_x', 'w_rec_init', 'c_mask_responseValue', 'p_weight_train', 'w_mask_value'] # Replace with the keys you want info: 'data' only exists from 15.01.25 on
 
 rule_color = {
@@ -372,7 +372,7 @@ def figureSceletton():
 
 # Paths and settings
 participant = 'beRNN_03' # subfolder with model iterations
-trainingNumber = '\\2025_04_2layerTest\\03'
+trainingNumber = '\\2025_04_multilayerTest\\01'
 folder = '\\beRNNmodels'
 # folderPath = 'W:\\group_csp\\analyses\\oliver.frank'
 folderPath = 'C:\\Users\\oliver.frank\\Desktop\\PyProjects'
@@ -518,7 +518,7 @@ for _model in _model_list:
         num_columns = 3  # Adjust based on how wide the text should be
         hp_text_formatted = "\n".join(["   ".join(hp_lines[i:i + num_columns]) for i in range(0, len(hp_lines), num_columns)])
 
-        hp_ax.text(0.5, 0.5, hp_text_formatted, fontsize=7, verticalalignment='center',
+        hp_ax.text(0.5, 0.5, hp_text_formatted, fontsize=6, verticalalignment='center',
                    horizontalalignment='center', color='black',
                    bbox=dict(facecolor='white', alpha=1, edgecolor='black'))
 

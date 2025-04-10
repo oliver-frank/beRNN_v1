@@ -1897,7 +1897,7 @@ def check_permissions(file_path):
 dataFolder = "Data"
 # subfolders = ['DM', 'DM_Anti', 'EF', 'EF_Anti', 'RP', 'RP_Anti', 'RP_Ctx1', 'RP_Ctx2', 'WM', 'WM_Anti', 'WM_Ctx1', 'WM_Ctx2']
 subfolders = ['DM', 'DM_Anti', 'EF', 'EF_Anti', 'RP', 'RP_Anti', 'RP_Ctx1', 'RP_Ctx2', 'WM', 'WM_Anti', 'WM_Ctx1', 'WM_Ctx2']
-preprocessing_folder = 'data_lowDim_correctOnly_3stimTCS'
+preprocessing_folder = 'data_lowDim_correctOnly_3stimTC'
 participants = ['beRNN_01', 'beRNN_02', 'beRNN_03', 'BeRNN_04', 'beRNN_05']
 months = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12'] # info: debugging '13'
 

@@ -45,7 +45,11 @@ def _compute_variance_bymodel(data_dir, model: object, sess: object, mode: str, 
         rules = hp['rules']
     print(rules)
 
-    n_hidden = hp['n_rnn']
+    # fix: Do a task variance analysis for each hidden layer
+    if hp['multiLayer'] == True:
+        n_hidden = hp['n_rnn_per_layer'][-1] # fix: Should be the indice of the currently analyzed hidden layer
+    else:
+        n_hidden = hp['n_rnn']
 
     if random_rotation:
         # Generate random orthogonal matrix

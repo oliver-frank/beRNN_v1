@@ -23,6 +23,7 @@ from tensorflow.python.ops import array_ops
 from tensorflow.python.ops import init_ops
 from tensorflow.python.ops import math_ops
 from tensorflow.python.ops import nn_ops
+from tensorflow.python.ops import rnn_cell_impl
 from tensorflow.python.util import nest
 from tensorflow.python.ops import rnn
 from tensorflow.python.ops.rnn_cell_impl import RNNCell
@@ -145,7 +146,9 @@ def cyclic_learning_rate(global_step, mode, base_lr=1e-5, max_lr=1e-3, step_size
 
     # Apply independent exponential decay if enabled
     elif mode == 'decay':
+        global_step_f = tf.cast(global_step, tf.float32)
         decay_factor = tf.pow(decay_rate, global_step_f / decay_steps)
+        clr = base_lr + (max_lr - base_lr) * tf.constant(1.0)  # optional: or just max_lr
         clr *= decay_factor
 
     return clr
@@ -354,6 +357,64 @@ class LeakyRNNCell(RNNCell):
         output = (1 - self._alpha) * state + self._alpha * output
 
         return output, output
+
+
+class FlexibleLeakyStackedRNNCell(tf.nn.rnn_cell.RNNCell):
+    """
+    Stack of LeakyRNNCell layers with individually specified units and activations per layer.
+    """
+
+    def __init__(self,
+                 n_rnn_per_layer,         # List[int]
+                 activations_per_layer,   # List[str], same length as n_rnn_per_layer
+                 n_input,
+                 alpha,
+                 sigma_rec=0,
+                 w_rec_init='diag',
+                 rng=None,
+                 reuse=None,
+                 name=None,
+                 mask=None):
+        super(FlexibleLeakyStackedRNNCell, self).__init__(_reuse=reuse, name=name)
+
+        assert len(n_rnn_per_layer) == len(activations_per_layer), \
+            "Length of n_rnn_per_layer and activations_per_layer must match"
+
+        self._num_layers = len(n_rnn_per_layer)
+        self._cells = []
+
+        input_size = n_input
+        for i, (num_units, activation) in enumerate(zip(n_rnn_per_layer, activations_per_layer)):
+            cell = LeakyRNNCell(
+                num_units=num_units,
+                n_input=input_size,
+                alpha=alpha,
+                sigma_rec=sigma_rec,
+                activation=activation,
+                w_rec_init=w_rec_init,
+                rng=rng,
+                reuse=reuse,
+                name=f"{name}_layer{i+1}" if name else None,
+                mask=mask if i == 0 else None  # only apply mask to first layer
+            )
+            self._cells.append(cell)
+            input_size = num_units  # next layer input is this layer's output
+
+        self._multi_cell = tf.nn.rnn_cell.MultiRNNCell(self._cells)
+
+    @property
+    def state_size(self):
+        return self._multi_cell.state_size
+
+    @property
+    def output_size(self):
+        return self._multi_cell.output_size
+
+    def call(self, inputs, state):
+        return self._multi_cell(inputs, state)
+
+    def zero_state(self, batch_size, dtype):
+        return self._multi_cell.zero_state(batch_size, dtype)
 
 
 class LeakyGRUCell(RNNCell):
@@ -686,7 +747,7 @@ class Model(object):
             # Define cyclic learning rate
             hp['learning_rate'] = tf.squeeze(
                 cyclic_learning_rate(self.global_step, hp['learning_rate_mode'], base_lr=hp['base_lr'],
-                                     max_lr=hp['max_lr'], step_size=2000, use_decay=False, decay_rate=0.999,
+                                     max_lr=hp['max_lr'], step_size=2000, decay_rate=0.999,
                                      decay_steps=10000))
 
         # Store the learning rate as an attribute for debugging
@@ -740,8 +801,9 @@ class Model(object):
             flat_input = tf.reshape(self.x, [-1, n_input])
             dense_output = tf.layers.dense(flat_input, units=n_rnn, activation=f_act)
             self.h = tf.reshape(dense_output, [-1, tf.shape(self.x)[1], n_rnn])
+
         else:
-            if hp['rnn_type'] == 'LeakyRNN':
+            if hp['rnn_type'] == 'LeakyRNN' and hp['multiLayer'] == False:
                 n_in_rnn = self.x.get_shape().as_list()[-1]
                 cell = LeakyRNNCell(n_rnn, n_in_rnn,
                                     hp['alpha'],
@@ -750,15 +812,31 @@ class Model(object):
                                     w_rec_init=hp['w_rec_init'],
                                     rng=self.rng,
                                     mask=hp['s_mask'])
+
+            elif hp['rnn_type'] == 'LeakyRNN' and hp['multiLayer'] == True:
+                n_in_rnn = self.x.get_shape().as_list()[-1]
+                cell = FlexibleLeakyStackedRNNCell(
+                    n_rnn_per_layer=hp['n_rnn_per_layer'],  # e.g., [128, 64, 32]
+                    activations_per_layer=hp['activations_per_layer'],  # e.g., ['relu', 'tanh', 'linear']
+                    n_input=n_in_rnn,
+                    alpha=hp['alpha'],
+                    sigma_rec=hp['sigma_rec'],
+                    w_rec_init=hp['w_rec_init'],
+                    rng=self.rng,
+                    mask=hp['s_mask']
+                )
+
             elif hp['rnn_type'] == 'LeakyGRU':
                 cell = LeakyGRUCell(
                     n_rnn, hp['alpha'],
                     sigma_rec=hp['sigma_rec'], activation=f_act, mask=hp['s_mask'])
+
             elif hp['rnn_type'] == 'LSTM':
                 cell = tf.contrib.rnn.LSTMCell(n_rnn, activation=f_act)
 
             elif hp['rnn_type'] == 'GRU':
                 cell = tf.contrib.rnn.GRUCell(n_rnn, activation=f_act, mask=hp['s_mask'])
+
             else:
                 raise NotImplementedError("""rnn_type must be one of LeakyRNN,
                         LeakyGRU, EILeakyGRU, LSTM, GRU
@@ -768,25 +846,50 @@ class Model(object):
             self.h, states = rnn.dynamic_rnn(
                 cell, self.x, dtype=tf.float32, time_major=True)
 
-        # Output
-        with tf.variable_scope("output"):
-            # Using default initialization `glorot_uniform_initializer`
-            w_out = tf.get_variable(
-                'weights',
-                [n_rnn, n_output],
-                dtype=tf.float32
-            )
-            b_out = tf.get_variable(
-                'biases',
-                [n_output],
-                dtype=tf.float32,
-                initializer=tf.constant_initializer(0.0, dtype=tf.float32)
-            )
 
-        h_shaped = tf.reshape(self.h, (-1, n_rnn))
-        y_shaped = tf.reshape(self.y, (-1, n_output))
-        # y_hat_ shape (n_time*n_batch, n_unit)
-        y_hat_ = tf.matmul(h_shaped, w_out) + b_out
+        if hp['multiLayer'] == False:
+            # Output
+            with tf.variable_scope("output"):
+                # Using default initialization `glorot_uniform_initializer`
+                w_out = tf.get_variable(
+                    'weights',
+                    [n_rnn, n_output],
+                    dtype=tf.float32
+                )
+                b_out = tf.get_variable(
+                    'biases',
+                    [n_output],
+                    dtype=tf.float32,
+                    initializer=tf.constant_initializer(0.0, dtype=tf.float32)
+                )
+
+            h_shaped = tf.reshape(self.h, (-1, n_rnn))
+            y_shaped = tf.reshape(self.y, (-1, n_output))
+            # y_hat_ shape (n_time*n_batch, n_unit)
+            y_hat_ = tf.matmul(h_shaped, w_out) + b_out
+
+        elif hp['multiLayer'] == True:
+            # Output
+            with tf.variable_scope("output"):
+                # Using default initialization `glorot_uniform_initializer`
+                w_out = tf.get_variable(
+                    'weights',
+                    [hp['n_rnn_per_layer'][-1], n_output],
+                    dtype=tf.float32
+                )
+                b_out = tf.get_variable(
+                    'biases',
+                    [n_output],
+                    dtype=tf.float32,
+                    initializer=tf.constant_initializer(0.0, dtype=tf.float32)
+                )
+
+            h_shaped = tf.reshape(self.h, (-1, hp['n_rnn_per_layer'][-1]))
+            y_shaped = tf.reshape(self.y, (-1, n_output))
+            # y_hat_ shape (n_time*n_batch, n_unit)
+            y_hat_ = tf.matmul(h_shaped, w_out) + b_out
+
+
         if hp['loss_type'] == 'lsq':
             # attention: ###############################################################################################
             # Least-square loss
@@ -848,6 +951,40 @@ class Model(object):
                         self.w_out = v
                     else:
                         self.b_out = v
+
+            elif hp['rnn_type'] == 'LeakyRNN' and hp['multiLayer'] == True:
+                self.w_in = []
+                self.w_rec = []
+                self.b_rec = []
+
+                rnn_kernels = [v for v in self.var_list if
+                               'rnn' in v.name and ('kernel' in v.name or 'weight' in v.name)]
+                rnn_biases = [v for v in self.var_list if 'rnn' in v.name and 'bias' in v.name]
+
+                n_layers = len(hp['n_rnn_per_layer'])
+
+                if len(rnn_kernels) != n_layers:
+                    raise ValueError(f'Expected {n_layers} recurrent kernels, found {len(rnn_kernels)}')
+                if len(rnn_biases) != n_layers:
+                    raise ValueError(f'Expected {n_layers} recurrent biases, found {len(rnn_biases)}')
+
+                for i in range(n_layers):
+                    n_in = hp['n_input'] if i == 0 else hp['n_rnn_per_layer'][i - 1]
+                    n_out = hp['n_rnn_per_layer'][i]
+                    kernel = rnn_kernels[i]
+
+                    self.w_in.append(kernel[:n_in, :])
+                    self.w_rec.append(kernel[n_in:, :])
+                    self.b_rec.append(rnn_biases[i])
+
+                # Find output projection weights
+                for v in self.var_list:
+                    if 'output' in v.name:
+                        if 'kernel' in v.name or 'weight' in v.name:
+                            self.w_out = v
+                        elif 'bias' in v.name:
+                            self.b_out = v
+
             else:  # for all other rnn_types
                 if 'rnn' in v.name:
                     if 'kernel' in v.name or 'weight' in v.name:
@@ -863,14 +1000,13 @@ class Model(object):
                     else:
                         self.b_out = v
 
-        if hp['rnn_type'] != 'NonRecurrent':
+        if hp['rnn_type'] != 'NonRecurrent' and hp['multiLayer'] == False:
             # check if the recurrent and output connection has the correct shape
             if self.w_out.shape != (n_rnn, n_output):
                 raise ValueError('Shape of w_out should be ' +
                                  str((n_rnn, n_output)) + ', but found ' +
                                  str(self.w_out.shape))
-            if hp[
-                'rnn_type'] == 'LSTM':  # info: The factor of 4 comes from the LSTM cell having four sets of weights for each of its components (input gate, forget gate, cell state, and output gate), hence a single LSTM cell's weight matrix quadruples in size compared to a simple RNN cell.
+            if hp['rnn_type'] == 'LSTM':  # info: The factor of 4 comes from the LSTM cell having four sets of weights for each of its components (input gate, forget gate, cell state, and output gate), hence a single LSTM cell's weight matrix quadruples in size compared to a simple RNN cell.
                 # Special handling for LSTM because it uses a different weight structure
                 if self.w_rec.shape != (n_rnn, n_rnn * 4):
                     raise ValueError(
@@ -885,6 +1021,37 @@ class Model(object):
                     raise ValueError(f'Expected w_rec shape to be {(n_rnn, n_rnn)}, but got {self.w_rec.shape}')
                 if self.w_in.shape != (n_input, n_rnn):
                     raise ValueError(f'Expected w_in shape to be {(n_input, n_rnn)}, but got {self.w_in.shape}')
+
+        elif hp['rnn_type'] == 'LeakyRNN' and hp['multiLayer'] == True:  # info: Extra case for multiLayerRNN
+            # Multi-layer LeakyRNN: check shapes layer by layer
+            n_layers = len(hp['n_rnn_per_layer'])
+
+            # Count how many kernel & bias pairs exist to sanity check
+            rnn_kernels = [v for v in self.var_list if 'rnn' in v.name and ('kernel' in v.name or 'weight' in v.name)]
+            rnn_biases = [v for v in self.var_list if 'rnn' in v.name and 'bias' in v.name]
+
+            if len(rnn_kernels) != n_layers:
+                raise ValueError(f'Expected {n_layers} recurrent kernels, found {len(rnn_kernels)}')
+
+            if len(rnn_biases) != n_layers:
+                raise ValueError(f'Expected {n_layers} recurrent biases, found {len(rnn_biases)}')
+
+            for i in range(n_layers):
+                n_in = hp['n_input'] if i == 0 else hp['n_rnn_per_layer'][i - 1]
+                n_out = hp['n_rnn_per_layer'][i]
+
+                w = rnn_kernels[i]
+                b = rnn_biases[i]
+
+                if w.shape != (n_in + n_out, n_out):
+                    raise ValueError(f'Layer {i}: expected kernel shape {(n_in + n_out, n_out)}, but got {w.shape}')
+                if b.shape != (n_out,):
+                    raise ValueError(f'Layer {i}: expected bias shape {(n_out,)}, but got {b.shape}')
+
+            # Also check output projection
+            n_out_final = hp['n_rnn_per_layer'][-1]
+            if self.w_out.shape != (n_out_final, hp['n_output']):
+                raise ValueError(f'Expected w_out shape {(n_out_final, hp["n_output"])}, but got {self.w_out.shape}')
 
     def _build_seperate(self, hp):
         # Input, target output, and cost mask
