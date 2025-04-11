@@ -372,7 +372,7 @@ class FlexibleLeakyStackedRNNCell(tf.nn.rnn_cell.RNNCell):
                  sigma_rec=0,
                  w_rec_init='diag',
                  rng=None,
-                 reuse=None,
+                 reuse=tf.AUTO_REUSE,
                  name=None,
                  mask=None):
         super(FlexibleLeakyStackedRNNCell, self).__init__(_reuse=reuse, name=name)
@@ -385,20 +385,22 @@ class FlexibleLeakyStackedRNNCell(tf.nn.rnn_cell.RNNCell):
 
         input_size = n_input
         for i, (num_units, activation) in enumerate(zip(n_rnn_per_layer, activations_per_layer)):
-            cell = LeakyRNNCell(
-                num_units=num_units,
-                n_input=input_size,
-                alpha=alpha,
-                sigma_rec=sigma_rec,
-                activation=activation,
-                w_rec_init=w_rec_init,
-                rng=rng,
-                reuse=reuse,
-                name=f"{name}_layer{i+1}" if name else None,
-                mask=mask if i == 0 else None  # only apply mask to first layer
-            )
-            self._cells.append(cell)
-            input_size = num_units  # next layer input is this layer's output
+            layer_name = f"{name}_layer{i}" if name else f"layer{i}"
+            with tf.variable_scope(layer_name):  # Outer scope
+                cell = LeakyRNNCell(
+                    num_units=num_units,
+                    n_input=input_size,
+                    alpha=alpha,
+                    sigma_rec=sigma_rec,
+                    activation=activation,
+                    w_rec_init=w_rec_init,
+                    rng=rng,
+                    reuse=None,  # Don't force reuse here
+                    name=layer_name,  # So the inner scope has a unique name too
+                    mask=mask if i == 0 else None
+                )
+                self._cells.append(cell)
+                input_size = num_units
 
         self._multi_cell = tf.nn.rnn_cell.MultiRNNCell(self._cells)
 
@@ -411,7 +413,20 @@ class FlexibleLeakyStackedRNNCell(tf.nn.rnn_cell.RNNCell):
         return self._multi_cell.output_size
 
     def call(self, inputs, state):
-        return self._multi_cell(inputs, state)
+        """Custom call method that captures outputs from all RNN layers."""
+        outputs = []
+        new_states = []
+
+        current_input = inputs
+        for i, cell in enumerate(self._cells):
+            output, new_state = cell(current_input, state[i])
+            outputs.append(output)  # store output of current layer
+            new_states.append(new_state)
+            current_input = output  # feed forward to next layer
+
+        self.hidden_states = outputs  # save for later access (one per layer)
+
+        return outputs[-1], tuple(new_states)  # return top layer output & full state
 
     def zero_state(self, batch_size, dtype):
         return self._multi_cell.zero_state(batch_size, dtype)
@@ -803,7 +818,7 @@ class Model(object):
             self.h = tf.reshape(dense_output, [-1, tf.shape(self.x)[1], n_rnn])
 
         else:
-            if hp['rnn_type'] == 'LeakyRNN' and hp['multiLayer'] == False:
+            if hp['rnn_type'] == 'LeakyRNN' and hp.get('multiLayer') == False:
                 n_in_rnn = self.x.get_shape().as_list()[-1]
                 cell = LeakyRNNCell(n_rnn, n_in_rnn,
                                     hp['alpha'],
@@ -813,18 +828,43 @@ class Model(object):
                                     rng=self.rng,
                                     mask=hp['s_mask'])
 
-            elif hp['rnn_type'] == 'LeakyRNN' and hp['multiLayer'] == True:
+
+            elif hp['rnn_type'] == 'LeakyRNN' and hp.get('multiLayer') == True:
+                # Prepare multi-layer LeakyRNN
                 n_in_rnn = self.x.get_shape().as_list()[-1]
-                cell = FlexibleLeakyStackedRNNCell(
-                    n_rnn_per_layer=hp['n_rnn_per_layer'],  # e.g., [128, 64, 32]
-                    activations_per_layer=hp['activations_per_layer'],  # e.g., ['relu', 'tanh', 'linear']
-                    n_input=n_in_rnn,
-                    alpha=hp['alpha'],
-                    sigma_rec=hp['sigma_rec'],
-                    w_rec_init=hp['w_rec_init'],
-                    rng=self.rng,
-                    mask=hp['s_mask']
-                )
+                cell_stack = []
+                input_size = n_in_rnn
+
+                for i, (units, activation) in enumerate(zip(hp['n_rnn_per_layer'], hp['activations_per_layer'])):
+                    with tf.variable_scope(f"layer{i}"):
+                        cell_i = LeakyRNNCell(
+                            num_units=units,
+                            n_input=input_size,
+                            alpha=hp['alpha'],
+                            sigma_rec=hp['sigma_rec'],
+                            activation=activation,
+                            w_rec_init=hp['w_rec_init'],
+                            rng=self.rng,
+                            mask=hp['s_mask'] if hp.get('s_mask') is not None else None
+                        )
+
+                        cell_stack.append(cell_i)
+                        input_size = units
+
+                # Manually apply dynamic_rnn layer by layer and store all outputs
+                inputs = self.x
+                outputs_per_layer = []
+                state = [cell.zero_state(tf.shape(self.x)[1], tf.float32) for cell in cell_stack]
+
+                for i, cell in enumerate(cell_stack):
+                    with tf.variable_scope(f"rnn_layer_{i}"):
+                        out_i, state_i = tf.nn.dynamic_rnn(
+                            cell, inputs, initial_state=state[i], time_major=True, dtype=tf.float32
+                        )
+                        outputs_per_layer.append(out_i)
+                        inputs = out_i  # feed into next layer
+                self.h_all_layers = outputs_per_layer  # list of [time, batch, units] tensors
+                self.h = outputs_per_layer[-1]  # last layer only for output decoding
 
             elif hp['rnn_type'] == 'LeakyGRU':
                 cell = LeakyGRUCell(
@@ -842,12 +882,14 @@ class Model(object):
                         LeakyGRU, EILeakyGRU, LSTM, GRU
                         """)
 
-            # Dynamic rnn with time major
-            self.h, states = rnn.dynamic_rnn(
-                cell, self.x, dtype=tf.float32, time_major=True)
+            if hp.get('multiLayer') == True:
+                # Already handled manually above — no need to run dynamic_rnn again
+                pass
+            else:
+                # Only single-layer model: run dynamic_rnn normally
+                self.h, states = rnn.dynamic_rnn(cell, self.x, dtype=tf.float32, time_major=True)
 
-
-        if hp['multiLayer'] == False:
+        if hp.get('multiLayer') == False:
             # Output
             with tf.variable_scope("output"):
                 # Using default initialization `glorot_uniform_initializer`
@@ -868,7 +910,7 @@ class Model(object):
             # y_hat_ shape (n_time*n_batch, n_unit)
             y_hat_ = tf.matmul(h_shaped, w_out) + b_out
 
-        elif hp['multiLayer'] == True:
+        elif hp.get('multiLayer') == True:
             # Output
             with tf.variable_scope("output"):
                 # Using default initialization `glorot_uniform_initializer`
@@ -952,7 +994,7 @@ class Model(object):
                     else:
                         self.b_out = v
 
-            elif hp['rnn_type'] == 'LeakyRNN' and hp['multiLayer'] == True:
+            elif hp['rnn_type'] == 'LeakyRNN' and hp.get('multiLayer') == True:
                 self.w_in = []
                 self.w_rec = []
                 self.b_rec = []
@@ -1000,7 +1042,7 @@ class Model(object):
                     else:
                         self.b_out = v
 
-        if hp['rnn_type'] != 'NonRecurrent' and hp['multiLayer'] == False:
+        if hp['rnn_type'] != 'NonRecurrent' and hp.get('multiLayer') == False:
             # check if the recurrent and output connection has the correct shape
             if self.w_out.shape != (n_rnn, n_output):
                 raise ValueError('Shape of w_out should be ' +
@@ -1022,7 +1064,7 @@ class Model(object):
                 if self.w_in.shape != (n_input, n_rnn):
                     raise ValueError(f'Expected w_in shape to be {(n_input, n_rnn)}, but got {self.w_in.shape}')
 
-        elif hp['rnn_type'] == 'LeakyRNN' and hp['multiLayer'] == True:  # info: Extra case for multiLayerRNN
+        elif hp['rnn_type'] == 'LeakyRNN' and hp.get('multiLayer') == True:  # info: Extra case for multiLayerRNN
             # Multi-layer LeakyRNN: check shapes layer by layer
             n_layers = len(hp['n_rnn_per_layer'])
 
