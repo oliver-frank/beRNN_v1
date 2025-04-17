@@ -818,7 +818,7 @@ class Model(object):
             self.h = tf.reshape(dense_output, [-1, tf.shape(self.x)[1], n_rnn])
 
         else:
-            if hp['rnn_type'] == 'LeakyRNN' and hp.get('multiLayer') == False:
+            if hp['rnn_type'] == 'LeakyRNN' and (hp.get('multiLayer') == None or hp.get('multiLayer') == False):
                 n_in_rnn = self.x.get_shape().as_list()[-1]
                 cell = LeakyRNNCell(n_rnn, n_in_rnn,
                                     hp['alpha'],
@@ -889,7 +889,7 @@ class Model(object):
                 # Only single-layer model: run dynamic_rnn normally
                 self.h, states = rnn.dynamic_rnn(cell, self.x, dtype=tf.float32, time_major=True)
 
-        if hp.get('multiLayer') == False:
+        if hp.get('multiLayer') == None or hp.get('multiLayer') == False:
             # Output
             with tf.variable_scope("output"):
                 # Using default initialization `glorot_uniform_initializer`
@@ -1042,7 +1042,7 @@ class Model(object):
                     else:
                         self.b_out = v
 
-        if hp['rnn_type'] != 'NonRecurrent' and hp.get('multiLayer') == False:
+        if hp['rnn_type'] != 'NonRecurrent' and (hp.get('multiLayer') == None or hp.get('multiLayer') == False):
             # check if the recurrent and output connection has the correct shape
             if self.w_out.shape != (n_rnn, n_output):
                 raise ValueError('Shape of w_out should be ' +

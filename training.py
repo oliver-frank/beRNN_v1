@@ -64,11 +64,11 @@ def get_default_hp(ruleset):
         'rnn_type': 'LeakyRNN', # Type of RNNs: NonRecurrent, LeakyRNN, LeakyGRU, EILeakyGRU | GRU, LSTM
         'multiLayer': True, # only applicaple with LeakyRNN
         'n_rnn': 128,  # number of recurrent units for one hidden layer architecture
+        'activation': 'tanh',  # Type of activation runctions, relu, softplus, tanh, elu, linear
         'n_rnn_per_layer': [256, 128, 64],
         'activations_per_layer': ['relu', 'tanh', 'linear'],
         'loss_type': 'lsq', # # Type of loss functions - Cross-entropy loss
         'optimizer': 'adam', # 'adam', 'sgd'
-        'activation': 'tanh', # Type of activation runctions, relu, softplus, tanh, elu, linear
         'tau': 100, # # Time constant (ms)- default 100
         'dt': 20, # discretization time step (ms) .
         # 'alpha': 0.2, # (redundant) discretization time step/time constant - dt/tau = alpha - ratio decides on how much previous states are taken into account for current state - low alpha more memory, high alpha more forgetting - alpha * h(t-1)
@@ -251,7 +251,7 @@ def do_eval(sess, model, log, rule_train, eval_data):
 
     return log
 
-def train(model_dir,train_data ,eval_data,hp=None,max_steps=9e4,display_step=500,ruleset='all',rule_trains=None,rule_prob_map=None,seed=0,
+def train(model_dir,train_data ,eval_data,hp=None,max_steps=3e6,display_step=500,ruleset='all',rule_trains=None,rule_prob_map=None,seed=0,
           load_dir=None,trainables=None):
     """Train the network.
 
