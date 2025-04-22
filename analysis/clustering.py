@@ -60,15 +60,32 @@ kelly_colors = \
 
 save = True
 
+def all_variance_files_exist(model_dir, numberOfLayers, mode, data_dir):
+    for layer in range(numberOfLayers):
+        for data_type in ['rule', 'epoch']:
+            fname = os.path.join(model_dir, 'var_' + mode + '_lay' + str(layer) + '_' + data_type + '.pkl')
+
+            if not os.path.exists(fname):
+                return False
+    return True
+
 class Analysis(object):
-    def __init__(self, data_dir, model_dir, mode, monthsConsidered, data_type, normalization_method='sum'):
+    def __init__(self, data_dir, model_dir, layer, mode, monthsConsidered, data_type, normalization_method='sum'):
         hp = tools.load_hp(model_dir)
 
-        # If not computed, use variance.py
-        fname = os.path.join(model_dir, 'variance_' + mode + '_' + data_type + '_' + data_dir.split('\\')[-1] + '.pkl')
-        if not os.path.exists(os.path.join(model_dir, fname)):
-            variance.compute_variance(data_dir, model_dir, mode, monthsConsidered)
+        # # Do a task variance analysis for each hidden layer
+        # if hp.get('multiLayer') == True:
+        #     numberOfLayers = len(hp['n_rnn_per_layer'])
+        # else:
+        #     numberOfLayers = 1
+        #
+        # if not all_variance_files_exist(model_dir, numberOfLayers, mode, data_dir):
+        fname = variance.compute_variance(data_dir, model_dir, layer, mode, monthsConsidered, data_type)
 
+        # compVarianceList = [compVariance for compVariance in os.listdir(model_dir) if compVariance.startswith('var')]
+        # self.h_normvar_all_list = []
+        # for compVariance in compVarianceList:
+        # fname = os.path.join(model_dir, compVariance)
         res = tools.load_pickle(fname)
         h_var_all_ = res['h_var_all']
         self.keys  = res['keys']
@@ -77,8 +94,31 @@ class Analysis(object):
         # info: This decides the granularity of summarized nodes that will be taken to create the clusters, also very
         #  important in connection with the number of clusters created below, as they can never overcome this number of
         #  summarized nodes
-        ind_active = np.where(h_var_all_.sum(axis=1) > 1e-3)[0] # attention: > 1e-3 - min > 0
+        ind_active = np.where(h_var_all_.sum(axis=1) > 1e-5)[0] # attention: > 1e-3 - min > 0 | it seems like hidden architecture can have very low h_var
         h_var_all  = h_var_all_[ind_active, :]
+
+        # if np.all(h_var_all_.sum(axis=1) == 0):
+        #     print("All rows are zero — skipping clustering and setting placeholder values.")
+        #     # Safe defaults
+        #     h_var_all = np.zeros([2, 12])
+        #     h_normvar_all = np.zeros([2, 12])
+        #     labels = np.zeros(2, dtype=int)
+        #     self.h_normvar_all = h_normvar_all
+        #     self.ind_active = np.arange(2)
+        #     self.n_clusters = []
+        #     self.scores = []
+        #     self.n_cluster = 1
+        #     self.h_var_all = h_var_all
+        #     self.normalization_method = normalization_method
+        #     self.labels = labels
+        #     self.unique_labels = np.unique(labels)
+        #     self.model_dir = model_dir
+        #     self.hp = hp
+        #     self.data_type = data_type
+        #     self.rules = hp['rules']
+        #     return  # safely exit __init__ early
+        #
+        # else:
 
         # Normalize by the total variance across tasks
         if normalization_method == 'sum':
@@ -152,7 +192,7 @@ class Analysis(object):
         ind_sort = np.argsort(labels)
 
         labels          = labels[ind_sort]
-        self.h_normvar_all   = h_normvar_all[ind_sort, :]
+        self.h_normvar_all = h_normvar_all[ind_sort, :]
         self.ind_active      = ind_active[ind_sort]
 
         self.n_clusters = n_clusters
@@ -568,10 +608,9 @@ class Analysis(object):
         ax2.set_ylim([0, len(labels)])
         ax1.axis('off')
         ax2.axis('off')
-        plt.savefig(
-            os.path.join('W:\\group_csp\\analyses\\oliver.frank', 'BeRNN_models\\Visuals\\connectivityByClustersWrecOnly\\finalReport',
-                         model_dir.split("\\")[-1] + '_' + mode + '.png'), \
-            format='png', dpi=300, bbox_inches='tight', pad_inches=0.1)
+        # plt.savefig(
+        #     os.path.join('W:\\group_csp\\analyses\\oliver.frank', 'BeRNN_models\\Visuals\\connectivityByClustersWrecOnly\\finalReport',
+        #                  model_dir.split("\\")[-1] + '_' + mode + '.png'), format='png', dpi=300, bbox_inches='tight', pad_inches=0.1) # fix
         plt.show()
 
     def easy_connectivity_plot(self, model_dir):

@@ -63,7 +63,6 @@ rule_color = {
     'WM_Ctx2': '#fdda9c'  # Light Yellow
 }
 
-
 def smoothed(data, window_size):
     smoothed_data = np.convolve(data, np.ones(window_size) / window_size, mode='valid')
     # Calculate how many points we need to add to match the length of the original data
@@ -520,7 +519,7 @@ def figureSceletton(model_column_widths):
 
 # Paths and settings
 participant = 'beRNN_03' # subfolder with model iterations
-trainingNumber = '\\Test\\1'
+trainingNumber = '\\2025_04_multiLayerHpGridSearch02\\11'
 folder = '\\beRNNmodels'
 folderPath = 'C:\\Users\\oliver.frank\\Desktop\\PyProjects'
 _finalPath = folderPath + folder + trainingNumber # attention
@@ -587,17 +586,25 @@ for _model in _model_list:
         n_layers = len(currentHP['n_rnn_per_layer']) if currentHP.get('multiLayer') else 1
         funcTrainList, funcTestList = [], []
         for layer in range(n_layers):
-            analysis_train = clustering.Analysis(data_dir, currentModelDirectory, layer, 'train', currentHP['monthsConsidered'], 'rule')
-            analysis_test = clustering.Analysis(data_dir, currentModelDirectory, layer, 'test', currentHP['monthsConsidered'], 'rule')
+            try:
+                analysis_train = clustering.Analysis(data_dir, currentModelDirectory, layer, 'train', currentHP['monthsConsidered'], 'rule')
+                analysis_test = clustering.Analysis(data_dir, currentModelDirectory, layer, 'test', currentHP['monthsConsidered'], 'rule')
 
-            func_train, *_ = compute_functionalCorrelation(currentModelDirectory, currentHP['monthsConsidered'], 'train', None, analysis_train)
-            func_test, *_ = compute_functionalCorrelation(currentModelDirectory, currentHP['monthsConsidered'], 'test', None, analysis_test)
+                func_train, *_ = compute_functionalCorrelation(currentModelDirectory, currentHP['monthsConsidered'], 'train', None, analysis_train)
+                func_test, *_ = compute_functionalCorrelation(currentModelDirectory, currentHP['monthsConsidered'], 'test', None, analysis_test)
 
-            funcTrainList.append(fig_to_array(func_train))
-            funcTestList.append(fig_to_array(func_test))
+                funcTrainList.append(fig_to_array(func_train))
+                funcTestList.append(fig_to_array(func_test))
 
-            plt.close(func_train)
-            plt.close(func_test)
+                plt.close(func_train)
+                plt.close(func_test)
+
+            except Exception as e:
+                print(f"Skipping layer {layer} for model {currentModelDirectory} due to error: {e}")
+                # You can optionally append blank images or zero arrays to keep the grid layout consistent
+                placeholder = np.zeros((currentHP['n_rnn_per_layer'][layer], currentHP['n_rnn_per_layer'][layer], 3), dtype=np.uint8)  # black placeholder RGB image
+                funcTrainList.append(placeholder)
+                funcTestList.append(placeholder)
 
         # Place plots into skeleton
         combined_train = np.concatenate((img_cost_train, img_perf_train), axis=1)
@@ -635,13 +642,11 @@ for _model in _model_list:
         axs[4][1].axis("off")
 
     plt.tight_layout()
-    overview_path = os.path.join(overviewFolder, 'full_model_overview.png')
+    overview_path = os.path.join(overviewFolder, f'{_model}_OVERVIEW.png')
     plt.savefig(overview_path, dpi=150, bbox_inches='tight')
     # plt.close(fig)
 
     print(f"Overview saved to: {overview_path}")
-
-
 
 
 # # info: ################################################################################################################

@@ -16,6 +16,7 @@ from collections import OrderedDict
 # import matplotlib.pyplot as plt
 import tensorflow as tf
 import random
+import errno
 
 # from task import *
 from network import Model
@@ -26,7 +27,7 @@ save = True
 ########################################################################################################################
 # Define functions
 ########################################################################################################################
-def _compute_variance_bymodel(data_dir, model: object, sess: object, mode: str, monthsConsidered: list, rules: object = None, random_rotation: object = False) -> object:
+def _compute_variance_bymodel(data_dir, model_dir, layer, data_type, model: object, sess: object, mode: str, monthsConsidered: list, rules: object = None, random_rotation: object = False) -> object:
     """Compute variance for all tasks.
 
         Args:
@@ -40,14 +41,19 @@ def _compute_variance_bymodel(data_dir, model: object, sess: object, mode: str, 
     hp = model.hp
     # model_dir = model.model_dir
 
-
     if rules is None:
         rules = hp['rules']
     print(rules)
 
-    # fix: Do a task variance analysis for each hidden layer
-    if hp['multiLayer'] == True:
-        n_hidden = hp['n_rnn_per_layer'][-1] # fix: Should be the indice of the currently analyzed hidden layer
+    # # Do a task variance analysis for each hidden layer
+    # if hp.get('multiLayer') == True:
+    #     numberOfLayers = len(hp['n_rnn_per_layer'])
+    # else:
+    #     numberOfLayers = 1
+
+    # for layer in range(0, numberOfLayers):
+    if hp.get('multiLayer') == True:
+        n_hidden = hp['n_rnn_per_layer'][layer]
     else:
         n_hidden = hp['n_rnn']
 
@@ -98,7 +104,6 @@ def _compute_variance_bymodel(data_dir, model: object, sess: object, mode: str, 
         train_data[subdir] = train_files
         eval_data[subdir] = eval_files
     # III: Split the data ##############################################################################################
-
     for task in rules:
         print(task)
         if mode == 'train':
@@ -138,7 +143,12 @@ def _compute_variance_bymodel(data_dir, model: object, sess: object, mode: str, 
         # info: ################################################################################################
 
         feed_dict = tools.gen_feed_dict(model, x, y, c_mask, hp)
-        h = sess.run(model.h, feed_dict=feed_dict)
+
+        if hp.get('multiLayer') == True:
+            h = sess.run(model.h_all_layers, feed_dict=feed_dict)
+            h = h[layer] # info: choose the layer of current interest
+        elif hp.get('multiLayer') == False or hp.get('multiLayer') == None:
+            h = sess.run(model.h, feed_dict=feed_dict)
 
         if random_rotation:
             h = np.dot(h, random_ortho_matrix)  # randomly rotate
@@ -157,33 +167,55 @@ def _compute_variance_bymodel(data_dir, model: object, sess: object, mode: str, 
     ind_key_sort = np.argsort(list(zip(*keys))[1], kind='mergesort')
     h_all_byepoch = OrderedDict([(keys[i], h_all_byepoch[keys[i]]) for i in ind_key_sort])
 
-    for data_type in ['rule', 'epoch']:
-        if data_type == 'rule':
-            h_all = h_all_byrule
-        elif data_type == 'epoch':
-            h_all = h_all_byepoch
-        else:
-            raise ValueError
+    if data_type == 'rule':
+        h_all = h_all_byrule # info: only task orientated over all epochs (fixation excluded)
+    elif data_type == 'epoch':
+        h_all = h_all_byepoch # info: task and epoch orientated (fixation excluded), similar to h_all_byrule as there is only fixation and response epoch
 
-        h_var_all = np.zeros((n_hidden, len(h_all.keys())))
-        for i, val in enumerate(h_all.values()):
-            # val is Time, Batch, Units
-            # Variance across time and stimulus
-            # h_var_all[:, i] = val[t_start:].reshape((-1, n_hidden)).var(axis=0)
-            # Variance acros stimulus, then averaged across time
-            h_var_all[:, i] = val.var(axis=1).mean(axis=0)
+    h_var_all = np.zeros((n_hidden, len(h_all.keys())))
+    for i, val in enumerate(h_all.values()):
+        # val is Time, Batch, Units
+        # Variance across time and stimulus
+        # h_var_all[:, i] = val[t_start:].reshape((-1, n_hidden)).var(axis=0)
+        # Variance acros stimulus, then averaged across time
+        h_var_all[:, i] = val.var(axis=1).mean(axis=0)
 
-        result = {'h_var_all': h_var_all, 'keys': list(h_all.keys())}
-        save_name = 'variance_' + mode + '_' + data_type + '_' + data_dir.split('\\')[-1]
-        if random_rotation:
-            save_name += '_rr'
+    result = {'h_var_all': h_var_all, 'keys': list(h_all.keys())}
+    save_name = 'var_' + mode + '_lay' + str(layer) + '_' + data_type
 
-        fname = os.path.join(model.model_dir, save_name + '.pkl')
-        print('Variance saved at {:s}'.format(fname))
+    if random_rotation:
+        save_name += '_rr'
+
+    fname = os.path.join(model_dir, save_name + '.pkl')
+    # dir_path = os.path.dirname(fname)
+
+    # C:\\Users\\oliver.frank\\Desktop\\PyProjects\\beRNNmodels\\2025_04_multiLayerHpGridSearch\\1\\beRNN_03_AllTask_3-5_data_highDim_correctOnly_3stimTC_iteration0_LeakyRNN_64-64-64_relu-relu-linear\\model_month_3\\variance_test_layer0_rule_data_highDim_correctOnly_3stimTC.pkl
+    # C:\Users\oliver.frank\Desktop\PyProjects\beRNNmodels\2025_04_multiLayerHpGridSearch\1\beRNN_03_AllTask_3-5_data_highDim_correctOnly_3stimTC_iteration0_LeakyRNN_64-64-64_relu-relu-linear\model_month_3
+
+    try:
+        os.makedirs(os.path.dirname(fname), exist_ok=True)
+
+        print("Saving to:", fname)
+        print("Dir to create:", os.path.dirname(fname))
+        print("Exists:", os.path.exists(os.path.dirname(fname)))
+
+        print("model_dir =", model_dir)
+
         with open(fname, 'wb') as f:
             pickle.dump(result, f)
+        print(f"Variance file saved: {fname}")
 
-def _compute_variance(data_dir, model_dir, mode, monthsConsidered, rules=None, random_rotation=False):
+    except OSError as e:
+        if e.errno == errno.EEXIST:
+            print(f"Directory already exists: {fname}")
+        else:
+            print(f"OS Error while saving file: {e}")
+    except Exception as e:
+        print(f"Failed to save variance file {fname}: {e}")
+
+    return fname
+
+def _compute_variance(data_dir, model_dir, layer, mode, monthsConsidered, data_type, rules=None, random_rotation=False):
     """Compute variance for all tasks.
 
     Args:
@@ -194,9 +226,10 @@ def _compute_variance(data_dir, model_dir, mode, monthsConsidered, rules=None, r
     model = Model(model_dir, sigma_rec=0)
     with tf.Session() as sess:
         model.restore()
-        _compute_variance_bymodel(data_dir, model, sess, mode, monthsConsidered, rules, random_rotation)
+        fname = _compute_variance_bymodel(data_dir, model_dir, layer, data_type, model, sess, mode, monthsConsidered, rules, random_rotation)
+        return fname
 
-def compute_variance(data_dir, model_dir, mode, monthsConsidered, rules=None, random_rotation=False):
+def compute_variance(data_dir, model_dir, layer, mode, monthsConsidered, data_type, rules=None, random_rotation=False):
     """Compute variance for all tasks.
 
     Args:
@@ -206,7 +239,9 @@ def compute_variance(data_dir, model_dir, mode, monthsConsidered, rules=None, ra
     """
     dirs = tools.valid_model_dirs(model_dir)
     for d in dirs:
-        _compute_variance(data_dir, d, mode, monthsConsidered, rules, random_rotation)
+        fname = _compute_variance(data_dir, d, layer, mode, monthsConsidered, data_type, rules, random_rotation)
+        return fname
+
 
 if __name__ == '__main__':
     pass
