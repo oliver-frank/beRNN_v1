@@ -10,6 +10,7 @@ from __future__ import division
 
 import os
 import numpy as np
+import matplotlib.pyplot as plt
 # import pickle
 
 import warnings
@@ -239,7 +240,9 @@ class LeakyRNNCell(RNNCell):
                  rng=None,
                  reuse=None,
                  name=None,
-                 mask=None):
+                 mask=None,
+                 participant=None,
+                 machine=None):
         super(LeakyRNNCell, self).__init__(_reuse=reuse, name=name)
 
         # Inputs must be 2-dimensional.
@@ -248,6 +251,7 @@ class LeakyRNNCell(RNNCell):
         self._num_units = num_units
         self._w_rec_init = w_rec_init
         self.mask = mask
+        self.participant = participant
 
         self._reuse = reuse
 
@@ -301,6 +305,33 @@ class LeakyRNNCell(RNNCell):
             w_rec0 = self._w_rec_start * tools.gen_ortho_matrix(n_hidden, rng=self.rng)
         elif self._w_rec_init == 'randgauss':
             w_rec0 = (self._w_rec_start * self.rng.randn(n_hidden, n_hidden) / np.sqrt(n_hidden))
+        elif self._w_rec_init == 'brainStructure':
+            # Define main path
+            if machine == 'local':
+                connectomePath = f'C:\\Users\\oliver.frank\\Desktop\\PyProjects\\art_beRNN\\masks\\connectomes_{participant}'
+            elif machine == 'hitkip':
+                connectomePath = f'/zi/home/oliver.frank/Desktop/RNN/multitask_BeRNN-main/masks/connectomes_{participant}'
+            elif machine == 'pandora':
+                connectomePath = f'/pandora/home/oliver.frank/01_Projects/RNN/multitask_BeRNN-main/masks/connectomes_{participant}'
+
+            # Load right weight matrix
+            connectomePath = f'C:\\Users\\oliver.frank\\Desktop\\PyProjects\\art_beRNN\\masks\\connectomes_beRNN_05'
+            w_rec0 = np.load(os.path.join(connectomePath, f'connectome_beRNN_05_{n_hidden}_sigNorm.npy'))
+
+
+        # # --- Matrix Visualization ---
+        # fig1, ax1 = plt.subplots(figsize=(8, 8))
+        # im = ax1.imshow(w_rec0, cmap='coolwarm')
+        # plt.colorbar(im, ax=ax1)
+        # ax1.set_title("Visualization of w_rec0")
+        # plt.show()
+        #
+        # # --- Histogram ---
+        # fig2, ax2 = plt.subplots(figsize=(8, 8))
+        # ax2.hist(w_rec0.flatten(), bins=1000)
+        # ax2.set_title("Weight Distribution (300×300 matrix)")
+        # plt.show()
+
 
         matrix0 = np.concatenate((w_in0, w_rec0), axis=0)
 
@@ -826,8 +857,9 @@ class Model(object):
                                     activation=hp['activation'],
                                     w_rec_init=hp['w_rec_init'],
                                     rng=self.rng,
-                                    mask=hp['s_mask'])
-
+                                    mask=hp['s_mask'],
+                                    participant=hp['participant'],
+                                    machine=hp['machine'])
 
             elif hp['rnn_type'] == 'LeakyRNN' and hp.get('multiLayer') == True:
                 # Prepare multi-layer LeakyRNN
@@ -845,7 +877,9 @@ class Model(object):
                             activation=activation,
                             w_rec_init=hp['w_rec_init'],
                             rng=self.rng,
-                            mask=hp['s_mask'] if hp.get('s_mask') is not None else None
+                            mask=hp['s_mask'] if hp.get('s_mask') is not None else None,
+                            participant=hp['participant'],
+                            machine=hp['machine']
                         )
 
                         cell_stack.append(cell_i)

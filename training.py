@@ -45,7 +45,7 @@ def get_default_hp(ruleset):
     machine = 'local' # 'local' 'pandora' 'hitkip'
     data = 'data_highDim_correctOnly_3stimTC' # 'data_highDim' , data_highDim_correctOnly , data_highDim_lowCognition , data_lowDim , data_lowDim_correctOnly , data_lowDim_lowCognition, 'data_highDim_correctOnly_3stimTC'
     trainingBatch = 'XXX'
-    trainingYear_Month = '2025_04_multilayerTest'
+    trainingYear_Month = '2025_04_DWItest_sigNorm'
 
     if 'highDim' in data: # fix: lowDim_timeCompressed needs to be skipped here
         n_eachring = 32
@@ -62,23 +62,23 @@ def get_default_hp(ruleset):
         # 'batch_size_test': 640, # batch_size for testing
         'in_type': 'normal', # input type: normal, multi
         'rnn_type': 'LeakyRNN', # Type of RNNs: NonRecurrent, LeakyRNN, LeakyGRU, EILeakyGRU | GRU, LSTM
-        'multiLayer': True, # only applicaple with LeakyRNN
+        'multiLayer': False, # only applicaple with LeakyRNN
         'n_rnn': 128,  # number of recurrent units for one hidden layer architecture
-        'activation': 'tanh',  # Type of activation runctions, relu, softplus, tanh, elu, linear
+        'activation': 'relu',  # Type of activation runctions, relu, softplus, tanh, elu, linear
         'n_rnn_per_layer': [256, 128, 64],
         'activations_per_layer': ['relu', 'tanh', 'linear'],
         'loss_type': 'lsq', # # Type of loss functions - Cross-entropy loss
         'optimizer': 'adam', # 'adam', 'sgd'
-        'tau': 100, # # Time constant (ms)- default 100
+        'tau': 50, # # Time constant (ms)- default 100
         'dt': 20, # discretization time step (ms) .
         # 'alpha': 0.2, # (redundant) discretization time step/time constant - dt/tau = alpha - ratio decides on how much previous states are taken into account for current state - low alpha more memory, high alpha more forgetting - alpha * h(t-1)
-        'sigma_rec': 0.05, # recurrent noise - directly influencing the noise added to the network
+        'sigma_rec': 0.01, # recurrent noise - directly influencing the noise added to the network
         'sigma_x': 0.01, # input noise
-        'w_rec_init': 'randortho', # leaky_rec weight initialization, diag, randortho, randgauss
-        'l1_h': 5e-5, # l1 lambda (regularizing with absolute value of magnitude of coefficients, leading to sparse features)
-        'l2_h': 5e-5, # l2 lambda (regularizing with squared value of magnitude of coefficients, decreasing influence of features)
+        'w_rec_init': 'brainStructure', # leaky_rec weight initialization, diag, randortho, randgauss, brainStructure (only accessible with LeakyRNN : 32-256)
+        'l1_h': 1e-4, # l1 lambda (regularizing with absolute value of magnitude of coefficients, leading to sparse features)
+        'l2_h': 5e-6, # l2 lambda (regularizing with squared value of magnitude of coefficients, decreasing influence of features)
         'l1_weight': 1e-5, # l2 regularization on weight
-        'l2_weight': 1e-5, # l2 regularization on weight
+        'l2_weight': 1e-4, # l2 regularization on weight
         'l2_weight_init': 0, # l2 regularization on deviation from initialization
         'p_weight_train': None, # proportion of weights not to be regularized, None or float between (0, 1) - 1-p_weight_train will be multiplied by w_mask_value
         'w_mask_value': 0.1, # default .1 - value that will be multiplied with L2 regularization (combined with p_weight_train), <1 will decrease it
@@ -92,12 +92,12 @@ def get_default_hp(ruleset):
         'rng': np.random.default_rng(), # np.random.RandomState(seed=0), random number used for several random initializations
         'ruleset': ruleset, # number of input units
         'save_name': 'test', # name to save
-        'learning_rate': 0.001, # learning rate
+        'learning_rate': 0.0015, # learning rate
         'learning_rate_mode': None, # Will overwrite learning_rate if it is not None - 'triangular', 'triangular2', 'exp_range', 'decay'
         'base_lr': [1e-5],
         'max_lr': [1e-3],
         'c_mask_responseValue': 5., # c_mask response epoch value - strenght response epoch is taken into account for error calculation
-        's_mask': None, # 'sc1000', None
+        's_mask': None, # 'sc1000', None - info: only accesible on local machine
         'rule_probs': None, # Rule probabilities to be drawn
         'use_separate_input': False,  # whether rule and stimulus inputs are represented separately
         # 'c_intsyn': 0, # intelligent synapses parameters, tuple (c, ksi) -> Yang et al. only apply these in sequential training
@@ -108,7 +108,7 @@ def get_default_hp(ruleset):
         'rule_prob_map': {"DM": 1,"DM_Anti": 1,"EF": 1,"EF_Anti": 1,"RP": 1,"RP_Anti": 1,"RP_Ctx1": 1,"RP_Ctx2": 1,"WM": 1,"WM_Anti": 1,"WM_Ctx1": 1,"WM_Ctx2": 1}, # fraction of tasks represented in training data
         'tasksString': 'Alltask', # tasks taken
         'sequenceMode': True, # Decide if models are trained sequentially month-wise
-        'participant': 'beRNN_03', # Participant to take
+        'participant': 'beRNN_05', # Participant to take
         'data': data, # 'data_highDim' , data_highDim_correctOnly , data_highDim_lowCognition , data_lowDim , data_lowDim_correctOnly , data_lowDim_lowCognition, data_timeCompressed, data_lowDim_timeCompressed
         'machine': machine,
         'trainingBatch': trainingBatch,
@@ -536,24 +536,24 @@ if __name__ == '__main__':
                     numberOfLayers = len(hp['n_rnn_per_layer'])
                     if numberOfLayers == 2:
                         model_dir = os.path.join(
-                            f"{path}\\beRNNmodels\\{hp['trainingYear_Month']}\\{hp['trainingBatch']}\\{hp['participant']}_{hp['tasksString']}_{hp['monthsString']}_{hp['data']}_iteration{modelNumber}_{hp['rnn_type']}_{hp['n_rnn_per_layer'][0]}-{hp['n_rnn_per_layer'][1]}_{hp['activations_per_layer'][0]}-{hp['activations_per_layer'][1]}",model_name)
+                            f"{path}\\beRNNmodels\\{hp['trainingYear_Month']}\\{hp['trainingBatch']}\\{hp['participant']}_{hp['tasksString']}_{hp['monthsString']}_{hp['data']}_iteration{modelNumber}_{hp['rnn_type']}_{hp['w_rec_init']}_{hp['n_rnn_per_layer'][0]}-{hp['n_rnn_per_layer'][1]}_{hp['activations_per_layer'][0]}-{hp['activations_per_layer'][1]}",model_name)
                     else:
-                        model_dir = os.path.join(f"{path}\\beRNNmodels\\{hp['trainingYear_Month']}\\{hp['trainingBatch']}\\{hp['participant']}_{hp['tasksString']}_{hp['monthsString']}_{hp['data']}_iteration{modelNumber}_{hp['rnn_type']}_{hp['n_rnn_per_layer'][0]}-{hp['n_rnn_per_layer'][1]}-{hp['n_rnn_per_layer'][2]}_{hp['activations_per_layer'][0]}-{hp['activations_per_layer'][1]}-{hp['activations_per_layer'][2]}", model_name)
+                        model_dir = os.path.join(f"{path}\\beRNNmodels\\{hp['trainingYear_Month']}\\{hp['trainingBatch']}\\{hp['participant']}_{hp['tasksString']}_{hp['monthsString']}_{hp['data']}_iteration{modelNumber}_{hp['rnn_type']}_{hp['w_rec_init']}_{hp['n_rnn_per_layer'][0]}-{hp['n_rnn_per_layer'][1]}-{hp['n_rnn_per_layer'][2]}_{hp['activations_per_layer'][0]}-{hp['activations_per_layer'][1]}-{hp['activations_per_layer'][2]}", model_name)
                 else:
-                    model_dir = os.path.join(f"{path}\\beRNNmodels\\{hp['trainingYear_Month']}\\{hp['trainingBatch']}\\{hp['participant']}_{hp['tasksString']}_{hp['monthsString']}_{hp['data']}_iteration{modelNumber}_{hp['rnn_type']}_{hp['n_rnn']}_{hp['activation']}",model_name)
+                    model_dir = os.path.join(f"{path}\\beRNNmodels\\{hp['trainingYear_Month']}\\{hp['trainingBatch']}\\{hp['participant']}_{hp['tasksString']}_{hp['monthsString']}_{hp['data']}_iteration{modelNumber}_{hp['rnn_type']}_{hp['w_rec_init']}_{hp['n_rnn']}_{hp['activation']}",model_name)
 
             elif hp['machine'] == 'hitkip' or hp['machine'] == 'pandora':
                 if hp['multiLayer'] == True:
                     numberOfLayers = len(hp['n_rnn_per_layer'])
                     if numberOfLayers == 2:
                         model_dir = os.path.join(
-                            f"{path}/beRNNmodels/{hp['trainingYear_Month']}/{hp['trainingBatch']}/{hp['participant']}_{hp['tasksString']}_{hp['monthsString']}_{hp['data']}_iteration{modelNumber}_{hp['rnn_type']}_{hp['n_rnn_per_layer'][0]}-{hp['n_rnn_per_layer'][1]}_{hp['activations_per_layer'][0]}-{hp['activations_per_layer'][1]}",model_name)
+                            f"{path}/beRNNmodels/{hp['trainingYear_Month']}/{hp['trainingBatch']}/{hp['participant']}_{hp['tasksString']}_{hp['monthsString']}_{hp['data']}_iteration{modelNumber}_{hp['rnn_type']}_{hp['w_rec_init']}_{hp['n_rnn_per_layer'][0]}-{hp['n_rnn_per_layer'][1]}_{hp['activations_per_layer'][0]}-{hp['activations_per_layer'][1]}",model_name)
                     else:
                         model_dir = os.path.join(
-                            f"{path}/beRNNmodels/{hp['trainingYear_Month']}/{hp['trainingBatch']}/{hp['participant']}_{hp['tasksString']}_{hp['monthsString']}_{hp['data']}_iteration{modelNumber}_{hp['rnn_type']}_{hp['n_rnn_per_layer'][0]}-{hp['n_rnn_per_layer'][1]}-{hp['n_rnn_per_layer'][2]}_{hp['activations_per_layer'][0]}-{hp['activations_per_layer'][1]}-{hp['activations_per_layer'][2]}",model_name)
+                            f"{path}/beRNNmodels/{hp['trainingYear_Month']}/{hp['trainingBatch']}/{hp['participant']}_{hp['tasksString']}_{hp['monthsString']}_{hp['data']}_iteration{modelNumber}_{hp['rnn_type']}_{hp['w_rec_init']}_{hp['n_rnn_per_layer'][0]}-{hp['n_rnn_per_layer'][1]}-{hp['n_rnn_per_layer'][2]}_{hp['activations_per_layer'][0]}-{hp['activations_per_layer'][1]}-{hp['activations_per_layer'][2]}",model_name)
                 else:
                     model_dir = os.path.join(
-                        f"{path}/beRNNmodels/{hp['trainingYear_Month']}/{hp['trainingBatch']}/{hp['participant']}_{hp['tasksString']}_{hp['monthsString']}_{hp['data']}_iteration{modelNumber}_{hp['rnn_type']}_{hp['n_rnn']}_{hp['activation']}",model_name)
+                        f"{path}/beRNNmodels/{hp['trainingYear_Month']}/{hp['trainingBatch']}/{hp['participant']}_{hp['tasksString']}_{hp['monthsString']}_{hp['data']}_iteration{modelNumber}_{hp['rnn_type']}_{hp['w_rec_init']}_{hp['n_rnn']}_{hp['activation']}",model_name)
 
 
             if not os.path.exists(model_dir):
