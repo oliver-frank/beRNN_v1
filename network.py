@@ -321,7 +321,7 @@ class LeakyRNNCell(RNNCell):
 
         # # --- Matrix Visualization ---
         # fig1, ax1 = plt.subplots(figsize=(8, 8))
-        # im = ax1.imshow(w_rec0, cmap='coolwarm')
+        # im = ax1.imshow(w_rec0, cmap='coolwarm', vmin=0, vmax=1)
         # plt.colorbar(im, ax=ax1)
         # ax1.set_title("Visualization of w_rec0")
         # plt.show()

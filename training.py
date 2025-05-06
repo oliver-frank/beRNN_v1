@@ -44,8 +44,8 @@ def get_default_hp(ruleset):
 
     machine = 'local' # 'local' 'pandora' 'hitkip'
     data = 'data_highDim_correctOnly_3stimTC' # 'data_highDim' , data_highDim_correctOnly , data_highDim_lowCognition , data_lowDim , data_lowDim_correctOnly , data_lowDim_lowCognition, 'data_highDim_correctOnly_3stimTC'
-    trainingBatch = 'XXX'
-    trainingYear_Month = '2025_04_DWItest_sigNorm'
+    trainingBatch = '01'
+    trainingYear_Month = '2025_05_DWItest_sigNorm'
 
     if 'highDim' in data: # fix: lowDim_timeCompressed needs to be skipped here
         n_eachring = 32
