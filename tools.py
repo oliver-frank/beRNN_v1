@@ -103,14 +103,15 @@ def load_trials(task,mode,batchSize,data,errorComparison):
                     if key.endswith(task):
                         currenTask_values.extend(values)
                 # Select number of batches according to defined batchSize
-                currentTriplets = random.sample(currenTask_values, numberOfBatches)
-                # base_name = currentTriplets[0][0].split('\\')[-1].split('Input')
+                currentQuartett = random.sample(currenTask_values, numberOfBatches)
+                # base_name = currentQuartett[0][0].split('\\')[-1].split('Input')
                 # print('chosenFile:  ', base_name)
                 # Load the files
                 if numberOfBatches <= 1:
-                    x = np.load(currentTriplets[0][0]) # Input
-                    y = np.load(currentTriplets[0][2]) # Participant Response
-                    y_loc = np.load(currentTriplets[0][1]) # Ground Truth # yLoc
+                    x = np.load(currentQuartett[0][0]) # Input
+                    y = np.load(currentQuartett[0][2]) # Participant Response
+                    y_loc = np.load(currentQuartett[0][1]) # Human Ground Truth
+                    response = np.load(currentQuartett[0][3], allow_pickle=True) # Objective Ground Truth - only needed for training if error balancing is applied
 
                     if batchSize < 40:
                         # randomly choose ratio for part of batch to take
@@ -120,11 +121,13 @@ def load_trials(task,mode,batchSize,data,errorComparison):
                             x = x[:, :batchSize, :]
                             y = y[:, :batchSize, :]
                             y_loc = y_loc[:, :batchSize]
+                            response = response[:, :batchSize]
                         elif choice == 'last':
                             # Select rows for either training
                             x = x[:, 40-batchSize:, :]
                             y = y[:, 40-batchSize:, :]
                             y_loc = y_loc[:, 40-batchSize:]
+                            response = response[:, 40-batchSize:]
                         elif choice == 'middle':
                             # Select the middle batchSize rows
                             mid_start = (x.shape[1] - batchSize) // 2
@@ -132,75 +135,92 @@ def load_trials(task,mode,batchSize,data,errorComparison):
                             x = x[:, mid_start:mid_end, :]
                             y = y[:, mid_start:mid_end, :]
                             y_loc = y_loc[:, mid_start:mid_end]
+                            response = response[:, mid_start:mid_end]
                 elif numberOfBatches == 2:
-                    x_0 = np.load(currentTriplets[0][0])  # Input
-                    y_0 = np.load(currentTriplets[0][2])  # Participant Response
-                    y_loc_0 = np.load(currentTriplets[0][1])  # Ground Truth # yLoc
+                    x_0 = np.load(currentQuartett[0][0])  # Input
+                    y_0 = np.load(currentQuartett[0][2])  # Participant Response
+                    y_loc_0 = np.load(currentQuartett[0][1])  # Ground Truth # yLoc
+                    response_0 = np.load(currentQuartett[0][3], allow_pickle=True)  # Objective Ground Truth - only needed for training if error balancing is applied
 
-                    x_1 = np.load(currentTriplets[1][0])  # Input
-                    y_1 = np.load(currentTriplets[1][2])  # Participant Response
-                    y_loc_1 = np.load(currentTriplets[1][1])  # Ground Truth # yLoc
+                    x_1 = np.load(currentQuartett[1][0])  # Input
+                    y_1 = np.load(currentQuartett[1][2])  # Participant Response
+                    y_loc_1 = np.load(currentQuartett[1][1])  # Ground Truth # yLoc
+                    response_1 = np.load(currentQuartett[0][3], allow_pickle=True)  # Objective Ground Truth - only needed for training if error balancing is applied
 
                     # Decrease first dimension size of batches to the size of the smallest by truncating first fixation epoch rows
                     truncated_arrays_x = truncate_to_smallest([x_0, x_1])
                     truncated_arrays_y = truncate_to_smallest([y_0, y_1])
                     truncated_arrays_y_loc = truncate_to_smallest([y_loc_0, y_loc_1])
+                    truncated_arrays_response = truncate_to_smallest([response_0, response_1])
                     # Concatenate the trauncated batches
                     x = np.concatenate((truncated_arrays_x[0], truncated_arrays_x[1]), axis=1)
                     y = np.concatenate((truncated_arrays_y[0], truncated_arrays_y[1]), axis=1)
                     y_loc = np.concatenate((truncated_arrays_y_loc[0], truncated_arrays_y_loc[1]), axis=1)
+                    response = np.concatenate((truncated_arrays_response[0], truncated_arrays_response[1]), axis=1)
 
                 elif numberOfBatches == 3:
-                    x_0 = np.load(currentTriplets[0][0])  # Input
-                    y_0 = np.load(currentTriplets[0][2])  # Participant Response
-                    y_loc_0 = np.load(currentTriplets[0][1])  # Ground Truth # yLoc
+                    x_0 = np.load(currentQuartett[0][0])  # Input
+                    y_0 = np.load(currentQuartett[0][2])  # Participant Response
+                    y_loc_0 = np.load(currentQuartett[0][1])  # Ground Truth # yLoc
+                    response_0 = np.load(currentQuartett[0][3], allow_pickle=True)  # Objective Ground Truth - only needed for training if error balancing is applied
 
-                    x_1 = np.load(currentTriplets[1][0])  # Input
-                    y_1 = np.load(currentTriplets[1][2])  # Participant Response
-                    y_loc_1 = np.load(currentTriplets[1][1])  # Ground Truth # yLoc
+                    x_1 = np.load(currentQuartett[1][0])  # Input
+                    y_1 = np.load(currentQuartett[1][2])  # Participant Response
+                    y_loc_1 = np.load(currentQuartett[1][1])  # Ground Truth # yLoc
+                    response_1 = np.load(currentQuartett[0][3], allow_pickle=True)  # Objective Ground Truth - only needed for training if error balancing is applied
 
-                    x_2 = np.load(currentTriplets[2][0])  # Input
-                    y_2 = np.load(currentTriplets[2][2])  # Participant Response
-                    y_loc_2 = np.load(currentTriplets[2][1])  # Ground Truth # yLoc
+                    x_2 = np.load(currentQuartett[2][0])  # Input
+                    y_2 = np.load(currentQuartett[2][2])  # Participant Response
+                    y_loc_2 = np.load(currentQuartett[2][1])  # Ground Truth # yLoc
+                    response_2 = np.load(currentQuartett[0][3], allow_pickle=True)  # Objective Ground Truth - only needed for training if error balancing is applied
 
                     # Decrease first dimension size of batches to the size of the smallest by truncating first fixation epoch rows
                     truncated_arrays_x = truncate_to_smallest([x_0, x_1, x_2])
                     truncated_arrays_y = truncate_to_smallest([y_0, y_1, y_2])
                     truncated_arrays_y_loc = truncate_to_smallest([y_loc_0, y_loc_1, y_loc_2])
+                    truncated_arrays_response = truncate_to_smallest([response_0, response_1, response_2])
                     # Concatenate the trauncated batches
                     x = np.concatenate((truncated_arrays_x[0], truncated_arrays_x[1], truncated_arrays_x[2]), axis=1)
                     y = np.concatenate((truncated_arrays_y[0], truncated_arrays_y[1], truncated_arrays_y[2]), axis=1)
                     y_loc = np.concatenate((truncated_arrays_y_loc[0], truncated_arrays_y_loc[1], truncated_arrays_y_loc[2]), axis=1)
+                    response = np.concatenate((truncated_arrays_response[0], truncated_arrays_response[1], truncated_arrays_response[2]), axis=1)
 
                 elif numberOfBatches == 4:
-                    x_0 = np.load(currentTriplets[0][0])  # Input
-                    y_0 = np.load(currentTriplets[0][2])  # Participant Response
-                    y_loc_0 = np.load(currentTriplets[0][1])  # Ground Truth # yLoc
+                    x_0 = np.load(currentQuartett[0][0])  # Input
+                    y_0 = np.load(currentQuartett[0][2])  # Participant Response
+                    y_loc_0 = np.load(currentQuartett[0][1])  # Ground Truth # yLoc
+                    response_0 = np.load(currentQuartett[0][3], allow_pickle=True)  # Objective Ground Truth - only needed for training if error balancing is applied
 
-                    x_1 = np.load(currentTriplets[1][0])  # Input
-                    y_1 = np.load(currentTriplets[1][2])  # Participant Response
-                    y_loc_1 = np.load(currentTriplets[1][1])  # Ground Truth # yLoc
+                    x_1 = np.load(currentQuartett[1][0])  # Input
+                    y_1 = np.load(currentQuartett[1][2])  # Participant Response
+                    y_loc_1 = np.load(currentQuartett[1][1])  # Ground Truth # yLoc
+                    response_1 = np.load(currentQuartett[0][3], allow_pickle=True)  # Objective Ground Truth - only needed for training if error balancing is applied
 
-                    x_2 = np.load(currentTriplets[2][0])  # Input
-                    y_2 = np.load(currentTriplets[2][2])  # Participant Response
-                    y_loc_2 = np.load(currentTriplets[2][1])  # Ground Truth # yLoc
+                    x_2 = np.load(currentQuartett[2][0])  # Input
+                    y_2 = np.load(currentQuartett[2][2])  # Participant Response
+                    y_loc_2 = np.load(currentQuartett[2][1])  # Ground Truth # yLoc
+                    response_2 = np.load(currentQuartett[0][3], allow_pickle=True)  # Objective Ground Truth - only needed for training if error balancing is applied
 
-                    x_3 = np.load(currentTriplets[3][0])  # Input
-                    y_3 = np.load(currentTriplets[3][2])  # Participant Response
-                    y_loc_3 = np.load(currentTriplets[3][1])  # Ground Truth # yLoc
+                    x_3 = np.load(currentQuartett[3][0])  # Input
+                    y_3 = np.load(currentQuartett[3][2])  # Participant Response
+                    y_loc_3 = np.load(currentQuartett[3][1])  # Ground Truth # yLoc
+                    response_3 = np.load(currentQuartett[0][3], allow_pickle=True)  # Objective Ground Truth - only needed for training if error balancing is applied
 
                     # Decrease first dimension size of batches to the size of the smallest by truncating first fixation epoch rows
                     truncated_arrays_x = truncate_to_smallest([x_0, x_1, x_2, x_3])
                     truncated_arrays_y = truncate_to_smallest([y_0, y_1, y_2, y_3])
                     truncated_arrays_y_loc = truncate_to_smallest([y_loc_0, y_loc_1, y_loc_2, y_loc_3])
+                    truncated_arrays_response = truncate_to_smallest([response_0, response_1, response_2, response_3])
                     # Concatenate the trauncated batches
                     x = np.concatenate((truncated_arrays_x[0], truncated_arrays_x[1], truncated_arrays_x[2], truncated_arrays_x[3]), axis=1)
                     y = np.concatenate((truncated_arrays_y[0], truncated_arrays_y[1], truncated_arrays_y[2], truncated_arrays_y[3]), axis=1)
                     y_loc = np.concatenate((truncated_arrays_y_loc[0], truncated_arrays_y_loc[1], truncated_arrays_y_loc[2], truncated_arrays_y_loc[3]), axis=1)
+                    response = np.concatenate((truncated_arrays_response[0], truncated_arrays_response[1], truncated_arrays_response[2], truncated_arrays_response[3]), axis=1)
                 else:
                     raise ValueError(f"batchSize {batchSize} is not valid")
 
             elif mode == 'test':
+                response = [] # only needed for training if error balancing is applied
                 # Choose the triplet from the splitted data
                 if errorComparison == False:
                     currenTask_values = []
@@ -208,21 +228,21 @@ def load_trials(task,mode,batchSize,data,errorComparison):
                         if key.endswith(task):
                             currenTask_values.extend(values)
                     if len(currenTask_values) < numberOfBatches: # info: In case there is not enough data to create batches with trials > 40
-                        currentTriplets = []
+                        currentQuartett = []
                         for i in range(numberOfBatches):
-                            currentTriplet = random.sample(currenTask_values, 1)
-                            currentTriplets.append(currentTriplet[0])
+                            currentQuartett = random.sample(currenTask_values, 1)
+                            currentQuartett.append(currentQuartett[0])
                     else:
-                        currentTriplets = random.sample(currenTask_values, numberOfBatches)
+                        currentQuartett = random.sample(currenTask_values, numberOfBatches)
                 elif errorComparison == True:
-                    currentTriplets = random.sample(data, numberOfBatches) # info: for errorComparison.py
-                    base_name = currentTriplets[0][0].split('Input')[0]
+                    currentQuartett = random.sample(data, numberOfBatches) # info: for errorComparison.py
+                    base_name = currentQuartett[0][0].split('Input')[0]
                     # print('chosenFile:  ', base_name)
                 # Load the files
                 if numberOfBatches <= 1:
-                    x = np.load(currentTriplets[0][0])  # Input
-                    y = np.load(currentTriplets[0][2])  # Participant Response
-                    y_loc = np.load(currentTriplets[0][1])  # Ground Truth # yLoc
+                    x = np.load(currentQuartett[0][0])  # Input
+                    y = np.load(currentQuartett[0][2])  # Participant Response
+                    y_loc = np.load(currentQuartett[0][1])  # Ground Truth # yLoc
                     if batchSize < 40:
                         # randomly choose ratio for part of batch to take
                         choice = np.random.sample(['first', 'last', 'middle'])
@@ -244,13 +264,13 @@ def load_trials(task,mode,batchSize,data,errorComparison):
                             y = y[:, mid_start:mid_end, :]
                             y_loc = y_loc[:, mid_start:mid_end]
                 elif numberOfBatches == 2:
-                    x_0 = np.load(currentTriplets[0][0])  # Input
-                    y_0 = np.load(currentTriplets[0][2])  # Participant Response
-                    y_loc_0 = np.load(currentTriplets[0][1])  # Ground Truth # yLoc
+                    x_0 = np.load(currentQuartett[0][0])  # Input
+                    y_0 = np.load(currentQuartett[0][2])  # Participant Response
+                    y_loc_0 = np.load(currentQuartett[0][1])  # Ground Truth # yLoc
 
-                    x_1 = np.load(currentTriplets[1][0])  # Input
-                    y_1 = np.load(currentTriplets[1][2])  # Participant Response
-                    y_loc_1 = np.load(currentTriplets[1][1])  # Ground Truth # yLoc
+                    x_1 = np.load(currentQuartett[1][0])  # Input
+                    y_1 = np.load(currentQuartett[1][2])  # Participant Response
+                    y_loc_1 = np.load(currentQuartett[1][1])  # Ground Truth # yLoc
 
                     # Decrease first dimension size of batches to the size of the smallest by truncating first fixation epoch rows
                     truncated_arrays_x = truncate_to_smallest([x_0, x_1])
@@ -262,17 +282,17 @@ def load_trials(task,mode,batchSize,data,errorComparison):
                     y_loc = np.concatenate((truncated_arrays_y_loc[0], truncated_arrays_y_loc[1]), axis=1)
 
                 elif numberOfBatches == 3:
-                    x_0 = np.load(currentTriplets[0][0])  # Input
-                    y_0 = np.load(currentTriplets[0][2])  # Participant Response
-                    y_loc_0 = np.load(currentTriplets[0][1])  # Ground Truth # yLoc
+                    x_0 = np.load(currentQuartett[0][0])  # Input
+                    y_0 = np.load(currentQuartett[0][2])  # Participant Response
+                    y_loc_0 = np.load(currentQuartett[0][1])  # Ground Truth # yLoc
 
-                    x_1 = np.load(currentTriplets[1][0])  # Input
-                    y_1 = np.load(currentTriplets[1][2])  # Participant Response
-                    y_loc_1 = np.load(currentTriplets[1][1])  # Ground Truth # yLoc
+                    x_1 = np.load(currentQuartett[1][0])  # Input
+                    y_1 = np.load(currentQuartett[1][2])  # Participant Response
+                    y_loc_1 = np.load(currentQuartett[1][1])  # Ground Truth # yLoc
 
-                    x_2 = np.load(currentTriplets[2][0])  # Input
-                    y_2 = np.load(currentTriplets[2][2])  # Participant Response
-                    y_loc_2 = np.load(currentTriplets[2][1])  # Ground Truth # yLoc
+                    x_2 = np.load(currentQuartett[2][0])  # Input
+                    y_2 = np.load(currentQuartett[2][2])  # Participant Response
+                    y_loc_2 = np.load(currentQuartett[2][1])  # Ground Truth # yLoc
 
                     # Decrease first dimension size of batches to the size of the smallest by truncating first fixation epoch rows
                     truncated_arrays_x = truncate_to_smallest([x_0, x_1, x_2])
@@ -285,21 +305,21 @@ def load_trials(task,mode,batchSize,data,errorComparison):
                         (truncated_arrays_y_loc[0], truncated_arrays_y_loc[1], truncated_arrays_y_loc[2]), axis=1)
 
                 elif numberOfBatches == 4:
-                    x_0 = np.load(currentTriplets[0][0])  # Input
-                    y_0 = np.load(currentTriplets[0][2])  # Participant Response
-                    y_loc_0 = np.load(currentTriplets[0][1])  # Ground Truth # yLoc
+                    x_0 = np.load(currentQuartett[0][0])  # Input
+                    y_0 = np.load(currentQuartett[0][2])  # Participant Response
+                    y_loc_0 = np.load(currentQuartett[0][1])  # Ground Truth # yLoc
 
-                    x_1 = np.load(currentTriplets[1][0])  # Input
-                    y_1 = np.load(currentTriplets[1][2])  # Participant Response
-                    y_loc_1 = np.load(currentTriplets[1][1])  # Ground Truth # yLoc
+                    x_1 = np.load(currentQuartett[1][0])  # Input
+                    y_1 = np.load(currentQuartett[1][2])  # Participant Response
+                    y_loc_1 = np.load(currentQuartett[1][1])  # Ground Truth # yLoc
 
-                    x_2 = np.load(currentTriplets[2][0])  # Input
-                    y_2 = np.load(currentTriplets[2][2])  # Participant Response
-                    y_loc_2 = np.load(currentTriplets[2][1])  # Ground Truth # yLoc
+                    x_2 = np.load(currentQuartett[2][0])  # Input
+                    y_2 = np.load(currentQuartett[2][2])  # Participant Response
+                    y_loc_2 = np.load(currentQuartett[2][1])  # Ground Truth # yLoc
 
-                    x_3 = np.load(currentTriplets[3][0])  # Input
-                    y_3 = np.load(currentTriplets[3][2])  # Participant Response
-                    y_loc_3 = np.load(currentTriplets[3][1])  # Ground Truth # yLoc
+                    x_3 = np.load(currentQuartett[3][0])  # Input
+                    y_3 = np.load(currentQuartett[3][2])  # Participant Response
+                    y_loc_3 = np.load(currentQuartett[3][1])  # Ground Truth # yLoc
 
                     # Decrease first dimension size of batches to the size of the smallest by truncating first fixation epoch rows
                     truncated_arrays_x = truncate_to_smallest([x_0, x_1, x_2, x_3])
@@ -322,7 +342,7 @@ def load_trials(task,mode,batchSize,data,errorComparison):
                         for trial in range(0,x.shape[1]):
                             x[timeStep,trial,:] = x[timeStep,trial,:] * 2
 
-                return x,y,y_loc
+                return x,y,y_loc,response
         except Exception as e:
             print(f"An error occurred: {e}. Retrying...")
             attempt += 1

@@ -43,9 +43,9 @@ def get_default_hp(ruleset):
     n_rule = tools.get_num_rule(ruleset)
 
     machine = 'local' # 'local' 'pandora' 'hitkip'
-    data = 'data_highDim_correctOnly_3stimTC' # 'data_highDim' , data_highDim_correctOnly , data_highDim_lowCognition , data_lowDim , data_lowDim_correctOnly , data_lowDim_lowCognition, 'data_highDim_correctOnly_3stimTC'
-    trainingBatch = '01'
-    trainingYear_Month = '2025_05_DWItest_sigNorm'
+    data = 'data_highDim' # 'data_highDim' , data_highDim_correctOnly , data_highDim_lowCognition , data_lowDim , data_lowDim_correctOnly , data_lowDim_lowCognition, 'data_highDim_correctOnly_3stimTC'
+    trainingBatch = '02_errorUnbalanced'
+    trainingYear_Month = 'errorBalancingTest'
 
     if 'highDim' in data: # fix: lowDim_timeCompressed needs to be skipped here
         n_eachring = 32
@@ -74,7 +74,7 @@ def get_default_hp(ruleset):
         # 'alpha': 0.2, # (redundant) discretization time step/time constant - dt/tau = alpha - ratio decides on how much previous states are taken into account for current state - low alpha more memory, high alpha more forgetting - alpha * h(t-1)
         'sigma_rec': 0.01, # recurrent noise - directly influencing the noise added to the network
         'sigma_x': 0.01, # input noise
-        'w_rec_init': 'brainStructure', # leaky_rec weight initialization, diag, randortho, randgauss, brainStructure (only accessible with LeakyRNN : 32-256)
+        'w_rec_init': 'randortho', # leaky_rec weight initialization, diag, randortho, randgauss, brainStructure (only accessible with LeakyRNN : 32-256)
         'l1_h': 1e-4, # l1 lambda (regularizing with absolute value of magnitude of coefficients, leading to sparse features)
         'l2_h': 5e-6, # l2 lambda (regularizing with squared value of magnitude of coefficients, decreasing influence of features)
         'l1_weight': 1e-5, # l2 regularization on weight
@@ -96,6 +96,7 @@ def get_default_hp(ruleset):
         'learning_rate_mode': None, # Will overwrite learning_rate if it is not None - 'triangular', 'triangular2', 'exp_range', 'decay'
         'base_lr': [1e-5],
         'max_lr': [1e-3],
+        'errorBalancingValue': 1., # will be multiplied with c_mask_responseValue for objective error trials - 1. means no difference between errors and corrects are made
         'c_mask_responseValue': 5., # c_mask response epoch value - strenght response epoch is taken into account for error calculation
         's_mask': None, # 'sc1000', None - info: only accesible on local machine
         'rule_probs': None, # Rule probabilities to be drawn
@@ -154,7 +155,7 @@ def do_eval(sess, model, log, rule_train, eval_data):
 
         for i_rep in range(n_rep):
             try:
-                x,y,y_loc = tools.load_trials(task, mode, hp['batch_size'], eval_data, False)  # y_loc is participantResponse_perfEvalForm
+                x,y,y_loc,response = tools.load_trials(task, mode, hp['batch_size'], eval_data, False)  # y_loc is participantResponse_perfEvalForm
 
                 # info: ################################################################################################
                 fixation_steps = tools.getEpochSteps(y)
@@ -423,7 +424,7 @@ def train(model_dir,train_data ,eval_data,hp=None,max_steps=3e6,display_step=500
                 task = hp['rng'].choice(hp['rule_trains'], p=hp['rule_probs'])
                 # Generate a random batch of trials; each batch has the same trial length
                 mode = 'train'
-                x,y,y_loc = tools.load_trials(task,mode,hp['batch_size'], train_data, False) # y_loc is participantResponse_perfEvalForm
+                x,y,y_loc,response = tools.load_trials(task,mode,hp['batch_size'], train_data, False) # y_loc is participantResponse_perfEvalForm
 
                 # info: ################################################################################################
                 fixation_steps = tools.getEpochSteps(y)
@@ -432,15 +433,25 @@ def train(model_dir,train_data ,eval_data,hp=None,max_steps=3e6,display_step=500
                 # Creat c_mask for current batch
                 if hp['loss_type'] == 'lsq':
                     c_mask = np.zeros((y.shape[0], y.shape[1], y.shape[2]), dtype='float32')
+
+                    # fix: Create a c_mask that emphasizes errors by multiplying the error contribution for backProp by 5. and corrects by 1.
+                    errorBalancingVector = np.zeros(response.shape[1], dtype='float32')
+                    for j in range(response.shape[1]):
+                        if response[0][j] == response[1][j]:
+                            errorBalancingVector[j] = 1. # weight value for corrects
+                        else:
+                            errorBalancingVector[j] = hp['errorBalancingValue']
+
                     for i in range(y.shape[1]):
                         # Fixation epoch
                         c_mask[:fixation_steps, i, :] = 1.
                         # Response epoch
-                        c_mask[fixation_steps:, i, :] = hp['c_mask_responseValue'] # info: 1 or 5
+                        c_mask[fixation_steps:, i, :] = hp['c_mask_responseValue'] * errorBalancingVector[i] # info: 1 or 5
 
                     # self.c_mask[:, :, 0] *= self.n_eachring # Fixation is important
                     # c_mask[:, :, 0] *= 2.  # Fixation is important # info: with or without
                     c_mask = c_mask.reshape((y.shape[0]*y.shape[1], y.shape[2]))
+                    c_mask /= np.mean(c_mask)
 
                 else:
                     c_mask = np.zeros((y.shape[0], y.shape[1]), dtype='float32')
@@ -569,7 +580,7 @@ if __name__ == '__main__':
 
             for subdir in subdirs:
                 # Collect all file triplets in the current subdirectory
-                file_triplets = []
+                file_quartett = []
                 for file in os.listdir(subdir):
                     if file.endswith('Input.npy'):
                         # # III: Exclude files with specific substrings in their names
@@ -583,10 +594,12 @@ if __name__ == '__main__':
                         input_file = os.path.join(subdir, base_name + 'Input.npy')
                         yloc_file = os.path.join(subdir, base_name + 'yLoc.npy')
                         output_file = os.path.join(subdir, base_name + 'Output.npy')
-                        file_triplets.append((input_file, yloc_file, output_file))
+                        response_file = os.path.join(subdir, base_name + 'Response.npy')
+
+                        file_quartett.append((input_file, yloc_file, output_file, response_file))
 
                 # Split the file triplets
-                train_files, eval_files = split_files(file_triplets)
+                train_files, eval_files = split_files(file_quartett)
 
                 # Store the results in the dictionaries
                 train_data[subdir] = train_files

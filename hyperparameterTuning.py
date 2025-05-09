@@ -107,6 +107,7 @@ print("Loaded Parameters:", adjParams)
 #     'multiLayer': [True],
 #     'n_rnn_per_layer': [[256, 256, 256], [256, 128, 128], [256, 128, 64], [128, 128, 128], [128, 64, 64], [128, 64, 32], [64, 64, 64]],
 #     'activations_per_layer': [['relu', 'tanh', 'linear'], ['relu', 'relu', 'relu'], ['tanh', 'tanh', 'tanh'], ['softplus', 'softplus', 'softplus'], ['relu', 'relu', 'linear'], ['tanh', 'tanh', 'linear'], ['softplus', 'softplus', 'linear']],
+#     'errorBalancingValue': 2.,
 #     'c_mask_responseValue': [5., 3., 1.],
 #     's_mask': 'sc1000', # 'sc1000', None
 #     'monthsConsidered': [['month_3', 'month_4', 'month_5']], # list of lists

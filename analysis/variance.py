@@ -81,7 +81,7 @@ def _compute_variance_bymodel(data_dir, model_dir, layer, data_type, model: obje
 
     for subdir in subdirs:
         # Collect all file triplets in the current subdirectory
-        file_triplets = []
+        file_quartett = []
         for file in os.listdir(subdir):
             if file.endswith('Input.npy'):
                 # # III: Exclude files with specific substrings in their names
@@ -91,14 +91,15 @@ def _compute_variance_bymodel(data_dir, model_dir, layer, data_type, model: obje
                 if not any(month in file for month in monthsConsidered):
                     continue
                 base_name = file.split('Input')[0]
-                # print(base_name)
                 input_file = os.path.join(subdir, base_name + 'Input.npy')
                 yloc_file = os.path.join(subdir, base_name + 'yLoc.npy')
                 output_file = os.path.join(subdir, base_name + 'Output.npy')
-                file_triplets.append((input_file, yloc_file, output_file))
+                response_file = os.path.join(subdir, base_name + 'Response.npy')
+
+                file_quartett.append((input_file, yloc_file, output_file, response_file))
 
         # Split the file triplets
-        train_files, eval_files = split_files(file_triplets)
+        train_files, eval_files = split_files(file_quartett)
 
         # Store the results in the dictionaries
         train_data[subdir] = train_files
@@ -110,7 +111,7 @@ def _compute_variance_bymodel(data_dir, model_dir, layer, data_type, model: obje
             data = train_data
         elif mode == 'test':
             data = eval_data
-        x, y, y_loc = tools.load_trials(task, mode, hp['batch_size'], data, False)
+        x, y, y_loc, response = tools.load_trials(task, mode, hp['batch_size'], data, False)
         epochs = tools.find_epochs(x)
 
         # info: ################################################################################################
@@ -128,6 +129,7 @@ def _compute_variance_bymodel(data_dir, model_dir, layer, data_type, model: obje
             # self.c_mask[:, :, 0] *= self.n_eachring # Fixation is important
             c_mask[:, :, 0] *= 2.  # Fixation is important
             c_mask = c_mask.reshape((y.shape[0] * y.shape[1], y.shape[2]))
+            c_mask /= c_mask.mean()
 
         else:
             c_mask = np.zeros((y.shape[0], y.shape[1]), dtype='float32')

@@ -518,8 +518,8 @@ def figureSceletton(model_column_widths):
     return fig, axs
 
 # Paths and settings
-participant = 'beRNN_05' # subfolder with model iterations
-trainingNumber = '\\2025_04_DWItest_sigNorm\\XXX'
+participant = 'beRNN_03' # subfolder with model iterations
+trainingNumber = '\\2025_04_multiLayerHpGridSearch03\\26'
 folder = '\\beRNNmodels'
 folderPath = 'C:\\Users\\oliver.frank\\Desktop\\PyProjects'
 _finalPath = folderPath + folder + trainingNumber # attention
