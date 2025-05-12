@@ -44,87 +44,87 @@ def create_repeated_param_combinations(param_grid, sample_size):
     return repeated_combinations
 
 
-# attention: hitkip cluster ############################################################################################
-# If script executed on hitkip cluster, HPs have to be defined in sbatch_HPscript.sbatch
-parser = argparse.ArgumentParser(description="Train RNN with specific parameters.")
-parser.add_argument("--adjParams", type=str, required=True, help="JSON-encoded parameters")
-args = parser.parse_args()
-
-try:
-    adjParams = json.loads(args.adjParams)
-except json.JSONDecodeError as e:
-    raise ValueError(f"Failed to decode adjParams JSON: {e}")
-
-print("Loaded Parameters:", adjParams)
-# attention: hitkip cluster ############################################################################################
-
-
-# # attention: all other setups ##########################################################################################
-# # Get input and output dimension for network, depending on higDim and lowDim data and ruleset (standard: 'all')
-# num_ring = tools.get_num_ring('all')
-# n_rule = tools.get_num_rule('all')
-# # Choose right dataset
-# data = ['data_lowDim_correctOnly'] # 'data_highDim' , data_highDim_correctOnly , data_highDim_lowCognition , data_lowDim , data_lowDim_correctOnly , data_lowDim_lowCognition
+# # attention: hitkip cluster ############################################################################################
+# # If script executed on hitkip cluster, HPs have to be defined in sbatch_HPscript.sbatch
+# parser = argparse.ArgumentParser(description="Train RNN with specific parameters.")
+# parser.add_argument("--adjParams", type=str, required=True, help="JSON-encoded parameters")
+# args = parser.parse_args()
 #
-# if 'highDim' in data[0]:
-#     n_eachring = 32
-#     n_outputring = n_eachring
-#     n_input, n_output = 1 + num_ring * n_eachring + n_rule, n_outputring + 1
-# else:
-#     n_eachring = 10
-#     n_outputring = 2
-#     n_input, n_output = 1 + num_ring * n_eachring + n_rule, n_outputring + 1
+# try:
+#     adjParams = json.loads(args.adjParams)
+# except json.JSONDecodeError as e:
+#     raise ValueError(f"Failed to decode adjParams JSON: {e}")
 #
-# # Info: After first HPs the most probable space inheriting the best solution decreased to the following
-# adjParams = {
-#     'batch_size': [80],
-#     'in_type': ['normal'],
-#     'rnn_type': ['LeakyRNN'], # 'LeakyGRU'
-#     'n_input': [n_input], # number of input units
-#     'n_output': [n_output], # number of output units
-#     'use_separate_input': [False],
-#     'loss_type': ['lsq'],
-#     'optimizer': ['adam'], # 'sgd'
-#     'activation': ['relu'], # 'elu', 'tanh', 'softplus'
-#     'tau': [100, 200], # Decides how fast previous information decays to calculate current state activity
-#     'dt': [10, 20],
-#     # 'alpha': 0.2,
-#     'sigma_rec': [0.01, 0.03, 0.05],
-#     'sigma_x': [0, 0.01],
-#     'w_rec_init': ['randortho', 'diag', 'randgauss'],
-#     'l1_h': [0, 0.00001, 0.00005, 0.0001],
-#     'l2_h': [0, 0.00001, 0.00005, 0.0001],
-#     'l1_weight': [0, 0.00001, 0.00005, 0.0001],
-#     'l2_weight': [0, 0.00001, 0.00005, 0.0001],
-#     'l2_weight_init': [0],
-#     'p_weight_train': [None, 0.05, 0.1],
-#     'w_mask_value': [0.1], # default .1 - value that will be multiplied with L2 regularization (combined with p_weight_train), <1 will decrease it
-#     'learning_rate': [0.001, 0.0005],
-#     'learning_rate_mode': [None, 'triangular', 'triangular2', 'exp_range'], # Will overwrite learning_rate if it is not None - 'triangular', 'triangular2', 'exp_range'
-#     'base_lr': [0.0005],
-#     'max_lr': [0.001],
-#     'n_rnn': [64, 128, 256],
-#     'multiLayer': [True],
-#     'n_rnn_per_layer': [[256, 256, 256], [256, 128, 128], [256, 128, 64], [128, 128, 128], [128, 64, 64], [128, 64, 32], [64, 64, 64]],
-#     'activations_per_layer': [['relu', 'tanh', 'linear'], ['relu', 'relu', 'relu'], ['tanh', 'tanh', 'tanh'], ['softplus', 'softplus', 'softplus'], ['relu', 'relu', 'linear'], ['tanh', 'tanh', 'linear'], ['softplus', 'softplus', 'linear']],
-#     'errorBalancingValue': 2.,
-#     'c_mask_responseValue': [5., 3., 1.],
-#     's_mask': 'sc1000', # 'sc1000', None
-#     'monthsConsidered': [['month_3', 'month_4', 'month_5']], # list of lists
-#     'monthsString': ['3-5'],
-#     # 'rule_prob_map': {"DM": 1,"DM_Anti": 1,"EF": 1,"EF_Anti": 1,"RP": 1,"RP_Anti": 1,"RP_Ctx1": 1,"RP_Ctx2": 1,"WM": 1,"WM_Anti": 1,"WM_Ctx1": 1,"WM_Ctx2": 1}
-#     'rule_prob_map': [{"DM": 1,"DM_Anti": 1,"EF": 1,"EF_Anti": 1,"RP": 1,"RP_Anti": 1,"RP_Ctx1": 1,"RP_Ctx2": 1,"WM": 1,"WM_Anti": 1,"WM_Ctx1": 1,"WM_Ctx2": 1}], # fraction of tasks represented in training data
-#     'participant': ['beRNN_03'], # Participant to take
-#     'data': data,
-#     'machine': ['local'], # 'local' 'pandora' 'hitkip'
-#     'tasksString': ['AllTask'], # tasksTaken
-#     'sequenceMode': [True], # Decide if models are trained sequentially month-wise
-#     'trainingBatch': ['01'],
-#     'trainingYear_Month': ['2025_XXX']
-# }
-# # attention: all other setups ##########################################################################################
+# print("Loaded Parameters:", adjParams)
+# # attention: hitkip cluster ############################################################################################
 
-# Randomly sample combinations
+
+# attention: all other setups ##########################################################################################
+# Get input and output dimension for network, depending on higDim and lowDim data and ruleset (standard: 'all')
+num_ring = tools.get_num_ring('all')
+n_rule = tools.get_num_rule('all')
+# Choose right dataset
+data = ['data_lowDim_correctOnly'] # 'data_highDim' , data_highDim_correctOnly , data_highDim_lowCognition , data_lowDim , data_lowDim_correctOnly , data_lowDim_lowCognition
+
+if 'highDim' in data[0]:
+    n_eachring = 32
+    n_outputring = n_eachring
+    n_input, n_output = 1 + num_ring * n_eachring + n_rule, n_outputring + 1
+else:
+    n_eachring = 10
+    n_outputring = 2
+    n_input, n_output = 1 + num_ring * n_eachring + n_rule, n_outputring + 1
+
+# Info: After first HPs the most probable space inheriting the best solution decreased to the following
+adjParams = {
+    'batch_size': [80],
+    'in_type': ['normal'],
+    'rnn_type': ['LeakyRNN'], # 'LeakyGRU'
+    'n_input': [n_input], # number of input units
+    'n_output': [n_output], # number of output units
+    'use_separate_input': [False],
+    'loss_type': ['lsq'],
+    'optimizer': ['adam'], # 'sgd'
+    'activation': ['relu'], # 'elu', 'tanh', 'softplus'
+    'tau': [100, 200], # Decides how fast previous information decays to calculate current state activity
+    'dt': [10, 20],
+    # 'alpha': 0.2,
+    'sigma_rec': [0.01, 0.03, 0.05],
+    'sigma_x': [0, 0.01],
+    'w_rec_init': ['randortho', 'diag', 'randgauss'],
+    'l1_h': [0, 0.00001, 0.00005, 0.0001],
+    'l2_h': [0, 0.00001, 0.00005, 0.0001],
+    'l1_weight': [0, 0.00001, 0.00005, 0.0001],
+    'l2_weight': [0, 0.00001, 0.00005, 0.0001],
+    'l2_weight_init': [0],
+    'p_weight_train': [None, 0.05, 0.1],
+    'w_mask_value': [0.1], # default .1 - value that will be multiplied with L2 regularization (combined with p_weight_train), <1 will decrease it
+    'learning_rate': [0.001, 0.0005],
+    'learning_rate_mode': [None, 'triangular', 'triangular2', 'exp_range'], # Will overwrite learning_rate if it is not None - 'triangular', 'triangular2', 'exp_range'
+    'base_lr': [0.0005],
+    'max_lr': [0.001],
+    'n_rnn': [64, 128, 256],
+    'multiLayer': [True],
+    'n_rnn_per_layer': [[256, 256, 256], [256, 128, 128], [256, 128, 64], [128, 128, 128], [128, 64, 64], [128, 64, 32], [64, 64, 64]],
+    'activations_per_layer': [['relu', 'tanh', 'linear'], ['relu', 'relu', 'relu'], ['tanh', 'tanh', 'tanh'], ['softplus', 'softplus', 'softplus'], ['relu', 'relu', 'linear'], ['tanh', 'tanh', 'linear'], ['softplus', 'softplus', 'linear']],
+    'errorBalancingValue': [2.],
+    'c_mask_responseValue': [5., 3., 1.],
+    's_mask': [None], # 'sc1000', None
+    'monthsConsidered': [['month_3', 'month_4', 'month_5']], # list of lists
+    'monthsString': ['3-5'],
+    # 'rule_prob_map': {"DM": 1,"DM_Anti": 1,"EF": 1,"EF_Anti": 1,"RP": 1,"RP_Anti": 1,"RP_Ctx1": 1,"RP_Ctx2": 1,"WM": 1,"WM_Anti": 1,"WM_Ctx1": 1,"WM_Ctx2": 1}
+    'rule_prob_map': [{"DM": 1,"DM_Anti": 1,"EF": 1,"EF_Anti": 1,"RP": 1,"RP_Anti": 1,"RP_Ctx1": 1,"RP_Ctx2": 1,"WM": 1,"WM_Anti": 1,"WM_Ctx1": 1,"WM_Ctx2": 1}], # fraction of tasks represented in training data
+    'participant': ['beRNN_03'], # Participant to take
+    'data': data,
+    'machine': ['local'], # 'local' 'pandora' 'hitkip'
+    'tasksString': ['AllTask'], # tasksTaken
+    'sequenceMode': [True], # Decide if models are trained sequentially month-wise
+    'trainingBatch': ['01'],
+    'trainingYear_Month': ['2025_XXX']
+}
+# attention: all other setups ##########################################################################################
+
+# Randomly sample combinationsa
 sampled_combinations = sample_param_combinations(adjParams, 50)
 
 # # Create one combination and repeat it according to sample_size
@@ -208,7 +208,7 @@ for modelNumber, params in enumerate(sampled_combinations): # info: either sampl
         # Function to split the files
         for subdir in subdirs:
             # Collect all file triplets in the current subdirectory
-            file_triplets = []
+            file_quartett = []
             for file in os.listdir(subdir):
                 if file.endswith('Input.npy'):
                     # III: Exclude files with specific substrings in their names
@@ -221,10 +221,12 @@ for modelNumber, params in enumerate(sampled_combinations): # info: either sampl
                     input_file = os.path.join(subdir, base_name + 'Input.npy')
                     yloc_file = os.path.join(subdir, base_name + 'yLoc.npy')
                     output_file = os.path.join(subdir, base_name + 'Output.npy')
-                    file_triplets.append((input_file, yloc_file, output_file))
+                    response_file = os.path.join(subdir, base_name + 'Response.npy')
+
+                    file_quartett.append((input_file, yloc_file, output_file, response_file))
 
             # Split the file triplets
-            train_files, eval_files = training.split_files(file_triplets)
+            train_files, eval_files = training.split_files(file_quartett)
 
             # Store the results in the dictionaries
             train_data[subdir] = train_files

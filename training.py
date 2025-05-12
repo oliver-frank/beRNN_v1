@@ -451,7 +451,7 @@ def train(model_dir,train_data ,eval_data,hp=None,max_steps=3e6,display_step=500
                     # self.c_mask[:, :, 0] *= self.n_eachring # Fixation is important
                     # c_mask[:, :, 0] *= 2.  # Fixation is important # info: with or without
                     c_mask = c_mask.reshape((y.shape[0]*y.shape[1], y.shape[2]))
-                    c_mask /= np.mean(c_mask)
+                    c_mask /= c_mask.mean()
 
                 else:
                     c_mask = np.zeros((y.shape[0], y.shape[1]), dtype='float32')

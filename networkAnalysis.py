@@ -17,6 +17,7 @@ from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
 from matplotlib.gridspec import GridSpec
 # from scipy.stats import ttest_ind
 import networkx as nx
+from networkx.algorithms.community import greedy_modularity_communities, modularity
 # import glob
 # import gc
 # import matplotlib
@@ -130,6 +131,25 @@ def apply_threshold(matrix, threshold):
     matrix_thresholded = np.where(np.abs(matrix) > threshold, matrix,
                                   0)  # fix: Can you appply a 20 to 40 % of the strongest connection filter for positive and negative correlations
     return matrix_thresholded
+
+def define_data_folder(split_parts):
+    # Predefined categories or flags to look for
+    possible_keys = [
+        'highDim', 'lowDim',
+        'correctOnly', 'correctOnly_3stimTC', 'correctOnly_timeCompressed',
+        'lowCognition', 'noCognition', 'timeCompressed'
+    ]
+
+    # Filter parts that match any known key
+    found_keys = [key for key in possible_keys if key in split_parts]
+
+    # If at least one key is found, join them with underscores
+    if found_keys:
+        data_folder = 'data_' + '_'.join(found_keys)
+    else:
+        data_folder = 'data_unknown'
+
+    return data_folder
 
 
 ########################################################################################################################
@@ -458,11 +478,17 @@ def compute_functionalCorrelation(model_dir, monthsConsidered, mode, figurePath,
 
     # The degree of a node in a graph is the count of edges connected to that node. For each node, it represents the number of
     # direct connections (or neighbors) it has within the graph.
-    degrees = nx.degree(G)  # For calculating node degrees
+    # degrees = nx.degree(G)  # For calculating node degrees
+
+    # Modularity: Modularity measures the strength of division of a graph into communities (clusters/modules). A higher modularity means
+    # many within-cluster edges and few between-cluster edges.
+    communities = greedy_modularity_communities(G)
+    mod_value = modularity(G, communities)
+
     # Betweenness centrality quantifies the importance of a node based on its position within the shortest paths between other nodes.
     betweenness = nx.betweenness_centrality(G)  # For betweenness centrality.
     # Optionally calculate averages of node-based metrics
-    avg_degree = np.mean(list(dict(G.degree()).values()))
+    # avg_degree = np.mean(list(dict(G.degree()).values()))
     avg_betweenness = np.mean(list(betweenness.values()))
 
     # Assortativity: Measures the tendency of nodes to connect to other nodes with similar degrees.
@@ -470,13 +496,13 @@ def compute_functionalCorrelation(model_dir, monthsConsidered, mode, figurePath,
     assortativity = nx.degree_assortativity_coefficient(G)
 
     # Show the top Markers within the func Correlation
-    ax_matrix.text(0.5, 0.6, f'Degrees: {avg_degree:.3f}', fontsize=22, color='white', fontweight='bold',
+    ax_matrix.text(0.5, 0.6, f'Modularity: {mod_value:.3f}', fontsize=22, color='white', fontweight='bold',
                    ha='center', va='center', transform=ax_matrix.transAxes)
     ax_matrix.text(0.5, 0.5, f'Betweenness: {avg_betweenness:.3f}', fontsize=22, color='white', fontweight='bold',
                    ha='center', va='center', transform=ax_matrix.transAxes)
     ax_matrix.text(0.5, 0.4, f'Assortativity: {assortativity:.3f}', fontsize=22, color='white', fontweight='bold',
                    ha='center', va='center', transform=ax_matrix.transAxes)
-    return corr_fig, avg_degree, avg_betweenness, assortativity
+    return corr_fig, mod_value, avg_betweenness, assortativity
     # plt.show()
     # plt.close()
 
@@ -518,8 +544,8 @@ def figureSceletton(model_column_widths):
     return fig, axs
 
 # Paths and settings
-participant = 'beRNN_03' # subfolder with model iterations
-trainingNumber = '\\2025_04_multiLayerHpGridSearch03\\26'
+participant = 'beRNN_05' # subfolder with model iterations
+trainingNumber = '\\errorBalancingTest\\02_errorUnbalanced'
 folder = '\\beRNNmodels'
 folderPath = 'C:\\Users\\oliver.frank\\Desktop\\PyProjects'
 _finalPath = folderPath + folder + trainingNumber # attention
@@ -569,9 +595,7 @@ for _model in _model_list:
         currentModelDirectory = os.path.join(model_dir, model)
         currentHP = tools.load_hp(currentModelDirectory)
 
-        dataFolder = '_'.join(_model.split('_')[4:6]) if len(_model.split('_')) == 10 else \
-                     '_'.join(_model.split('_')[4:7]) if len(_model.split('_')) == 11 else \
-                     '_'.join(_model.split('_')[4:8])
+        dataFolder = define_data_folder(_model.split('_'))
 
         data_dir = os.path.join('C:\\Users\\oliver.frank\\Desktop\\PyProjects\\Data', participant, dataFolder)
         rule_plot = [i for i in currentHP['rule_prob_map'] if currentHP['rule_prob_map'][i] > 0]
