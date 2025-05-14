@@ -1571,14 +1571,14 @@ for participant in participants:
                             sequence_on, sequence_off, batchLength = 0, 40, 40
                             try:
                                 # Preprocess the xlsxFile according to its task type and directly save it to the right directory
-                                # if opened_xlsxFile['Spreadsheet'][0].split('_')[0] == 'DM':
-                                #     preprocess_DM(opened_xlsxFile, questionnare_files, list_allSessions, sequence_on, sequence_off, batchLength)
+                                if opened_xlsxFile['Spreadsheet'][0].split('_')[0] == 'DM':
+                                    preprocess_DM(opened_xlsxFile, questionnare_files, list_allSessions, sequence_on, sequence_off, batchLength)
                                 if opened_xlsxFile['Spreadsheet'][0].split('_')[0] == 'EF':
                                     preprocess_EF(opened_xlsxFile, questionnare_files, list_allSessions, sequence_on, sequence_off, batchLength)
-                                # if opened_xlsxFile['Spreadsheet'][0].split('_')[0] == 'RP':
-                                #     preprocess_RP(opened_xlsxFile, questionnare_files, list_allSessions, sequence_on, sequence_off, batchLength)
-                                # if opened_xlsxFile['Spreadsheet'][0].split('_')[0] == 'WM':
-                                #     preprocess_WM(opened_xlsxFile, questionnare_files, list_allSessions, sequence_on, sequence_off, batchLength)
+                                if opened_xlsxFile['Spreadsheet'][0].split('_')[0] == 'RP':
+                                    preprocess_RP(opened_xlsxFile, questionnare_files, list_allSessions, sequence_on, sequence_off, batchLength)
+                                if opened_xlsxFile['Spreadsheet'][0].split('_')[0] == 'WM':
+                                    preprocess_WM(opened_xlsxFile, questionnare_files, list_allSessions, sequence_on, sequence_off, batchLength)
                             except Exception as e:
                                 print(f"An error occurred with file {xlsxFile}: {e}")
                         except Exception as e:
