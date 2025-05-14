@@ -43,9 +43,9 @@ def get_default_hp(ruleset):
     n_rule = tools.get_num_rule(ruleset)
 
     machine = 'local' # 'local' 'pandora' 'hitkip'
-    data = 'data_highDim' # 'data_highDim' , data_highDim_correctOnly , data_highDim_lowCognition , data_lowDim , data_lowDim_correctOnly , data_lowDim_lowCognition, 'data_highDim_correctOnly_3stimTC'
-    trainingBatch = '02_errorUnbalanced'
-    trainingYear_Month = 'errorBalancingTest'
+    data = 'data_highDim_correctOnly_3stimTC' # 'data_highDim' , data_highDim_correctOnly , data_highDim_lowCognition , data_lowDim , data_lowDim_correctOnly , data_lowDim_lowCognition, 'data_highDim_correctOnly_3stimTC'
+    trainingBatch = '01'
+    trainingYear_Month = 'newEFencoding'
 
     if 'highDim' in data: # fix: lowDim_timeCompressed needs to be skipped here
         n_eachring = 32
@@ -109,7 +109,7 @@ def get_default_hp(ruleset):
         'rule_prob_map': {"DM": 1,"DM_Anti": 1,"EF": 1,"EF_Anti": 1,"RP": 1,"RP_Anti": 1,"RP_Ctx1": 1,"RP_Ctx2": 1,"WM": 1,"WM_Anti": 1,"WM_Ctx1": 1,"WM_Ctx2": 1}, # fraction of tasks represented in training data
         'tasksString': 'Alltask', # tasks taken
         'sequenceMode': True, # Decide if models are trained sequentially month-wise
-        'participant': 'beRNN_05', # Participant to take
+        'participant': 'beRNN_03', # Participant to take
         'data': data, # 'data_highDim' , data_highDim_correctOnly , data_highDim_lowCognition , data_lowDim , data_lowDim_correctOnly , data_lowDim_lowCognition, data_timeCompressed, data_lowDim_timeCompressed
         'machine': machine,
         'trainingBatch': trainingBatch,
