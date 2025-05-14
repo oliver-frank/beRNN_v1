@@ -677,12 +677,16 @@ def preprocess_EF(opened_xlsxFile, questionnare_files, list_allSessions, sequenc
                 NonZero_Mod1 = np.nonzero(currentTimeStepModOne)[0]
                 NonZero_Mod2 = np.nonzero(currentTimeStepModTwo)[0]
 
+                # attention: Check if performance decrease comes from unrealistic encoding of stim positions ###########
+                NonZero_Mod1_fixedPosition = [11, 17, 23]
+                NonZero_Mod2_fixedPosition = [11, 17, 23]
+                # attention: Check if performance decrease comes from unrealistic encoding of stim positions ###########
+
                 # info: Get non-zero values for decreasing stims to 3
                 NonZero_Values_Mod1 = currentTimeStepModOne[NonZero_Mod1]
                 NonZero_Values_Mod2 = currentTimeStepModTwo[NonZero_Mod2]
                 # info: Concatenate the stim components
-                concatenated_stims = [f"{NonZero_Values_Mod1[i]}_{NonZero_Values_Mod2[i]}" for i in
-                                      range(len(NonZero_Values_Mod1))]
+                concatenated_stims = [f"{NonZero_Values_Mod1[i]}_{NonZero_Values_Mod2[i]}" for i in range(len(NonZero_Values_Mod1))]
                 # info: Initialize for final 3stim list
                 NonZero_Mod1_final = []
                 NonZero_Mod2_final = []
@@ -707,9 +711,9 @@ def preprocess_EF(opened_xlsxFile, questionnare_files, list_allSessions, sequenc
 
                     # Accumulating all activities for both unit rings together
                     for k in range(0, len(NonZero_Mod1)):
-                        currentStimLoc_Mod1 = pref[NonZero_Mod1[k]]
+                        currentStimLoc_Mod1 = pref[NonZero_Mod1_fixedPosition[k]] # attention: Always map the stims on the same position
                         currentStimStrength_Mod1 = currentTimeStepModOne[NonZero_Mod1[k]]
-                        currentStimLoc_Mod2 = pref[NonZero_Mod2[k]]
+                        currentStimLoc_Mod2 = pref[NonZero_Mod2_fixedPosition[k]] # attention: Always map the stims on the same position
                         currentStimStrength_Mod2 = currentTimeStepModTwo[NonZero_Mod2[k]]
                         # add one gradual activated stim to final form
                         currentActivation_Mod1 = add_x_loc(currentStimLoc_Mod1, pref) * currentStimStrength_Mod1
@@ -1812,14 +1816,14 @@ for participant in participants:
                             sequence_on, sequence_off, batchLength = 0, 40, 40
                             try:
                                 # Preprocess the xlsxFile according to its task type and directly save it to the right directory
-                                if opened_xlsxFile['Spreadsheet'][0].split('_')[0] == 'DM':
-                                    preprocess_DM(opened_xlsxFile, questionnare_files, list_allSessions, sequence_on, sequence_off, batchLength)
+                                # if opened_xlsxFile['Spreadsheet'][0].split('_')[0] == 'DM':
+                                #     preprocess_DM(opened_xlsxFile, questionnare_files, list_allSessions, sequence_on, sequence_off, batchLength)
                                 if opened_xlsxFile['Spreadsheet'][0].split('_')[0] == 'EF':
                                     preprocess_EF(opened_xlsxFile, questionnare_files, list_allSessions, sequence_on, sequence_off, batchLength)
-                                if opened_xlsxFile['Spreadsheet'][0].split('_')[0] == 'RP':
-                                    preprocess_RP(opened_xlsxFile, questionnare_files, list_allSessions, sequence_on, sequence_off, batchLength)
-                                if opened_xlsxFile['Spreadsheet'][0].split('_')[0] == 'WM':
-                                    preprocess_WM(opened_xlsxFile, questionnare_files, list_allSessions, sequence_on, sequence_off, batchLength)
+                                # if opened_xlsxFile['Spreadsheet'][0].split('_')[0] == 'RP':
+                                #     preprocess_RP(opened_xlsxFile, questionnare_files, list_allSessions, sequence_on, sequence_off, batchLength)
+                                # if opened_xlsxFile['Spreadsheet'][0].split('_')[0] == 'WM':
+                                #     preprocess_WM(opened_xlsxFile, questionnare_files, list_allSessions, sequence_on, sequence_off, batchLength)
                             except Exception as e:
                                 print(f"An error occurred with file {xlsxFile}: {e}")
                         except Exception as e:

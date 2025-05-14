@@ -167,7 +167,6 @@ def plot_performanceprogress_test_BeRNN(model_dir, figurePath_overview, model, f
     hp = tools.load_hp(model_dir)
 
     # co: change to [::2] if you want to have only every second validation value
-    # trials = log['trials'][::2]
     trials = log['trials']
     x_plot = np.array(trials) / 1000  # scale the x-axis right
 
@@ -183,7 +182,6 @@ def plot_performanceprogress_test_BeRNN(model_dir, figurePath_overview, model, f
 
     for i, rule in enumerate(rule_plot):
         # co: add [::2] if you want to have only every second validation values
-        # line = ax.plot(x_plot, np.log10(log['cost_' + rule]), color=rule_color[rule])
         line = ax.plot(x_plot, log['perf_' + rule], color=rule_color[rule], linewidth=3)
         lines.append(line[0])
         labels.append(rule_name[rule])
@@ -224,7 +222,6 @@ def plot_performanceprogress_train_BeRNN(model_dir, figurePath_overview, model, 
     hp = tools.load_hp(model_dir)
 
     # co: change to [::2] if you want to have only every second validation value
-    # trials = log['trials'][::2]
     trials = log['trials']  # info: There is an entry every 40 trials for each task
     x_plot = (np.array(trials)) / 1000  # scale the x-axis right
 
@@ -240,8 +237,6 @@ def plot_performanceprogress_train_BeRNN(model_dir, figurePath_overview, model, 
     # rule_plot = ['DM', 'DM_Anti']
 
     for i, rule in enumerate(rule_plot):
-        # y_cost = log['cost_train_' + rule][::int((len(log['cost_train_' + rule]) / len(x_plot)))][:len(x_plot)]
-
         y_perf = log['perf_train_' + rule][::int((len(log['perf_train_' + rule]) / len(x_plot)))][:len(x_plot)]
 
         window_size = 5  # Adjust window_size to smooth less or more, should actually be 20 so that it concolves the same amount of data (800 trials) for one one measure as in evaluation
@@ -250,10 +245,8 @@ def plot_performanceprogress_train_BeRNN(model_dir, figurePath_overview, model, 
         y_perf_smoothed = smoothed(y_perf, window_size=window_size)
 
         # Ensure the lengths match
-        # y_cost_smoothed = y_cost_smoothed[:len(x_plot)]
         y_perf_smoothed = y_perf_smoothed[:len(x_plot)]
 
-        # line = ax.plot(x_plot, np.log10(y_cost_smoothed), color=rule_color[rule])
         line = ax.plot(x_plot, y_perf_smoothed, color=rule_color[rule], linewidth=3)
 
         lines.append(line[0])
@@ -298,7 +291,6 @@ def plot_cost_test_BeRNN(model_dir, figurePath_overview, model, figurePath, rule
     hp = tools.load_hp(model_dir)
 
     # co: change to [::2] if you want to have only every second validation value
-    # trials = log['trials'][::2]
     trials = log['trials']
     x_plot = np.array(trials) / 1000  # scale the x-axis right
 
@@ -312,19 +304,31 @@ def plot_cost_test_BeRNN(model_dir, figurePath_overview, model, figurePath, rule
     # if rule_plot == None:
     #     # rule_plot = hp['rules']
 
+    # Collect all log-transformed costs for scaling
+    all_costs_log = ([np.log10(np.array(log['cost_train_' + rule]) + 1e-8) for rule in rule_plot]
+                     + [np.log10(np.array(log['cost_' + rule]) + 1e-8) for rule in rule_plot])
+
+    # Determine global min and max on the log-transformed scale
+    cost_log_min = min(np.min(c) for c in all_costs_log)
+    cost_log_max = max(np.max(c) for c in all_costs_log)
+
     for i, rule in enumerate(rule_plot):
         # co: add [::2] if you want to have only every second validation values
-        # line = ax.plot(x_plot, np.log10(log['cost_' + rule]), color=rule_color[rule])
-        line = ax.plot(x_plot, log['cost_' + rule], color=rule_color[rule], linewidth=3)
+        y_cost = log['cost_' + rule]
+        # Safe log transform (shift to avoid log(0))
+        y_cost_log = np.log10(list(map(lambda x: x + 1e-8, y_cost)))
+        # Normalize log costs
+        y_cost_log_norm = (y_cost_log - cost_log_min) / (cost_log_max - cost_log_min)
+
+        line = ax.plot(x_plot, y_cost_log_norm, color=rule_color[rule], linewidth=3)
         lines.append(line[0])
         labels.append(rule_name[rule])
 
     ax.tick_params(axis='both', which='major', labelsize=fs)
-
     ax.set_ylim([0, 1])
     # ax.set_xlim([0, 80000])
     ax.set_xlabel('Total number of trials (*1000)', fontsize=fs, labelpad=2)
-    ax.set_ylabel('Cost', fontsize=fs, labelpad=0)
+    ax.set_ylabel('Normalized Log10(Cost)', fontsize=fs, labelpad=0)
     ax.locator_params(axis='x', nbins=5)
     ax.set_yticks([0, .25, .5, .75, 1])
     ax.spines["right"].set_visible(False)
@@ -355,7 +359,6 @@ def plot_cost_train_BeRNN(model_dir, figurePath_overview, model, figurePath, rul
     hp = tools.load_hp(model_dir)
 
     # co: change to [::2] if you want to have only every second validation value
-    # trials = log['trials'][::2]
     trials = log['trials']  # info: There is an entry every 40 trials for each task
     x_plot = (np.array(trials)) / 1000  # scale the x-axis right
 
@@ -368,24 +371,31 @@ def plot_cost_train_BeRNN(model_dir, figurePath_overview, model, figurePath, rul
 
     # if rule_plot is None:
     # rule_plot = hp['rules']
-    # rule_plot = ['DM', 'DM_Anti']
+
+    # Collect all log-transformed costs for scaling
+    all_costs_log = ([np.log10(np.array(log['cost_train_' + rule]) + 1e-8) for rule in rule_plot]
+                     + [np.log10(np.array(log['cost_' + rule]) + 1e-8) for rule in rule_plot])
+
+    # Determine global min and max on the log-transformed scale
+    cost_log_min = min(np.min(c) for c in all_costs_log)
+    cost_log_max = max(np.max(c) for c in all_costs_log)
 
     for i, rule in enumerate(rule_plot):
         # y_cost = log['cost_train_' + rule][::int((len(log['cost_train_' + rule]) / len(x_plot)))][:len(x_plot)]
+        y_cost = log['cost_train_' + rule]
+        y_cost_smoothed = smoothed(y_cost, window_size=5)[:len(trials)]
 
-        y_perf = log['cost_train_' + rule][::int((len(log['cost_train_' + rule]) / len(x_plot)))][:len(x_plot)]
-
-        window_size = 5  # Adjust window_size to smooth less or more, should actually be 20 so that it concolves the same amount of data (800 trials) for one one measure as in evaluation
-
+        # window_size = 5  # Adjust window_size to smooth less or more, should actually be 20 so that it concolves the same amount of data (800 trials) for one one measure as in evaluation
         # y_cost_smoothed = smoothed(y_cost, window_size=window_size)
-        y_perf_smoothed = smoothed(y_perf, window_size=window_size)
-
         # Ensure the lengths match
         # y_cost_smoothed = y_cost_smoothed[:len(x_plot)]
-        y_perf_smoothed = y_perf_smoothed[:len(x_plot)]
+        # Safe log transform (shift to avoid log(0))
+        y_cost_log = np.log10(list(map(lambda x: x + 1e-8, y_cost_smoothed)))
+        # Normalize log costs
+        y_cost_log_norm = (y_cost_log - cost_log_min) / (cost_log_max - cost_log_min)
 
         # line = ax.plot(x_plot, np.log10(y_cost_smoothed), color=rule_color[rule])
-        line = ax.plot(x_plot, y_perf_smoothed, color=rule_color[rule], linewidth=3)
+        line = ax.plot(x_plot, y_cost_log_norm, color=rule_color[rule], linewidth=3)
 
         lines.append(line[0])
         labels.append(rule_name[rule])
@@ -393,7 +403,7 @@ def plot_cost_train_BeRNN(model_dir, figurePath_overview, model, figurePath, rul
     ax.tick_params(axis='both', which='major', labelsize=fs)
     ax.set_ylim([0, 1])
     ax.set_xlabel('Total number of trials (*1000)', fontsize=fs, labelpad=2)
-    ax.set_ylabel('Cost', fontsize=fs, labelpad=0)
+    ax.set_ylabel('Normalized Log10(Cost)', fontsize=fs, labelpad=0)
     ax.locator_params(axis='x', nbins=5)
     ax.set_yticks([0, .25, .5, .75, 1])
     ax.spines["right"].set_visible(False)
@@ -544,8 +554,8 @@ def figureSceletton(model_column_widths):
     return fig, axs
 
 # Paths and settings
-participant = 'beRNN_05' # subfolder with model iterations
-trainingNumber = '\\errorBalancingTest\\02_errorUnbalanced'
+participant = 'beRNN_03' # subfolder with model iterations
+trainingNumber = '\\2025_04_multiLayerHpGridSearch03\\21'
 folder = '\\beRNNmodels'
 folderPath = 'C:\\Users\\oliver.frank\\Desktop\\PyProjects'
 _finalPath = folderPath + folder + trainingNumber # attention

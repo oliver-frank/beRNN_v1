@@ -44,7 +44,7 @@ def get_default_hp(ruleset):
 
     machine = 'local' # 'local' 'pandora' 'hitkip'
     data = 'data_highDim_correctOnly_3stimTC' # 'data_highDim' , data_highDim_correctOnly , data_highDim_lowCognition , data_lowDim , data_lowDim_correctOnly , data_lowDim_lowCognition, 'data_highDim_correctOnly_3stimTC'
-    trainingBatch = '01'
+    trainingBatch = '03'
     trainingYear_Month = 'newEFencoding'
 
     if 'highDim' in data: # fix: lowDim_timeCompressed needs to be skipped here
@@ -69,7 +69,7 @@ def get_default_hp(ruleset):
         'activations_per_layer': ['relu', 'tanh', 'linear'],
         'loss_type': 'lsq', # # Type of loss functions - Cross-entropy loss
         'optimizer': 'adam', # 'adam', 'sgd'
-        'tau': 50, # # Time constant (ms)- default 100
+        'tau': 100, # # Time constant (ms)- default 100
         'dt': 20, # discretization time step (ms) .
         # 'alpha': 0.2, # (redundant) discretization time step/time constant - dt/tau = alpha - ratio decides on how much previous states are taken into account for current state - low alpha more memory, high alpha more forgetting - alpha * h(t-1)
         'sigma_rec': 0.01, # recurrent noise - directly influencing the noise added to the network

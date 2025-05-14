@@ -615,12 +615,18 @@ def preprocess_EF(opened_xlsxFile, questionnare_files, list_allSessions, sequenc
                 # Get non-zero values of time steps on both modalities (distance issue was already fixed by design in spreadsheets)
                 NonZero_Mod1 = np.nonzero(currentTimeStepModOne)[0]
                 NonZero_Mod2 = np.nonzero(currentTimeStepModTwo)[0]
+
+                # attention: Check if performance decrease comes from unrealistic encoding of stim positions ###########
+                NonZero_Mod1_fixedPosition = [5, 11, 17, 23, 29]
+                NonZero_Mod2_fixedPosition = [5, 11, 17, 23, 29]
+                # attention: Check if performance decrease comes from unrealistic encoding of stim positions ###########
+
                 if len(NonZero_Mod1) != 0:
                     # Accumulating all activities for both unit rings together
                     for k in range(0, len(NonZero_Mod1)):
-                        currentStimLoc_Mod1 = pref[NonZero_Mod1[k]]
+                        currentStimLoc_Mod1 = pref[NonZero_Mod1_fixedPosition[k]] # attention: Always map the stims on the same position
                         currentStimStrength_Mod1 = currentTimeStepModOne[NonZero_Mod1[k]]
-                        currentStimLoc_Mod2 = pref[NonZero_Mod2[k]]
+                        currentStimLoc_Mod2 = pref[NonZero_Mod2_fixedPosition[k]] # attention: Always map the stims on the same position
                         currentStimStrength_Mod2 = currentTimeStepModTwo[NonZero_Mod2[k]]
                         # add one gradual activated stim to final form
                         currentActivation_Mod1 = add_x_loc(currentStimLoc_Mod1, pref) * currentStimStrength_Mod1
@@ -1520,8 +1526,7 @@ def check_permissions(file_path):
 dataFolder = "Data"
 subfolders = ['DM', 'DM_Anti', 'EF', 'EF_Anti', 'RP', 'RP_Anti', 'RP_Ctx1', 'RP_Ctx2', 'WM', 'WM_Anti', 'WM_Ctx1', 'WM_Ctx2']
 preprocessing_folder = 'data_highDim_correctOnly_timeCompressed'
-# participants = ['beRNN_01', 'beRNN_02', 'beRNN_03', 'beRNN_05']
-participants = ['BeRNN_04']
+participants = ['beRNN_01', 'beRNN_02', 'beRNN_03', 'BeRNN_04', 'beRNN_05']
 months = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12'] # info: debugging '13'
 
 for participant in participants:
@@ -1594,14 +1599,14 @@ for participant in participants:
                             sequence_on, sequence_off, batchLength = 0, 40, 40
                             try:
                                 # Preprocess the xlsxFile according to its task type and directly save it to the right directory
-                                if opened_xlsxFile['Spreadsheet'][0].split('_')[0] == 'DM':
-                                    preprocess_DM(opened_xlsxFile, questionnare_files, list_allSessions, sequence_on, sequence_off, batchLength)
+                                # if opened_xlsxFile['Spreadsheet'][0].split('_')[0] == 'DM':
+                                #     preprocess_DM(opened_xlsxFile, questionnare_files, list_allSessions, sequence_on, sequence_off, batchLength)
                                 if opened_xlsxFile['Spreadsheet'][0].split('_')[0] == 'EF':
                                     preprocess_EF(opened_xlsxFile, questionnare_files, list_allSessions, sequence_on, sequence_off, batchLength)
-                                if opened_xlsxFile['Spreadsheet'][0].split('_')[0] == 'RP':
-                                    preprocess_RP(opened_xlsxFile, questionnare_files, list_allSessions, sequence_on, sequence_off, batchLength)
-                                if opened_xlsxFile['Spreadsheet'][0].split('_')[0] == 'WM':
-                                    preprocess_WM(opened_xlsxFile, questionnare_files, list_allSessions, sequence_on, sequence_off, batchLength)
+                                # if opened_xlsxFile['Spreadsheet'][0].split('_')[0] == 'RP':
+                                #     preprocess_RP(opened_xlsxFile, questionnare_files, list_allSessions, sequence_on, sequence_off, batchLength)
+                                # if opened_xlsxFile['Spreadsheet'][0].split('_')[0] == 'WM':
+                                #     preprocess_WM(opened_xlsxFile, questionnare_files, list_allSessions, sequence_on, sequence_off, batchLength)
                             except Exception as e:
                                 print(f"An error occurred with file {xlsxFile}: {e}")
                         except Exception as e:
