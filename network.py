@@ -111,7 +111,7 @@ def get_perf(y_hat, y_loc):
     return perf_rounded
 
 def cyclic_learning_rate(global_step, mode, base_lr=1e-5, max_lr=1e-3, step_size=2000, decay_rate=0.999,
-                         decay_steps=10000):
+                         decay_steps=50000):
     """
     Implements a cyclic learning rate schedule. Decay rate can be added or defined independent from cycling rate.
 
@@ -794,7 +794,7 @@ class Model(object):
             hp['learning_rate'] = tf.squeeze(
                 cyclic_learning_rate(self.global_step, hp['learning_rate_mode'], base_lr=hp['base_lr'],
                                      max_lr=hp['max_lr'], step_size=2000, decay_rate=0.999,
-                                     decay_steps=10000))
+                                     decay_steps=50000))
 
         # Store the learning rate as an attribute for debugging
         self.learning_rate = hp['learning_rate']

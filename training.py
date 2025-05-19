@@ -544,6 +544,7 @@ if __name__ == '__main__':
             # Define model_dir for different servers
             if hp['machine'] == 'local':
                 if hp['multiLayer'] == True:
+                    hp['rnn_type'] = 'LeakyRNN' # info: force rnn_type to always be LeakyRNN for multiLayer case
                     numberOfLayers = len(hp['n_rnn_per_layer'])
                     if numberOfLayers == 2:
                         model_dir = os.path.join(
@@ -555,6 +556,7 @@ if __name__ == '__main__':
 
             elif hp['machine'] == 'hitkip' or hp['machine'] == 'pandora':
                 if hp['multiLayer'] == True:
+                    hp['rnn_type'] = 'LeakyRNN'  # info: force rnn_type to always be LeakyRNN for multiLayer case
                     numberOfLayers = len(hp['n_rnn_per_layer'])
                     if numberOfLayers == 2:
                         model_dir = os.path.join(

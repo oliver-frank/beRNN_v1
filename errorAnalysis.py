@@ -8,6 +8,10 @@
 ########################################################################################################################
 # Import necessary libraries and modules
 ########################################################################################################################
+from __future__ import division
+import warnings
+warnings.simplefilter(action='ignore', category=FutureWarning)
+
 import numpy as np
 # import os
 import json
@@ -314,8 +318,9 @@ def get_fine_grained_error(sortedResponse, errors_dict_fineGrained, task):
             errors_dict_fineGrained[currentChosenList].append(sortedResponse[:, i])
     return errors_dict_fineGrained
 
-participant = 'beRNN_01'
-focusedMonths = ['month_1','month_2','month_3','month_4','month_5','month_6','month_7','month_8','month_9','month_10','month_11','month_12' ]
+participant = 'beRNN_03'
+# focusedMonths = ['month_1','month_2','month_3','month_4','month_5','month_6','month_7','month_8','month_9','month_10','month_11','month_12' ]
+focusedMonths = ['month_3','month_4','month_5']
 directory = f'C:\\Users\\oliver.frank\\Desktop\\PyProjects\\Data\\{participant}\\data_highDim' # info: whole script made for original dataset only
 
 
@@ -1059,10 +1064,6 @@ for j in list_error_keys:
 ########################################################################################################################
 # Import necessary libraries and modules
 ########################################################################################################################
-from __future__ import division
-import warnings
-warnings.simplefilter(action='ignore', category=FutureWarning)
-
 import os
 import numpy as np
 import tensorflow as tf
@@ -1233,8 +1234,8 @@ def visualize_contingency_table(data, task, figure_path, mode, model_dir, ratio_
 # Model evaluation for chosen tasks
 ########################################################################################################################
 # Directory has to point exactly on the model folder of interest
-directory = 'C:\\Users\\oliver.frank\\Desktop\\PyProjects\\beRNNmodels\\2025_03_4\\beRNN_03\\beRNN_03_All_3-5_data_highDim_correctOnly_iteration1_LeakyRNN_128_relu'
-dataDirectory = 'C:\\Users\\oliver.frank\\Desktop\\PyProjects\\Data\\beRNN_01\\data_highDim_correctOnly' # add right participant and dataset
+directory = 'C:\\Users\\oliver.frank\\Desktop\\PyProjects\\beRNNmodels\\2025_05_multiLayerHpGridSearch&errorBalancing_01\\18\\beRNN_03_AllTask_3-5_data_highDim_iteration6_LeakyRNN_512_relu'
+dataDirectory = 'C:\\Users\\oliver.frank\\Desktop\\PyProjects\\Data\\beRNN_03\\data_highDim' # add right participant and dataset
 modelsList = [os.path.join(directory, item) for item in os.listdir(directory) if 'model' in item]
 
 # Tasks to evaluate

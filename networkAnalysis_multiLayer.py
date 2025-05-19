@@ -38,8 +38,8 @@ from tools import rule_name
 
 selected_hp_keys = ['participant', 'rnn_type', 'data', 'multiLayer', 'n_rnn_per_layer', 'activations_per_layer',
                     'activation', 'optimizer', 'loss_type', 'batch_size', 'l1_h', 'l2_h', 'l1_weight', 'l2_weight',
-                    'learning_rate', 'learning_rate_mode', 'n_rnn', 'tau', 'sigma_rec', 'sigma_x', 'w_rec_init',
-                    'c_mask_responseValue', 'p_weight_train',
+                    'learning_rate', 'learning_rate_mode', 'n_rnn', 'sigma_rec', 'sigma_x', 'w_rec_init',
+                    'c_mask_responseValue', 'errorBalancingValue', 'p_weight_train',
                     'w_mask_value']  # Replace with the keys you want info: 'data' only exists from 15.01.25 on
 
 rule_color = {
@@ -555,7 +555,7 @@ def figureSceletton(model_column_widths):
 
 # Paths and settings
 participant = 'beRNN_03' # subfolder with model iterations
-trainingNumber = '\\2025_04_multiLayerHpGridSearch03\\21'
+trainingNumber = '\\2025_multiLayer_errorBalancing\\06'
 folder = '\\beRNNmodels'
 folderPath = 'C:\\Users\\oliver.frank\\Desktop\\PyProjects'
 _finalPath = folderPath + folder + trainingNumber # attention
