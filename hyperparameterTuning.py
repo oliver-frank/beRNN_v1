@@ -45,18 +45,20 @@ def create_repeated_param_combinations(param_grid, sample_size):
 
 
 # # attention: hitkip cluster ############################################################################################
-# # If script executed on hitkip cluster, HPs have to be defined in sbatch_HPscript.sbatch
-# parser = argparse.ArgumentParser(description="Train RNN with specific parameters.")
-# parser.add_argument("--adjParams", type=str, required=True, help="JSON-encoded parameters")
+# parser = argparse.ArgumentParser()
+# parser.add_argument("--adjParams", type=str, required=True)
 # args = parser.parse_args()
 #
-# try:
-#     adjParams = json.loads(args.adjParams)
-# except json.JSONDecodeError as e:
-#     raise ValueError(f"Failed to decode adjParams JSON: {e}")
-#
-# print("Loaded Parameters:", adjParams)
+# # Convert the JSON string to a Python dictionary
+# sampled_combinations = json.loads(args.adjParams)
 # # attention: hitkip cluster ############################################################################################
+
+
+# # attention: hitkip machine #############################################################################################
+# batchDirectory = '/zi/home/oliver.frank/Desktop/RNN/multitask_BeRNN-main/paramCombinations_highDim_hitkip/sampled_combinations_beRNN_05_25.json'
+# with open(batchDirectory, 'r') as f:
+#     sampled_combinations = json.load(f)
+# # attention: hitkip machine #############################################################################################
 
 
 # # attention: all other setups ##########################################################################################
@@ -79,7 +81,7 @@ n_input, n_output = 1 + num_ring * n_eachring + n_rule, n_outputring + 1
 adjParams = {
     'batch_size': [80],
     'in_type': ['normal'],
-    'rnn_type': ['LeakyRNN', 'LeakyGRU'], # 'LeakyGRU'
+    'rnn_type': ['LeakyRNN'], # 'LeakyGRU'
     'n_input': [n_input], # number of input units
     'n_output': [n_output], # number of output units
     'use_separate_input': [False],
@@ -103,8 +105,8 @@ adjParams = {
     'learning_rate_mode': [None, None, 'exp_range', 'triangular2'], # Will overwrite learning_rate if it is not None - 'triangular', 'triangular2', 'exp_range'
     'base_lr': [0.0005],
     'max_lr': [0.0015],
-    'n_rnn': [128, 256, 512],
-    'multiLayer': [True, False, False],
+    'n_rnn': [512],
+    'multiLayer': [False],
     'n_rnn_per_layer': [[256, 256, 256], [128, 128, 128]],
     'activations_per_layer': [['relu', 'relu', 'relu'], ['softplus', 'softplus', 'softplus'], ['tanh', 'tanh', 'tanh']],
     'errorBalancingValue': [1.],
@@ -114,40 +116,40 @@ adjParams = {
     'monthsString': ['4-6'],
     # 'rule_prob_map': {"DM": 1,"DM_Anti": 1,"EF": 1,"EF_Anti": 1,"RP": 1,"RP_Anti": 1,"RP_Ctx1": 1,"RP_Ctx2": 1,"WM": 1,"WM_Anti": 1,"WM_Ctx1": 1,"WM_Ctx2": 1}
     'rule_prob_map': [{"DM": 1,"DM_Anti": 1,"EF": 1,"EF_Anti": 1,"RP": 1,"RP_Anti": 1,"RP_Ctx1": 1,"RP_Ctx2": 1,"WM": 1,"WM_Anti": 1,"WM_Ctx1": 1,"WM_Ctx2": 1}], # fraction of tasks represented in training data
-    'participant': [None], # Participant to take
-    'data': [None],
+    'participant': ['beRNN_01'], # Participant to take
+    'data': ['data_highDim'],
     'machine': ['local'], # 'local' 'pandora' 'hitkip'
     'tasksString': ['AllTask'], # tasksTaken
     'sequenceMode': [True], # Decide if models are trained sequentially month-wise
-    'trainingBatch': [None],
-    'trainingYear_Month': ['finalGridSearch_allSubjects']
+    'trainingBatch': ['01'],
+    'trainingYear_Month': ['test123']
 }
 # # attention: all other setups ##########################################################################################
 
 # Randomly sample combinations
 sampled_combinations = sample_param_combinations(adjParams, 8)
 
-# Create one combination and repeat it according to sample_size
+# # Create one combination and repeat it according to sample_size
 # sampled_repeated_combinations = create_repeated_param_combinations(best_params, 5)
 
 
 
-# # info: for >>>finalGridSearch_allSubjects<<< ##########################################################################
-# os.chdir(r'C:\Users\oliver.frank\Desktop\PyProjects\art_beRNN\paramCombinations_highDim_hitkip')
-# for paramBatch in range(1,33):
-#     # Randomly sample combinations
-#     sampled_combinations = sample_param_combinations(adjParams, 8)
-#
-#     with open(f'sampled_combinations_beRNN_01_{paramBatch}.json', 'w') as f:
-#         json.dump(sampled_combinations, f, indent=4)
-#     with open(f'sampled_combinations_beRNN_02_{paramBatch}.json', 'w') as f:
-#         json.dump(sampled_combinations, f, indent=4)
-#     with open(f'sampled_combinations_beRNN_03_{paramBatch}.json', 'w') as f:
-#         json.dump(sampled_combinations, f, indent=4)
-#     with open(f'sampled_combinations_beRNN_04_{paramBatch}.json', 'w') as f:
-#         json.dump(sampled_combinations, f, indent=4)
-#     with open(f'sampled_combinations_beRNN_05_{paramBatch}.json', 'w') as f:
-#         json.dump(sampled_combinations, f, indent=4)
+# # info: for finalGridSearch_allSubjects ##############################################################################
+# os.chdir(r'C:\Users\oliver.frank\Desktop\PyProjects\art_beRNN\paramCombinations_highDim_correctOnly_3stimTC_hitkip')
+# # for paramBatch in range(1,33):
+#     # # Randomly sample combinations
+#     # sampled_combinations = sample_param_combinations(adjParams, 8)
+#     #
+#     # with open(f'sampled_combinations_beRNN_01_{paramBatch}.json', 'w') as f:
+#     #     json.dump(sampled_combinations, f, indent=4)
+#     # with open(f'sampled_combinations_beRNN_02_{paramBatch}.json', 'w') as f:
+#     #     json.dump(sampled_combinations, f, indent=4)
+#     # with open(f'sampled_combinations_beRNN_03_{paramBatch}.json', 'w') as f:
+#     #     json.dump(sampled_combinations, f, indent=4)
+#     # with open(f'sampled_combinations_beRNN_04_{paramBatch}.json', 'w') as f:
+#     #     json.dump(sampled_combinations, f, indent=4)
+#     # with open(f'sampled_combinations_beRNN_05_{paramBatch}.json', 'w') as f:
+#     #     json.dump(sampled_combinations, f, indent=4)
 #
 # for paramBatch in range(1, 33):
 #
@@ -156,7 +158,7 @@ sampled_combinations = sample_param_combinations(adjParams, 8)
 #         for i in range(len(sampled_combinations)):
 #             sampled_combinations[i]['participant'] = 'beRNN_01' # attention: You have to define participant for paperGridSearch
 #             sampled_combinations[i]['machine'] = 'hitkip' # attention: You have to define machine for paperGridSearch
-#             sampled_combinations[i]['data'] = 'data_highDim' # attention: You have to define data for paperGridSearch
+#             sampled_combinations[i]['data'] = 'data_highDim_correctOnly_3stimTC' # attention: You have to define data for paperGridSearch
 #             sampled_combinations[i]['trainingBatch'] = str(paramBatch) # attention: You have to define trainingBatch
 #         # info: Overwrite previous file
 #         with open(f'sampled_combinations_beRNN_01_{paramBatch}.json', 'w') as f:
@@ -167,7 +169,7 @@ sampled_combinations = sample_param_combinations(adjParams, 8)
 #         for i in range(len(sampled_combinations)):
 #             sampled_combinations[i]['participant'] = 'beRNN_02'  # attention: You have to define participant for paperGridSearch
 #             sampled_combinations[i]['machine'] = 'hitkip'  # attention: You have to define machine for paperGridSearch
-#             sampled_combinations[i]['data'] = 'data_highDim'  # attention: You have to define data for paperGridSearch
+#             sampled_combinations[i]['data'] = 'data_highDim_correctOnly_3stimTC'  # attention: You have to define data for paperGridSearch
 #             sampled_combinations[i]['trainingBatch'] = str(paramBatch)  # attention: You have to define trainingBatch
 #         # info: Overwrite previous file
 #         with open(f'sampled_combinations_beRNN_02_{paramBatch}.json', 'w') as f:
@@ -178,7 +180,7 @@ sampled_combinations = sample_param_combinations(adjParams, 8)
 #         for i in range(len(sampled_combinations)):
 #             sampled_combinations[i]['participant'] = 'beRNN_03'  # attention: You have to define participant for paperGridSearch
 #             sampled_combinations[i]['machine'] = 'hitkip'  # attention: You have to define machine for paperGridSearch
-#             sampled_combinations[i]['data'] = 'data_highDim'  # attention: You have to define data for paperGridSearch
+#             sampled_combinations[i]['data'] = 'data_highDim_correctOnly_3stimTC'  # attention: You have to define data for paperGridSearch
 #             sampled_combinations[i]['trainingBatch'] = str(paramBatch)  # attention: You have to define trainingBatch
 #         # info: Overwrite previous file
 #         with open(f'sampled_combinations_beRNN_03_{paramBatch}.json', 'w') as f:
@@ -189,7 +191,7 @@ sampled_combinations = sample_param_combinations(adjParams, 8)
 #         for i in range(len(sampled_combinations)):
 #             sampled_combinations[i]['participant'] = 'beRNN_04'  # attention: You have to define participant for paperGridSearch
 #             sampled_combinations[i]['machine'] = 'hitkip'  # attention: You have to define machine for paperGridSearch
-#             sampled_combinations[i]['data'] = 'data_highDim'  # attention: You have to define data for paperGridSearch
+#             sampled_combinations[i]['data'] = 'data_highDim_correctOnly_3stimTC'  # attention: You have to define data for paperGridSearch
 #             sampled_combinations[i]['trainingBatch'] = str(paramBatch)  # attention: You have to define trainingBatch
 #         # info: Overwrite previous file
 #         with open(f'sampled_combinations_beRNN_04_{paramBatch}.json', 'w') as f:
@@ -200,20 +202,12 @@ sampled_combinations = sample_param_combinations(adjParams, 8)
 #         for i in range(len(sampled_combinations)):
 #             sampled_combinations[i]['participant'] = 'beRNN_05'  # attention: You have to define participant for paperGridSearch
 #             sampled_combinations[i]['machine'] = 'hitkip'  # attention: You have to define machine for paperGridSearch
-#             sampled_combinations[i]['data'] = 'data_highDim'  # attention: You have to define data for paperGridSearch
+#             sampled_combinations[i]['data'] = 'data_highDim_correctOnly_3stimTC'  # attention: You have to define data for paperGridSearch
 #             sampled_combinations[i]['trainingBatch'] = str(paramBatch)  # attention: You have to define trainingBatch
 #         # info: Overwrite previous file
 #         with open(f'sampled_combinations_beRNN_05_{paramBatch}.json', 'w') as f:
 #             json.dump(sampled_combinations, f, indent=4)
-
-
-# parser = argparse.ArgumentParser()
-# parser.add_argument("--adjParams", type=str, required=True)
-# args = parser.parse_args()
-#
-# # Convert the JSON string to a Python dictionary
-# sampled_combinations = json.loads(args.adjParams)
-# # info: for >>>finalGridSearch_allSubjects<<< ##########################################################################
+# info: for finalGridSearch_allSubjects ##############################################################################
 
 
 
@@ -258,13 +252,13 @@ for modelNumber, params in enumerate(sampled_combinations): # info: either sampl
                 numberOfLayers = len(params['n_rnn_per_layer'])
                 params['rnn_type'] = 'LeakyRNN'  # info: force rnn_type to always be LeakyRNN for multiLayer case
                 if numberOfLayers == 2:
-                    model_dir = os.path.join(f"{path}\\beRNNmodels\\{params['trainingYear_Month']}\\{params['trainingBatch']}\\{params['participant']}_{params['tasksString']}_{params['monthsString']}_{params['data']}_trainingBatch{params['trainingBatch']}_iteration{modelNumber}_{params['rnn_type']}_{params['n_rnn_per_layer'][0]}-{params['n_rnn_per_layer'][1]}_{params['activations_per_layer'][0]}-{params['activations_per_layer'][1]}",model_name)
+                    model_dir = os.path.join(f"{path}\\beRNNmodels\\{params['trainingYear_Month']}\\{params['participant']}\\{params['trainingBatch']}\\{params['participant']}_{params['tasksString']}_{params['monthsString']}_{params['data']}_trainingBatch{params['trainingBatch']}_iteration{modelNumber}_{params['rnn_type']}_{params['n_rnn_per_layer'][0]}-{params['n_rnn_per_layer'][1]}_{params['activations_per_layer'][0]}-{params['activations_per_layer'][1]}",model_name)
                 else:
                     model_dir = os.path.join(
-                        f"{path}\\beRNNmodels\\{params['trainingYear_Month']}\\{params['trainingBatch']}\\{params['participant']}_{params['tasksString']}_{params['monthsString']}_{params['data']}_trainingBatch{params['trainingBatch']}_iteration{modelNumber}_{params['rnn_type']}_{params['n_rnn_per_layer'][0]}-{params['n_rnn_per_layer'][1]}-{params['n_rnn_per_layer'][2]}_{params['activations_per_layer'][0]}-{params['activations_per_layer'][1]}-{params['activations_per_layer'][2]}",model_name)
+                        f"{path}\\beRNNmodels\\{params['trainingYear_Month']}\\{params['participant']}\\{params['trainingBatch']}\\{params['participant']}_{params['tasksString']}_{params['monthsString']}_{params['data']}_trainingBatch{params['trainingBatch']}_iteration{modelNumber}_{params['rnn_type']}_{params['n_rnn_per_layer'][0]}-{params['n_rnn_per_layer'][1]}-{params['n_rnn_per_layer'][2]}_{params['activations_per_layer'][0]}-{params['activations_per_layer'][1]}-{params['activations_per_layer'][2]}",model_name)
             else:
                 model_dir = os.path.join(
-                    f"{path}\\beRNNmodels\\{params['trainingYear_Month']}\\{params['trainingBatch']}\\{params['participant']}_{params['tasksString']}_{params['monthsString']}_{params['data']}_trainingBatch{params['trainingBatch']}_iteration{modelNumber}_{params['rnn_type']}_{params['n_rnn']}_{params['activation']}",model_name)
+                    f"{path}\\beRNNmodels\\{params['trainingYear_Month']}\\{params['participant']}\\{params['trainingBatch']}\\{params['participant']}_{params['tasksString']}_{params['monthsString']}_{params['data']}_trainingBatch{params['trainingBatch']}_iteration{modelNumber}_{params['rnn_type']}_{params['n_rnn']}_{params['activation']}",model_name)
 
         elif params['machine'] == 'hitkip' or params['machine'] == 'pandora':
 
@@ -273,13 +267,13 @@ for modelNumber, params in enumerate(sampled_combinations): # info: either sampl
                 numberOfLayers = len(params['n_rnn_per_layer'])
                 if numberOfLayers == 2:
                     model_dir = os.path.join(
-                        f"{path}/beRNNmodels/{params['trainingYear_Month']}/{params['trainingBatch']}/{params['participant']}_{params['tasksString']}_{params['monthsString']}_{params['data']}_trainingBatch{params['trainingBatch']}_iteration{modelNumber}_{params['rnn_type']}_{params['n_rnn_per_layer'][0]}-{params['n_rnn_per_layer'][1]}_{params['activations_per_layer'][0]}-{params['activations_per_layer'][1]}",model_name)
+                        f"{path}/beRNNmodels/{params['trainingYear_Month']}/{params['participant']}/{params['trainingBatch']}/{params['participant']}_{params['tasksString']}_{params['monthsString']}_{params['data']}_trainingBatch{params['trainingBatch']}_iteration{modelNumber}_{params['rnn_type']}_{params['n_rnn_per_layer'][0]}-{params['n_rnn_per_layer'][1]}_{params['activations_per_layer'][0]}-{params['activations_per_layer'][1]}",model_name)
                 else:
                     model_dir = os.path.join(
-                        f"{path}/beRNNmodels/{params['trainingYear_Month']}/{params['trainingBatch']}/{params['participant']}_{params['tasksString']}_{params['monthsString']}_{params['data']}_trainingBatch{params['trainingBatch']}_iteration{modelNumber}_{params['rnn_type']}_{params['n_rnn_per_layer'][0]}-{params['n_rnn_per_layer'][1]}-{params['n_rnn_per_layer'][2]}_{params['activations_per_layer'][0]}-{params['activations_per_layer'][1]}-{params['activations_per_layer'][2]}",model_name)
+                        f"{path}/beRNNmodels/{params['trainingYear_Month']}/{params['participant']}/{params['trainingBatch']}/{params['participant']}_{params['tasksString']}_{params['monthsString']}_{params['data']}_trainingBatch{params['trainingBatch']}_iteration{modelNumber}_{params['rnn_type']}_{params['n_rnn_per_layer'][0]}-{params['n_rnn_per_layer'][1]}-{params['n_rnn_per_layer'][2]}_{params['activations_per_layer'][0]}-{params['activations_per_layer'][1]}-{params['activations_per_layer'][2]}",model_name)
             else:
                 model_dir = os.path.join(
-                    f"{path}/beRNNmodels/{params['trainingYear_Month']}/{params['trainingBatch']}/{params['participant']}_{params['tasksString']}_{params['monthsString']}_{params['data']}_trainingBatch{params['trainingBatch']}_iteration{modelNumber}_{params['rnn_type']}_{params['n_rnn']}_{params['activation']}",model_name)
+                    f"{path}/beRNNmodels/{params['trainingYear_Month']}/{params['participant']}/{params['trainingBatch']}/{params['participant']}_{params['tasksString']}_{params['monthsString']}_{params['data']}_trainingBatch{params['trainingBatch']}_iteration{modelNumber}_{params['rnn_type']}_{params['n_rnn']}_{params['activation']}",model_name)
 
         print('MODELDIR: ', model_dir)
 

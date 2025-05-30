@@ -94,7 +94,8 @@ class Analysis(object):
         # info: This decides the granularity of summarized nodes that will be taken to create the clusters, also very
         #  important in connection with the number of clusters created below, as they can never overcome this number of
         #  summarized nodes
-        ind_active = np.where(h_var_all_.sum(axis=1) > 1e-5)[0] # attention: > 1e-3 - min > 0 | it seems like hidden architecture can have very low h_var
+        activityThreshold = 0 if hp['multiLayer'] else 1e-5
+        ind_active = np.where(h_var_all_.sum(axis=1) > activityThreshold)[0] # attention: > 1e-3 - min > 0 | it seems like hidden architecture can have very low h_var
         h_var_all  = h_var_all_[ind_active, :]
 
         # if np.all(h_var_all_.sum(axis=1) == 0):

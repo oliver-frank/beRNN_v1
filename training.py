@@ -45,7 +45,7 @@ def get_default_hp(ruleset):
     machine = 'local' # 'local' 'pandora' 'hitkip'
     data = 'data_highDim_correctOnly_3stimTC' # 'data_highDim' , data_highDim_correctOnly , data_highDim_lowCognition , data_lowDim , data_lowDim_correctOnly , data_lowDim_lowCognition, 'data_highDim_correctOnly_3stimTC'
     trainingBatch = '03'
-    trainingYear_Month = 'newEFencoding'
+    trainingYear_Month = 'test123'
 
     if 'highDim' in data: # fix: lowDim_timeCompressed needs to be skipped here
         n_eachring = 32
@@ -62,8 +62,8 @@ def get_default_hp(ruleset):
         # 'batch_size_test': 640, # batch_size for testing
         'in_type': 'normal', # input type: normal, multi
         'rnn_type': 'LeakyRNN', # Type of RNNs: NonRecurrent, LeakyRNN, LeakyGRU, EILeakyGRU | GRU, LSTM
-        'multiLayer': False, # only applicaple with LeakyRNN
-        'n_rnn': 128,  # number of recurrent units for one hidden layer architecture
+        'multiLayer': True, # only applicaple with LeakyRNN
+        'n_rnn': 512,  # number of recurrent units for one hidden layer architecture
         'activation': 'relu',  # Type of activation runctions, relu, softplus, tanh, elu, linear
         'n_rnn_per_layer': [256, 128, 64],
         'activations_per_layer': ['relu', 'tanh', 'linear'],
@@ -74,7 +74,7 @@ def get_default_hp(ruleset):
         # 'alpha': 0.2, # (redundant) discretization time step/time constant - dt/tau = alpha - ratio decides on how much previous states are taken into account for current state - low alpha more memory, high alpha more forgetting - alpha * h(t-1)
         'sigma_rec': 0.01, # recurrent noise - directly influencing the noise added to the network
         'sigma_x': 0.01, # input noise
-        'w_rec_init': 'randortho', # leaky_rec weight initialization, diag, randortho, randgauss, brainStructure (only accessible with LeakyRNN : 32-256)
+        'w_rec_init': 'brainStructure', # leaky_rec weight initialization, diag, randortho, randgauss, brainStructure (only accessible with LeakyRNN : 32-256)
         'l1_h': 1e-4, # l1 lambda (regularizing with absolute value of magnitude of coefficients, leading to sparse features)
         'l2_h': 5e-6, # l2 lambda (regularizing with squared value of magnitude of coefficients, decreasing influence of features)
         'l1_weight': 1e-5, # l2 regularization on weight

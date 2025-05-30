@@ -136,11 +136,11 @@ def cyclic_learning_rate(global_step, mode, base_lr=1e-5, max_lr=1e-3, step_size
     base_lr = tf.cast(base_lr, tf.float32)
     max_lr = tf.cast(max_lr, tf.float32)
 
-    if mode == 'triangular':
+    if mode == 'triangular': # info: Simple periodic exploration
         clr = base_lr + (max_lr - base_lr) * tf.maximum(tf.constant(0., dtype=tf.float32), (1 - x))
-    elif mode == 'triangular2':
+    elif mode == 'triangular2': # info: Gradual convergence
         clr = base_lr + (max_lr - base_lr) * tf.maximum(tf.constant(0., dtype=tf.float32), (1 - x)) / (2 ** (cycle - 1))
-    elif mode == 'exp_range':
+    elif mode == 'exp_range': # info: Long-term decay (gamma<1 term) + local flexibility
         gamma = tf.constant(0.99994, dtype=tf.float32)  # Ensure gamma is float32
         clr = base_lr + (max_lr - base_lr) * tf.maximum(tf.constant(0., dtype=tf.float32), (1 - x)) * (
                     gamma ** tf.cast(global_step, tf.float32))
@@ -315,7 +315,6 @@ class LeakyRNNCell(RNNCell):
                 connectomePath = f'/pandora/home/oliver.frank/01_Projects/RNN/multitask_BeRNN-main/masks/connectomes_{participant}'
 
             # Load right weight matrix
-            connectomePath = f'C:\\Users\\oliver.frank\\Desktop\\PyProjects\\art_beRNN\\masks\\connectomes_beRNN_05'
             w_rec0 = np.load(os.path.join(connectomePath, f'connectome_beRNN_05_{n_hidden}_sigNorm.npy'))
 
 
@@ -332,6 +331,8 @@ class LeakyRNNCell(RNNCell):
         # ax2.set_title("Weight Distribution (300×300 matrix)")
         # plt.show()
 
+        print('>>>>>>>>>>>>>> w_rec0.shape', w_rec0.shape)
+        print('>>>>>>>>>>>>>> w_in0.shape', w_in0.shape)
 
         matrix0 = np.concatenate((w_in0, w_rec0), axis=0)
 
