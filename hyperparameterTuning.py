@@ -133,7 +133,6 @@ sampled_combinations = sample_param_combinations(adjParams, 8)
 # sampled_repeated_combinations = create_repeated_param_combinations(best_params, 5)
 
 
-
 # # info: for finalGridSearch_allSubjects ##############################################################################
 # os.chdir(r'C:\Users\oliver.frank\Desktop\PyProjects\art_beRNN\paramCombinations_highDim_correctOnly_3stimTC_hitkip')
 # # for paramBatch in range(1,33):
@@ -151,64 +150,21 @@ sampled_combinations = sample_param_combinations(adjParams, 8)
 #     # with open(f'sampled_combinations_beRNN_05_{paramBatch}.json', 'w') as f:
 #     #     json.dump(sampled_combinations, f, indent=4)
 #
-# for paramBatch in range(1, 33):
-#
-#     with open(f'sampled_combinations_beRNN_01_{paramBatch}.json', 'r') as f:
-#         sampled_combinations = json.load(f)
-#         for i in range(len(sampled_combinations)):
-#             sampled_combinations[i]['participant'] = 'beRNN_01' # attention: You have to define participant for paperGridSearch
-#             sampled_combinations[i]['machine'] = 'hitkip' # attention: You have to define machine for paperGridSearch
-#             sampled_combinations[i]['data'] = 'data_highDim_correctOnly_3stimTC' # attention: You have to define data for paperGridSearch
-#             sampled_combinations[i]['trainingBatch'] = str(paramBatch) # attention: You have to define trainingBatch
-#         # info: Overwrite previous file
-#         with open(f'sampled_combinations_beRNN_01_{paramBatch}.json', 'w') as f:
-#             json.dump(sampled_combinations, f, indent=4)
-#
-#     with open(f'sampled_combinations_beRNN_02_{paramBatch}.json', 'r') as f:
-#         sampled_combinations = json.load(f)
-#         for i in range(len(sampled_combinations)):
-#             sampled_combinations[i]['participant'] = 'beRNN_02'  # attention: You have to define participant for paperGridSearch
-#             sampled_combinations[i]['machine'] = 'hitkip'  # attention: You have to define machine for paperGridSearch
-#             sampled_combinations[i]['data'] = 'data_highDim_correctOnly_3stimTC'  # attention: You have to define data for paperGridSearch
-#             sampled_combinations[i]['trainingBatch'] = str(paramBatch)  # attention: You have to define trainingBatch
-#         # info: Overwrite previous file
-#         with open(f'sampled_combinations_beRNN_02_{paramBatch}.json', 'w') as f:
-#             json.dump(sampled_combinations, f, indent=4)
-#
-#     with open(f'sampled_combinations_beRNN_03_{paramBatch}.json', 'r') as f:
-#         sampled_combinations = json.load(f)
-#         for i in range(len(sampled_combinations)):
-#             sampled_combinations[i]['participant'] = 'beRNN_03'  # attention: You have to define participant for paperGridSearch
-#             sampled_combinations[i]['machine'] = 'hitkip'  # attention: You have to define machine for paperGridSearch
-#             sampled_combinations[i]['data'] = 'data_highDim_correctOnly_3stimTC'  # attention: You have to define data for paperGridSearch
-#             sampled_combinations[i]['trainingBatch'] = str(paramBatch)  # attention: You have to define trainingBatch
-#         # info: Overwrite previous file
-#         with open(f'sampled_combinations_beRNN_03_{paramBatch}.json', 'w') as f:
-#             json.dump(sampled_combinations, f, indent=4)
-#
-#     with open(f'sampled_combinations_beRNN_04_{paramBatch}.json', 'r') as f:
-#         sampled_combinations = json.load(f)
-#         for i in range(len(sampled_combinations)):
-#             sampled_combinations[i]['participant'] = 'beRNN_04'  # attention: You have to define participant for paperGridSearch
-#             sampled_combinations[i]['machine'] = 'hitkip'  # attention: You have to define machine for paperGridSearch
-#             sampled_combinations[i]['data'] = 'data_highDim_correctOnly_3stimTC'  # attention: You have to define data for paperGridSearch
-#             sampled_combinations[i]['trainingBatch'] = str(paramBatch)  # attention: You have to define trainingBatch
-#         # info: Overwrite previous file
-#         with open(f'sampled_combinations_beRNN_04_{paramBatch}.json', 'w') as f:
-#             json.dump(sampled_combinations, f, indent=4)
-#
-#     with open(f'sampled_combinations_beRNN_05_{paramBatch}.json', 'r') as f:
-#         sampled_combinations = json.load(f)
-#         for i in range(len(sampled_combinations)):
-#             sampled_combinations[i]['participant'] = 'beRNN_05'  # attention: You have to define participant for paperGridSearch
-#             sampled_combinations[i]['machine'] = 'hitkip'  # attention: You have to define machine for paperGridSearch
-#             sampled_combinations[i]['data'] = 'data_highDim_correctOnly_3stimTC'  # attention: You have to define data for paperGridSearch
-#             sampled_combinations[i]['trainingBatch'] = str(paramBatch)  # attention: You have to define trainingBatch
-#         # info: Overwrite previous file
-#         with open(f'sampled_combinations_beRNN_05_{paramBatch}.json', 'w') as f:
-#             json.dump(sampled_combinations, f, indent=4)
-# info: for finalGridSearch_allSubjects ##############################################################################
-
+# participantList = ['beRNN_01', 'beRNN_02', 'beRNN_03', 'beRNN_04', 'beRNN_05']
+# for participant in participantList:
+#     for paramBatch in range(1, 33):
+#         with open(f'sampled_combinations_{participant}_{paramBatch}.json', 'r') as f:
+#             sampled_combinations = json.load(f)
+#             for i in range(len(sampled_combinations)):
+#                 # sampled_combinations[i]['participant'] = 'beRNN_01' # attention: You have to define participant for paperGridSearch
+#                 # sampled_combinations[i]['machine'] = 'hitkip' # attention: You have to define machine for paperGridSearch
+#                 # sampled_combinations[i]['data'] = 'data_highDim_correctOnly_3stimTC' # attention: You have to define data for paperGridSearch
+#                 # sampled_combinations[i]['trainingBatch'] = str(paramBatch) # attention: You have to define trainingBatch
+#                 sampled_combinations[i]['trainingYear_Month'] = "finalGridSearch_allSubjects_3stimTC"
+#             # info: Overwrite previous file
+#             with open(f'sampled_combinations_{participant}_{paramBatch}.json', 'w') as f:
+#                 json.dump(sampled_combinations, f, indent=4)
+# # info: for finalGridSearch_allSubjects ##############################################################################
 
 
 # Training #############################################################################################################

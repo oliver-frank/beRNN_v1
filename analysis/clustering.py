@@ -94,121 +94,132 @@ class Analysis(object):
         # info: This decides the granularity of summarized nodes that will be taken to create the clusters, also very
         #  important in connection with the number of clusters created below, as they can never overcome this number of
         #  summarized nodes
-        activityThreshold = 0 if hp['multiLayer'] else 1e-5
-        ind_active = np.where(h_var_all_.sum(axis=1) > activityThreshold)[0] # attention: > 1e-3 - min > 0 | it seems like hidden architecture can have very low h_var
+        # activityThreshold = 0 if hp['multiLayer'] else 1e-5
+        activityThreshold = 1e-5
+        ind_active = np.where(h_var_all_.sum(axis=1) >= activityThreshold)[0] # attention: > 1e-3 - min > 0 | it seems like hidden architecture can have very low h_var
         h_var_all  = h_var_all_[ind_active, :]
 
-        # if np.all(h_var_all_.sum(axis=1) == 0):
-        #     print("All rows are zero — skipping clustering and setting placeholder values.")
-        #     # Safe defaults
-        #     h_var_all = np.zeros([2, 12])
-        #     h_normvar_all = np.zeros([2, 12])
-        #     labels = np.zeros(2, dtype=int)
-        #     self.h_normvar_all = h_normvar_all
-        #     self.ind_active = np.arange(2)
-        #     self.n_clusters = []
-        #     self.scores = []
-        #     self.n_cluster = 1
-        #     self.h_var_all = h_var_all
-        #     self.normalization_method = normalization_method
-        #     self.labels = labels
-        #     self.unique_labels = np.unique(labels)
-        #     self.model_dir = model_dir
-        #     self.hp = hp
-        #     self.data_type = data_type
-        #     self.rules = hp['rules']
-        #     return  # safely exit __init__ early
-        #
-        # else:
 
-        # Normalize by the total variance across tasks
-        if normalization_method == 'sum':
-            h_normvar_all = (h_var_all.T/np.sum(h_var_all, axis=1)).T
-        elif normalization_method == 'max':
-            h_normvar_all = (h_var_all.T/np.max(h_var_all, axis=1)).T
-        elif normalization_method == 'none':
-            h_normvar_all = h_var_all
+        # Info: Debug not working models
+        print(f"Model: {model_dir}")
+        print(f"Active units after thresholding: {len(ind_active)}")
+        print(f"Variance sum across tasks for active units: {h_var_all_.sum(axis=1)[ind_active]}")
+
+
+        # attention: fallback if clustering is not possible
+        if h_var_all.shape[0] < 2 or np.all(h_var_all.sum(axis=1) <= 1e-2):
+        # if h_var_all.shape[0] < 2 or np.where(h_var_all_.sum(axis=1) < activityThreshold):
+            print(f"Skipping clustering for model {model_dir} — insufficient data or variance.")
+
+            self.h_var_all = np.zeros([2, 12])
+            self.h_normvar_all = np.zeros([2, 12])
+            self.labels = np.array([0, 1])  # Use 2 dummy clusters
+            self.ind_active = np.array([0, 1])
+            self.n_clusters = [2]
+            self.scores = [0.0]
+            self.n_cluster = 2
+            self.unique_labels = np.array([0, 1])
+
+            self.normalization_method = normalization_method
+            self.model_dir = model_dir
+            self.hp = hp
+            self.data_type = data_type
+            self.rules = hp['rules']
+
         else:
-            raise NotImplementedError()
+            # Normalize by the total variance across tasks
+            if normalization_method == 'sum':
+                h_normvar_all = (h_var_all.T/np.sum(h_var_all, axis=1)).T
+            elif normalization_method == 'max':
+                h_normvar_all = (h_var_all.T/np.max(h_var_all, axis=1)).T
+            elif normalization_method == 'none':
+                h_normvar_all = h_var_all
+            else:
+                raise NotImplementedError()
 
-        # Clustering ---------------------------------------------------------------------------------------------------
-        from sklearn import metrics
-        X = h_normvar_all
+            # Clustering ---------------------------------------------------------------------------------------------------
+            from sklearn import metrics
+            X = h_normvar_all
 
-        # Clustering
-        from sklearn.cluster import AgglomerativeClustering, KMeans
+            # Clustering
+            from sklearn.cluster import AgglomerativeClustering, KMeans
 
-        # fix: Sometimes n-samples < 30
-        if len(X) < 30:
-            range2 = len(X)
-        else:
-            range2 = 30
+            # fix: Sometimes n-samples < 30
+            if len(X) < 30:
+                range2 = len(X)
+            else:
+                range2 = 30
 
-        # Choose number of clusters that maximize silhouette score
-        n_clusters = range(2, range2) # attention: 2,30
-        scores = list()
-        labels_list = list()
-        for n_cluster in n_clusters:
-            # clustering = AgglomerativeClustering(n_cluster, affinity='cosine', linkage='average')
-            clustering = KMeans(n_cluster, algorithm='full', n_init=20, random_state=0)
-            clustering.fit(X) # n_samples, n_features = n_units, n_rules/n_epochs
-            labels = clustering.labels_ # cluster labels
+            # Choose number of clusters that maximize silhouette score
+            n_clusters = range(2, range2) # attention: 2,30
+            scores = list()
+            labels_list = list()
+            for n_cluster in n_clusters:
+                # clustering = AgglomerativeClustering(n_cluster, affinity='cosine', linkage='average')
+                clustering = KMeans(n_cluster, algorithm='full', n_init=20, random_state=0)
+                clustering.fit(X) # n_samples, n_features = n_units, n_rules/n_epochs
+                labels = clustering.labels_ # cluster labels
 
-            score = metrics.silhouette_score(X, labels)
+                score = metrics.silhouette_score(X, labels)
 
-            scores.append(score)
-            labels_list.append(labels)
+                scores.append(score)
+                labels_list.append(labels)
 
-        scores = np.array(scores)
+            scores = np.array(scores)
 
-        # Heuristic elbow method
-        # Choose the number of cluster when Silhouette score first falls
-        # Choose the number of cluster when Silhouette score is maximum
-        if data_type == 'rule':
-            #i = np.where((scores[1:]-scores[:-1])<0)[0][0]
-            i = np.argmax(scores)
-        else:
-            # The more rigorous method doesn't work well in this case
-            i = n_clusters.index(10)
+            # Heuristic elbow method
+            # Choose the number of cluster when Silhouette score first falls
+            # Choose the number of cluster when Silhouette score is maximum
+            if data_type == 'rule':
+                #i = np.where((scores[1:]-scores[:-1])<0)[0][0]
+                # try:
+                i = np.argmax(scores)
+                # except:
+                #     i = 0
+                #     labels_list = ['1']
+                #     n_clusters = [1]
+            else:
+                # The more rigorous method doesn't work well in this case
+                i = n_clusters.index(10)
 
-        labels = labels_list[i]
-        n_cluster = n_clusters[i]
-        print('Choosing {:d} clusters'.format(n_cluster))
+            labels = labels_list[i]
+            n_cluster = n_clusters[i]
+            print('Choosing {:d} clusters'.format(n_cluster))
 
-        # Sort clusters by its task preference (important for consistency across nets)
-        if data_type == 'rule':
-            label_prefs = [np.argmax(h_normvar_all[labels==l].sum(axis=0)) for l in set(labels)]
-        elif data_type == 'epoch':
-            ## info: this may no longer work!
-            label_prefs = [self.keys[np.argmax(h_normvar_all[labels==l].sum(axis=0))][0] for l in set(labels)]
+            # Sort clusters by its task preference (important for consistency across nets)
+            if data_type == 'rule':
+                label_prefs = [np.argmax(h_normvar_all[labels==l].sum(axis=0)) for l in set(labels)]
+            elif data_type == 'epoch':
+                ## info: this may no longer work!
+                label_prefs = [self.keys[np.argmax(h_normvar_all[labels==l].sum(axis=0))][0] for l in set(labels)]
 
-        ind_label_sort = np.argsort(label_prefs)
-        label_prefs = np.array(label_prefs)[ind_label_sort]
-        # Relabel
-        labels2 = np.zeros_like(labels)
-        for i, ind in enumerate(ind_label_sort):
-            labels2[labels==ind] = i
-        labels = labels2
+            ind_label_sort = np.argsort(label_prefs)
+            label_prefs = np.array(label_prefs)[ind_label_sort]
+            # Relabel
+            labels2 = np.zeros_like(labels)
+            for i, ind in enumerate(ind_label_sort):
+                labels2[labels==ind] = i
+            labels = labels2
 
-        ind_sort = np.argsort(labels)
+            ind_sort = np.argsort(labels)
 
-        labels          = labels[ind_sort]
-        self.h_normvar_all = h_normvar_all[ind_sort, :]
-        self.ind_active      = ind_active[ind_sort]
+            labels          = labels[ind_sort]
+            self.h_normvar_all = h_normvar_all[ind_sort, :]
+            self.ind_active      = ind_active[ind_sort]
 
-        self.n_clusters = n_clusters
-        self.scores = scores
-        self.n_cluster = n_cluster
+            self.n_clusters = n_clusters
+            self.scores = scores
+            self.n_cluster = n_cluster
 
-        self.h_var_all = h_var_all
-        self.normalization_method = normalization_method
-        self.labels = labels
-        self.unique_labels = np.unique(labels)
+            self.h_var_all = h_var_all
+            self.normalization_method = normalization_method
+            self.labels = labels
+            self.unique_labels = np.unique(labels)
 
-        self.model_dir = model_dir
-        self.hp = hp
-        self.data_type = data_type
-        self.rules = hp['rules']
+            self.model_dir = model_dir
+            self.hp = hp
+            self.data_type = data_type
+            self.rules = hp['rules']
 
     def plot_cluster_score(self, save_name=None):
         """Plot the score by the number of clusters."""

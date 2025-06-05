@@ -307,15 +307,15 @@ class LeakyRNNCell(RNNCell):
             w_rec0 = (self._w_rec_start * self.rng.randn(n_hidden, n_hidden) / np.sqrt(n_hidden))
         elif self._w_rec_init == 'brainStructure':
             # Define main path
-            if machine == 'local':
+            if machine == 'hitkip': # attention: adapted for paper analysis - default: 'local'
                 connectomePath = f'C:\\Users\\oliver.frank\\Desktop\\PyProjects\\art_beRNN\\masks\\connectomes_{participant}'
-            elif machine == 'hitkip':
-                connectomePath = f'/zi/home/oliver.frank/Desktop/RNN/multitask_BeRNN-main/masks/connectomes_{participant}'
+            # elif machine == 'hitkip':
+            #     connectomePath = f'/zi/home/oliver.frank/Desktop/RNN/multitask_BeRNN-main/masks/connectomes_{participant}'
             elif machine == 'pandora':
                 connectomePath = f'/pandora/home/oliver.frank/01_Projects/RNN/multitask_BeRNN-main/masks/connectomes_{participant}'
 
             # Load right weight matrix
-            w_rec0 = np.load(os.path.join(connectomePath, f'connectome_beRNN_05_{n_hidden}_sigNorm.npy'))
+            w_rec0 = np.load(os.path.join(connectomePath, f'connectome_{participant}_{n_hidden}_sigNorm.npy'))
 
 
         # # --- Matrix Visualization ---

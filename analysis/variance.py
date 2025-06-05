@@ -53,7 +53,7 @@ def _compute_variance_bymodel(data_dir, model_dir, layer, data_type, model: obje
 
     # for layer in range(0, numberOfLayers):
     if hp.get('multiLayer') == True:
-        n_hidden = hp['n_rnn_per_layer'][layer]
+        n_hidden = hp['n_rnn_per_layer'][layer-1]
     else:
         n_hidden = hp['n_rnn']
 
@@ -106,7 +106,7 @@ def _compute_variance_bymodel(data_dir, model_dir, layer, data_type, model: obje
         eval_data[subdir] = eval_files
     # III: Split the data ##############################################################################################
     for task in rules:
-        print(task)
+        # print(task)
         if mode == 'train':
             data = train_data
         elif mode == 'test':
@@ -141,14 +141,13 @@ def _compute_variance_bymodel(data_dir, model_dir, layer, data_type, model: obje
 
             c_mask = c_mask.reshape((y.shape[0] * y.shape[1],))
             c_mask /= c_mask.mean()
-
         # info: ################################################################################################
 
         feed_dict = tools.gen_feed_dict(model, x, y, c_mask, hp)
 
         if hp.get('multiLayer') == True:
             h = sess.run(model.h_all_layers, feed_dict=feed_dict)
-            h = h[layer] # info: choose the layer of current interest
+            h = h[layer-1] # info: choose the layer of current interest
         elif hp.get('multiLayer') == False or hp.get('multiLayer') == None:
             h = sess.run(model.h, feed_dict=feed_dict)
 
