@@ -154,6 +154,19 @@ def cyclic_learning_rate(global_step, mode, base_lr=1e-5, max_lr=1e-3, step_size
 
     return clr
 
+def random_orthogonal(n, rng=None):
+    """
+    Draw a random orthogonal matrix distributed uniformly (Haar) over O(n).
+    """
+    if rng is None:
+        rng = np.random.default_rng()          # or np.random.default_rng(seed)
+    H = rng.standard_normal((n, n))
+    Q, R = np.linalg.qr(H)
+    # Make Q uniformly distributed by flipping signs so diag(R) > 0
+    Q *= np.sign(np.diag(R))
+    return Q
+
+
 # info: lowDIM section
 def popvec_lowDIM(y):
     """Population vector read out.
@@ -314,8 +327,13 @@ class LeakyRNNCell(RNNCell):
             elif machine == 'pandora':
                 connectomePath = f'/pandora/home/oliver.frank/01_Projects/RNN/multitask_BeRNN-main/masks/connectomes_{participant}'
 
-            # Load right weight matrix
-            w_rec0 = np.load(os.path.join(connectomePath, f'connectome_{participant}_{n_hidden}_sigNorm.npy'))
+            # Load right weight matrix & rotated for equivalent randomness factor while preserving the spectral characteristics
+            w_rec0_ = np.load(os.path.join(connectomePath, f'connectome_{participant}_{n_hidden}_sigNorm.npy')) # fix: Add number for brainStructVariations
+            # Draw a new random rotation each run (or per epoch if you like)
+            Q = random_orthogonal(w_rec0_.shape[0])
+
+            # Symmetric similarity transform (keeps eigenvalues & symmetry)
+            w_rec0 = Q @ w_rec0_ @ Q.T  # shape (n, n)
 
 
         # # --- Matrix Visualization ---

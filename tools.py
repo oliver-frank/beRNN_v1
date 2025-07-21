@@ -19,8 +19,14 @@ import pickle
 import numpy as np
 
 rules_dict = {'all' : ['DM', 'DM_Anti', 'EF', 'EF_Anti', 'RP', 'RP_Anti', 'RP_Ctx1', 'RP_Ctx2',
-              'WM', 'WM_Anti', 'WM_Ctx1', 'WM_Ctx2']}
-              # 'DMs_only' : ['DM', 'DM_Anti']} # fix: not very feasible because preprocessing created 77 unit input structure (could be adjusted in Tools.load_trials)
+              'WM', 'WM_Anti', 'WM_Ctx1', 'WM_Ctx2'], # All tasks
+              'DMtasks' : ['DM', 'DM_Anti'], # DM tasks isolated
+              'EFtasks' : ['EF', 'EF_Anti'], # EF tasks isolated
+              'DM&EFtasks' : ['DM', 'DM_Anti', 'EF', 'EF_Anti'], # cog. complexity level 1
+              'RPtasks' : ['RP', 'RP_Anti', 'RP_Ctx1', 'RP_Ctx2'], # RP tasks isolated
+              'WMtasks' : ['WM', 'WM_Anti', 'WM_Ctx1', 'WM_Ctx2'], # WM tasks isolated
+              'RP&WMCTXtasks' : ['RP', 'RP_Anti', 'RP_Ctx1', 'RP_Ctx2', 'WM_Ctx1', 'WM_Ctx2'], # cog. complexity level 2
+              'WM&WMANTItasks' : ['WM', 'WM_Anti']} # cog. complexity level 3
 
 rule_name = {
             'DM': 'Decison Making (DM)',
@@ -73,7 +79,7 @@ def truncate_to_smallest(arrays):
 
     return truncated_arrays
 
-def load_trials(task,mode,batchSize,data,errorComparison):
+def load_trials(rng,task,mode,batchSize,data,errorComparison):
     '''Load trials from pickle file'''
     # Build-in mechanism to prevent interruption of code as for many .npy files there errors are raised
     max_attempts = 30
@@ -103,7 +109,7 @@ def load_trials(task,mode,batchSize,data,errorComparison):
                     if key.endswith(task):
                         currenTask_values.extend(values)
                 # Select number of batches according to defined batchSize
-                currentQuartett = random.sample(currenTask_values, numberOfBatches)
+                currentQuartett = rng.choice(currenTask_values, size=numberOfBatches, replace=False).tolist()
                 # base_name = currentQuartett[0][0].split('\\')[-1].split('Input')
                 # print('chosenFile:  ', base_name)
                 # Load the files
@@ -115,7 +121,7 @@ def load_trials(task,mode,batchSize,data,errorComparison):
 
                     if batchSize < 40:
                         # randomly choose ratio for part of batch to take
-                        choice = np.random.sample(['first', 'last', 'middle'])
+                        choice = rng.choice(['first', 'last', 'middle'])
                         if choice == 'first':
                             # Select rows for either training
                             x = x[:, :batchSize, :]
@@ -228,14 +234,11 @@ def load_trials(task,mode,batchSize,data,errorComparison):
                         if key.endswith(task):
                             currenTask_values.extend(values)
                     if len(currenTask_values) < numberOfBatches: # info: In case there is not enough data to create batches with trials > 40
-                        currentQuartett = []
-                        for i in range(numberOfBatches):
-                            currentQuartett = random.sample(currenTask_values, 1)
-                            currentQuartett.append(currentQuartett[0])
+                        currentQuartett = rng.choice(currenTask_values, size=numberOfBatches, replace=True).tolist()
                     else:
-                        currentQuartett = random.sample(currenTask_values, numberOfBatches)
+                        currentQuartett = rng.choice(currenTask_values, size=numberOfBatches, replace=False).tolist()
                 elif errorComparison == True:
-                    currentQuartett = random.sample(data, numberOfBatches) # info: for errorComparison.py
+                    currentQuartett = rng.choice(data, size=numberOfBatches, replace=False).tolist() # info: for errorComparison.py
                     base_name = currentQuartett[0][0].split('Input')[0]
                     # print('chosenFile:  ', base_name)
                 # Load the files
@@ -245,7 +248,7 @@ def load_trials(task,mode,batchSize,data,errorComparison):
                     y_loc = np.load(currentQuartett[0][1])  # Ground Truth # yLoc
                     if batchSize < 40:
                         # randomly choose ratio for part of batch to take
-                        choice = np.random.sample(['first', 'last', 'middle'])
+                        choice = rng.choice(['first', 'last', 'middle'])
                         if choice == 'first':
                             # Select rows for either training
                             x = x[:, :batchSize, :]
@@ -381,7 +384,7 @@ def getEpochSteps(y):
     #     fixation_steps = np.round(int(y.shape[0] / 2))
     #     # print('fixation_steps artificially created for: ', file_stem)
 
-    return fixation_steps
+    return fixation_steps, response_steps
 
 def adjust_ndarray_size(arr):
     if arr.size == 4:
@@ -424,6 +427,14 @@ def _contain_model_file(model_dir):
         if 'model.ckpt' in f:
             return True
     return False
+
+def valid_model_dirs2(root_dir):
+    """Get valid model directories given a root directory."""
+    model_dirs = list()
+    for model_dir in root_dir:
+        if _contain_model_file(model_dir):
+            model_dirs.append(model_dir)
+    return model_dirs
 
 def _valid_model_dirs(root_dir):
     """Get valid model directories given a root directory."""
@@ -471,16 +482,28 @@ def load_hp(model_dir):
     with open(fname, 'r') as f:
         hp = json.load(f)
 
+    # with open(fname, 'r') as f:
+    #     content = f.read()
+    #     if not content.strip():
+    #         print('###################################################################################################')
+    #         print('###################################################################################################')
+    #         print('###################################################################################################')
+    #         print('###################################################################################################')
+    #         print('###################################################################################################')
+    #         raise ValueError(f"Hyperparameter file '{fname}' is empty.")
+    #     hp = json.loads(content)
+
     # Use a different seed aftering loading,
     # since loading is typically for analysis
     # hp['rng'] = np.random.RandomState(hp['seed']+1000)
-    hp['rng'] = np.random.default_rng()
+    # hp['rng'] = np.random.default_rng()
     return hp
 
 def save_hp(hp, model_dir):
     """Save the hyper-parameter file of model save_name"""
     hp_copy = hp.copy()
-    hp_copy.pop('rng')  # rng can not be serialized
+    if 'rng' in hp_copy:
+        hp_copy.pop('rng')  # rng can not be serialized
     with open(os.path.join(model_dir, 'hp.json'), 'w') as f:
         json.dump(hp_copy, f)
 

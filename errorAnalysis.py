@@ -320,7 +320,7 @@ def get_fine_grained_error(sortedResponse, errors_dict_fineGrained, task):
 
 participant = 'beRNN_03'
 # focusedMonths = ['month_1','month_2','month_3','month_4','month_5','month_6','month_7','month_8','month_9','month_10','month_11','month_12' ]
-focusedMonths = ['month_3','month_4','month_5']
+focusedMonths = ['month_4','month_5','month_6']
 directory = f'C:\\Users\\oliver.frank\\Desktop\\PyProjects\\Data\\{participant}\\data_highDim' # info: whole script made for original dataset only
 
 
@@ -1092,8 +1092,9 @@ def evaluate_model_responses(directory, dataDirectory, models, tasks):
         mode = 'Individual'
 
         for model_dir in models:
+            hp = tools.load_hp(model_dir)
             # Info: Adjust for test and training data if training was random seeded
-            file_triplets = get_file_triplets(dataDirectory, task, model_dir)
+            file_triplets = get_file_triplets(hp, dataDirectory, task, model_dir)
             correct_match, error_match, correct_mismatch, error_mismatch, total_trials = evaluate_task(model_dir, task, file_triplets)
 
             # Calculate percentages for the contingency table
@@ -1118,7 +1119,7 @@ def evaluate_model_responses(directory, dataDirectory, models, tasks):
         # Visualize the averaged contingency table
         visualize_contingency_table(average_data_percentage, task, figurePath, mode, model_dir=model_dir, ratio_correct=ratioCorrect, ratio_error=ratioError)
 
-def get_file_triplets(trial_dir, task, model_dir):
+def get_file_triplets(hp, trial_dir, task, model_dir):
     dir = os.path.join(trial_dir, task)
     npy_files_Input = glob.glob(os.path.join(dir, '*Input.npy'))
     # Filter file_triplets for month taken into account
@@ -1136,7 +1137,7 @@ def get_file_triplets(trial_dir, task, model_dir):
         file_triplets.append((input_file, yloc_file, output_file))
 
     # Split the file triplets and take both as the files are shuffeld randomly each time anyway atm
-    train_files, eval_files = split_files(file_triplets)
+    train_files, eval_files = split_files(hp, file_triplets)
     all_files = train_files + eval_files
 
     return all_files
@@ -1155,7 +1156,7 @@ def evaluate_task(model_dir, task, file_triplets):
         model.restore(model_dir)
 
         for i in range(0, 100): # Info: Each iteration represents one batch - after the spliting most often you only have 4 batches for one month
-            x, y, y_loc, base_name = tools.load_trials(task, 'test', 40, file_triplets, True)
+            x, y, y_loc, base_name = tools.load_trials(hp['rng'], task, 'test', 40, file_triplets, True)
             ground_truth = np.load(os.path.join(base_name + 'Response.npy'), allow_pickle=True)
 
             # Sort response data

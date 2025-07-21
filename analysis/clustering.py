@@ -12,7 +12,9 @@ from __future__ import division
 import os
 import numpy as np
 # import pickle
+import random
 import matplotlib.pyplot as plt
+from scipy.spatial.distance import pdist, squareform
 
 import tensorflow as tf
 
@@ -20,7 +22,10 @@ import tensorflow as tf
 from network import Model
 import tools
 from tools import rule_name
+from network import get_perf
 from analysis import variance
+from training import createSplittedDatasets, create_cMask
+
 
 # Colors used for clusters
 kelly_colors = \
@@ -70,7 +75,7 @@ def all_variance_files_exist(model_dir, numberOfLayers, mode, data_dir):
     return True
 
 class Analysis(object):
-    def __init__(self, data_dir, model_dir, layer, mode, monthsConsidered, data_type, normalization_method='sum'):
+    def __init__(self, data_dir, model_dir, layer, rdm_metric, mode, monthsConsidered, data_type, networkAnalysis, normalization_method='sum'):
         hp = tools.load_hp(model_dir)
 
         # # Do a task variance analysis for each hidden layer
@@ -80,7 +85,7 @@ class Analysis(object):
         #     numberOfLayers = 1
         #
         # if not all_variance_files_exist(model_dir, numberOfLayers, mode, data_dir):
-        fname = variance.compute_variance(data_dir, model_dir, layer, mode, monthsConsidered, data_type)
+        fname = variance.compute_variance(data_dir, model_dir, layer, mode, monthsConsidered, data_type, networkAnalysis)
 
         # compVarianceList = [compVariance for compVariance in os.listdir(model_dir) if compVariance.startswith('var')]
         # self.h_normvar_all_list = []
@@ -103,7 +108,7 @@ class Analysis(object):
         # Info: Debug not working models
         print(f"Model: {model_dir}")
         print(f"Active units after thresholding: {len(ind_active)}")
-        print(f"Variance sum across tasks for active units: {h_var_all_.sum(axis=1)[ind_active]}")
+        # print(f"Variance sum across tasks for active units: {h_var_all_.sum(axis=1)[ind_active]}")
 
 
         # attention: fallback if clustering is not possible
@@ -111,8 +116,9 @@ class Analysis(object):
         # if h_var_all.shape[0] < 2 or np.where(h_var_all_.sum(axis=1) < activityThreshold):
             print(f"Skipping clustering for model {model_dir} — insufficient data or variance.")
 
-            self.h_var_all = np.zeros([2, 12])
-            self.h_normvar_all = np.zeros([2, 12])
+            self.h_var_all = np.ones([2, 12])
+            self.h_normvar_all = np.array([[1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+                                           [0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]])
             self.labels = np.array([0, 1])  # Use 2 dummy clusters
             self.ind_active = np.array([0, 1])
             self.n_clusters = [2]
@@ -126,6 +132,13 @@ class Analysis(object):
             self.data_type = data_type
             self.rules = hp['rules']
 
+            task_matrix = self.h_normvar_all.T  # shape: (n_tasks, n_units)
+            n_tasks = task_matrix.shape[0]
+            # Safe dummy RDM (0 = no dissimilarity)
+            self.rdm = np.full((n_tasks, n_tasks), 0.5)  # or np.full((n_tasks, n_tasks), 0.5) if you prefer mid-range dissimilarity
+            self.rdm_vector = np.zeros(int(n_tasks * (n_tasks - 1) / 2))
+            self.rdm_metric = rdm_metric
+
         else:
             # Normalize by the total variance across tasks
             if normalization_method == 'sum':
@@ -137,9 +150,17 @@ class Analysis(object):
             else:
                 raise NotImplementedError()
 
-            # Clustering ---------------------------------------------------------------------------------------------------
+            # head: Compute Representational Dissimilarity Matrix (RSA-style) ==========================================
+            task_matrix = h_normvar_all.T  # shape: (n_tasks, n_units)
+            self.rdm_metric = rdm_metric # correlation - cosine - ...
+            self.rdm = squareform(pdist(task_matrix, metric=self.rdm_metric))
+            self.rdm_vector = self.rdm[np.triu_indices_from(self.rdm, k=1)]
+
+
+            # head: Clustering =========================================================================================
             from sklearn import metrics
             X = h_normvar_all
+
 
             # Clustering
             from sklearn.cluster import AgglomerativeClustering, KMeans
@@ -242,7 +263,7 @@ class Analysis(object):
             plt.savefig('figure/'+fig_name+'.pdf', transparent=True)
         plt.show()
 
-    def plot_variance(self, model_dir, figurePath, mode, save_name=None):
+    def plot_variance(self, model_dir, figurePath, mode_, save_name=None):
         labels = self.labels
         # Plotting Variance --------------------------------------------------------------------------------------------
         # Plot Normalized Variance
@@ -269,7 +290,7 @@ class Analysis(object):
         vmin, vmax = 0, 1
         fig = plt.figure(figsize=figsize)
         ax = fig.add_axes(rect)
-        im = ax.imshow(h_plot, cmap='coolwarm', aspect='auto', interpolation='nearest', vmin=vmin, vmax=vmax)
+        im = ax.imshow(h_plot, cmap='hot', aspect='auto', interpolation='nearest', vmin=vmin, vmax=vmax)
 
         plt.yticks(range(len(tick_names)), tick_names,rotation=0, va='center', fontsize=fs)
         plt.xticks([])
@@ -304,15 +325,267 @@ class Analysis(object):
             ax.set_ylim([-1, 1])
             ax.axis('off')
 
-        plt.savefig(os.path.join(figurePath, model_dir.split("\\")[-1] + '_' + 'taskVariance' + '_' + mode + '.png'), format='png', dpi=300, bbox_inches='tight', pad_inches=0.1)
+        taskVarianceFolder = os.path.join(figurePath, '_'.join(mode_.split('_')[1:3]), 'taskVariances')
+        os.makedirs(name=taskVarianceFolder, exist_ok=True)
+        plt.savefig(os.path.join(taskVarianceFolder, mode_ + '_' + 'batch_' + model_dir.split("\\")[-5] + '_' + model_dir.split("\\")[-3].split('_')[-4] + '_' + 'taskVariance.png'), format='png', dpi=300, bbox_inches='tight', pad_inches=0.1)
 
         # plt.show()
         # plt.close()
 
+    def lesions(self, data_dir, mode_):
+        labels = self.labels
+
+        # The first will be the intact network
+        lesion_units_list = [None]
+        for il, l in enumerate(self.unique_labels):
+            ind_l = np.where(labels == l)[0]
+            # In original indices
+            lesion_units_list += [self.ind_active[ind_l]]
+
+        perfs_store_list = list()
+        perfs_changes = list()
+        cost_store_list = list()
+        cost_changes = list()
+
+        # # III: Split the data ##############################################################################################
+        # # List of the subdirectories
+        # subdirs = [os.path.join(data_dir, d) for d in os.listdir(data_dir) if
+        #            os.path.isdir(os.path.join(data_dir, d))]
+        #
+        # # Initialize dictionaries to store training and evaluation data
+        # train_data = {}
+        # eval_data = {}
+        #
+        # # Function to split the files
+        # def split_files(files, split_ratio=0.8):
+        #     random.seed(42)  # info: add seed to always shuffle similiar
+        #     random.shuffle(files)
+        #     split_index = int(len(files) * split_ratio)
+        #     return files[:split_index], files[split_index:]
+        #
+        # # Create the training and test data
+        # for subdir in subdirs:
+        #     # Collect all file triplets in the current subdirectory
+        #     file_quartett = []
+        #     for file in os.listdir(subdir):
+        #         if file.endswith('Input.npy'):
+        #             # # III: Exclude files with specific substrings in their names
+        #             # if any(exclude in file for exclude in ['Randomization', 'Segmentation', 'Mirrored', 'Rotation']):
+        #             #     continue
+        #             # Include only files that contain any of the months in monthsConsidered
+        #             if not any(month in file for month in ['month_4', 'month_5', 'month_6']): # fix: hp['monthsConsidered'] should be variable
+        #                 continue
+        #             base_name = file.split('Input')[0]
+        #             input_file = os.path.join(subdir, base_name + 'Input.npy')
+        #             yloc_file = os.path.join(subdir, base_name + 'yLoc.npy')
+        #             output_file = os.path.join(subdir, base_name + 'Output.npy')
+        #             response_file = os.path.join(subdir, base_name + 'Response.npy')
+        #
+        #             file_quartett.append((input_file, yloc_file, output_file, response_file))
+        #
+        #     # Split the file triplets
+        #     train_files, eval_files = split_files(file_quartett)
+        #
+        #     # Store the results in the dictionaries
+        #     train_data[subdir] = train_files
+        #     eval_data[subdir] = eval_files
+        #     # III: Split the data ##############################################################################################
+
+        hp = self.hp
+        month = '_'.join(self.model_dir.split('_')[-2:]) # only current model's month considered
+        train_data, eval_data = createSplittedDatasets(hp, data_dir, month)
+
+        for i, lesion_units in enumerate(lesion_units_list):
+            model = Model(self.model_dir)
+            hp = model.hp
+            with tf.Session() as sess:
+                model.restore()
+                model.lesion_units(sess, lesion_units)
+
+                perfs_store = list()
+                cost_store = list()
+                for task in self.rules:
+                    n_rep = 16
+                    # batch_size_test = 256
+                    # batch_size_test_rep = int(batch_size_test / n_rep)
+                    clsq_tmp = list()
+                    perf_tmp = list()
+                    for i_rep in range(n_rep):
+                        # attention: #######################################################################################
+                        # Start evaluation of this task
+                        print('Evaluate task: ', task)
+                        mode = mode_.split('_')[-1]
+                        # if mode == 'test':
+                        #     x, y, y_loc, response = tools.load_trials(task, mode, hp['batch_size'], eval_data, False)
+                        # elif mode == 'train':
+                        #     x, y, y_loc, response = tools.load_trials(task, mode, hp['batch_size'], train_data, False)
+
+                        # Fallback for taskRepresentation.py - hp['rng'] is popped out before saving in training
+                        if 'rng' not in hp:
+                            hp['rng'] = np.random.default_rng()
+
+                        if mode == 'test':
+                            x, y, y_loc, response = tools.load_trials(hp['rng'], task, mode, hp['batch_size'], eval_data, False)
+                        elif mode == 'train':
+                            x, y, y_loc, response = tools.load_trials(hp['rng'], task, mode, hp['batch_size'], train_data, False)  # y_loc is participantResponse_perfEvalForm
+                        # Create cMask
+                        c_mask = create_cMask(y, response, hp, mode)
+
+                        # if c_mask == None:
+                        #     continue
+
+                        # # Generating feed_dict.
+                        # feed_dict = tools.gen_feed_dict(model, x, y, c_mask, hp)
+                        #
+                        # h = sess.run(model.train_step,
+                        #              feed_dict=feed_dict)  # info: Trainables are actualized - train_step should represent the step in training.py and the global_step in network.py
+                        #
+
+
+                        # epochs = tools.find_epochs(x)
+                        #
+                        # # info: ################################################################################################
+                        # fixation_steps = tools.getEpochSteps(y)
+                        #
+                        # # Create c_mask for current batch
+                        # if hp['loss_type'] == 'lsq':
+                        #     c_mask = np.zeros((y.shape[0], y.shape[1], y.shape[2]), dtype='float32')
+                        #     for i in range(y.shape[1]):
+                        #         # Fixation epoch
+                        #         c_mask[:fixation_steps, i, :] = 1.
+                        #         # Response epoch
+                        #         c_mask[fixation_steps:, i, :] = 1.
+                        #
+                        #     # self.c_mask[:, :, 0] *= self.n_eachring # Fixation is important
+                        #     c_mask[:, :, 0] *= 2.  # Fixation is important
+                        #     c_mask = c_mask.reshape((y.shape[0] * y.shape[1], y.shape[2]))
+                        #     c_mask /= c_mask.mean()
+                        #
+                        # else:
+                        #     c_mask = np.zeros((y.shape[0], y.shape[1]), dtype='float32')
+                        #     for i in range(y.shape[1]):
+                        #         # Fixation epoch
+                        #         c_mask[:fixation_steps, i, :] = 1.
+                        #         # Response epoch
+                        #         c_mask[fixation_steps:, i, :] = 1.
+                        #
+                        #     c_mask = c_mask.reshape((y.shape[0] * y.shape[1],))
+                        #     c_mask /= c_mask.mean()
+                        # # info: ################################################################################################
+
+                        feed_dict = tools.gen_feed_dict(model, x, y, c_mask, hp)
+                        y_hat_test, c_lsq = sess.run([model.y_hat, model.cost_lsq], feed_dict=feed_dict)
+                        # attention ####################################################################################
+
+                        # Cost is first summed over time, and averaged across batch and units
+                        # We did the averaging over time through c_mask
+
+                        # IMPORTANT CHANGES: take overall mean
+                        perf_test = np.mean(get_perf(y_hat_test, y_loc))
+
+                        clsq_tmp.append(c_lsq)
+                        perf_tmp.append(perf_test)
+
+                    perfs_store.append(np.mean(perf_tmp))
+                    cost_store.append(np.mean(clsq_tmp))
+
+            perfs_store = np.array(perfs_store)
+            cost_store = np.array(cost_store)
+
+            perfs_store_list.append(perfs_store)
+            cost_store_list.append(cost_store)
+
+            if i > 0:
+                perfs_changes.append(perfs_store - perfs_store_list[0])
+                cost_changes.append(cost_store - cost_store_list[0])
+
+        perfs_changes = np.array(perfs_changes)
+        cost_changes = np.array(cost_changes)
+
+        return perfs_changes, cost_changes
+
+    def plot_lesions(self, data_dir, model_dir, figurePath, mode_):
+        """Lesion individual cluster and show performance."""
+
+        perfs_changes, cost_changes = self.lesions(data_dir, mode_)
+
+        cb_labels = ['Performance change after lesioning',
+                     'Cost change after lesioning']
+        vmins = [-0.5, -0.5]
+        vmaxs = [+0.5, +0.5]
+        ticks = [[-0.5, 0.5], [-0.5, 0.5]]
+        changes_plot = [perfs_changes, cost_changes]
+
+        fs = 6
+        figsize = (2.5, 2.5)
+        rect = [0.3, 0.2, 0.5, 0.7]
+        rect_cb = [0.87, 0.2, 0.03, 0.7]
+        rect_color = [0.3, 0.15, 0.5, 0.05]
+
+        i = 0  # only performance plot
+
+        labels = self.labels
+        cluster_edges = [0]
+        for l in self.unique_labels:
+            count = np.sum(labels == l)
+            cluster_edges.append(cluster_edges[-1] + count)
+        x_edges = np.array(cluster_edges)
+        y_edges = np.arange(changes_plot[i].T.shape[0] + 1)
+
+        fig = plt.figure(figsize=figsize)
+        ax = fig.add_axes(rect)
+        pc = ax.pcolormesh(x_edges, y_edges, changes_plot[i].T,
+                           cmap='coolwarm', vmin=vmins[i], vmax=vmaxs[i], shading='flat')
+        ax.invert_yaxis()
+
+        tick_names = [rule_name[r] for r in self.rules]
+        ax.set_yticks(np.arange(len(tick_names)) + 0.5)
+        ax.set_yticklabels(tick_names, fontsize=fs, va='center')
+        ax.set_xticks([])
+        ax.set_xlabel('Clusters', fontsize=7)
+        ax.xaxis.set_label_coords(0.5, -0.15)
+        ax.tick_params(length=0)
+        for spine in ax.spines.values():
+            spine.set_visible(False)
+
+        ax = fig.add_axes(rect_cb)
+        cb = plt.colorbar(pc, cax=ax, ticks=ticks[i])
+        cb.outline.set_linewidth(0.5)
+        cb.ax.set_ylabel(cb_labels[i], fontsize=7, labelpad=0)
+        cb.ax.tick_params(labelsize=6)
+
+        ax = fig.add_axes(rect_color)
+        for il, l in enumerate(self.unique_labels):
+            inds = np.where(labels == l)[0]
+            if len(inds) == 0:
+                continue
+            start, end = inds[0], inds[-1] + 1
+            ax.plot([start, end], [0, 0], linewidth=4, solid_capstyle='butt',
+                    color=kelly_colors[il + 1])
+            ax.text((start + end) / 2, -0.5, str(il + 1), fontsize=6,
+                    ha='center', va='top', color=kelly_colors[il + 1])
+        ax.set_xlim([0, len(labels)])
+        ax.set_ylim([-1, 1])
+        ax.axis('off')
+
+        lesionPlotsFolder = os.path.join(figurePath, '_'.join(mode_.split('_')[1:3]), 'lesionPlots')
+        os.makedirs(name=lesionPlotsFolder, exist_ok=True)
+        plt.savefig(os.path.join(lesionPlotsFolder, mode_ + '_' + 'batch_' + model_dir.split("\\")[-5] + '_' +
+                                 model_dir.split("\\")[-3].split('_')[-4] + '_' + 'lesionPlot.png'),
+                    format='png', dpi=300, bbox_inches='tight', pad_inches=0.1)
+
+        # plt.show()
+
+        return plt
+
     def get_dotProductCorrelation(self):
         # Center and normalize the data
         data_centered = self.h_normvar_all - self.h_normvar_all.mean(axis=1, keepdims=True)
-        data_normalized = data_centered / np.linalg.norm(data_centered, axis=1, keepdims=True)
+
+        norm = np.linalg.norm(data_centered, axis=1, keepdims=True)
+        norm[norm == 0] = 1e-8  # Prevent division by zero
+
+        data_normalized = data_centered / norm
 
         corr_coef = np.dot(data_normalized, data_normalized.T)
 

@@ -1,5 +1,5 @@
 ########################################################################################################################
-# info: hyperparameterTuning
+# head: hyperparameterTuning ###########################################################################################
 ########################################################################################################################
 # Random Grid Search of different hyperparameter sets for automated accumulated model training.
 
@@ -44,24 +44,24 @@ def create_repeated_param_combinations(param_grid, sample_size):
     return repeated_combinations
 
 
-# # attention: hitkip cluster ############################################################################################
+# # attention: hitkip cluster ##########################################################################################
 # parser = argparse.ArgumentParser()
 # parser.add_argument("--adjParams", type=str, required=True)
 # args = parser.parse_args()
 #
 # # Convert the JSON string to a Python dictionary
 # sampled_combinations = json.loads(args.adjParams)
-# # attention: hitkip cluster ############################################################################################
+# # attention: hitkip cluster ##########################################################################################
 
 
-# # attention: hitkip machine #############################################################################################
+# # attention: hitkip local ############################################################################################
 # batchDirectory = '/zi/home/oliver.frank/Desktop/RNN/multitask_BeRNN-main/paramCombinations_highDim_hitkip/sampled_combinations_beRNN_05_25.json'
 # with open(batchDirectory, 'r') as f:
 #     sampled_combinations = json.load(f)
-# # attention: hitkip machine #############################################################################################
+# # attention: hitkip local ############################################################################################
 
 
-# # attention: all other setups ##########################################################################################
+# # attention: all other setups ########################################################################################
 # Get input and output dimension for network, depending on higDim and lowDim data and ruleset (standard: 'all')
 num_ring = tools.get_num_ring('all')
 n_rule = tools.get_num_rule('all')
@@ -77,7 +77,6 @@ n_input, n_output = 1 + num_ring * n_eachring + n_rule, n_outputring + 1
 #     n_outputring = 2
 #     n_input, n_output = 1 + num_ring * n_eachring + n_rule, n_outputring + 1
 
-# Info: After first HPs the most probable space inheriting the best solution decreased to the following
 adjParams = {
     'batch_size': [80],
     'in_type': ['normal'],
@@ -107,7 +106,7 @@ adjParams = {
     'max_lr': [0.0015],
     'n_rnn': [512],
     'multiLayer': [False],
-    'n_rnn_per_layer': [[256, 256, 256], [128, 128, 128]],
+    'n_rnn_per_layer': [[512, 512, 512], [256, 256, 256], [128, 128, 128]],
     'activations_per_layer': [['relu', 'relu', 'relu'], ['softplus', 'softplus', 'softplus'], ['tanh', 'tanh', 'tanh']],
     'errorBalancingValue': [1.],
     'c_mask_responseValue': [5.],
@@ -122,35 +121,36 @@ adjParams = {
     'tasksString': ['AllTask'], # tasksTaken
     'sequenceMode': [True], # Decide if models are trained sequentially month-wise
     'trainingBatch': ['01'],
-    'trainingYear_Month': ['test123']
+    'trainingYear_Month': ['X']
 }
 # # attention: all other setups ##########################################################################################
 
 # Randomly sample combinations
-sampled_combinations = sample_param_combinations(adjParams, 8)
+sampled_combinations = sample_param_combinations(adjParams, 20)
 
 # # Create one combination and repeat it according to sample_size
 # sampled_repeated_combinations = create_repeated_param_combinations(best_params, 5)
 
 
-# # info: for finalGridSearch_allSubjects ##############################################################################
-# os.chdir(r'C:\Users\oliver.frank\Desktop\PyProjects\art_beRNN\paramCombinations_highDim_correctOnly_3stimTC_hitkip')
-# # for paramBatch in range(1,33):
-#     # # Randomly sample combinations
-#     # sampled_combinations = sample_param_combinations(adjParams, 8)
-#     #
-#     # with open(f'sampled_combinations_beRNN_01_{paramBatch}.json', 'w') as f:
-#     #     json.dump(sampled_combinations, f, indent=4)
-#     # with open(f'sampled_combinations_beRNN_02_{paramBatch}.json', 'w') as f:
-#     #     json.dump(sampled_combinations, f, indent=4)
-#     # with open(f'sampled_combinations_beRNN_03_{paramBatch}.json', 'w') as f:
-#     #     json.dump(sampled_combinations, f, indent=4)
-#     # with open(f'sampled_combinations_beRNN_04_{paramBatch}.json', 'w') as f:
-#     #     json.dump(sampled_combinations, f, indent=4)
-#     # with open(f'sampled_combinations_beRNN_05_{paramBatch}.json', 'w') as f:
-#     #     json.dump(sampled_combinations, f, indent=4)
+# # info: dataset adjustments ##########################################################################################
+# os.chdir(r'C:\Users\oliver.frank\Desktop\PyProjects\art_beRNN\paramCombinations_highDim_correctOnly_hitkip')
+# for paramBatch in range(1,33):
+#     # Randomly sample combinations
+#     sampled_combinations = sample_param_combinations(adjParams, 8)
+#
+#     with open(f'sampled_combinations_beRNN_01_{paramBatch}.json', 'w') as f:
+#         json.dump(sampled_combinations, f, indent=4)
+#     with open(f'sampled_combinations_beRNN_02_{paramBatch}.json', 'w') as f:
+#         json.dump(sampled_combinations, f, indent=4)
+#     with open(f'sampled_combinations_beRNN_03_{paramBatch}.json', 'w') as f:
+#         json.dump(sampled_combinations, f, indent=4)
+#     with open(f'sampled_combinations_beRNN_04_{paramBatch}.json', 'w') as f:
+#         json.dump(sampled_combinations, f, indent=4)
+#     with open(f'sampled_combinations_beRNN_05_{paramBatch}.json', 'w') as f:
+#         json.dump(sampled_combinations, f, indent=4)
 #
 # participantList = ['beRNN_01', 'beRNN_02', 'beRNN_03', 'beRNN_04', 'beRNN_05']
+# # participantList = ['beRNN_01']
 # for participant in participantList:
 #     for paramBatch in range(1, 33):
 #         with open(f'sampled_combinations_{participant}_{paramBatch}.json', 'r') as f:
@@ -160,11 +160,11 @@ sampled_combinations = sample_param_combinations(adjParams, 8)
 #                 # sampled_combinations[i]['machine'] = 'hitkip' # attention: You have to define machine for paperGridSearch
 #                 # sampled_combinations[i]['data'] = 'data_highDim_correctOnly_3stimTC' # attention: You have to define data for paperGridSearch
 #                 # sampled_combinations[i]['trainingBatch'] = str(paramBatch) # attention: You have to define trainingBatch
-#                 sampled_combinations[i]['trainingYear_Month'] = "finalGridSearch_allSubjects_3stimTC"
-#             # info: Overwrite previous file
-#             with open(f'sampled_combinations_{participant}_{paramBatch}.json', 'w') as f:
-#                 json.dump(sampled_combinations, f, indent=4)
-# # info: for finalGridSearch_allSubjects ##############################################################################
+#                 sampled_combinations[i]['trainingYear_Month'] = "finalGridSearch_allSubjects_correctOnly"
+#         # info: Overwrite previous file
+#         with open(f'sampled_combinations_{participant}_{paramBatch}.json', 'w') as f:
+#             json.dump(sampled_combinations, f, indent=4)
+# # info: dataset adjustments ##########################################################################################
 
 
 # Training #############################################################################################################
@@ -265,7 +265,7 @@ for modelNumber, params in enumerate(sampled_combinations): # info: either sampl
                     file_quartett.append((input_file, yloc_file, output_file, response_file))
 
             # Split the file triplets
-            train_files, eval_files = training.split_files(file_quartett)
+            train_files, eval_files = training.split_files(params, file_quartett)
 
             # Store the results in the dictionaries
             train_data[subdir] = train_files
@@ -296,8 +296,8 @@ for modelNumber, params in enumerate(sampled_combinations): # info: either sampl
     trainingTimeTotal_hours += elapsed_time_hours
 
 
-# Save training time total and list to folder as a text file
-file_path = os.path.join(model_dir, 'times.txt')
+# Save training time for each model to current batch folder as a text file
+file_path = os.path.join(path, 'beRNNmodels', params['trainingYear_Month'], params['participant'], params['trainingBatch'], 'times.txt')
 
 with open(file_path, 'w') as f:
     f.write(f"training time total (hours): {trainingTimeTotal_hours}\n")
@@ -306,4 +306,5 @@ with open(file_path, 'w') as f:
         f.write(f"{time}\n")
 
 print(f"Training times saved to {file_path}")
+
 

@@ -44,8 +44,8 @@ def get_default_hp(ruleset):
 
     machine = 'local' # 'local' 'pandora' 'hitkip'
     data = 'data_highDim_correctOnly_3stimTC' # 'data_highDim' , data_highDim_correctOnly , data_highDim_lowCognition , data_lowDim , data_lowDim_correctOnly , data_lowDim_lowCognition, 'data_highDim_correctOnly_3stimTC'
-    trainingBatch = '03'
-    trainingYear_Month = 'test123'
+    trainingBatch = '01'
+    trainingYear_Month = 'test12345'
 
     if 'highDim' in data: # fix: lowDim_timeCompressed needs to be skipped here
         n_eachring = 32
@@ -89,7 +89,7 @@ def get_default_hp(ruleset):
         'rule_start': 1 + num_ring * n_eachring, # first input index for rule units
         'n_input': n_input, # number of input units
         'n_output': n_output, # number of output units
-        'rng': np.random.default_rng(), # np.random.RandomState(seed=0), random number used for several random initializations
+        'rng': np.random.default_rng(), # add seed here if you want to make it reproducible e.g. (42)
         'ruleset': ruleset, # number of input units
         'save_name': 'test', # name to save
         'learning_rate': 0.0015, # learning rate
@@ -105,11 +105,11 @@ def get_default_hp(ruleset):
         # 'ksi_intsyn': 0,
         'monthsConsidered': ['month_3', 'month_4', 'month_5'], # months to train and test
         'monthsString': '3-5', # monthsTaken
-        # 'rule_prob_map': {"DM": 1,"DM_Anti": 1,"EF": 1,"EF_Anti": 1,"RP": 1,"RP_Anti": 1,"RP_Ctx1": 1,"RP_Ctx2": 1,"WM": 1,"WM_Anti": 1,"WM_Ctx1": 1,"WM_Ctx2": 1},
-        'rule_prob_map': {"DM": 1,"DM_Anti": 1,"EF": 1,"EF_Anti": 1,"RP": 1,"RP_Anti": 1,"RP_Ctx1": 1,"RP_Ctx2": 1,"WM": 1,"WM_Anti": 1,"WM_Ctx1": 1,"WM_Ctx2": 1}, # fraction of tasks represented in training data
+        'rule_prob_map': {"DM": 1,"DM_Anti": 1,"EF": 1,"EF_Anti": 1,"RP": 1,"RP_Anti": 1,"RP_Ctx1": 1,"RP_Ctx2": 1,"WM": 1,"WM_Anti": 1,"WM_Ctx1": 1,"WM_Ctx2": 1},
+        # 'rule_prob_map': {"DM": 0,"DM_Anti": 0,"EF": 0,"EF_Anti": 0,"RP": 0,"RP_Anti": 1,"RP_Ctx1": 0,"RP_Ctx2": 0,"WM": 0,"WM_Anti": 0,"WM_Ctx1": 0,"WM_Ctx2": 0}, # fraction of tasks represented in training data
         'tasksString': 'Alltask', # tasks taken
         'sequenceMode': True, # Decide if models are trained sequentially month-wise
-        'participant': 'beRNN_03', # Participant to take
+        'participant': 'beRNN_02', # Participant to take
         'data': data, # 'data_highDim' , data_highDim_correctOnly , data_highDim_lowCognition , data_lowDim , data_lowDim_correctOnly , data_lowDim_lowCognition, data_timeCompressed, data_lowDim_timeCompressed
         'machine': machine,
         'trainingBatch': trainingBatch,
@@ -118,12 +118,94 @@ def get_default_hp(ruleset):
 
     return hp
 
-def split_files(files, split_ratio=0.8):
-    # random.seed(42) # attention: add seed to always shuffle similiar - would be good for NetworkAnalysis as it iwll result in robust solutions
-    random.seed(np.random.default_rng()) # attention: add seed to always shuffle similiar - would be good for NetworkAnalysis as it iwll result in robust solutions
-    random.shuffle(files)
+def createSplittedDatasets(hp, preprocessedData_path, month):
+    # Split the data into training and test data -----------------------------------------------------------------------
+    # List of the subdirectories
+    subdirs = [os.path.join(preprocessedData_path, d) for d in os.listdir(preprocessedData_path) if
+               os.path.isdir(os.path.join(preprocessedData_path, d))]
+
+    # Initialize dictionaries to store training and evaluation data
+    train_data = {}
+    eval_data = {}
+
+    for subdir in subdirs:
+        # Collect all file triplets in the current subdirectory
+        file_quartett = []
+        for file in os.listdir(subdir):
+            if file.endswith('Input.npy'):
+                # # III: Exclude files with specific substrings in their names
+                # if any(exclude in file for exclude in ['Randomization', 'Segmentation', 'Mirrored', 'Rotation']):
+                #     continue
+                # Include only files that contain any of the months in monthsConsidered
+                if month not in file:  # Sort out months which should not be considered
+                    continue
+                # Add all necessary files to triplets
+                base_name = file.split('Input')[0]
+                input_file = os.path.join(subdir, base_name + 'Input.npy')
+                yloc_file = os.path.join(subdir, base_name + 'yLoc.npy')
+                output_file = os.path.join(subdir, base_name + 'Output.npy')
+                response_file = os.path.join(subdir, base_name + 'Response.npy')
+
+                file_quartett.append((input_file, yloc_file, output_file, response_file))
+
+        # Split the file triplets
+        train_files, eval_files = split_files(hp, file_quartett)
+
+        # Store the results in the dictionaries
+        train_data[subdir] = train_files
+        eval_data[subdir] = eval_files
+
+    return train_data, eval_data
+
+def split_files(hp, files, split_ratio=0.8):
+    if 'rng' not in hp:
+        hp['rng'] = np.random.default_rng()
+    hp['rng'].shuffle(files)
     split_index = int(len(files) * split_ratio)
     return files[:split_index], files[split_index:]
+
+def create_cMask(y, response, hp, mode):
+    fixation_steps, response_steps = tools.getEpochSteps(y)
+    if fixation_steps == None:  # if no fixation_steps could be found
+        return None
+    # Creat c_mask for current batch
+    if hp['loss_type'] == 'lsq':
+        c_mask = np.zeros((y.shape[0], y.shape[1], y.shape[2]), dtype='float32')
+
+        if mode == 'train':
+            # fix: Create a c_mask that emphasizes errors by multiplying the error contribution for backProp by 5. and corrects by 1.
+            errorBalancingVector = np.zeros(response.shape[1], dtype='float32')
+            for j in range(response.shape[1]):
+                if response[0][j] == response[1][j]:
+                    errorBalancingVector[j] = 1.  # weight value for corrects
+                else:
+                    errorBalancingVector[j] = hp['errorBalancingValue']
+
+            for i in range(y.shape[1]):
+                # Fixation epoch
+                c_mask[:fixation_steps, i, :] = 1.
+                # Response epoch
+                c_mask[fixation_steps:, i, :] = hp['c_mask_responseValue'] * errorBalancingVector[i]  # info: 1 or 5
+
+            # self.c_mask[:, :, 0] *= self.n_eachring # Fixation is important
+            # c_mask[:, :, 0] *= 2.  # Fixation is important # info: with or without
+            c_mask = c_mask.reshape((y.shape[0] * y.shape[1], y.shape[2]))
+            c_mask /= c_mask.mean()
+
+        c_mask = c_mask.reshape((y.shape[0] * y.shape[1], y.shape[2]))
+
+    else:
+        c_mask = np.zeros((y.shape[0], y.shape[1]), dtype='float32')
+        for i in range(y.shape[1]):
+            # Fixation epoch
+            c_mask[:fixation_steps, i, :] = 1.
+            # Response epoch
+            c_mask[fixation_steps:, i, :] = hp['c_mask_responseValue']  # info: 1 or 5
+
+        c_mask = c_mask.reshape((y.shape[0] * y.shape[1],))
+        c_mask /= c_mask.mean()
+
+    return c_mask
 
 def do_eval(sess, model, log, rule_train, eval_data):
     """Do evaluation.
@@ -155,38 +237,9 @@ def do_eval(sess, model, log, rule_train, eval_data):
 
         for i_rep in range(n_rep):
             try:
-                x,y,y_loc,response = tools.load_trials(task, mode, hp['batch_size'], eval_data, False)  # y_loc is participantResponse_perfEvalForm
+                x,y,y_loc,response = tools.load_trials(hp['rng'], task, mode, hp['batch_size'], eval_data, False)  # y_loc is participantResponse_perfEvalForm
 
-                # info: ################################################################################################
-                fixation_steps = tools.getEpochSteps(y)
-                if fixation_steps == None:  # if no fixation_steps could be found
-                    continue
-
-                # Creat c_mask for current batch
-                if hp['loss_type'] == 'lsq':
-                    c_mask = np.zeros((y.shape[0], y.shape[1], y.shape[2]), dtype='float32')
-                    for i in range(y.shape[1]):
-                        # Fixation epoch
-                        c_mask[:fixation_steps, i, :] = 1.
-                        # Response epoch
-                        c_mask[fixation_steps:, i, :] = hp['c_mask_responseValue'] # info: 1 or 5
-
-                    # self.c_mask[:, :, 0] *= self.n_eachring # Fixation is important
-                    # c_mask[:, :, 0] *= 2.  # Fixation is important
-                    c_mask = c_mask.reshape((y.shape[0]*y.shape[1], y.shape[2]))
-
-                else:
-                    c_mask = np.zeros((y.shape[0], y.shape[1]), dtype='float32')
-                    for i in range(y.shape[1]):
-                        # Fixation epoch
-                        c_mask[:fixation_steps, i, :] = 1.
-                        # Response epoch
-                        c_mask[fixation_steps:, i, :] = hp['c_mask_responseValue'] # info: 1 or 5
-
-                    c_mask = c_mask.reshape((y.shape[0] * y.shape[1],))
-                    c_mask /= c_mask.mean()
-
-                # info: ################################################################################################
+                c_mask = create_cMask(y, response, hp, mode)
 
                 feed_dict = tools.gen_feed_dict(model, x, y, c_mask, hp) # y: participnt response, that gives the lable for what the network is trained for
                 # print('passed feed_dict Evaluation')
@@ -253,7 +306,7 @@ def do_eval(sess, model, log, rule_train, eval_data):
     return log
 
 def train(model_dir,train_data ,eval_data,hp=None,max_steps=3e6,display_step=500,ruleset='all',rule_trains=None,rule_prob_map=None,seed=0,
-          load_dir=None,trainables=None):
+          load_dir=None,trainables=None, robustnessTest= True):
     """Train the network.
 
     Args:
@@ -280,7 +333,6 @@ def train(model_dir,train_data ,eval_data,hp=None,max_steps=3e6,display_step=500
         default_hp.update(hp) # fix: Where does this update function come from?
     hp = default_hp
     hp['seed'] = seed
-    hp['rng'] = np.random.default_rng()
 
     # Rules to train and test. Rules in a set are trained together
     if rule_trains is None:
@@ -300,7 +352,11 @@ def train(model_dir,train_data ,eval_data,hp=None,max_steps=3e6,display_step=500
         # Set default as 1.
         rule_prob = np.array([hp['rule_prob_map'].get(r, 1.) for r in hp['rule_trains']])
         hp['rule_probs'] = list(rule_prob / np.sum(rule_prob))
+    # if robustnessTest != True:
     tools.save_hp(hp, model_dir)
+
+    # head: Add 'rng' here after it was pop out
+    hp['rng'] = np.random.default_rng()
 
     # # info: Create structural mask to multiply with hidden layer
     # if hp['s_mask'] == 'sc1000':
@@ -424,47 +480,12 @@ def train(model_dir,train_data ,eval_data,hp=None,max_steps=3e6,display_step=500
                 task = hp['rng'].choice(hp['rule_trains'], p=hp['rule_probs'])
                 # Generate a random batch of trials; each batch has the same trial length
                 mode = 'train'
-                x,y,y_loc,response = tools.load_trials(task,mode,hp['batch_size'], train_data, False) # y_loc is participantResponse_perfEvalForm
+                x,y,y_loc,response = tools.load_trials(hp['rng'],task,mode,hp['batch_size'], train_data, False) # y_loc is participantResponse_perfEvalForm
+                # Create cMask
+                c_mask = create_cMask(y, response, hp, mode)
 
-                # info: ################################################################################################
-                fixation_steps = tools.getEpochSteps(y)
-                if fixation_steps == None: # if no fixation_steps could be found
-                    continue
-                # Creat c_mask for current batch
-                if hp['loss_type'] == 'lsq':
-                    c_mask = np.zeros((y.shape[0], y.shape[1], y.shape[2]), dtype='float32')
-
-                    # fix: Create a c_mask that emphasizes errors by multiplying the error contribution for backProp by 5. and corrects by 1.
-                    errorBalancingVector = np.zeros(response.shape[1], dtype='float32')
-                    for j in range(response.shape[1]):
-                        if response[0][j] == response[1][j]:
-                            errorBalancingVector[j] = 1. # weight value for corrects
-                        else:
-                            errorBalancingVector[j] = hp['errorBalancingValue']
-
-                    for i in range(y.shape[1]):
-                        # Fixation epoch
-                        c_mask[:fixation_steps, i, :] = 1.
-                        # Response epoch
-                        c_mask[fixation_steps:, i, :] = hp['c_mask_responseValue'] * errorBalancingVector[i] # info: 1 or 5
-
-                    # self.c_mask[:, :, 0] *= self.n_eachring # Fixation is important
-                    # c_mask[:, :, 0] *= 2.  # Fixation is important # info: with or without
-                    c_mask = c_mask.reshape((y.shape[0]*y.shape[1], y.shape[2]))
-                    c_mask /= c_mask.mean()
-
-                else:
-                    c_mask = np.zeros((y.shape[0], y.shape[1]), dtype='float32')
-                    for i in range(y.shape[1]):
-                        # Fixation epoch
-                        c_mask[:fixation_steps, i, :] = 1.
-                        # Response epoch
-                        c_mask[fixation_steps:, i, :] = hp['c_mask_responseValue'] # info: 1 or 5
-
-                    c_mask = c_mask.reshape((y.shape[0] * y.shape[1],))
-                    c_mask /= c_mask.mean()
-
-                # info: ################################################################################################
+                # if c_mask == None:
+                #     continue
 
                 trialsLoaded += 1
 
@@ -485,6 +506,7 @@ def train(model_dir,train_data ,eval_data,hp=None,max_steps=3e6,display_step=500
                     perf_train = np.round(np.mean(get_perf_lowDIM(y_hat_train, y_loc)),3)  # info: y_loc is participant response as groundTruth
                 else:
                     perf_train = np.round(np.mean(get_perf(y_hat_train, y_loc)),3) # info: y_loc is participant response as groundTruth
+
                 print('perf_train   ', perf_train)
                 clsq_train_tmp.append(c_lsq_train)
                 creg_train_tmp.append(c_reg_train)
@@ -525,6 +547,7 @@ if __name__ == '__main__':
         hp = get_default_hp('all')
         load_dir = None
 
+
         # Define main path
         if hp['machine'] == 'local':
             path = 'C:\\Users\\oliver.frank\\Desktop\\PyProjects'
@@ -539,7 +562,6 @@ if __name__ == '__main__':
         for month in hp['monthsConsidered']: # attention: You have to delete this if cascade training should be set OFF
             # Adjust variables manually as needed
             model_name = f'model_{month}'
-
 
             # Define model_dir for different servers
             if hp['machine'] == 'local':
@@ -572,40 +594,8 @@ if __name__ == '__main__':
             if not os.path.exists(model_dir):
                 os.makedirs(model_dir)
 
-            # Split the data into training and test data -----------------------------------------------------------------------
-            # List of the subdirectories
-            subdirs = [os.path.join(preprocessedData_path, d) for d in os.listdir(preprocessedData_path) if os.path.isdir(os.path.join(preprocessedData_path, d))]
-
-            # Initialize dictionaries to store training and evaluation data
-            train_data = {}
-            eval_data = {}
-
-            for subdir in subdirs:
-                # Collect all file triplets in the current subdirectory
-                file_quartett = []
-                for file in os.listdir(subdir):
-                    if file.endswith('Input.npy'):
-                        # # III: Exclude files with specific substrings in their names
-                        # if any(exclude in file for exclude in ['Randomization', 'Segmentation', 'Mirrored', 'Rotation']):
-                        #     continue
-                        # Include only files that contain any of the months in monthsConsidered
-                        if month not in file: # Sort out months which should not be considered
-                            continue
-                        # Add all necessary files to triplets
-                        base_name = file.split('Input')[0]
-                        input_file = os.path.join(subdir, base_name + 'Input.npy')
-                        yloc_file = os.path.join(subdir, base_name + 'yLoc.npy')
-                        output_file = os.path.join(subdir, base_name + 'Output.npy')
-                        response_file = os.path.join(subdir, base_name + 'Response.npy')
-
-                        file_quartett.append((input_file, yloc_file, output_file, response_file))
-
-                # Split the file triplets
-                train_files, eval_files = split_files(file_quartett)
-
-                # Store the results in the dictionaries
-                train_data[subdir] = train_files
-                eval_data[subdir] = eval_files
+            # Create train and eval data
+            train_data, eval_data = createSplittedDatasets(hp, preprocessedData_path, month)
 
             # info: If you want to initialize the new model with an old one
             # load_dir = 'C:\\Users\\oliver.frank\\Desktop\\PyProjects\\beRNNmodels\\2025_03\\sc_mask_final\\beRNN_03_All_3-5_data_highDim_correctOnly_iteration1_LeakyRNN_1000_relu\\model_month_3'
@@ -631,7 +621,7 @@ if __name__ == '__main__':
         trainingTimeTotal_hours += elapsed_time_hours
 
     # Save training time total and list to folder as a text file
-    file_path = os.path.join(model_dir, 'times.txt')
+    file_path = os.path.join(path, 'beRNNmodels', hp['trainingYear_Month'], hp['participant'], hp['trainingBatch'], 'times.txt')
 
     with open(file_path, 'w') as f:
         f.write(f"training time total (hours): {trainingTimeTotal_hours}\n")

@@ -1,40 +1,32 @@
 ########################################################################################################################
-# info: networkAnalysis
+# head: networkAnalysis ################################################################################################
 ########################################################################################################################
 
 ########################################################################################################################
 # Import necessary libraries and modules
 ########################################################################################################################
+import warnings
+warnings.simplefilter(action='ignore', category=FutureWarning)
+
 import os
 import numpy as np
 import pandas as pd
-# import pandas as pd
-import matplotlib.pyplot as plt
+import glob
+import shutil
 
-plt.ioff()  # prevents windows to pop up when figs and plots are created
+import matplotlib.pyplot as plt
 from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
-# from matplotlib.patches import Rectangle, Polygon
-from matplotlib.gridspec import GridSpec
-# from scipy.stats import ttest_ind
+from scipy.stats import ttest_ind
 import networkx as nx
 from networkx.algorithms.community import greedy_modularity_communities, modularity
-# import glob
-# import gc
-# import matplotlib
-# matplotlib.use('WebAgg')  # Or 'Qt5Agg', 'GTK3Agg', 'wxAgg'
-# from scipy.stats import ttest_ind
-# import shutil
+from pathlib import Path
 
-import warnings
-
-warnings.simplefilter(action='ignore', category=FutureWarning)
+plt.ioff()  # prevents windows to pop up when figs and plots are created
 
 from analysis import clustering  # , variance
 import tools
 from tools import rule_name
 
-# from Network import Model
-# import tensorflow as tf
 
 selected_hp_keys = ['participant', 'rnn_type', 'data', 'multiLayer', 'n_rnn_per_layer', 'activations_per_layer',
                     'activation', 'optimizer', 'loss_type', 'batch_size', 'l1_h', 'l2_h', 'l1_weight', 'l2_weight',
@@ -486,10 +478,6 @@ def compute_functionalCorrelation(model_dir, monthsConsidered, mode, figurePath,
     # Function to apply a threshold to the matrix
     G = nx.from_numpy_array(functionalCorrelation_thresholded)
 
-    # The degree of a node in a graph is the count of edges connected to that node. For each node, it represents the number of
-    # direct connections (or neighbors) it has within the graph.
-    # degrees = nx.degree(G)  # For calculating node degrees
-
     # Modularity: Modularity measures the strength of division of a graph into communities (clusters/modules). A higher modularity means
     # many within-cluster edges and few between-cluster edges.
     communities = greedy_modularity_communities(G)
@@ -498,7 +486,6 @@ def compute_functionalCorrelation(model_dir, monthsConsidered, mode, figurePath,
     # Betweenness centrality quantifies the importance of a node based on its position within the shortest paths between other nodes.
     betweenness = nx.betweenness_centrality(G)  # For betweenness centrality.
     # Optionally calculate averages of node-based metrics
-    # avg_degree = np.mean(list(dict(G.degree()).values()))
     avg_betweenness = np.mean(list(betweenness.values()))
 
     # Assortativity: Measures the tendency of nodes to connect to other nodes with similar degrees.
@@ -553,25 +540,24 @@ if __name__ == "__main__":
 
         return fig, axs
 
-    # Paths and settings
-    participant = 'beRNN_05' # subfolder with model iterations
-    trainingNumber = f'\\finalGridSearch_allSubjects_highDim\\{participant}\\21' # participant variable newly added 26.05
-    folder = '\\beRNNmodels'
-    folderPath = 'C:\\Users\\oliver.frank\\Desktop\\PyProjects'
-    _finalPath = folderPath + folder + trainingNumber # attention
+    folder, dataType, participant, batch, months = 'paperPlanes', 'highDim3stimTC', 'beRNN_03', '32', ['month_4', 'month_5', 'month_6']
+    _finalPath = Path('C:/Users/oliver.frank/Desktop/PyProjects/beRNNmodels', f'{folder}/{dataType}/{participant}/{batch}')
+    _data_dir = Path('C:/Users/oliver.frank/Desktop/PyProjects/Data')
+
+    # Define variables for topological marker distribution comparison
+    participant1, batch1 = 'beRNN_01', '32'
+    participant2, batch2 = 'beRNN_03', '32'
+
     # Define paths
     participant_id = participant  # Change this for each participant
-    destination_dir = os.path.join(_finalPath, 'overviews', 'all_topologicalMarker_files')
-    os.makedirs(destination_dir, exist_ok=True)
+    topMarker_path = os.path.join(_finalPath, 'overviews', 'all_topologicalMarker_files')
+    os.makedirs(topMarker_path, exist_ok=True)
     # Create overview folder
-    overviewFolder = _finalPath + '\\overviews'
+    overviewFolder = Path(_finalPath, 'overviews')
     os.makedirs(overviewFolder, exist_ok=True)
     # Create model list for every iteration
     _model_list = os.listdir(_finalPath)
     _model_list = [i for i in _model_list if 'beRNN' in i]
-
-    # First pass to gather column widths for figure skeleton
-    dataFolders = []
 
     for _model in _model_list:
         try:
@@ -608,7 +594,7 @@ if __name__ == "__main__":
 
                 dataFolder = define_data_folder(_model.split('_'))
 
-                data_dir = os.path.join('C:\\Users\\oliver.frank\\Desktop\\PyProjects\\Data', participant, dataFolder)
+                data_dir = os.path.join(_data_dir, participant, dataFolder)
                 rule_plot = [i for i in currentHP['rule_prob_map'] if currentHP['rule_prob_map'][i] > 0]
 
                 # Plot performance and cost
@@ -622,11 +608,28 @@ if __name__ == "__main__":
                 funcTrainList, funcTestList = [], []
                 for layer in range(n_layers):
                     try:
-                        analysis_train = clustering.Analysis(data_dir, currentModelDirectory, layer, 'train', currentHP['monthsConsidered'], 'rule')
-                        analysis_test = clustering.Analysis(data_dir, currentModelDirectory, layer, 'test', currentHP['monthsConsidered'], 'rule')
+                        analysis_train = clustering.Analysis(data_dir, currentModelDirectory, layer,  'cosine', 'train', currentHP['monthsConsidered'], 'rule', True)
+                        analysis_test = clustering.Analysis(data_dir, currentModelDirectory, layer, 'cosine','test', currentHP['monthsConsidered'], 'rule', True)
 
                         func_train, *_ = compute_functionalCorrelation(currentModelDirectory, currentHP['monthsConsidered'], 'train', None, analysis_train)
-                        func_test, *_ = compute_functionalCorrelation(currentModelDirectory, currentHP['monthsConsidered'], 'test', None, analysis_test)
+                        func_test, avg_mod_test, avg_betweenness_test, assortativity_test = compute_functionalCorrelation(currentModelDirectory, currentHP['monthsConsidered'], 'test', None, analysis_test)
+
+                        # info: Append test top. Markers into a list and save them in folder #######################################
+                        modList = []
+                        betweennessList = []
+                        assortativityList = []
+                        modList.append(avg_mod_test)  # fix: exchange with modularity
+                        betweennessList.append(avg_betweenness_test)
+                        assortativityList.append(assortativity_test)
+
+                        topMarkerList = [modList, betweennessList, assortativityList]
+                        topMarkerNamesList = ['modList', 'betweennessList', 'assortativityList']
+                        for i in range(0, len(topMarkerNamesList)):
+                            mean_value = np.mean(topMarkerList[i])
+                            variance_value = np.var(topMarkerList[i])
+                            # mean_variance = np.array([mean_value, variance_value])
+                            np.save(os.path.join(topMarker_path, f'{topMarkerNamesList[i]}_{_model}_{model}_layer{layer}.npy'), topMarkerList[i])
+                        # info: ####################################################################################################
 
                         funcTrainList.append(fig_to_array(func_train))
                         funcTestList.append(fig_to_array(func_test))
@@ -670,7 +673,7 @@ if __name__ == "__main__":
                 hp_lines = [f"{key}: {currentHP[key]}" for key in selected_hp_keys if key in currentHP]
                 num_columns = 3
                 hp_text_formatted = "\n".join(["   ".join(hp_lines[i:i + num_columns]) for i in range(0, len(hp_lines), num_columns)])
-                # fix: fontsize decides size of box and yhould be individual for number of layers - 3: 9
+                # fix: fontsize decides size of box and should be individual for number of layers - 3: 9
                 axs[4][1].text(0.5, 0.5, hp_text_formatted, fontsize=9, verticalalignment='center',
                                horizontalalignment='center', color='black',
                                bbox=dict(facecolor='white', alpha=1, edgecolor='black'))
@@ -686,255 +689,236 @@ if __name__ == "__main__":
         except:
             print("An exception occurred with model number: ", model_dir)
 
-    # # info: ################################################################################################################
-    # # info: Distribution plot ##############################################################################################
-    # # info: ################################################################################################################
-    # import os
-    # import glob
-    # import shutil
-    # import numpy as np
-    # import matplotlib.pyplot as plt
-    # from scipy.stats import ttest_ind
-    #
-    # # Collect all top Marker files into one destination
-    # _iterationList = os.listdir(_finalPath) # info: Folder of several iterations for one training batch of one participant
-    # iterationList = [os.path.join(_finalPath, iteration, 'topologicalMarker')
-    #                  for iteration in _iterationList if 'beRNN' in iteration]
-    #
-    # # Copy files into a single directory with unique iteration identifiers
-    # for indice, iteration in enumerate(iterationList):
-    #     npy_files = glob.glob(os.path.join(iteration, "*.npy"))
-    #
-    #     for file_path in npy_files:
-    #         file_name = os.path.basename(file_path)
-    #         new_file_name = f"iteration{indice}_{file_name}"  # Append iteration index
-    #         destination_path = os.path.join(destination_dir, new_file_name)
-    #
-    #         shutil.copy2(file_path, destination_path)  # Copy file
-    #
-    # # Dynamically group files based on a common identifier
-    # fileList = [f for f in os.listdir(destination_dir) if f.endswith(".npy")]
-    #
-    # # Extract markers and months from filenames
-    # topMarkers = sorted(set(f.split('_')[-4] for f in fileList))
-    # months = sorted(set(f.split('_')[-1].split('.')[0] for f in fileList))
-    #
-    # num_rows = len(topMarkers)
-    # num_columns = len(months)
-    #
-    # # Group files based on (marker, month)
-    # groups = {marker: {month: [] for month in months} for marker in topMarkers}
-    # for file in fileList:
-    #     parts = file.split('_')
-    #     marker = parts[-4]
-    #     month = parts[-1].split('.')[0]
-    #     if marker in groups and month in groups[marker]:
-    #         groups[marker][month].append(os.path.join(destination_dir, file))
-    #
-    # # Create figure and axes
-    # fig, axes = plt.subplots(num_rows, num_columns, figsize=(6, 1.5 * num_rows), sharex=False, sharey=False)
-    #
-    # # Ensure axes is always a 2D array
-    # if num_rows == 1:
-    #     axes = np.array([axes])
-    # if num_columns == 1:
-    #     axes = np.expand_dims(axes, axis=1)
-    #
-    # # Directory to save distributions
-    # distribution_dir = os.path.join(_finalPath, 'overviews', "topologicalMarker_distributions")
-    # os.makedirs(distribution_dir, exist_ok=True)
-    #
-    # # Dictionary to store t-test results
-    # t_test_results = {}
-    #
-    # # Process and plot distributions
-    # for row, marker in enumerate(topMarkers):
-    #     t_test_results[marker] = {}
-    #
-    #     for col, month in enumerate(months):
-    #         files = groups[marker][month]
-    #         ax = axes[row, col]
-    #
-    #         if files:
-    #             all_data = []
-    #             for file in files:
-    #                 try:
-    #                     data = np.load(file)
-    #                     all_data.append(data)
-    #                 except Exception as e:
-    #                     print(f"Error loading {file}: {e}")
-    #
-    #             if all_data:
-    #                 # Convert to NumPy arrays and filter out empty data
-    #                 all_data = [np.asarray(arr).flatten() for arr in all_data if arr.size > 0]
-    #
-    #                 if all_data:
-    #                     if len(all_data) == 1:
-    #                         valid_data = all_data[0]
-    #                     else:
-    #                         valid_data = np.concatenate(all_data)
-    #
-    #                     # Save distribution for later comparisons
-    #                     np.save(os.path.join(distribution_dir, f"{marker}_{month}.npy"), valid_data)
-    #
-    #                     mean, variance = np.mean(valid_data), np.var(valid_data)
-    #
-    #                     # Plot histogram
-    #                     ax.hist(valid_data, bins=20, density=False, alpha=0.7, color='skyblue', edgecolor='black')
-    #                     ax.axvline(mean, color='red', linestyle='dashed', linewidth=1.5,
-    #                                label=f'Mean: {mean:.2f}\nVar: {variance:.2f}')
-    #                     ax.set_title(f"{marker} - {month}", fontsize=12)
-    #                     ax.legend(fontsize=6)
-    #
-    #                     ax.tick_params(axis='both', which='major', labelsize=6)  # Adjust size as needed
-    #                     ax.tick_params(axis='both', which='minor', labelsize=6)  # Even smaller for minor ticks
-    #
-    #                     # Store t-test results
-    #                     if col > 0:
-    #                         prev_files = groups[marker][months[col - 1]]
-    #
-    #                         prev_data_list = []
-    #                         for prev_file in prev_files:
-    #                             try:
-    #                                 prev_data_list.append(np.load(prev_file))
-    #                             except Exception as e:
-    #                                 print(f"Error loading {prev_file}: {e}")
-    #
-    #                         # Ensure previous data is valid
-    #                         if prev_data_list:
-    #                             prev_data_list = [np.asarray(arr).flatten() for arr in prev_data_list if arr.size > 0]
-    #                             if prev_data_list:
-    #                                 prev_data = np.concatenate(prev_data_list) if len(prev_data_list) > 1 else prev_data_list[0]
-    #
-    #                                 if len(prev_data) > 1 and len(valid_data) > 1:
-    #                                     t_stat, p_value = ttest_ind(prev_data, valid_data, equal_var=False)
-    #                                     t_test_results[marker][(months[col - 1], month)] = (t_stat, p_value)
-    #
-    #                                     if p_value < 0.05:
-    #                                         ax.annotate(f'* p={p_value:.2e}', xy=(0.5, 0.55), xycoords='axes fraction',
-    #                                                     fontsize=6, fontweight='bold', ha='center', color='red')
-    #                 else:
-    #                     ax.set_title(f"{marker} - {month} (No Valid Data)", fontsize=10)
-    #             else:
-    #                 ax.set_title(f"{marker} - {month} (No Data)", fontsize=10)
-    #         else:
-    #             ax.set_title(f"{marker} - {month} (No Data)", fontsize=10)
-    #
-    # # Adjust layout and save plot
-    # plt.tight_layout()
-    # plt.suptitle(f"Distributions for {participant_id}", fontsize=12, fontweight='bold', y=1.02)
-    #
-    # # Save the figure
-    # plot_path = os.path.join(folderPath + folder + trainingNumber, 'overviews', f"topologicalMarkers_distribution_{participant_id}.png")
-    # plt.savefig(plot_path, dpi=300, bbox_inches='tight')
-    # # plt.show()
-    #
-    # print(f"Plot saved at: {plot_path}")
-    # print(f"Distributions saved for participant {participant_id} in {distribution_dir}")
 
 
-    # # # info: ################################################################################################################
-    # # # info: Comparison - Only apply after previous analysis ################################################################
-    # # # info: ################################################################################################################
-    # from scipy.stats import ttest_ind, ks_2samp
-    # import seaborn as sns
-    #
-    # destination_dir = 'C:\\Users\\oliver.frank\\Desktop\\PyProjects\\beRNNmodels\\2025_03_2\\topMarkerComparisons' # fix: must be generic
-    # os.makedirs(destination_dir, exist_ok=True)
-    #
-    # def compare_participants(dist_1, dist_2, participant_1, participant_2):
-    #     """
-    #     Compare the distributions of two participants and display significance.
-    #     """
-    #     p_values = {}  # Store p-values for visualization
-    #
-    #     for marker in dist_1.keys():
-    #         p_values[marker] = {}
-    #
-    #         for month in dist_1[marker].keys():
-    #             if marker in dist_2 and month in dist_2[marker]:  # Ensure both have data
-    #                 data_1 = dist_1[marker][month]
-    #                 data_2 = dist_2[marker][month]
-    #
-    #                 if len(data_1) > 1 and len(data_2) > 1:
-    #                     # Perform statistical tests
-    #                     t_stat, p_ttest = ttest_ind(data_1, data_2, equal_var=False)
-    #                     ks_stat, p_ks = ks_2samp(data_1, data_2)
-    #
-    #                     p_values[marker][month] = min(p_ttest, p_ks)  # Store min p-value
-    #                 else:
-    #                     p_values[marker][month] = 1.0  # No valid comparison
-    #
-    #     # Convert to DataFrame for visualization
-    #     p_df = pd.DataFrame(p_values).T  # Transpose so markers are rows, months are columns
-    #
-    #     # Prepare text annotations with significance levels
-    #     def format_p_value(p):
-    #         if p < 0.001:
-    #             return f"$\\bf{{{p:.3f}}}$***"  # Bold + ***
-    #         elif p < 0.01:
-    #             return f"$\\bf{{{p:.3f}}}$**"  # Bold + **
-    #         elif p < 0.05:
-    #             return f"$\\bf{{{p:.3f}}}$*"  # Bold + *
-    #         else:
-    #             return f"{p:.3f}"  # No bold
-    #
-    #     annotations = p_df.applymap(format_p_value)
-    #
-    #     # Plot heatmap of p-values
-    #     plt.figure(figsize=(10, 6))
-    #     ax = sns.heatmap(
-    #         p_df.astype(float),
-    #         annot=annotations,
-    #         fmt="",
-    #         cmap="magma",  # Reverse "magma" so low p-values are lighter
-    #         vmin=0.001,
-    #         vmax=1.0,
-    #         center=0.05,
-    #         cbar_kws={"shrink": 1.0},  # Fix legend error
-    #         annot_kws={"fontsize": 10, "color": "white"},  # Ensure all text is white
-    #     )
-    #
-    #     plt.title(f"Statistical Comparison: {participant_1} vs {participant_2}")
-    #     plt.xlabel("Months")
-    #     plt.ylabel("Topological Markers")
-    #
-    #     # Save and show the plot
-    #     plot_path = os.path.join(destination_dir, f"topMarkerComparison_{participant_1}_{participant_2}.png")
-    #     plt.savefig(plot_path, dpi=300, bbox_inches='tight')
-    #     plt.show()
-    #
-    # def load_distributions(distribution_dir):
-    #     """
-    #     Load saved distributions for a given participant.
-    #     """
-    #     input_dir = os.path.join(distribution_dir)
-    #     distributions = {}
-    #
-    #     if not os.path.exists(input_dir):
-    #         print(f"No distributions found for {distribution_dir}")
-    #         return None
-    #
-    #     for file in os.listdir(input_dir):
-    #         if file.endswith(".npy"):
-    #             marker, month = file.replace(".npy", "").split("_")
-    #             if marker not in distributions:
-    #                 distributions[marker] = {}
-    #             distributions[marker][month] = np.load(os.path.join(input_dir, file))
-    #
-    #     return distributions
-    #
-    #
-    # participant1 = "beRNN_01" # info: should be name of training batch
-    # participant2 = "beRNN_05" # info: should be name of training batch
-    #
-    # distributions_dir_participant_01 = f"C:\\Users\\oliver.frank\\Desktop\\PyProjects\\beRNNmodels\\2025_03_2\\{participant1}\\overviews\\distributions"
-    # distributions_dir_participant_02 = f"C:\\Users\\oliver.frank\\Desktop\\PyProjects\\beRNNmodels\\2025_03_2\\{participant2}\\overviews\\distributions"
-    #
-    # dist_1 = load_distributions(distributions_dir_participant_01)
-    # dist_2 = load_distributions(distributions_dir_participant_02)
-    #
-    # compare_participants(dist_1, dist_2, participant1, participant2)
+    # info: ################################################################################################################
+    # info: Distribution plot ##############################################################################################
+    # info: ################################################################################################################
+
+    # Collect all top Marker files into one destination
+    _iterationList = os.listdir(_finalPath) # info: Folder of several iterations for one training batch of one participant
+    iterationList = [os.path.join(_finalPath, iteration, 'topologicalMarker')
+                     for iteration in _iterationList if 'beRNN' in iteration]
+
+    npy_files = glob.glob(os.path.join(topMarker_path, "*.npy"))
+    # Extract markers and months from filenames
+    topMarkers = ['assortativityList', 'betweennessList', 'modList']
+
+    num_rows = len(topMarkers)
+    num_columns = len(months)
+
+    # Group files based on (marker, month)
+    groups = {marker: {month: [] for month in months} for marker in topMarkers}
+    for file in npy_files:
+        for marker in topMarkers:
+            for month in months:
+                if marker in file and month in file:
+                    groups[marker][month].append(os.path.join(topMarker_path, file))
+
+    # Create figure and axes
+    fig, axes = plt.subplots(num_rows, num_columns, figsize=(6, 1.5 * num_rows), sharex=False, sharey=False)
+
+    # Ensure axes is always a 2D array
+    if num_rows == 1:
+        axes = np.array([axes])
+    if num_columns == 1:
+        axes = np.expand_dims(axes, axis=1)
+
+    # Directory to save distributions
+    distribution_dir = os.path.join(_finalPath, 'overviews', "topologicalMarker_lists")
+    os.makedirs(distribution_dir, exist_ok=True)
+
+    # Dictionary to store t-test results
+    t_test_results = {}
+
+    # Process and plot distributions
+    for row, marker in enumerate(topMarkers):
+        t_test_results[marker] = {}
+
+        for col, month in enumerate(months):
+            files = groups[marker][month]
+            ax = axes[row, col]
+
+            if files:
+                all_data = []
+                for file in files:
+                    try:
+                        data = np.load(file)
+                        all_data.append(data)
+                    except Exception as e:
+                        print(f"Error loading {file}: {e}")
+
+                if all_data:
+                    # Convert to NumPy arrays and filter out empty data
+                    all_data = [np.asarray(arr).flatten() for arr in all_data if arr.size > 0]
+
+                    if all_data:
+                        if len(all_data) == 1:
+                            valid_data = all_data[0]
+                        else:
+                            valid_data = np.concatenate(all_data)
+
+                        # Save distribution for later comparisons
+                        np.save(os.path.join(distribution_dir, f"{marker}_{month}.npy"), valid_data)
+
+                        mean, variance = np.mean(valid_data), np.var(valid_data)
+
+                        # Plot histogram
+                        ax.hist(valid_data, bins=20, density=False, alpha=0.7, color='skyblue', edgecolor='black')
+                        ax.axvline(mean, color='red', linestyle='dashed', linewidth=1.5,
+                                   label=f'Mean: {mean:.2f}\nVar: {variance:.2f}')
+                        ax.set_title(f"{marker} - {month}", fontsize=12)
+                        ax.legend(fontsize=6)
+
+                        ax.tick_params(axis='both', which='major', labelsize=6)  # Adjust size as needed
+                        ax.tick_params(axis='both', which='minor', labelsize=6)  # Even smaller for minor ticks
+
+                        # Store t-test results
+                        if col > 0:
+                            prev_files = groups[marker][months[col - 1]]
+
+                            prev_data_list = []
+                            for prev_file in prev_files:
+                                try:
+                                    prev_data_list.append(np.load(prev_file))
+                                except Exception as e:
+                                    print(f"Error loading {prev_file}: {e}")
+
+                            # Ensure previous data is valid
+                            if prev_data_list:
+                                prev_data_list = [np.asarray(arr).flatten() for arr in prev_data_list if arr.size > 0]
+                                if prev_data_list:
+                                    prev_data = np.concatenate(prev_data_list) if len(prev_data_list) > 1 else prev_data_list[0]
+
+                                    if len(prev_data) > 1 and len(valid_data) > 1:
+                                        t_stat, p_value = ttest_ind(prev_data, valid_data, equal_var=False)
+                                        t_test_results[marker][(months[col - 1], month)] = (t_stat, p_value)
+
+                                        if p_value < 0.05:
+                                            ax.annotate(f'* p={p_value:.2e}', xy=(0.5, 0.55), xycoords='axes fraction',
+                                                        fontsize=6, fontweight='bold', ha='center', color='red')
+                    else:
+                        ax.set_title(f"{marker} - {month} (No Valid Data)", fontsize=10)
+                else:
+                    ax.set_title(f"{marker} - {month} (No Data)", fontsize=10)
+            else:
+                ax.set_title(f"{marker} - {month} (No Data)", fontsize=10)
+
+    # Adjust layout and save plot
+    plt.tight_layout()
+    plt.suptitle(f"Distributions for {participant_id}", fontsize=12, fontweight='bold', y=1.02)
+
+    # Save the figure
+    plot_path = os.path.join(_finalPath, 'overviews', f"topologicalMarkers_distribution_{participant_id}_{dataType}_{batch}.png")
+    plt.savefig(plot_path, dpi=300, bbox_inches='tight')
+    # plt.show()
+
+    print(f"Plot saved at: {plot_path}")
+    print(f"Distributions saved for participant {participant_id} in {distribution_dir}")
+
+
+
+# # info: ################################################################################################################
+# # info: Comparison - Only apply after previous analysis ################################################################
+# # info: ################################################################################################################
+from scipy.stats import ttest_ind, ks_2samp
+import seaborn as sns
+
+def load_distributions(distribution_dir,topMarkers,months):
+    """
+    Load saved distributions for a given participant.
+    """
+    distributions = {}
+
+    if not os.path.exists(distribution_dir):
+        print(f"No distributions found for {distribution_dir}")
+        return None
+
+    for file in os.listdir(distribution_dir):
+        if file.endswith(".npy"):
+            for marker in topMarkers:
+                for month in months:
+                    # Safely initialize nested dict
+                    if marker not in distributions:
+                        distributions[marker] = {}
+                    distributions[marker][month] = np.load(os.path.join(distribution_dir, file))
+
+    return distributions
+
+def compare_participants(dist_1, dist_2, participant_1, participant_2, destination_dir):
+    """
+    Compare the distributions of two participants and display significance.
+    """
+    p_values = {}  # Store p-values for visualization
+
+    for marker in dist_1.keys():
+        p_values[marker] = {}
+
+        for month in dist_1[marker].keys():
+            if marker in dist_2 and month in dist_2[marker]:  # Ensure both have data
+                data_1 = dist_1[marker][month]
+                data_2 = dist_2[marker][month]
+
+                if len(data_1) > 1 and len(data_2) > 1:
+                    # Perform statistical tests
+                    t_stat, p_ttest = ttest_ind(data_1, data_2, equal_var=False)
+                    ks_stat, p_ks = ks_2samp(data_1, data_2)
+
+                    p_values[marker][month] = min(p_ttest, p_ks)  # Store min p-value
+                else:
+                    p_values[marker][month] = 1.0  # No valid comparison
+
+    # Convert to DataFrame for visualization
+    p_df = pd.DataFrame(p_values).T  # Transpose so markers are rows, months are columns
+
+    # Prepare text annotations with significance levels
+    def format_p_value(p):
+        if p < 0.001:
+            return f"$\\bf{{{p:.3f}}}$***"  # Bold + ***
+        elif p < 0.01:
+            return f"$\\bf{{{p:.3f}}}$**"  # Bold + **
+        elif p < 0.05:
+            return f"$\\bf{{{p:.3f}}}$*"  # Bold + *
+        else:
+            return f"{p:.3f}"  # No bold
+
+    annotations = p_df.applymap(format_p_value)
+
+    # Plot heatmap of p-values
+    plt.figure(figsize=(10, 6))
+    ax = sns.heatmap(
+        p_df.astype(float),
+        annot=annotations,
+        fmt="",
+        cmap="magma",  # Reverse "magma" so low p-values are lighter
+        vmin=0.001,
+        vmax=1.0,
+        center=0.05,
+        cbar_kws={"shrink": 1.0},  # Fix legend error
+        annot_kws={"fontsize": 10, "color": "white"},  # Ensure all text is white
+    )
+
+    plt.title(f"Statistical Comparison: {participant_1} vs {participant_2}")
+    plt.xlabel("Months")
+    plt.ylabel("Topological Markers")
+
+    # Save and show the plot
+    plot_path = os.path.join(destination_dir, '_topologicalMarkerComparison')
+    os.makedirs(plot_path, exist_ok=True)
+    plt.savefig(os.path.join(plot_path, f"topMarkerComparison_{participant_1}_{participant_2}.png"), dpi=300, bbox_inches='tight')
+    plt.show()
+
+
+destination_dir = Path('C:/Users/oliver.frank/Desktop/PyProjects/beRNNmodels', f'{folder}/{dataType}')
+os.makedirs(destination_dir, exist_ok=True)
+
+distributions_dir_participant_01 = f"{destination_dir}\\{participant1}\\{batch1}\\overviews\\topologicalMarker_lists"
+distributions_dir_participant_02 = f"{destination_dir}\\{participant2}\\{batch2}\\overviews\\topologicalMarker_lists"
+
+dist_1 = load_distributions(distributions_dir_participant_01,topMarkers,months)
+dist_2 = load_distributions(distributions_dir_participant_02,topMarkers,months)
+
+compare_participants(dist_1, dist_2, participant1, participant2, destination_dir)
 
 
     ########################################################################################################################
