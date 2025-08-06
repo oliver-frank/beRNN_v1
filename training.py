@@ -20,16 +20,71 @@ import os
 import numpy as np
 # import matplotlib.pyplot as plt
 import tensorflow as tf
-import random
+# import random
+
+import networkx as nx
+from networkx.algorithms.community import greedy_modularity_communities, modularity
+from analysis import variance
 
 from network import Model, get_perf,get_perf_lowDIM
-# from analysis import variance
 import tools
 
 
 ########################################################################################################################
 # Predefine functions
 ########################################################################################################################
+def apply_threshold(matrix, threshold):
+    # info: added function second time from networkAnalysis for training on server with only training.py and friends
+    # Set all values below the threshold to zero
+    matrix_thresholded = np.where(np.abs(matrix) > threshold, matrix,0)
+    return matrix_thresholded
+
+def getAndSafeModValue(data_dir, model_dir, hp, model, sess, log):
+    fname = variance.compute_variance(data_dir, model_dir, layer=1, mode='test',
+                                      monthsConsidered=hp['monthsConsidered'], data_type='rule', networkAnalysis=False,
+                                      model=model, sess=sess)
+    # (data_dir, model_dir, layer, mode, monthsConsidered, data_type, networkAnalysis, rules=None, random_rotation=False)
+
+    res = tools.load_pickle(fname)
+    h_var_all_ = res['h_var_all']
+
+    activityThreshold = 1e-5
+    ind_active = np.where(h_var_all_.sum(axis=1) >= activityThreshold)[
+        0]  # attention: > 1e-3 - min > 0 | it seems like hidden architecture can have very low h_var
+    h_var_all = h_var_all_[ind_active, :]
+
+    # attention: fallback if clustering is not possible
+    if h_var_all.shape[0] < 2 or np.all(h_var_all.sum(axis=1) <= 1e-2):
+        # if h_var_all.shape[0] < 2 or np.where(h_var_all_.sum(axis=1) < activityThreshold):
+        print(f"Skipping clustering for model {model_dir} — insufficient data or variance.")
+
+        h_normvar_all = np.array([[1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+                                  [0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+                                   0.0]])
+
+    else:
+        # Normalize by the total variance across tasks
+        h_normvar_all = (h_var_all.T / np.sum(h_var_all, axis=1)).T
+
+    # Center and normalize the data
+    data_centered = h_normvar_all - h_normvar_all.mean(axis=1, keepdims=True)
+    norm = np.linalg.norm(data_centered, axis=1, keepdims=True)
+    norm[norm == 0] = 1e-8  # Prevent division by zero
+    data_normalized = data_centered / norm
+    correlation = np.dot(data_normalized, data_normalized.T)
+    # Compute topological marker
+    threshold = 0.5  # info: can be adjusted!
+    functionalCorrelation_thresholded = apply_threshold(correlation, threshold)
+    # Function to apply a threshold to the matrix
+    G = nx.from_numpy_array(functionalCorrelation_thresholded)
+    # Modularity: Modularity measures the strength of division of a graph into communities (clusters/modules). A higher modularity means
+    # many within-cluster edges and few between-cluster edges.
+    communities = greedy_modularity_communities(G)
+    mod_value = modularity(G, communities)
+
+    log['modularity'].append(mod_value)
+    tools.save_log(log)
+
 def get_default_hp(ruleset):
     '''Get a default hp.
 
@@ -45,7 +100,7 @@ def get_default_hp(ruleset):
     machine = 'local' # 'local' 'pandora' 'hitkip'
     data = 'data_highDim_correctOnly_3stimTC' # 'data_highDim' , data_highDim_correctOnly , data_highDim_lowCognition , data_lowDim , data_lowDim_correctOnly , data_lowDim_lowCognition, 'data_highDim_correctOnly_3stimTC'
     trainingBatch = '01'
-    trainingYear_Month = 'test12345'
+    trainingYear_Month = 'testModularityValue'
 
     if 'highDim' in data: # fix: lowDim_timeCompressed needs to be skipped here
         n_eachring = 32
@@ -62,8 +117,8 @@ def get_default_hp(ruleset):
         # 'batch_size_test': 640, # batch_size for testing
         'in_type': 'normal', # input type: normal, multi
         'rnn_type': 'LeakyRNN', # Type of RNNs: NonRecurrent, LeakyRNN, LeakyGRU, EILeakyGRU | GRU, LSTM
-        'multiLayer': True, # only applicaple with LeakyRNN
-        'n_rnn': 512,  # number of recurrent units for one hidden layer architecture
+        'multiLayer': False, # only applicaple with LeakyRNN
+        'n_rnn': 128,  # number of recurrent units for one hidden layer architecture
         'activation': 'relu',  # Type of activation runctions, relu, softplus, tanh, elu, linear
         'n_rnn_per_layer': [256, 128, 64],
         'activations_per_layer': ['relu', 'tanh', 'linear'],
@@ -74,7 +129,7 @@ def get_default_hp(ruleset):
         # 'alpha': 0.2, # (redundant) discretization time step/time constant - dt/tau = alpha - ratio decides on how much previous states are taken into account for current state - low alpha more memory, high alpha more forgetting - alpha * h(t-1)
         'sigma_rec': 0.01, # recurrent noise - directly influencing the noise added to the network
         'sigma_x': 0.01, # input noise
-        'w_rec_init': 'brainStructure', # leaky_rec weight initialization, diag, randortho, randgauss, brainStructure (only accessible with LeakyRNN : 32-256)
+        'w_rec_init': 'randortho', # leaky_rec weight initialization, diag, randortho, randgauss, brainStructure (only accessible with LeakyRNN : 32-256)
         'l1_h': 1e-4, # l1 lambda (regularizing with absolute value of magnitude of coefficients, leading to sparse features)
         'l2_h': 5e-6, # l2 lambda (regularizing with squared value of magnitude of coefficients, decreasing influence of features)
         'l1_weight': 1e-5, # l2 regularization on weight
@@ -118,95 +173,6 @@ def get_default_hp(ruleset):
 
     return hp
 
-def createSplittedDatasets(hp, preprocessedData_path, month):
-    # Split the data into training and test data -----------------------------------------------------------------------
-    # List of the subdirectories
-    subdirs = [os.path.join(preprocessedData_path, d) for d in os.listdir(preprocessedData_path) if
-               os.path.isdir(os.path.join(preprocessedData_path, d))]
-
-    # Initialize dictionaries to store training and evaluation data
-    train_data = {}
-    eval_data = {}
-
-    for subdir in subdirs:
-        # Collect all file triplets in the current subdirectory
-        file_quartett = []
-        for file in os.listdir(subdir):
-            if file.endswith('Input.npy'):
-                # # III: Exclude files with specific substrings in their names
-                # if any(exclude in file for exclude in ['Randomization', 'Segmentation', 'Mirrored', 'Rotation']):
-                #     continue
-                # Include only files that contain any of the months in monthsConsidered
-                if month not in file:  # Sort out months which should not be considered
-                    continue
-                # Add all necessary files to triplets
-                base_name = file.split('Input')[0]
-                input_file = os.path.join(subdir, base_name + 'Input.npy')
-                yloc_file = os.path.join(subdir, base_name + 'yLoc.npy')
-                output_file = os.path.join(subdir, base_name + 'Output.npy')
-                response_file = os.path.join(subdir, base_name + 'Response.npy')
-
-                file_quartett.append((input_file, yloc_file, output_file, response_file))
-
-        # Split the file triplets
-        train_files, eval_files = split_files(hp, file_quartett)
-
-        # Store the results in the dictionaries
-        train_data[subdir] = train_files
-        eval_data[subdir] = eval_files
-
-    return train_data, eval_data
-
-def split_files(hp, files, split_ratio=0.8):
-    if 'rng' not in hp:
-        hp['rng'] = np.random.default_rng()
-    hp['rng'].shuffle(files)
-    split_index = int(len(files) * split_ratio)
-    return files[:split_index], files[split_index:]
-
-def create_cMask(y, response, hp, mode):
-    fixation_steps, response_steps = tools.getEpochSteps(y)
-    if fixation_steps == None:  # if no fixation_steps could be found
-        return None
-    # Creat c_mask for current batch
-    if hp['loss_type'] == 'lsq':
-        c_mask = np.zeros((y.shape[0], y.shape[1], y.shape[2]), dtype='float32')
-
-        if mode == 'train':
-            # fix: Create a c_mask that emphasizes errors by multiplying the error contribution for backProp by 5. and corrects by 1.
-            errorBalancingVector = np.zeros(response.shape[1], dtype='float32')
-            for j in range(response.shape[1]):
-                if response[0][j] == response[1][j]:
-                    errorBalancingVector[j] = 1.  # weight value for corrects
-                else:
-                    errorBalancingVector[j] = hp['errorBalancingValue']
-
-            for i in range(y.shape[1]):
-                # Fixation epoch
-                c_mask[:fixation_steps, i, :] = 1.
-                # Response epoch
-                c_mask[fixation_steps:, i, :] = hp['c_mask_responseValue'] * errorBalancingVector[i]  # info: 1 or 5
-
-            # self.c_mask[:, :, 0] *= self.n_eachring # Fixation is important
-            # c_mask[:, :, 0] *= 2.  # Fixation is important # info: with or without
-            c_mask = c_mask.reshape((y.shape[0] * y.shape[1], y.shape[2]))
-            c_mask /= c_mask.mean()
-
-        c_mask = c_mask.reshape((y.shape[0] * y.shape[1], y.shape[2]))
-
-    else:
-        c_mask = np.zeros((y.shape[0], y.shape[1]), dtype='float32')
-        for i in range(y.shape[1]):
-            # Fixation epoch
-            c_mask[:fixation_steps, i, :] = 1.
-            # Response epoch
-            c_mask[fixation_steps:, i, :] = hp['c_mask_responseValue']  # info: 1 or 5
-
-        c_mask = c_mask.reshape((y.shape[0] * y.shape[1],))
-        c_mask /= c_mask.mean()
-
-    return c_mask
-
 def do_eval(sess, model, log, rule_train, eval_data):
     """Do evaluation.
 
@@ -239,7 +205,11 @@ def do_eval(sess, model, log, rule_train, eval_data):
             try:
                 x,y,y_loc,response = tools.load_trials(hp['rng'], task, mode, hp['batch_size'], eval_data, False)  # y_loc is participantResponse_perfEvalForm
 
-                c_mask = create_cMask(y, response, hp, mode)
+                c_mask = tools.create_cMask(y, response, hp, mode)
+
+                # fix: for inconcruence between y and response dimension 1
+                if c_mask.any() == None:
+                    continue
 
                 feed_dict = tools.gen_feed_dict(model, x, y, c_mask, hp) # y: participnt response, that gives the lable for what the network is trained for
                 # print('passed feed_dict Evaluation')
@@ -305,7 +275,7 @@ def do_eval(sess, model, log, rule_train, eval_data):
 
     return log
 
-def train(model_dir,train_data ,eval_data,hp=None,max_steps=3e6,display_step=500,ruleset='all',rule_trains=None,rule_prob_map=None,seed=0,
+def train(data_dir, model_dir,train_data ,eval_data,hp=None,max_steps=1e6,display_step=500,ruleset='all',rule_trains=None,rule_prob_map=None,seed=0,
           load_dir=None,trainables=None, robustnessTest= True):
     """Train the network.
 
@@ -361,8 +331,8 @@ def train(model_dir,train_data ,eval_data,hp=None,max_steps=3e6,display_step=500
     # # info: Create structural mask to multiply with hidden layer
     # if hp['s_mask'] == 'sc1000':
     #     import scipy.io
-    #     sc = scipy.io.loadmat('C:\\Users\\oliver.frank\\Desktop\\PyProjects\\art_beRNN\\masks\\sc1000')
-    #     # sc = scipy.io.loadmat('C:\\Users\\oliver.frank\\Desktop\\PyProjects\\art_beRNN\\masks\\sc100')
+    #     sc = scipy.io.loadmat('C:\\Users\\oliver.frank\\Desktop\\PyProjects\\beRNN_v1\\masks\\sc1000')
+    #     # sc = scipy.io.loadmat('C:\\Users\\oliver.frank\\Desktop\\PyProjects\\beRNN_v1\\masks\\sc100')
     #     sc_mask = sc['mat_zero'] # 1000
     #     # sc_mask = sc['shaefer_rsn'] # 100
     #
@@ -409,7 +379,7 @@ def train(model_dir,train_data ,eval_data,hp=None,max_steps=3e6,display_step=500
             model.restore(load_dir)  # complete restore
             print('model restored')
         else:
-            # Assume everything is restored
+            # Initialize variables from scratch
             sess.run(tf.global_variables_initializer())
 
         # Set trainable parameters
@@ -423,6 +393,8 @@ def train(model_dir,train_data ,eval_data,hp=None,max_steps=3e6,display_step=500
             var_list = [v for v in model.var_list if 'rule_input' in v.name]
         else:
             raise ValueError('Unknown trainables')
+
+        # Define variables to optimize
         model.set_optimizer(var_list=var_list)
 
         # penalty on deviation from initial weight
@@ -473,6 +445,11 @@ def train(model_dir,train_data ,eval_data,hp=None,max_steps=3e6,display_step=500
                             hp['target_perf']))
                         break
 
+
+                    # info: Add modularity value once each evaluation ##################################################
+                    if hp['multiLayer'] == False:
+                        getAndSafeModValue(data_dir, model_dir, hp, model, sess, log)
+
                     # if rich_output:
                     #     display_rich_output(model, sess, step, log, model_dir)
 
@@ -482,10 +459,11 @@ def train(model_dir,train_data ,eval_data,hp=None,max_steps=3e6,display_step=500
                 mode = 'train'
                 x,y,y_loc,response = tools.load_trials(hp['rng'],task,mode,hp['batch_size'], train_data, False) # y_loc is participantResponse_perfEvalForm
                 # Create cMask
-                c_mask = create_cMask(y, response, hp, mode)
+                c_mask = tools.create_cMask(y, response, hp, mode)
 
-                # if c_mask == None:
-                #     continue
+                # fix: for inconcruence between y and response on dimension 1 - probably preprocessing related
+                if c_mask.any() == None:
+                    continue
 
                 trialsLoaded += 1
 
@@ -547,7 +525,6 @@ if __name__ == '__main__':
         hp = get_default_hp('all')
         load_dir = None
 
-
         # Define main path
         if hp['machine'] == 'local':
             path = 'C:\\Users\\oliver.frank\\Desktop\\PyProjects'
@@ -557,7 +534,7 @@ if __name__ == '__main__':
             path = '/pandora/home/oliver.frank/01_Projects/RNN/multitask_BeRNN-main'
 
         # Define data path
-        preprocessedData_path = os.path.join(path, 'Data', hp['participant'], hp['data'])  # pandora
+        preprocessedData_path = os.path.join(path, 'Data', hp['participant'], hp['data'])
 
         for month in hp['monthsConsidered']: # attention: You have to delete this if cascade training should be set OFF
             # Adjust variables manually as needed
@@ -570,11 +547,11 @@ if __name__ == '__main__':
                     numberOfLayers = len(hp['n_rnn_per_layer'])
                     if numberOfLayers == 2:
                         model_dir = os.path.join(
-                            f"{path}\\beRNNmodels\\{hp['trainingYear_Month']}\\{hp['trainingBatch']}\\{hp['participant']}_{hp['tasksString']}_{hp['monthsString']}_{hp['data']}_iteration{modelNumber}_{hp['rnn_type']}_{hp['w_rec_init']}_{hp['n_rnn_per_layer'][0]}-{hp['n_rnn_per_layer'][1]}_{hp['activations_per_layer'][0]}-{hp['activations_per_layer'][1]}",model_name)
+                            f"{path}\\beRNNmodels\\{hp['trainingYear_Month']}\\{hp['participant']}\\{hp['trainingBatch']}\\{hp['participant']}_{hp['tasksString']}_{hp['monthsString']}_{hp['data']}_iteration{modelNumber}_{hp['rnn_type']}_{hp['w_rec_init']}_{hp['n_rnn_per_layer'][0]}-{hp['n_rnn_per_layer'][1]}_{hp['activations_per_layer'][0]}-{hp['activations_per_layer'][1]}",model_name)
                     else:
-                        model_dir = os.path.join(f"{path}\\beRNNmodels\\{hp['trainingYear_Month']}\\{hp['trainingBatch']}\\{hp['participant']}_{hp['tasksString']}_{hp['monthsString']}_{hp['data']}_iteration{modelNumber}_{hp['rnn_type']}_{hp['w_rec_init']}_{hp['n_rnn_per_layer'][0]}-{hp['n_rnn_per_layer'][1]}-{hp['n_rnn_per_layer'][2]}_{hp['activations_per_layer'][0]}-{hp['activations_per_layer'][1]}-{hp['activations_per_layer'][2]}", model_name)
+                        model_dir = os.path.join(f"{path}\\beRNNmodels\\{hp['trainingYear_Month']}\\{hp['participant']}\\{hp['trainingBatch']}\\{hp['participant']}_{hp['tasksString']}_{hp['monthsString']}_{hp['data']}_iteration{modelNumber}_{hp['rnn_type']}_{hp['w_rec_init']}_{hp['n_rnn_per_layer'][0]}-{hp['n_rnn_per_layer'][1]}-{hp['n_rnn_per_layer'][2]}_{hp['activations_per_layer'][0]}-{hp['activations_per_layer'][1]}-{hp['activations_per_layer'][2]}", model_name)
                 else:
-                    model_dir = os.path.join(f"{path}\\beRNNmodels\\{hp['trainingYear_Month']}\\{hp['trainingBatch']}\\{hp['participant']}_{hp['tasksString']}_{hp['monthsString']}_{hp['data']}_iteration{modelNumber}_{hp['rnn_type']}_{hp['w_rec_init']}_{hp['n_rnn']}_{hp['activation']}",model_name)
+                    model_dir = os.path.join(f"{path}\\beRNNmodels\\{hp['trainingYear_Month']}\\{hp['participant']}\\{hp['trainingBatch']}\\{hp['participant']}_{hp['tasksString']}_{hp['monthsString']}_{hp['data']}_iteration{modelNumber}_{hp['rnn_type']}_{hp['w_rec_init']}_{hp['n_rnn']}_{hp['activation']}",model_name)
 
             elif hp['machine'] == 'hitkip' or hp['machine'] == 'pandora':
                 if hp['multiLayer'] == True:
@@ -582,25 +559,25 @@ if __name__ == '__main__':
                     numberOfLayers = len(hp['n_rnn_per_layer'])
                     if numberOfLayers == 2:
                         model_dir = os.path.join(
-                            f"{path}/beRNNmodels/{hp['trainingYear_Month']}/{hp['trainingBatch']}/{hp['participant']}_{hp['tasksString']}_{hp['monthsString']}_{hp['data']}_iteration{modelNumber}_{hp['rnn_type']}_{hp['w_rec_init']}_{hp['n_rnn_per_layer'][0]}-{hp['n_rnn_per_layer'][1]}_{hp['activations_per_layer'][0]}-{hp['activations_per_layer'][1]}",model_name)
+                            f"{path}/beRNNmodels/{hp['trainingYear_Month']}/{hp['participant']}/{hp['trainingBatch']}/{hp['participant']}_{hp['tasksString']}_{hp['monthsString']}_{hp['data']}_iteration{modelNumber}_{hp['rnn_type']}_{hp['w_rec_init']}_{hp['n_rnn_per_layer'][0]}-{hp['n_rnn_per_layer'][1]}_{hp['activations_per_layer'][0]}-{hp['activations_per_layer'][1]}",model_name)
                     else:
                         model_dir = os.path.join(
-                            f"{path}/beRNNmodels/{hp['trainingYear_Month']}/{hp['trainingBatch']}/{hp['participant']}_{hp['tasksString']}_{hp['monthsString']}_{hp['data']}_iteration{modelNumber}_{hp['rnn_type']}_{hp['w_rec_init']}_{hp['n_rnn_per_layer'][0]}-{hp['n_rnn_per_layer'][1]}-{hp['n_rnn_per_layer'][2]}_{hp['activations_per_layer'][0]}-{hp['activations_per_layer'][1]}-{hp['activations_per_layer'][2]}",model_name)
+                            f"{path}/beRNNmodels/{hp['trainingYear_Month']}/{hp['participant']}/{hp['trainingBatch']}/{hp['participant']}_{hp['tasksString']}_{hp['monthsString']}_{hp['data']}_iteration{modelNumber}_{hp['rnn_type']}_{hp['w_rec_init']}_{hp['n_rnn_per_layer'][0]}-{hp['n_rnn_per_layer'][1]}-{hp['n_rnn_per_layer'][2]}_{hp['activations_per_layer'][0]}-{hp['activations_per_layer'][1]}-{hp['activations_per_layer'][2]}",model_name)
                 else:
                     model_dir = os.path.join(
-                        f"{path}/beRNNmodels/{hp['trainingYear_Month']}/{hp['trainingBatch']}/{hp['participant']}_{hp['tasksString']}_{hp['monthsString']}_{hp['data']}_iteration{modelNumber}_{hp['rnn_type']}_{hp['w_rec_init']}_{hp['n_rnn']}_{hp['activation']}",model_name)
+                        f"{path}/beRNNmodels/{hp['trainingYear_Month']}/{hp['participant']}/{hp['trainingBatch']}/{hp['participant']}_{hp['tasksString']}_{hp['monthsString']}_{hp['data']}_iteration{modelNumber}_{hp['rnn_type']}_{hp['w_rec_init']}_{hp['n_rnn']}_{hp['activation']}",model_name)
 
 
             if not os.path.exists(model_dir):
                 os.makedirs(model_dir)
 
             # Create train and eval data
-            train_data, eval_data = createSplittedDatasets(hp, preprocessedData_path, month)
+            train_data, eval_data = tools.createSplittedDatasets(hp, preprocessedData_path, month)
 
             # info: If you want to initialize the new model with an old one
             # load_dir = 'C:\\Users\\oliver.frank\\Desktop\\PyProjects\\beRNNmodels\\2025_03\\sc_mask_final\\beRNN_03_All_3-5_data_highDim_correctOnly_iteration1_LeakyRNN_1000_relu\\model_month_3'
             # Start Training ---------------------------------------------------------------------------------------------------
-            train(model_dir=model_dir, train_data = train_data, eval_data = eval_data, load_dir = load_dir)
+            train(preprocessedData_path, model_dir=model_dir, train_data = train_data, eval_data = eval_data, load_dir = load_dir)
 
             # info: If True previous model parameters will be taken to initialize consecutive model, creating sequential training
             if hp['sequenceMode'] == True:

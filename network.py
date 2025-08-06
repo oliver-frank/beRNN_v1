@@ -166,7 +166,6 @@ def random_orthogonal(n, rng=None):
     Q *= np.sign(np.diag(R))
     return Q
 
-
 # info: lowDIM section
 def popvec_lowDIM(y):
     """Population vector read out.
@@ -320,12 +319,12 @@ class LeakyRNNCell(RNNCell):
             w_rec0 = (self._w_rec_start * self.rng.randn(n_hidden, n_hidden) / np.sqrt(n_hidden))
         elif self._w_rec_init == 'brainStructure':
             # Define main path
-            if machine == 'hitkip': # attention: adapted for paper analysis - default: 'local'
-                connectomePath = f'C:\\Users\\oliver.frank\\Desktop\\PyProjects\\art_beRNN\\masks\\connectomes_{participant}'
+            if machine == 'local' or machine == 'hitkip' or machine == 'pandora': # attention: scenario only when computing networks locally
+                connectomePath = f'C:\\Users\\oliver.frank\\Desktop\\PyProjects\\beRNN_v1\\masks\\connectomes_{participant}'
             # elif machine == 'hitkip':
             #     connectomePath = f'/zi/home/oliver.frank/Desktop/RNN/multitask_BeRNN-main/masks/connectomes_{participant}'
-            elif machine == 'pandora':
-                connectomePath = f'/pandora/home/oliver.frank/01_Projects/RNN/multitask_BeRNN-main/masks/connectomes_{participant}'
+            # elif machine == 'pandora':
+            #     connectomePath = f'/pandora/home/oliver.frank/01_Projects/RNN/multitask_BeRNN-main/masks/connectomes_{participant}'
 
             # Load right weight matrix & rotated for equivalent randomness factor while preserving the spectral characteristics
             w_rec0_ = np.load(os.path.join(connectomePath, f'connectome_{participant}_{n_hidden}_sigNorm.npy')) # fix: Add number for brainStructVariations
@@ -408,7 +407,6 @@ class LeakyRNNCell(RNNCell):
 
         return output, output
 
-
 class FlexibleLeakyStackedRNNCell(tf.nn.rnn_cell.RNNCell):
     """
     Stack of LeakyRNNCell layers with individually specified units and activations per layer.
@@ -480,7 +478,6 @@ class FlexibleLeakyStackedRNNCell(tf.nn.rnn_cell.RNNCell):
 
     def zero_state(self, batch_size, dtype):
         return self._multi_cell.zero_state(batch_size, dtype)
-
 
 class LeakyGRUCell(RNNCell):
     """Leaky Gated Recurrent Unit cell (cf. https://elifesciences.org/articles/21492).
@@ -613,7 +610,6 @@ class LeakyGRUCell(RNNCell):
 
         return new_h, new_h
 
-
 class LeakyRNNCellSeparateInput(RNNCell):
     """The most basic RNN cell with external inputs separated.
 
@@ -723,7 +719,6 @@ class LeakyRNNCellSeparateInput(RNNCell):
         output = (1 - self._alpha) * state + self._alpha * output
 
         return output, output
-
 
 class Model(object):
     """The model."""

@@ -1,5 +1,5 @@
 ########################################################################################################################
-# info: Variance
+# head: Task variance
 ########################################################################################################################
 
 ########################################################################################################################
@@ -15,12 +15,11 @@ from collections import OrderedDict
 # import matplotlib as mpl
 # import matplotlib.pyplot as plt
 import tensorflow as tf
-import random
+# import random
 import errno
 
 # from task import *
 from network import Model
-from training import createSplittedDatasets, create_cMask
 import tools
 
 save = True
@@ -64,7 +63,7 @@ def _compute_variance_bymodel(data_dir, model_dir, layer, data_type, networkAnal
 
     # data_dir = 'C:\\Users\\oliver.frank\\Desktop\\BackUp\\Data\\BeRNN_' + model_dir.split('BeRNN_')[-1].split('_')[0] + '\\PreprocessedData_wResp_ALL'
     month = '_'.join(model_dir.split('_')[-2:]) # only current model's month considered
-    train_data, eval_data = createSplittedDatasets(hp, data_dir, month)
+    train_data, eval_data = tools.createSplittedDatasets(hp, data_dir, month)
 
     # Skip taskVariance creation if already exists
     save_name = 'var_' + mode + '_lay' + str(layer) + '_' + data_type
@@ -85,7 +84,7 @@ def _compute_variance_bymodel(data_dir, model_dir, layer, data_type, networkAnal
                 x, y, y_loc, response = tools.load_trials(hp['rng'], task, mode, hp['batch_size'], data, False)
                 epochs = tools.find_epochs(x)
 
-                c_mask = create_cMask(y, response, hp, mode)
+                c_mask = tools.create_cMask(y, response, hp, mode)
 
                 # # info: ################################################################################################
                 # fixation_steps = tools.getEpochSteps(y)
@@ -200,7 +199,7 @@ def _compute_variance_bymodel(data_dir, model_dir, layer, data_type, networkAnal
         print(f"task variance file: {fname} already exists. Skipping repetition.")
     return fname
 
-def _compute_variance(data_dir, model_dir, layer, mode, monthsConsidered, data_type, networkAnalysis, rules=None, random_rotation=False):
+def _compute_variance(data_dir, model_dir, layer, mode, monthsConsidered, data_type, networkAnalysis, rules=None, random_rotation=False, **kwargs):
     """Compute variance for all tasks.
 
     Args:
@@ -208,13 +207,21 @@ def _compute_variance(data_dir, model_dir, layer, mode, monthsConsidered, data_t
         rules: list of rules to compute variance, list of strings
         random_rotation: boolean. If True, rotate the neural activity.
     """
-    model = Model(model_dir, sigma_rec=0)
-    with tf.Session() as sess:
-        model.restore()
+    if networkAnalysis == True:
+        model = Model(model_dir, sigma_rec=0)
+        with tf.Session() as sess:
+            model.restore()
+            fname = _compute_variance_bymodel(data_dir, model_dir, layer, data_type, networkAnalysis, model, sess, mode, monthsConsidered, rules, random_rotation)
+            return fname
+    else:
+        # Get model and sess from kwargs
+        model = kwargs.get('model')
+        sess = kwargs.get('sess')
+
         fname = _compute_variance_bymodel(data_dir, model_dir, layer, data_type, networkAnalysis, model, sess, mode, monthsConsidered, rules, random_rotation)
         return fname
 
-def compute_variance(data_dir, model_dir, layer, mode, monthsConsidered, data_type, networkAnalysis, rules=None, random_rotation=False):
+def compute_variance(data_dir, model_dir, layer, mode, monthsConsidered, data_type, networkAnalysis, rules=None, random_rotation=False, **kwargs):
     """Compute variance for all tasks.
 
     Args:
@@ -224,7 +231,7 @@ def compute_variance(data_dir, model_dir, layer, mode, monthsConsidered, data_ty
     """
     dirs = tools.valid_model_dirs(model_dir)
     for d in dirs:
-        fname = _compute_variance(data_dir, d, layer, mode, monthsConsidered, data_type, networkAnalysis, rules, random_rotation)
+        fname = _compute_variance(data_dir, d, layer, mode, monthsConsidered, data_type, networkAnalysis, rules, random_rotation, **kwargs)
         return fname
 
 

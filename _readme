@@ -4,3 +4,23 @@
 3. taskRepresentation.py for analyzing models hidden structure
 4. errorAnalysis.py & taskAccuracy.py for analyzing specific cognitive behavior
 
+ToDo:
+- Robustness test for highDim best model LeakyRNN all beRNNs
+- Integrate LAB stuff
+- Compare state variable models within participants (sleep quality, drug consumption)
+- Create semantic error classes inspired by literature
+- Compare successful hyperaparaemter sets overlap between subjects
+- Optuna optimization
+- Clone participants
+- Set up probabilistic model (RNN)
+- Comparison to brain networks (RSA)
+- check MS code for suspect results
+- Visualize reasoning over time in models (poc)
+- Visualize everything better
+
+Train:
+- hpOverview: highDim beRNN_03 w. all models
+- hpOverview: highDim beRNN_04 216 models shown only?
+- hpOverview: 3stimTC beRNN_04 w. all models
+- hpOverview: CorrOnly beRNN_01 w. all models
+

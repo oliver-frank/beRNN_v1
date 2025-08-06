@@ -30,7 +30,7 @@ from networkAnalysis import define_data_folder, plot_performanceprogress_test_Be
 
 # Functions ############################################################################################################
 # Task Variance & Lesioning ############################################################################################
-def plot_taskVariance_and_lesioning(directory, mode, sort_variable, rdm_metric, numberOfModels):
+def plot_taskVariance_and_lesioning(directory, mode, sort_variable, rdm_metric, robustnessTest, batch, numberOfModels):
     # Colors used for clusters
     kelly_colors = \
         [np.array([0.94901961, 0.95294118, 0.95686275]),
@@ -56,12 +56,16 @@ def plot_taskVariance_and_lesioning(directory, mode, sort_variable, rdm_metric, 
          np.array([0.88627451, 0.34509804, 0.13333333]),
          np.array([0.16862745, 0.23921569, 0.14901961])]
 
-    txtFile = os.path.join(directory, 'visuals', f'{sort_variable}_{mode}', f'bestModels_{sort_variable}_{mode}.txt')
+    if robustnessTest == False:
+        txtFile = os.path.join(directory, 'visuals', f'{sort_variable}_{mode}', f'bestModels_{sort_variable}_{mode}.txt')
+    else:
+        txtFile = os.path.join(directory, 'visuals', f'{sort_variable}_{mode}', 'batchPlots', batch, f'bestModels_{sort_variable}_{mode}_{batch}.txt')
+
     with open(txtFile, "r") as file:
         lines = file.read().splitlines()
     cleaned_lines = [line.strip().strip('\'",') for line in lines]
 
-    for model in range(1, numberOfModels - 1):
+    for model in range(1, numberOfModels + 1):
         best_model_dir = cleaned_lines[model]  # Choose model of interest, starting with [1]
 
         dataFolder = define_data_folder(best_model_dir.split('_'))
@@ -450,14 +454,14 @@ def plot_group_rdm_mds(directory, mode, sort_variable, rdm_metric, numberOfModel
         all_keys.append(knowledgeBase.keys)
         all_models.append(knowledgeBase.model_dir)
 
-        # info: Plot also single performance plots for each of the chosen models
-        rule_plot = [i for i in hp['rule_prob_map'] if hp['rule_prob_map'][i] > 0]
-        performanceTest_dir = os.path.join(directory, 'visuals', f'{sort_variable}_{mode}', 'performanceTest')
-        performanceTrain_dir = os.path.join(directory, 'visuals', f'{sort_variable}_{mode}', 'performanceTrain')
+        # # info: Plot also single performance plots for each of the chosen models
+        # rule_plot = [i for i in hp['rule_prob_map'] if hp['rule_prob_map'][i] > 0]
+        # performanceTest_dir = os.path.join(directory, 'visuals', f'{sort_variable}_{mode}', 'performanceTest')
+        # performanceTrain_dir = os.path.join(directory, 'visuals', f'{sort_variable}_{mode}', 'performanceTrain')
         representationalDissimilarity_dir = os.path.join(directory, 'visuals', f'{sort_variable}_{mode}',
                                                          f'representationalDissimilarity_{rdm_metric}')
-        os.makedirs(performanceTest_dir, exist_ok=True)
-        os.makedirs(performanceTrain_dir, exist_ok=True)
+        # os.makedirs(performanceTest_dir, exist_ok=True)
+        # os.makedirs(performanceTrain_dir, exist_ok=True)
         os.makedirs(representationalDissimilarity_dir, exist_ok=True)
 
         # save rdm
@@ -466,20 +470,6 @@ def plot_group_rdm_mds(directory, mode, sort_variable, rdm_metric, numberOfModel
                              best_model_dir.split("\\")[-3].split('_')[
                                  -4] + f'_rdmArray_{knowledgeBase.rdm_metric}.npy'), knowledgeBase.rdm)
 
-        # test
-        fig_test = plot_performanceprogress_test_BeRNN(best_model_dir, performanceTest_dir, "", model,
-                                                       rule_plot=rule_plot)
-        fig_test.savefig(os.path.join(performanceTest_dir,
-                                      f'{model}_{sort_variable}_{mode}' + '_' + 'batch_' + best_model_dir.split("\\")[
-                                          -5] + '_' + best_model_dir.split("\\")[-3].split('_')[
-                                          -4] + '_performanceTest.png'), format='png', dpi=300)
-        # train
-        fig_train = plot_performanceprogress_train_BeRNN(best_model_dir, performanceTrain_dir, "", model,
-                                                         rule_plot=rule_plot)
-        fig_test.savefig(os.path.join(performanceTrain_dir,
-                                      f'{model}_{sort_variable}_{mode}' + '_' + 'batch_' + best_model_dir.split("\\")[
-                                          -5] + '_' + best_model_dir.split("\\")[-3].split('_')[
-                                          -4] + '_performanceTrain.png'), format='png', dpi=300)
         # info: Create RDM Heatmaps and 2D representations
         label_list = [tools.rule_name[key] for key in knowledgeBase.keys]
         fig_rdm = plot_rdm_heatmap(knowledgeBase.rdm, knowledgeBase.rdm_metric, task_labels=label_list)
@@ -531,7 +521,7 @@ def plot_group_rdm_mds(directory, mode, sort_variable, rdm_metric, numberOfModel
             -4] + f'_representationalDissimilarity_{knowledgeBase.rdm_metric}_2DspaceGeometry_modelAlignment_{numberOfModels}.png'), format='png', dpi=300)
         plt.close()
 
-def plot_rsa(directory, paricipantList):
+def plot_rsa(directory, participantList):
     def ascendingNumbers(e):
         return int(e.split('_')[0])
     def vec(rdm):  # → length 66 (for 12 tasks)
@@ -539,6 +529,7 @@ def plot_rsa(directory, paricipantList):
         return rdm[idx]
 
     rsa_directory = Path(*directory.parts[:-1], '_networkComparison')
+    os.makedirs(rsa_directory, exist_ok=True)
 
     # Gather rdmFiles in dict lists
     rdm_dict = {}
@@ -648,66 +639,79 @@ def plot_rsa(directory, paricipantList):
 
 # Task representation analysis - variable allocation ###################################################################
 # info: The script can only be run after participants have been analyzed by hyperparameterOverview.py
-directory = Path('C:/Users/oliver.frank/Desktop/PyProjects/beRNNmodels/robustnessTest/highDim3stimTC/beRNN_03')
+dataType = ['highDim', 'highDim_correctOnly', 'highDim_3stimTC'][1]
+participant = ['beRNN_01', 'beRNN_02', 'beRNN_03', 'beRNN_04', 'beRNN_05'][2]
+folder = ['robustnessTest', 'paperPlanes'][0]
+directory = Path(f'C:/Users/oliver.frank/Desktop/PyProjects/beRNNmodels/{folder}/{dataType}/{participant}')
 
 mode = ['test', 'train'][0]
 sort_variable = ['performance', 'clustering'][0]
 rdm_metric = ['cosine', 'correlation'][0]
+standard_analysis = [True, False][1]
+rsa_analysis = [True, False][0]
+robustnessTest, batch = [True, False][0], '0'
 
 ruleset = ['all'][0]
 representation = ['rate', 'weight'][0]
 restore = False
 
-numberOfModels = 20
+numberOfModels = 21
 
-txtFile = os.path.join(directory, 'visuals', f'{sort_variable}_{mode}', f'bestModels_{sort_variable}_{mode}.txt')
+# Define for different folder structure
+if robustnessTest == False:
+    txtFile = os.path.join(directory, 'visuals', f'{sort_variable}_{mode}', f'bestModels_{sort_variable}_{mode}.txt')
+else:
+    txtFile = os.path.join(directory, 'visuals', f'{sort_variable}_{mode}', 'batchPlots', batch, f'bestModels_{sort_variable}_{mode}_{batch}.txt')
+
 with open(txtFile, "r") as file:
     lines = file.read().splitlines()
 cleaned_lines = [line.strip().strip('\'",') for line in lines]
 
 
-# head: Create individual task variance and lesioning plots ##############################################################
-plot_taskVariance_and_lesioning(directory, mode, sort_variable, rdm_metric, numberOfModels=numberOfModels)
+if standard_analysis == True:
+    # # head: Create individual task variance and lesioning plots ##############################################################
+    # plot_taskVariance_and_lesioning(directory, mode, sort_variable, rdm_metric, robustnessTest, batch, numberOfModels=numberOfModels)
+    #
+    #
+    # # head: Create task variance space plots - tsne/PCA based ################################################################
+    # tsa_exist = False
+    # h_trans_all = OrderedDict()
+    # # Iterate over all models and create TR individually and on group-level
+    # for model in range(1, numberOfModels - 1):
+    #     rules = tools.rules_dict[ruleset]
+    #
+    #     best_model_dir = cleaned_lines[model]  # Choose model of interest, starting with [1]
+    #
+    #     fname = 'taskset{:s}_space_2DtaskVarianceRepresentation'.format(ruleset) + '.pkl'  # fix: set subgroups of tasks as variable here too
+    #     fname = os.path.join(best_model_dir, fname)
+    #     figName = 'taskset{:s}_space_2DtaskVarianceRepresentation_'.format(ruleset) + '_'.join(best_model_dir.split('\\')[-3].split('_')[-5:-3])
+    #
+    #     try:
+    #         if restore and os.path.isfile(fname):
+    #             print('Reloading results from ' + fname)
+    #             h_trans = tools.load_pickle(fname)
+    #         else:
+    #             tsa, tsa_exist = TaskSetAnalysis(best_model_dir), True
+    #             h_trans = tsa.compute_taskspace(fname, dim_reduction_type='PCA', epochs=['response']) # Focus on response epoch
+    #             tsa.plot_taskspace(h_trans, directory, sort_variable, mode, figName, 'individual')
+    #             # Collect all h_trans (2DtaskRepresentations) for group plot
+    #             h_trans_all = tsa.collect_h_trans(h_trans, h_trans_all, model)
+    #     except ValueError:
+    #         print('Skipping model: ' + best_model_dir.split('\\')[-3])
+    #         continue
+    #
+    # if tsa_exist:
+    #     tsa.plot_taskspace(h_trans_all, directory, sort_variable, mode, figName, 'group', lxy=(1.1, 1.1))
 
 
-# head: Create task variance space plots - tsne/PCA based ################################################################
-tsa_exist = False
-h_trans_all = OrderedDict()
-# Iterate over all models and create TR individually and on group-level
-for model in range(1, numberOfModels - 1):
-    rules = tools.rules_dict[ruleset]
-
-    best_model_dir = cleaned_lines[model]  # Choose model of interest, starting with [1]
-
-    fname = 'taskset{:s}_space_2DtaskVarianceRepresentation'.format(ruleset) + '.pkl'  # fix: set subgroups of tasks as variable here too
-    fname = os.path.join(best_model_dir, fname)
-    figName = 'taskset{:s}_space_2DtaskVarianceRepresentation_'.format(ruleset) + '_'.join(best_model_dir.split('\\')[-3].split('_')[-5:-3])
-
-    try:
-        if restore and os.path.isfile(fname):
-            print('Reloading results from ' + fname)
-            h_trans = tools.load_pickle(fname)
-        else:
-            tsa, tsa_exist = TaskSetAnalysis(best_model_dir), True
-            h_trans = tsa.compute_taskspace(fname, dim_reduction_type='PCA', epochs=['response']) # Focus on response epoch
-            tsa.plot_taskspace(h_trans, directory, sort_variable, mode, figName, 'individual')
-            # Collect all h_trans (2DtaskRepresentations) for group plot
-            h_trans_all = tsa.collect_h_trans(h_trans, h_trans_all, model)
-    except ValueError:
-        print('Skipping model: ' + best_model_dir.split('\\')[-3])
-        continue
-
-if tsa_exist:
-    tsa.plot_taskspace(h_trans_all, directory, sort_variable, mode, figName, 'group', lxy=(1.1, 1.1))
-
-
-# head: Create individual rdm heatmaps, rdm 2D representations and one grouped rdm 2D representation #####################
-plot_group_rdm_mds(directory, mode, sort_variable, rdm_metric, numberOfModels=numberOfModels)
+    # head: Create individual rdm heatmaps, rdm 2D representations and one grouped rdm 2D representation #####################
+    plot_group_rdm_mds(directory, mode, sort_variable, rdm_metric, numberOfModels=numberOfModels)
 
 
 # Create RSA matrix for comparing rdm representations between participants #############################################
-# participantList = ['beRNN_01', 'beRNN_02', 'beRNN_03', 'beRNN_04', 'beRNN_05'] # info: Only choose participants who were analyzed above
-participantList = ['beRNN_03'] # info: Only choose participants who were analyzed above
-plot_rsa(directory, participantList)
+if rsa_analysis == True:
+    # participantList = ['beRNN_01', 'beRNN_02', 'beRNN_03', 'beRNN_04', 'beRNN_05'] # info: Only choose participants who were analyzed above
+    participantList =  ['beRNN_01', 'beRNN_04', 'beRNN_05'] # info: Only choose participants who were analyzed above
+    plot_rsa(directory, participantList)
 
 

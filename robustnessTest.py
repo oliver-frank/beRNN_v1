@@ -8,12 +8,12 @@ import time
 import ast
 import json
 
-from training import createSplittedDatasets, train
+from training import train
 import tools
 
 # Choose machine to process on
 machineList = ['local', 'hitkip']
-machine = machineList[1]
+machine = machineList[0]
 # Choose model class
 modelClassList = ['RNN', 'multiRNN', 'GRU']
 modelClass = modelClassList[0]
@@ -21,12 +21,18 @@ modelClass = modelClassList[0]
 modelRangeList = ['best', 'worst']
 modelRange = modelRangeList[0]
 # Define data format
-dataFormatList = ['highDim', 'highDimCorrectOnly', 'highDim3stimTC']
-dataFormat = dataFormatList[2]
+dataFormatList = ['highDim', 'highDim_correctOnly', 'highDim3stimTC']
+dataFormat = dataFormatList[1]
+# Define participant
+participantList = ['beRNN_01', 'beRNN_02', 'beRNN_03', 'beRNN_04', 'beRNN_05']
+participant = participantList[1]
 
 # # info: Change the directories for hitkip run ##########################################################################
+# participant = 'beRNN_05'
+# data = 'correctOnly'
+# seperator = 'CorrectOnly'
 # # ---- Load the original list (not line-by-line!) ----
-# with open(r"C:\Users\oliver.frank\Desktop\PyProjects\beRNNmodels\robustnessTest\bestModels_performance_test.txt", "r") as f:
+# with open(fr"C:\Users\oliver.frank\Desktop\PyProjects\beRNNmodels\paperPlanes\highDim_{data}\{participant}\visuals\performance_test\bestModels_performance_test.txt", "r") as f:
 #     old_paths = json.load(f)  # loads full list
 #
 # # ---- Transform paths ----
@@ -36,22 +42,22 @@ dataFormat = dataFormatList[2]
 #     path = path.replace("\\", "/")
 #
 #     # Replace Windows base path with Linux path
-#     suffix = path.split("/highDim3stimTC/")[1]
-#     new_path = f"/zi/home/oliver.frank/Desktop/beRNNmodels/finalGridSearch_allSubjects_3stimTC/{suffix}"
+#     suffix = path.split(f"/highDim_{seperator}/")[1]
+#     new_path = f"/zi/home/oliver.frank/Desktop/beRNNmodels/finalGridSearch_allSubjects_{data}/{suffix}"
 #     new_paths.append(new_path)
 #
 # # ---- Save as proper list again (as .txt with JSON structure) ----
-# with open(r"C:\Users\oliver.frank\Desktop\PyProjects\beRNNmodels\robustnessTest\bestModels_performance_test_hitkipVersion.txt", "w") as f:
+# with open(fr"C:\Users\oliver.frank\Desktop\PyProjects\beRNNmodels\paperPlanes\highDim_{data}\{participant}\visuals\performance_test\bestModels_performance_test_hitkipVersion.txt", "w") as f:
 #     json.dump(new_paths, f, indent=2)  # indent for readability
 # # info: ################################################################################################################
 
 
 if machine == 'local':
     directory = Path(
-        f'C:/Users/oliver.frank/Desktop/PyProjects/beRNNmodels/paperPlanes/{dataFormat}/beRNN_03/visuals/performance_test/bestModels_performance_test.txt')
+        f'C:/Users/oliver.frank/Desktop/PyProjects/beRNNmodels/robustnessTest/{dataFormat}/{participant}/visuals/performance_test/bestModels_performance_test.txt')
 elif machine == 'hitkip':
     directory = Path(
-        '/zi/home/oliver.frank/Desktop/RNN/multitask_BeRNN-robustness/bestModels_performance_test_hitkipVersion.txt')
+        '/zi/home/oliver.frank/Desktop/RNN/multitask_BeRNN-main/bestModels_performance_test_hitkipVersion.txt')
 
 with open(directory, 'r') as f:
     content = f.read()
@@ -106,14 +112,14 @@ if modelClass == 'GRU':
             if len(filtered_modelList) == numberOfModelsToFilter:
                 break
 
-modelBatch = 19
+modelBatch = 0 # Create a new modelBatch for each chosen model in robustnessTest folder
 model_dir = filtered_modelList[modelBatch]
 
 print(f'chosen model nr. {numberOfCurrentModelFiltered} : ', model_dir)
 
 # Initialize list for all training times for each model
 trainingTimeList = []
-for modelNumber in range(11, 21):  # Define number of iterations and models to be created for every month, respectively
+for modelNumber in range(1, 5):  # Define number of iterations and models to be created for every month, respectively
 
     # Measure time for every model, respectively
     trainingTimeTotal_hours = 0
@@ -158,12 +164,12 @@ for modelNumber in range(11, 21):  # Define number of iterations and models to b
             os.makedirs(model_dir)
 
         # Create train and eval data
-        train_data, eval_data = createSplittedDatasets(hp, preprocessedData_path, month)
+        train_data, eval_data = tools.createSplittedDatasets(hp, preprocessedData_path, month)
 
         # info: If you want to initialize the new model with an old one
         # load_dir = 'C:\\Users\\oliver.frank\\Desktop\\PyProjects\\beRNNmodels\\2025_03\\sc_mask_final\\beRNN_03_All_3-5_data_highDim_correctOnly_iteration1_LeakyRNN_1000_relu\\model_month_3'
         # Start Training ---------------------------------------------------------------------------------------------------
-        train(model_dir=model_dir, train_data=train_data, eval_data=eval_data, hp=hp, load_dir=load_dir)
+        train(preprocessedData_path, model_dir=model_dir, train_data=train_data, eval_data=eval_data, hp=hp, load_dir=load_dir)
 
         # info: If True previous model parameters will be taken to initialize consecutive model, creating sequential training
         if hp['sequenceMode'] == True:
@@ -194,5 +200,7 @@ with open(file_path, 'w') as f:
         f.write(f"{time}\n")
 
 print(f"Training times saved to {file_path}")
+
+
 
 

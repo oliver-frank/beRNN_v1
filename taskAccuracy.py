@@ -47,7 +47,7 @@ for i in list_testParticipant_month:
         # print(currentFile['UTC Date and Time'])
         if currentFile['Task Name'][0] != '000_state_questions' and currentFile['Task Name'][0] != '000_session_completion': # avoid files with state questions and session completion
             # print(currentFile.iloc[0,28].split('_trials_')[0])
-            # print('W:/AG_CSP/Projekte/art_beRNN/02_Daten/BeRNN_main/' + participant + month + i)
+            # print('W:/AG_CSP/Projekte/beRNN_v1/02_Daten/BeRNN_main/' + participant + month + i)
             if currentFile['Spreadsheet'][0].split('_trials_')[0] == 'DM':
                 # percentCorrect_DM += currentFile['Store: PercentCorrectDM'][len(currentFile['Store: PercentCorrectDM'])-3]
                 # count_DM += 1

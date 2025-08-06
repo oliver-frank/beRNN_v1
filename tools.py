@@ -363,6 +363,7 @@ def find_epochs(array):
 def getEpochSteps(y):
     previous_value = None
     fixation_steps = None
+    response_steps = None
     for i in range(y.shape[0]):
         if y.shape[1] != 0:
             current_value = y[i, 0, 0]
@@ -378,13 +379,104 @@ def getEpochSteps(y):
 
         else:
             continue
-            # fixation_steps = np.round(int(y.shape[0] / 2))
-
-    # if fixation_steps is None:  # Unclean fix for fixation_steps not found - has to be improved in the future
-    #     fixation_steps = np.round(int(y.shape[0] / 2))
-    #     # print('fixation_steps artificially created for: ', file_stem)
 
     return fixation_steps, response_steps
+
+def createSplittedDatasets(hp, preprocessedData_path, month):
+    # Split the data into training and test data -----------------------------------------------------------------------
+    # List of the subdirectories
+    subdirs = [os.path.join(preprocessedData_path, d) for d in os.listdir(preprocessedData_path) if
+               os.path.isdir(os.path.join(preprocessedData_path, d))]
+
+    # Initialize dictionaries to store training and evaluation data
+    train_data = {}
+    eval_data = {}
+
+    for subdir in subdirs:
+        # Collect all file triplets in the current subdirectory
+        file_quartett = []
+        for file in os.listdir(subdir):
+            if file.endswith('Input.npy'):
+                # # III: Exclude files with specific substrings in their names
+                # if any(exclude in file for exclude in ['Randomization', 'Segmentation', 'Mirrored', 'Rotation']):
+                #     continue
+                # Include only files that contain any of the months in monthsConsidered
+                if month not in file:  # Sort out months which should not be considered
+                    continue
+                # Add all necessary files to triplets
+                base_name = file.split('Input')[0]
+                input_file = os.path.join(subdir, base_name + 'Input.npy')
+                yloc_file = os.path.join(subdir, base_name + 'yLoc.npy')
+                output_file = os.path.join(subdir, base_name + 'Output.npy')
+                response_file = os.path.join(subdir, base_name + 'Response.npy')
+
+                file_quartett.append((input_file, yloc_file, output_file, response_file))
+
+        # Split the file triplets
+        train_files, eval_files = split_files(hp, file_quartett)
+
+        # Store the results in the dictionaries
+        train_data[subdir] = train_files
+        eval_data[subdir] = eval_files
+
+    return train_data, eval_data
+
+def split_files(hp, files, split_ratio=0.8):
+    if 'rng' not in hp:
+        hp['rng'] = np.random.default_rng()
+    hp['rng'].shuffle(files)
+    split_index = int(len(files) * split_ratio)
+    return files[:split_index], files[split_index:]
+
+def create_cMask(y, response, hp, mode):
+    fixation_steps, response_steps = getEpochSteps(y)
+
+    if fixation_steps == None or response_steps == None:  # if no fixation_steps could be found
+        return np.array(None)
+    # Creat c_mask for current batch
+    if hp['loss_type'] == 'lsq':
+
+        c_mask = np.zeros((y.shape[0], y.shape[1], y.shape[2]), dtype='float32')
+
+        if mode == 'train':
+            # fix: random beRNN_02 bug: inconcruence between y and response dimension 1
+            if response.shape[1] != y.shape[1]:
+                return np.array(None)
+
+            # info: Create a c_mask that emphasizes errors by multiplying the error contribution for backProp by 5. and corrects by 1.
+            errorBalancingVector = np.zeros(response.shape[1], dtype='float32')
+
+            for j in range(response.shape[1]):
+                if response[0][j] == response[1][j]:
+                    errorBalancingVector[j] = 1.  # weight value for corrects
+                else:
+                    errorBalancingVector[j] = hp['errorBalancingValue']
+
+            for i in range(y.shape[1]):
+                # Fixation epoch
+                c_mask[:fixation_steps, i, :] = 1.
+                # Response epoch
+                c_mask[fixation_steps:, i, :] = hp['c_mask_responseValue'] * errorBalancingVector[i]  # info: 1 or 5
+
+            # self.c_mask[:, :, 0] *= self.n_eachring # Fixation is important
+            # c_mask[:, :, 0] *= 2.  # Fixation is important # info: with or without
+            c_mask = c_mask.reshape((y.shape[0] * y.shape[1], y.shape[2]))
+            c_mask /= c_mask.mean()
+
+        c_mask = c_mask.reshape((y.shape[0] * y.shape[1], y.shape[2]))
+
+    else:
+        c_mask = np.zeros((y.shape[0], y.shape[1]), dtype='float32')
+        for i in range(y.shape[1]):
+            # Fixation epoch
+            c_mask[:fixation_steps, i, :] = 1.
+            # Response epoch
+            c_mask[fixation_steps:, i, :] = hp['c_mask_responseValue']  # info: 1 or 5
+
+        c_mask = c_mask.reshape((y.shape[0] * y.shape[1],))
+        c_mask /= c_mask.mean()
+
+    return c_mask
 
 def adjust_ndarray_size(arr):
     if arr.size == 4:

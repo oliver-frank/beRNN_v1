@@ -19,7 +19,6 @@ from analysis import clustering
 from networkAnalysis import define_data_folder
 # from analysis import standard_analysis
 
-
 ########################################################################################################################
 # head: Create histogramms to visualize and investigate interrelations of hyperparameter, modularity and performance ###
 ########################################################################################################################
@@ -537,7 +536,7 @@ def individual_hp_plot(n_clusters, silhouette_score, avg_perf_train_list, avg_pe
     for hp_plot in hp_plots:
         n_cluster_dict = _individual_hp_plot(hp_plot, sort_variable, mode, directory, batchPlot, model_dir_batches, n_clusters, silhouette_score, avg_perf_test_list, avg_perf_train_list, hp_list)
 
-
+# fix: Add network size here please
 HP_NAME = {'activation': 'Activation fun.',
            'rnn_type': 'Network type',
            'w_rec_init': 'Initialization',
@@ -550,44 +549,49 @@ HP_NAME = {'activation': 'Activation fun.',
            'learning_rate': 'Learning rate',
            'learning_rate_mode': 'Learning rate mode'}
 
+if __name__ == '__main__':
+    final_model_dirs = []
 
-final_model_dirs = []
-directory = r'C:\Users\oliver.frank\Desktop\PyProjects\beRNNmodels\robustnessTest\highDim3stimTC\beRNN_03'
+    participant = ['beRNN_01', 'beRNN_02', 'beRNN_03', 'beRNN_04', 'beRNN_05'][0]
+    dataType = ['highDim', 'highDim_3stimTC', 'highDim_correctOnly'][1]
+    folder = ['paperPlanes', 'robustnessTest'][0]
 
-mode = ['train', 'test'][1]
-sort_variable = ['clustering', 'performance', 'silhouette'][1]
-batchPlot = [True, False][1]
-lastMonth = '6'
+    mode = ['train', 'test'][1]
+    sort_variable = ['clustering', 'performance', 'silhouette'][1]
+    batchPlot = [True, False][1]
+    lastMonth = '6'
 
-if batchPlot == False:
-    model_dir_batches = os.listdir(directory)
-else:
-    model_dir_batches = ['9'] # info: For creating a hp overview for one batch (e.g. in robustnessTest)
+    directory = fr'C:\Users\oliver.frank\Desktop\PyProjects\beRNNmodels\{folder}\{dataType}\{participant}'
 
-# Create list of models to integrate in one hp overview plot
-model_dir_batches = [batch for batch in model_dir_batches if batch != 'visuals']
-for model_dir_batch in model_dir_batches:
-    model_dirs_ = os.listdir(os.path.join(directory, model_dir_batch))
-    model_dirs = [model_dir for model_dir in model_dirs_ if model_dir != 'overviews' and not model_dir.endswith('.txt')]
-    for model_dir in model_dirs:
-        model_dir_lastMonth_ = os.listdir(os.path.join(directory, model_dir_batch, model_dir))
-        model_dir_lastMonth = [model_dir for model_dir in model_dir_lastMonth_ if lastMonth in model_dir]
-        # Concatenate all models in one list
-        if 'model' in model_dir_lastMonth[0]: # Be sure to add anything else but models
-            final_model_dirs.append(os.path.join(directory, model_dir_batch, model_dir, model_dir_lastMonth[0]))
+    if batchPlot == False:
+        model_dir_batches = os.listdir(directory)
+    else:
+        model_dir_batches = ['0'] # info: For creating a hp overview for one batch (e.g. in robustnessTest)
 
-# First compute n_clusters for each model then collect them in lists
-successful_model_dirs = compute_n_cluster(final_model_dirs, mode)
-n_clusters, hp_list, silhouette_score, avg_perf_train_list, avg_perf_test_list = get_n_clusters(successful_model_dirs)
+    # Create list of models to integrate in one hp overview plot
+    model_dir_batches = [batch for batch in model_dir_batches if batch != 'visuals']
+    for model_dir_batch in model_dir_batches:
+        model_dirs_ = os.listdir(os.path.join(directory, model_dir_batch))
+        model_dirs = [model_dir for model_dir in model_dirs_ if model_dir != 'overviews' and not model_dir.endswith('.txt')]
+        for model_dir in model_dirs:
+            model_dir_lastMonth_ = os.listdir(os.path.join(directory, model_dir_batch, model_dir))
+            model_dir_lastMonth = [model_dir for model_dir in model_dir_lastMonth_ if lastMonth in model_dir]
+            # Concatenate all models in one list
+            if 'model' in model_dir_lastMonth[0]: # Be sure to add anything else but models
+                final_model_dirs.append(os.path.join(directory, model_dir_batch, model_dir, model_dir_lastMonth[0]))
 
-# Create hp_plots sorted by performance or clustering
-general_hp_plot(n_clusters, silhouette_score, hp_list, avg_perf_train_list, avg_perf_test_list, directory, sort_variable, mode, batchPlot, model_dir_batches)
-# Create legend
-hp_ranges = _get_hp_ranges()
-hp_plots = list(hp_ranges.keys())
-plot_vertical_hp_legend(hp_ranges, hp_plots, HP_NAME, directory)
+    # First compute n_clusters for each model then collect them in lists
+    successful_model_dirs = compute_n_cluster(final_model_dirs, mode)
+    n_clusters, hp_list, silhouette_score, avg_perf_train_list, avg_perf_test_list = get_n_clusters(successful_model_dirs)
 
-# Create histogramms for each hyperparameter seperatly w.r.t. performance or clustering
-individual_hp_plot(n_clusters, silhouette_score, avg_perf_train_list, avg_perf_test_list, directory, hp_list, sort_variable, mode, batchPlot, model_dir_batches)
+    # Create hp_plots sorted by performance or clustering
+    general_hp_plot(n_clusters, silhouette_score, hp_list, avg_perf_train_list, avg_perf_test_list, directory, sort_variable, mode, batchPlot, model_dir_batches)
+    # Create legend
+    hp_ranges = _get_hp_ranges()
+    hp_plots = list(hp_ranges.keys())
+    plot_vertical_hp_legend(hp_ranges, hp_plots, HP_NAME, directory)
+
+    # Create histogramms for each hyperparameter seperatly w.r.t. performance or clustering
+    individual_hp_plot(n_clusters, silhouette_score, avg_perf_train_list, avg_perf_test_list, directory, hp_list, sort_variable, mode, batchPlot, model_dir_batches)
 
 

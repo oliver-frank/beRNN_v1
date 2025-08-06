@@ -133,7 +133,7 @@ sampled_combinations = sample_param_combinations(adjParams, 20)
 
 
 # # info: dataset adjustments ##########################################################################################
-# os.chdir(r'C:\Users\oliver.frank\Desktop\PyProjects\art_beRNN\paramCombinations_highDim_correctOnly_hitkip')
+# os.chdir(r'C:\Users\oliver.frank\Desktop\PyProjects\beRNN_v1\paramCombinations_highDim_correctOnly_hitkip')
 # for paramBatch in range(1,33):
 #     # Randomly sample combinations
 #     sampled_combinations = sample_param_combinations(adjParams, 8)
@@ -273,7 +273,7 @@ for modelNumber, params in enumerate(sampled_combinations): # info: either sampl
 
         try:
             # Start Training ---------------------------------------------------------------------------------------------------
-            training.train(model_dir=model_dir, train_data=train_data, eval_data=eval_data, hp=params, load_dir=load_dir)
+            training.train(preprocessedData_path, model_dir=model_dir, train_data=train_data, eval_data=eval_data, hp=params, load_dir=load_dir)
 
         except:
             print("An exception occurred with model number: ", modelNumber)
