@@ -45,9 +45,9 @@ def compute_n_cluster(model_dirs, mode):
             data_dir = os.path.join('C:\\Users\\oliver.frank\\Desktop\\PyProjects\\Data', participant, dataFolder)
             rdm_metric = 'cosine'
             if mode == 'test':
-                analysis = clustering.Analysis(data_dir, model_dir, layer, rdm_metric,'test', hp['monthsConsidered'], 'rule', False) # test performance
+                analysis = clustering.Analysis(data_dir, model_dir, layer, rdm_metric,'test', hp['monthsConsidered'], 'rule', True) # test performance
             elif mode == 'train':
-                analysis = clustering.Analysis(data_dir, model_dir, layer, rdm_metric,'train', hp['monthsConsidered'], 'rule', False) # train performance
+                analysis = clustering.Analysis(data_dir, model_dir, layer, rdm_metric,'train', hp['monthsConsidered'], 'rule', True) # train performance
 
             # Average performance for training at the last time point
             totalPerformanceTraining = 0
@@ -552,13 +552,13 @@ HP_NAME = {'activation': 'Activation fun.',
 if __name__ == '__main__':
     final_model_dirs = []
 
-    participant = ['beRNN_01', 'beRNN_02', 'beRNN_03', 'beRNN_04', 'beRNN_05'][0]
-    dataType = ['highDim', 'highDim_3stimTC', 'highDim_correctOnly'][1]
-    folder = ['paperPlanes', 'robustnessTest'][0]
+    participant = ['beRNN_01', 'beRNN_02', 'beRNN_03', 'beRNN_04', 'beRNN_05'][4]
+    dataType = ['highDim', 'highDim_3stimTC', 'highDim_correctOnly'][2]
+    folder = ['paperPlanes', 'robustnessTest'][1]
 
     mode = ['train', 'test'][1]
     sort_variable = ['clustering', 'performance', 'silhouette'][1]
-    batchPlot = [True, False][1]
+    batchPlot = [True, False][0] # attention: important for folder structure
     lastMonth = '6'
 
     directory = fr'C:\Users\oliver.frank\Desktop\PyProjects\beRNNmodels\{folder}\{dataType}\{participant}'

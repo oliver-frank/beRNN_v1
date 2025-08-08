@@ -24,7 +24,6 @@ from collections import OrderedDict
 import tools
 from network import Model
 from analysis import clustering
-from training import createSplittedDatasets, create_cMask
 from networkAnalysis import define_data_folder, plot_performanceprogress_test_BeRNN, plot_performanceprogress_train_BeRNN, rule_color
 
 
@@ -126,11 +125,11 @@ class TaskSetAnalysis(object):
 
             for rule in rules:
                 month = hp['monthsConsidered'][0]
-                train_data, test_data = createSplittedDatasets(hp, preprocessedData_path, month)
+                train_data, test_data = tools.createSplittedDatasets(hp, preprocessedData_path, month)
 
                 x, y, y_loc, response = tools.load_trials(hp['rng'], rule, 'test', hp['batch_size'], test_data,
                                                           False)  # y_loc is participantResponse_perfEvalForm
-                c_mask = create_cMask(y, response, hp, 'test')
+                c_mask = tools.create_cMask(y, response, hp, 'test')
                 feed_dict = tools.gen_feed_dict(model, x, y, c_mask, hp)
 
                 h = sess.run(model.h,
@@ -433,7 +432,7 @@ def plot_group_rdm_mds(directory, mode, sort_variable, rdm_metric, numberOfModel
         layer = [1 if hp['multiLayer'] == False else 3][0]
 
         # Create task variance matrix for current model in loop
-        knowledgeBase = clustering.Analysis(data_dir, best_model_dir, layer, rdm_metric, 'test', hp['monthsConsidered'],'rule', False)
+        knowledgeBase = clustering.Analysis(data_dir, best_model_dir, layer, rdm_metric, 'test', hp['monthsConsidered'],'rule', True)
 
         # Skip dummy RDMs
         if np.allclose(knowledgeBase.rdm, knowledgeBase.rdm[0, 0]):
@@ -443,12 +442,13 @@ def plot_group_rdm_mds(directory, mode, sort_variable, rdm_metric, numberOfModel
         # info: Initialize mds models
         coords_model = mds.fit_transform(knowledgeBase.rdm)
 
-        if model == 1:
-            coords_ref = coords_model
-            coords_aligned = coords_model
-        else:
-            R, _ = orthogonal_procrustes(coords_model, coords_ref)
-            coords_aligned = coords_model @ R
+        # attention: For highDim rotation alignment doesn't work
+        # if model == 1:
+        coords_ref = coords_model
+        coords_aligned = coords_model
+        # else:
+        #     R, _ = orthogonal_procrustes(coords_model, coords_ref)
+        #     coords_aligned = coords_model @ R
 
         all_coords.append(coords_aligned)
         all_keys.append(knowledgeBase.keys)
@@ -639,8 +639,9 @@ def plot_rsa(directory, participantList):
 
 # Task representation analysis - variable allocation ###################################################################
 # info: The script can only be run after participants have been analyzed by hyperparameterOverview.py
-dataType = ['highDim', 'highDim_correctOnly', 'highDim_3stimTC'][1]
-participant = ['beRNN_01', 'beRNN_02', 'beRNN_03', 'beRNN_04', 'beRNN_05'][2]
+dataType = ['highDim', 'highDim_correctOnly', 'highDim_3stimTC', 'highDim_CCN'][3]
+participantList =  ['beRNN_01', 'beRNN_04', 'beRNN_05'] # info: Only choose participants who were analyzed for RDM first
+participant = participantList[0]
 folder = ['robustnessTest', 'paperPlanes'][0]
 directory = Path(f'C:/Users/oliver.frank/Desktop/PyProjects/beRNNmodels/{folder}/{dataType}/{participant}')
 
@@ -710,8 +711,6 @@ if standard_analysis == True:
 
 # Create RSA matrix for comparing rdm representations between participants #############################################
 if rsa_analysis == True:
-    # participantList = ['beRNN_01', 'beRNN_02', 'beRNN_03', 'beRNN_04', 'beRNN_05'] # info: Only choose participants who were analyzed above
-    participantList =  ['beRNN_01', 'beRNN_04', 'beRNN_05'] # info: Only choose participants who were analyzed above
     plot_rsa(directory, participantList)
 
 

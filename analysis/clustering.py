@@ -21,10 +21,9 @@ import tensorflow as tf
 # from Network_Analysis import rule_name
 from network import Model
 import tools
-from tools import rule_name
+from tools import rule_name, createSplittedDatasets, create_cMask
 from network import get_perf
 from analysis import variance
-from training import createSplittedDatasets, create_cMask
 
 
 # Colors used for clusters
