@@ -94,13 +94,13 @@ adjParams = {
     'sigma_x': [0, 0.01],
     'w_rec_init': ['randortho', 'randgauss', 'diag', 'brainStructure'],
     'l1_h': [0, 0.00001, 0.0001, 0.001],
-    'l2_h': [0, 0.00001, 0.0001, 0.001],
+    'l2_h': [0, 0.000001, 0.0001, 0.001],
     'l1_weight': [0, 0.00001, 0.0001, 0.001],
     'l2_weight': [0, 0.00001, 0.0001, 0.001],
     'l2_weight_init': [0],
     'p_weight_train': [None],
     'w_mask_value': [0.1], # default .1 - value that will be multiplied with L2 regularization (combined with p_weight_train), <1 will decrease it
-    'learning_rate': [0.0015, 0.001, 0.0005],
+    'learning_rate': [0.0015, 0.001, 0.0005, 0.0001],
     'learning_rate_mode': [None, None, 'exp_range', 'triangular2'], # Will overwrite learning_rate if it is not None - 'triangular', 'triangular2', 'exp_range'
     'base_lr': [0.0005],
     'max_lr': [0.0015],
@@ -115,13 +115,13 @@ adjParams = {
     'monthsString': ['4-6'],
     # 'rule_prob_map': {"DM": 1,"DM_Anti": 1,"EF": 1,"EF_Anti": 1,"RP": 1,"RP_Anti": 1,"RP_Ctx1": 1,"RP_Ctx2": 1,"WM": 1,"WM_Anti": 1,"WM_Ctx1": 1,"WM_Ctx2": 1}
     'rule_prob_map': [{"DM": 1,"DM_Anti": 1,"EF": 1,"EF_Anti": 1,"RP": 1,"RP_Anti": 1,"RP_Ctx1": 1,"RP_Ctx2": 1,"WM": 1,"WM_Anti": 1,"WM_Ctx1": 1,"WM_Ctx2": 1}], # fraction of tasks represented in training data
-    'participant': ['beRNN_01'], # Participant to take
-    'data': ['data_highDim'],
-    'machine': ['local'], # 'local' 'pandora' 'hitkip'
+    'participant': ['beRNN_03'], # Participant to take
+    'data': ['data_highDim_correctOnly_3stimTC'],
+    'machine': ['hitkip'], # 'local' 'pandora' 'hitkip'
     'tasksString': ['AllTask'], # tasksTaken
     'sequenceMode': [True], # Decide if models are trained sequentially month-wise
-    'trainingBatch': ['01'],
-    'trainingYear_Month': ['X']
+    'trainingBatch': ['1'],
+    'trainingYear_Month': ['networkSize_512units_gridSearch']
 }
 # # attention: all other setups ##########################################################################################
 
@@ -132,39 +132,43 @@ sampled_combinations = sample_param_combinations(adjParams, 20)
 # sampled_repeated_combinations = create_repeated_param_combinations(best_params, 5)
 
 
-# # info: dataset adjustments ##########################################################################################
-# os.chdir(r'C:\Users\oliver.frank\Desktop\PyProjects\beRNN_v1\paramCombinations_highDim_correctOnly_hitkip')
+# # info: dataset adjustments ############################################################################################
+# dir = fr'C:\Users\oliver.frank\Desktop\PyProjects\beRNN_v1\paramCombinations_{adjParams["data"][0].split("data_")[1]}_hitkip_512units_gridSearch'
+# os.makedirs(dir, exist_ok=True)
+# os.chdir(dir)
+#
 # for paramBatch in range(1,33):
 #     # Randomly sample combinations
 #     sampled_combinations = sample_param_combinations(adjParams, 8)
 #
-#     with open(f'sampled_combinations_beRNN_01_{paramBatch}.json', 'w') as f:
-#         json.dump(sampled_combinations, f, indent=4)
-#     with open(f'sampled_combinations_beRNN_02_{paramBatch}.json', 'w') as f:
-#         json.dump(sampled_combinations, f, indent=4)
+#     # with open(f'sampled_combinations_beRNN_01_{paramBatch}.json', 'w') as f:
+#     #     json.dump(sampled_combinations, f, indent=4)
+#     # with open(f'sampled_combinations_beRNN_02_{paramBatch}.json', 'w') as f:
+#     #     json.dump(sampled_combinations, f, indent=4)
 #     with open(f'sampled_combinations_beRNN_03_{paramBatch}.json', 'w') as f:
 #         json.dump(sampled_combinations, f, indent=4)
-#     with open(f'sampled_combinations_beRNN_04_{paramBatch}.json', 'w') as f:
-#         json.dump(sampled_combinations, f, indent=4)
-#     with open(f'sampled_combinations_beRNN_05_{paramBatch}.json', 'w') as f:
-#         json.dump(sampled_combinations, f, indent=4)
+#     # with open(f'sampled_combinations_beRNN_04_{paramBatch}.json', 'w') as f:
+#     #     json.dump(sampled_combinations, f, indent=4)
+#     # with open(f'sampled_combinations_beRNN_05_{paramBatch}.json', 'w') as f:
+#     #     json.dump(sampled_combinations, f, indent=4)
 #
-# participantList = ['beRNN_01', 'beRNN_02', 'beRNN_03', 'beRNN_04', 'beRNN_05']
-# # participantList = ['beRNN_01']
+# # info: Adjust values for already created json files ###################################################################
+# # participantList = ['beRNN_01', 'beRNN_02', 'beRNN_03', 'beRNN_04', 'beRNN_05']
+# participantList = ['beRNN_03']
 # for participant in participantList:
 #     for paramBatch in range(1, 33):
 #         with open(f'sampled_combinations_{participant}_{paramBatch}.json', 'r') as f:
 #             sampled_combinations = json.load(f)
 #             for i in range(len(sampled_combinations)):
-#                 # sampled_combinations[i]['participant'] = 'beRNN_01' # attention: You have to define participant for paperGridSearch
+#                 # sampled_combinations[i]['participant'] = participant # attention: You have to define participant for paperGridSearch
 #                 # sampled_combinations[i]['machine'] = 'hitkip' # attention: You have to define machine for paperGridSearch
 #                 # sampled_combinations[i]['data'] = 'data_highDim_correctOnly_3stimTC' # attention: You have to define data for paperGridSearch
-#                 # sampled_combinations[i]['trainingBatch'] = str(paramBatch) # attention: You have to define trainingBatch
-#                 sampled_combinations[i]['trainingYear_Month'] = "finalGridSearch_allSubjects_correctOnly"
+#                 sampled_combinations[i]['trainingBatch'] = str(paramBatch) # attention: You have to define trainingBatch
+#                 # sampled_combinations[i]['trainingYear_Month'] = "finalGridSearch_allSubjects_correctOnly"
 #         # info: Overwrite previous file
 #         with open(f'sampled_combinations_{participant}_{paramBatch}.json', 'w') as f:
 #             json.dump(sampled_combinations, f, indent=4)
-# # info: dataset adjustments ##########################################################################################
+# # info: dataset adjustments ############################################################################################
 
 
 # Training #############################################################################################################
@@ -265,7 +269,7 @@ for modelNumber, params in enumerate(sampled_combinations): # info: either sampl
                     file_quartett.append((input_file, yloc_file, output_file, response_file))
 
             # Split the file triplets
-            train_files, eval_files = training.split_files(params, file_quartett)
+            train_files, eval_files = tools.split_files(params, file_quartett)
 
             # Store the results in the dictionaries
             train_data[subdir] = train_files
