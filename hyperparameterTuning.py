@@ -80,7 +80,7 @@ n_input, n_output = 1 + num_ring * n_eachring + n_rule, n_outputring + 1
 adjParams = {
     'batch_size': [80],
     'in_type': ['normal'],
-    'rnn_type': ['LeakyRNN'], # 'LeakyGRU'
+    'rnn_type': ['LeakyGRU'], # 'LeakyGRU'
     'n_input': [n_input], # number of input units
     'n_output': [n_output], # number of output units
     'use_separate_input': [False],
@@ -94,7 +94,7 @@ adjParams = {
     'sigma_x': [0, 0.01],
     'w_rec_init': ['randortho', 'randgauss', 'diag', 'brainStructure'],
     'l1_h': [0, 0.00001, 0.0001, 0.001],
-    'l2_h': [0, 0.000001, 0.0001, 0.001],
+    'l2_h': [0, 0.00001, 0.0001, 0.001],
     'l1_weight': [0, 0.00001, 0.0001, 0.001],
     'l2_weight': [0, 0.00001, 0.0001, 0.001],
     'l2_weight_init': [0],
@@ -104,71 +104,71 @@ adjParams = {
     'learning_rate_mode': [None, None, 'exp_range', 'triangular2'], # Will overwrite learning_rate if it is not None - 'triangular', 'triangular2', 'exp_range'
     'base_lr': [0.0005],
     'max_lr': [0.0015],
-    'n_rnn': [512],
+    'n_rnn': [128],
     'multiLayer': [False],
-    'n_rnn_per_layer': [[512, 512, 512], [256, 256, 256], [128, 128, 128]],
+    'n_rnn_per_layer': [[8, 8, 8]],
     'activations_per_layer': [['relu', 'relu', 'relu'], ['softplus', 'softplus', 'softplus'], ['tanh', 'tanh', 'tanh']],
     'errorBalancingValue': [1.],
     'c_mask_responseValue': [5.],
     's_mask': [None], # 'sc1000', None
     'monthsConsidered': [['month_4', 'month_5', 'month_6']], # list of lists
     'monthsString': ['4-6'],
-    # 'rule_prob_map': {"DM": 1,"DM_Anti": 1,"EF": 1,"EF_Anti": 1,"RP": 1,"RP_Anti": 1,"RP_Ctx1": 1,"RP_Ctx2": 1,"WM": 1,"WM_Anti": 1,"WM_Ctx1": 1,"WM_Ctx2": 1}
-    'rule_prob_map': [{"DM": 1,"DM_Anti": 1,"EF": 1,"EF_Anti": 1,"RP": 1,"RP_Anti": 1,"RP_Ctx1": 1,"RP_Ctx2": 1,"WM": 1,"WM_Anti": 1,"WM_Ctx1": 1,"WM_Ctx2": 1}], # fraction of tasks represented in training data
+    'rule_prob_map': [{"DM": 1,"DM_Anti": 1,"EF": 1,"EF_Anti": 1,"RP": 1,"RP_Anti": 1,"RP_Ctx1": 1,"RP_Ctx2": 1,"WM": 1,"WM_Anti": 1,"WM_Ctx1": 1,"WM_Ctx2": 1}],
+    # 'rule_prob_map': [{"DM": 1,"DM_Anti": 1,"EF": 0,"EF_Anti": 0,"RP": 0,"RP_Anti": 0,"RP_Ctx1": 0,"RP_Ctx2": 0,"WM": 0,"WM_Anti": 0,"WM_Ctx1": 0,"WM_Ctx2": 0}], # fraction of tasks represented in training data
     'participant': ['beRNN_03'], # Participant to take
     'data': ['data_highDim_correctOnly_3stimTC'],
     'machine': ['hitkip'], # 'local' 'pandora' 'hitkip'
     'tasksString': ['AllTask'], # tasksTaken
     'sequenceMode': [True], # Decide if models are trained sequentially month-wise
     'trainingBatch': ['1'],
-    'trainingYear_Month': ['networkSize_512units_gridSearch']
+    'trainingYear_Month': ['networkSize_128units_LeakyGRU_gridSearch']
 }
 # # attention: all other setups ##########################################################################################
 
 # Randomly sample combinations
-sampled_combinations = sample_param_combinations(adjParams, 20)
+# sampled_combinations = sample_param_combinations(adjParams, 20)
 
 # # Create one combination and repeat it according to sample_size
 # sampled_repeated_combinations = create_repeated_param_combinations(best_params, 5)
 
 
-# # info: dataset adjustments ############################################################################################
-# dir = fr'C:\Users\oliver.frank\Desktop\PyProjects\beRNN_v1\paramCombinations_{adjParams["data"][0].split("data_")[1]}_hitkip_512units_gridSearch'
-# os.makedirs(dir, exist_ok=True)
-# os.chdir(dir)
-#
-# for paramBatch in range(1,33):
-#     # Randomly sample combinations
-#     sampled_combinations = sample_param_combinations(adjParams, 8)
-#
-#     # with open(f'sampled_combinations_beRNN_01_{paramBatch}.json', 'w') as f:
-#     #     json.dump(sampled_combinations, f, indent=4)
-#     # with open(f'sampled_combinations_beRNN_02_{paramBatch}.json', 'w') as f:
-#     #     json.dump(sampled_combinations, f, indent=4)
-#     with open(f'sampled_combinations_beRNN_03_{paramBatch}.json', 'w') as f:
-#         json.dump(sampled_combinations, f, indent=4)
-#     # with open(f'sampled_combinations_beRNN_04_{paramBatch}.json', 'w') as f:
-#     #     json.dump(sampled_combinations, f, indent=4)
-#     # with open(f'sampled_combinations_beRNN_05_{paramBatch}.json', 'w') as f:
-#     #     json.dump(sampled_combinations, f, indent=4)
-#
-# # info: Adjust values for already created json files ###################################################################
-# # participantList = ['beRNN_01', 'beRNN_02', 'beRNN_03', 'beRNN_04', 'beRNN_05']
-# participantList = ['beRNN_03']
-# for participant in participantList:
-#     for paramBatch in range(1, 33):
-#         with open(f'sampled_combinations_{participant}_{paramBatch}.json', 'r') as f:
-#             sampled_combinations = json.load(f)
-#             for i in range(len(sampled_combinations)):
-#                 # sampled_combinations[i]['participant'] = participant # attention: You have to define participant for paperGridSearch
-#                 # sampled_combinations[i]['machine'] = 'hitkip' # attention: You have to define machine for paperGridSearch
-#                 # sampled_combinations[i]['data'] = 'data_highDim_correctOnly_3stimTC' # attention: You have to define data for paperGridSearch
-#                 sampled_combinations[i]['trainingBatch'] = str(paramBatch) # attention: You have to define trainingBatch
-#                 # sampled_combinations[i]['trainingYear_Month'] = "finalGridSearch_allSubjects_correctOnly"
-#         # info: Overwrite previous file
-#         with open(f'sampled_combinations_{participant}_{paramBatch}.json', 'w') as f:
-#             json.dump(sampled_combinations, f, indent=4)
-# # info: dataset adjustments ############################################################################################
+# info: dataset adjustments ############################################################################################
+dir = fr'C:\Users\oliver.frank\Desktop\PyProjects\beRNN_v1\paramCombinations_{adjParams["data"][0].split("data_")[1]}_hitkip_128units_LeakyGRU_gridSearch'
+os.makedirs(dir, exist_ok=True)
+os.chdir(dir)
+
+for paramBatch in range(1,33):
+    # Randomly sample combinations
+    sampled_combinations = sample_param_combinations(adjParams, 8)
+
+    # with open(f'sampled_combinations_beRNN_01_{paramBatch}.json', 'w') as f:
+    #     json.dump(sampled_combinations, f, indent=4)
+    # with open(f'sampled_combinations_beRNN_02_{paramBatch}.json', 'w') as f:
+    #     json.dump(sampled_combinations, f, indent=4)
+    with open(f'sampled_combinations_beRNN_03_{paramBatch}.json', 'w') as f:
+        json.dump(sampled_combinations, f, indent=4)
+    # with open(f'sampled_combinations_beRNN_04_{paramBatch}.json', 'w') as f:
+    #     json.dump(sampled_combinations, f, indent=4)
+    # with open(f'sampled_combinations_beRNN_05_{paramBatch}.json', 'w') as f:
+    #     json.dump(sampled_combinations, f, indent=4)
+
+# info: Adjust values for already created json files ###################################################################
+# participantList = ['beRNN_01', 'beRNN_02', 'beRNN_03', 'beRNN_04', 'beRNN_05']
+participantList = ['beRNN_03']
+for participant in participantList:
+    for paramBatch in range(1, 33):
+        with open(f'sampled_combinations_{participant}_{paramBatch}.json', 'r') as f:
+            sampled_combinations = json.load(f)
+            for i in range(len(sampled_combinations)):
+                # sampled_combinations[i]['participant'] = participant # attention: You have to define participant for paperGridSearch
+                # sampled_combinations[i]['machine'] = 'hitkip' # attention: You have to define machine for paperGridSearch
+                # sampled_combinations[i]['data'] = 'data_highDim_correctOnly_3stimTC' # attention: You have to define data for paperGridSearch
+                sampled_combinations[i]['trainingBatch'] = str(paramBatch) # attention: You have to define trainingBatch
+                # sampled_combinations[i]['trainingYear_Month'] = "finalGridSearch_allSubjects_correctOnly"
+        # info: Overwrite previous file
+        with open(f'sampled_combinations_{participant}_{paramBatch}.json', 'w') as f:
+            json.dump(sampled_combinations, f, indent=4)
+# info: dataset adjustments ############################################################################################
 
 
 # Training #############################################################################################################

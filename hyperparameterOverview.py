@@ -107,6 +107,7 @@ def get_n_clusters(model_dirs):
     silhouette_score = list()
     avg_perf_train_list = list()
     avg_perf_test_list = list()
+    modularity_list = list()
 
     for i, model_dir in enumerate(model_dirs):
         if i % 50 == 0:
@@ -130,8 +131,9 @@ def get_n_clusters(model_dirs):
         silhouette_score.append(log['score'])
         avg_perf_train_list.append(log['avg_perf_train'])
         avg_perf_test_list.append(log['avg_perf_test'])
+        modularity_list.append(log['modularity'][-1])
 
-    return n_clusters, hp_list, silhouette_score, avg_perf_train_list, avg_perf_test_list
+    return n_clusters, hp_list, silhouette_score, avg_perf_train_list, avg_perf_test_list, modularity_list
 
 def plot_histogram():
     initdict = defaultdict(list)
@@ -246,17 +248,17 @@ def _get_hp_ranges():
     hp_ranges = OrderedDict()
     hp_ranges['activation'] = ['softplus', 'relu', 'tanh']
     hp_ranges['rnn_type'] = ['LeakyRNN', 'LeakyGRU', 'MultiLayer']
-    hp_ranges['n_rnn'] = [128, 256, 512]
+    hp_ranges['n_rnn'] = [16, 32, 64, 128, 256, 512]
     hp_ranges['w_rec_init'] = ['randortho', 'randgauss', 'diag', 'brainStructure']
-    hp_ranges['l1_h'] = [0, 1e-5, 1e-4, 1e-3]
-    hp_ranges['l1_weight'] = [0, 1e-5, 1e-4, 1e-3]
-    hp_ranges['l2_h'] = [0, 1e-5, 1e-4, 1e-3]
-    hp_ranges['l2_weight'] = [0, 1e-5, 1e-4, 1e-3]
-    hp_ranges['learning_rate'] = [0.0015, 0.001, 0.0005]
+    hp_ranges['l1_h'] = [0, 1e-6, 1e-5, 1e-4, 1e-3]
+    hp_ranges['l1_weight'] = [0, 1e-6, 1e-5, 1e-4, 1e-3]
+    hp_ranges['l2_h'] = [0, 1e-6, 1e-5, 1e-4, 1e-3]
+    hp_ranges['l2_weight'] = [0, 1e-6, 1e-5, 1e-4, 1e-3]
+    hp_ranges['learning_rate'] = [0.002, 0.0015, 0.001, 0.0005, 0.0001]
     hp_ranges['learning_rate_mode'] = ['constant', 'exp_range', 'triangular2']
     return hp_ranges
 
-def general_hp_plot(n_clusters, silhouette_score, hp_list, avg_perf_train_list, avg_perf_test_list, directory, sort_variable, mode, batchPlot, model_dir_batches):
+def general_hp_plot(n_clusters, silhouette_score, hp_list, avg_perf_train_list, avg_perf_test_list, modularity_list, directory, sort_variable, mode, batchPlot, model_dir_batches):
     hp_ranges = _get_hp_ranges()
     hp_plots = list(hp_ranges.keys())
 
@@ -269,12 +271,15 @@ def general_hp_plot(n_clusters, silhouette_score, hp_list, avg_perf_train_list, 
         ind_sort = np.argsort(n_clusters)[::-1]
     elif sort_variable == 'silhouette':
         ind_sort = np.argsort(silhouette_score)[::-1]
+    elif sort_variable == 'silhouette':
+        ind_sort = np.argsort(modularity_list)[::-1]
 
     n_clusters_sorted = [n_clusters[i] for i in ind_sort]
     silhouette_score_sorted = [silhouette_score[i] for i in ind_sort]
     hp_list_sorted = [hp_list[i] for i in ind_sort]
     avg_perf_train_list_sorted = [avg_perf_train_list[i] for i in ind_sort]
     avg_perf_test_list_sorted = [avg_perf_test_list[i] for i in ind_sort]
+    modularity_list_sorted = [modularity_list[i] for i in ind_sort]
     successful_model_dirs_sorted = [successful_model_dirs[i] for i in ind_sort]
 
     # Prepare heatmap data
@@ -291,11 +296,20 @@ def general_hp_plot(n_clusters, silhouette_score, hp_list, avg_perf_train_list, 
     fig, axs = plt.subplots(5, 1, figsize=(8, 6), sharex=True, gridspec_kw={'height_ratios': [1, 1, 1, 1, 1.5]})
     plt.subplots_adjust(hspace=0.5)
 
-    axs[0].plot(silhouette_score_sorted, '-')
-    axs[0].set_ylabel(f'Silhouette score ({mode})', fontsize=7)
+    # axs[0].plot(silhouette_score_sorted, '-')
+    # axs[0].set_ylabel(f'Silhouette score ({mode})', fontsize=7)
+    # axs[0].set_yticks([0, 0.25, 0.5, 0.75, 1.0])
+    # axs[0].spines["top"].set_visible(False)
+    # axs[0].spines["right"].set_visible(False)
+
+    axs[0].plot(modularity_list_sorted, '-')
+    axs[0].set_ylabel(f'Modularity score ({mode})', fontsize=7)
     axs[0].set_yticks([0, 0.25, 0.5, 0.75, 1.0])
     axs[0].spines["top"].set_visible(False)
     axs[0].spines["right"].set_visible(False)
+    # Add light grey dashed lines at y=0.3, 0.5, 0.7
+    for y in [0.3, 0.5, 0.7]:
+        axs[0].axhline(y=y, color='lightgrey', linestyle='--', linewidth=0.8, zorder=0)
 
     axs[1].plot(n_clusters_sorted, '-')
     axs[1].set_ylabel(f'Num. clusters ({mode})', fontsize=7)
@@ -395,7 +409,7 @@ def plot_vertical_hp_legend(hp_ranges, hp_plots, HP_NAME, directory):
 
     plt.show()
 
-def _individual_hp_plot(hp_plot, sort_variable, mode, directory, batchPlot, model_dir_batches, n_clusters=None, silhouette_score=None, avg_perf_test_list=None, avg_perf_train_list=None, hp_list=None):
+def _individual_hp_plot(hp_plot, sort_variable, mode, directory, batchPlot, model_dir_batches, n_clusters=None, silhouette_score=None, avg_perf_test_list=None, avg_perf_train_list=None, hp_list=None, modularity_list=None):
     """Plot histogram for number of clusters, separating by an attribute.
 
     Args:
@@ -403,8 +417,8 @@ def _individual_hp_plot(hp_plot, sort_variable, mode, directory, batchPlot, mode
         n_clusters: list of cluster numbers
         hp_list: list of hp dictionary
     """
-    if hp_list is None:
-        n_clusters, hp_list, silhouette_score = get_n_clusters(successful_model_dirs) # fix: variable still to deliver
+    if hp_list is None: # attention: Maybe wrong fix here
+        n_clusters, hp_list, silhouette_score, avg_perf_train_list, avg_perf_test_list, modularity_list = get_n_clusters(successful_model_dirs) # fix: variable still to deliver
 
     # Compare activation, ignore tanh that can not be trained with LeakyRNN
     # hp_plot = 'activation'
@@ -418,20 +432,23 @@ def _individual_hp_plot(hp_plot, sort_variable, mode, directory, batchPlot, mode
 
     if sort_variable == 'performance':
         if mode == 'test':
-            for hp, n_cluster in zip(hp_list, avg_perf_test_list):
-                sort_variable_dict[hp[hp_plot]].append(n_cluster)
+            for hp, perf_test in zip(hp_list, avg_perf_test_list):
+                sort_variable_dict[hp[hp_plot]].append(perf_test)
         elif mode == 'train':
-            for hp, n_cluster in zip(hp_list, avg_perf_train_list):
-                sort_variable_dict[hp[hp_plot]].append(n_cluster)
+            for hp, perf_train in zip(hp_list, avg_perf_train_list):
+                sort_variable_dict[hp[hp_plot]].append(perf_train)
 
     elif sort_variable == 'clustering':
         for hp, n_cluster in zip(hp_list, n_clusters):
             sort_variable_dict[hp[hp_plot]].append(n_cluster)
 
     elif sort_variable == 'silhouette':
-        for hp, n_cluster in zip(hp_list, silhouette_score):
-            sort_variable_dict[hp[hp_plot]].append(n_cluster)
+        for hp, silhouette in zip(hp_list, silhouette_score):
+            sort_variable_dict[hp[hp_plot]].append(silhouette)
 
+    elif sort_variable == 'modularity':
+        for hp, modu in zip(hp_list, modularity_list):
+            sort_variable_dict[hp[hp_plot]].append(modu)
 
     label_map = {'softplus': 'Softplus',
                  'relu': 'ReLU',
@@ -477,7 +494,7 @@ def _individual_hp_plot(hp_plot, sort_variable, mode, directory, batchPlot, mode
         else:
             label = label_map.get(key, str(key))
 
-        if sort_variable == 'performance' or sort_variable == 'silhouette':
+        if sort_variable == 'performance' or sort_variable == 'silhouette' or sort_variable == 'modularity':
             ax.hist(val, label=label, range=(0, 1),
                     density=True, bins=16, ec=color, facecolor=color,lw=1.5)
         elif sort_variable == 'clustering':
@@ -489,7 +506,7 @@ def _individual_hp_plot(hp_plot, sort_variable, mode, directory, batchPlot, mode
         ax.spines["top"].set_visible(False)
         ax.set_yticks([])
 
-        if sort_variable == 'performance' or sort_variable == 'silhouette':
+        if sort_variable == 'performance' or sort_variable == 'silhouette' or sort_variable == 'modularity':
             ax.set_xticks([0, 0.5, 1.0])
             ax.set_xlim([0, 1.0])
             ax.text(0.7, 0.7, label, fontsize=7, transform=ax.transAxes)
@@ -507,6 +524,8 @@ def _individual_hp_plot(hp_plot, sort_variable, mode, directory, batchPlot, mode
         ax.set_xlabel('Number of clusters', fontsize=7)
     elif sort_variable == 'silhouette':
         ax.set_ylabel('Silhouette score', fontsize=7)
+    elif sort_variable == 'modularity':
+        ax.set_ylabel('Modularity score', fontsize=7)
 
     # plt.tight_layout()
     # plt.show()
@@ -524,7 +543,7 @@ def _individual_hp_plot(hp_plot, sort_variable, mode, directory, batchPlot, mode
 
     return sort_variable_dict
 
-def individual_hp_plot(n_clusters, silhouette_score, avg_perf_train_list, avg_perf_test_list, directory, hp_list, sort_variable, mode, batchPlot, model_dir_batches):
+def individual_hp_plot(n_clusters, silhouette_score, avg_perf_train_list, avg_perf_test_list, modularity_list, directory, hp_list, sort_variable, mode, batchPlot, model_dir_batches):
     """Plot histogram of number of clusters.
 
     Args:
@@ -534,7 +553,7 @@ def individual_hp_plot(n_clusters, silhouette_score, avg_perf_train_list, avg_pe
     hp_plots = ['activation', 'rnn_type', 'n_rnn', 'w_rec_init', 'l1_h', 'l1_weight', 'l2_h', 'l2_weight', 'learning_rate', 'learning_rate_mode']
 
     for hp_plot in hp_plots:
-        n_cluster_dict = _individual_hp_plot(hp_plot, sort_variable, mode, directory, batchPlot, model_dir_batches, n_clusters, silhouette_score, avg_perf_test_list, avg_perf_train_list, hp_list)
+        n_cluster_dict = _individual_hp_plot(hp_plot, sort_variable, mode, directory, batchPlot, model_dir_batches, n_clusters, silhouette_score, avg_perf_test_list, avg_perf_train_list, hp_list, modularity_list)
 
 # fix: Add network size here please
 HP_NAME = {'activation': 'Activation fun.',
@@ -552,13 +571,13 @@ HP_NAME = {'activation': 'Activation fun.',
 if __name__ == '__main__':
     final_model_dirs = []
 
-    participant = ['beRNN_01', 'beRNN_02', 'beRNN_03', 'beRNN_04', 'beRNN_05'][4]
-    dataType = ['highDim', 'highDim_3stimTC', 'highDim_correctOnly'][2]
-    folder = ['paperPlanes', 'robustnessTest'][1]
+    participant = ['beRNN_01', 'beRNN_02', 'beRNN_03', 'beRNN_04', 'beRNN_05'][2]
+    dataType = ['highDim', 'highDim_3stimTC', 'highDim_correctOnly'][1]
+    folder = ['paperPlanes', 'robustnessTest', 'capacityLimitationTest_512'][2]
 
     mode = ['train', 'test'][1]
     sort_variable = ['clustering', 'performance', 'silhouette'][1]
-    batchPlot = [True, False][0] # attention: important for folder structure
+    batchPlot = [True, False][1] # attention: important for folder structure
     lastMonth = '6'
 
     directory = fr'C:\Users\oliver.frank\Desktop\PyProjects\beRNNmodels\{folder}\{dataType}\{participant}'
@@ -582,16 +601,16 @@ if __name__ == '__main__':
 
     # First compute n_clusters for each model then collect them in lists
     successful_model_dirs = compute_n_cluster(final_model_dirs, mode)
-    n_clusters, hp_list, silhouette_score, avg_perf_train_list, avg_perf_test_list = get_n_clusters(successful_model_dirs)
+    n_clusters, hp_list, silhouette_score, avg_perf_train_list, avg_perf_test_list, modularity_list = get_n_clusters(successful_model_dirs)
 
     # Create hp_plots sorted by performance or clustering
-    general_hp_plot(n_clusters, silhouette_score, hp_list, avg_perf_train_list, avg_perf_test_list, directory, sort_variable, mode, batchPlot, model_dir_batches)
+    general_hp_plot(n_clusters, silhouette_score, hp_list, avg_perf_train_list, avg_perf_test_list, modularity_list, directory, sort_variable, mode, batchPlot, model_dir_batches)
     # Create legend
     hp_ranges = _get_hp_ranges()
     hp_plots = list(hp_ranges.keys())
     plot_vertical_hp_legend(hp_ranges, hp_plots, HP_NAME, directory)
 
     # Create histogramms for each hyperparameter seperatly w.r.t. performance or clustering
-    individual_hp_plot(n_clusters, silhouette_score, avg_perf_train_list, avg_perf_test_list, directory, hp_list, sort_variable, mode, batchPlot, model_dir_batches)
+    individual_hp_plot(n_clusters, silhouette_score, avg_perf_train_list, avg_perf_test_list, modularity_list, directory, hp_list, sort_variable, mode, batchPlot, model_dir_batches)
 
 

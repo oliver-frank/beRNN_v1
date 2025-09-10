@@ -68,6 +68,12 @@ def safe_isnan(value):
         # value is likely not a float (e.g., int, string)
         return False
 
+def stable_choice(i, candidates):
+    # use i as the seed, and also include the candidate list to make it unique
+    seed = hash((i, tuple(candidates))) % (2 ** 32 - 1)
+    rng = np.random.RandomState(seed=seed)
+    return rng.choice(candidates)
+
 ########################################################################################################################
 # info: DM tasks
 ########################################################################################################################
@@ -924,16 +930,39 @@ def preprocess_RP(opened_xlsxFile, questionnare_files, list_allSessions, sequenc
         for j in incrementList[batchOn:batchOff]:
             currentTrial = opened_xlsxFile_selection[j:j + 2].reset_index().drop(columns=['index'])
             # ----------------------------------------------------------------------------------------------------------
-            # Get the rest of the trial information for later error analysis
-            png_strings = np.array([s for s in currentTrial.loc[0][9:73] if isinstance(s, str) and s.endswith('.png')])
-            unique_values, occurrence_counts = np.unique(png_strings, return_counts=True)
-            unique_values, occurrence_counts = unique_values[1:], occurrence_counts[1:]  # exclude 000_000.png
-            # Check if values and counts are equal/below 4 and zeropad them, so that all columns have the same length
-            if len(unique_values) <= 4:
-                for i in range(5-len(unique_values)):
-                    unique_values, occurrence_counts = np.concatenate((unique_values,['None']),axis=0), np.concatenate((occurrence_counts,[0]),axis=0)
-            concatedValuesAndOccurrences = np.concatenate([unique_values, occurrence_counts], axis=0)
+            # # Get the rest of the trial information for later error analysis
+            # png_strings = np.array([s for s in currentTrial.loc[0][9:73] if isinstance(s, str) and s.endswith('.png')])
+            # unique_values, occurrence_counts = np.unique(png_strings, return_counts=True)
+            # unique_values, occurrence_counts = unique_values[1:], occurrence_counts[1:]  # exclude 000_000.png
+            # # Check if values and counts are equal/below 4 and zeropad them, so that all columns have the same length
+            # if len(unique_values) <= 4:
+            #     for i in range(5-len(unique_values)):
+            #         unique_values, occurrence_counts = np.concatenate((unique_values,['None']),axis=0), np.concatenate((occurrence_counts,[0]),axis=0)
+            # concatedValuesAndOccurrences = np.concatenate([unique_values, occurrence_counts], axis=0)
+            # concatedValuesAndOccurrencesList.append(concatedValuesAndOccurrences)
+
+            png_strings = [s for s in currentTrial.loc[0][9:73] if isinstance(s, str) and s.endswith('.png')]
+
+            # skip 000_000.png
+            values = png_strings[1:]
+            counter = Counter(values)
+
+            # Expand into (value, count) pairs but keep duplicates
+            values_with_counts = [(v, counter[v]) for v in values]
+
+            # Split into separate lists again
+            values = [v for v, c in values_with_counts]
+            counts = [c for v, c in values_with_counts]
+
+            # Pad to length 5
+            if len(values) <= 4:
+                pad_len = 5 - len(values)
+                values += ['None'] * pad_len
+                counts += [0] * pad_len
+
+            concatedValuesAndOccurrences = np.concatenate([values, counts], axis=0)
             concatedValuesAndOccurrencesList.append(concatedValuesAndOccurrences)
+
             # ----------------------------------------------------------------------------------------------------------
             currentSequenceList = []
             for k in range(totalStepsAverage):
@@ -1045,6 +1074,7 @@ def preprocess_RP(opened_xlsxFile, questionnare_files, list_allSessions, sequenc
 
         for i in range(0, Input.shape[0]):
             for j in range(0, Input.shape[1]):
+
                 currentTimeStepModOne = Input[i][j][1:33]
                 currentTimeStepModTwo = Input[i][j][33:65]
                 # Allocate first unit ring
@@ -1064,11 +1094,23 @@ def preprocess_RP(opened_xlsxFile, questionnare_files, list_allSessions, sequenc
                 NonZero_Mod1_final = []
                 NonZero_Mod2_final = []
                 # info: Define correct response
-                np.random.seed(j) # j representing the number of trials, where each has a different correct repsonse
-                correctResponseIndice = random.choice(np.where(Output_copy[i][j][0:32] == correctAnswer[i][j]))[0]
+                # np.random.seed(j) # j representing the number of trials, where each has a different correct repsonse
+                # correctResponseIndice = random.choice(np.where(Output_copy[i][j][0:32] == correctAnswer[i][j])[0])
+
+                candidates = np.sort(np.where(Output_copy[i][j][0:32] == correctAnswer[i][j])[0])
+                if len(candidates) == 0:
+                    # fallback if no candidate matches (should not normally happen)
+                    correctResponseIndice = None
+                else:
+                    if (i // 2) % 2 == 1: # wenn gerade - hardcode fix
+                        correctResponseIndice = candidates[0]
+                    else:
+                        correctResponseIndice = candidates[-1]
 
                 # if len(correctResponseIndice) == 0:
                 #     print('Stop')
+
+                task = finalSequenceList[0][0][0]['Spreadsheet']
 
                 if len(NonZero_Mod1) != 0:
 
@@ -1081,25 +1123,43 @@ def preprocess_RP(opened_xlsxFile, questionnare_files, list_allSessions, sequenc
                         # Create a new list with modified occurrences
                         # filtered_stimuli = []
                         # filtered_positions = []
-                        task = finalSequenceList[0][0][0]['Spreadsheet']
 
                         if 'RP_Anti' in task:
-                            counts = Counter(concatenated_stims)
-                            # Add one of the wrong stims once
-                            lowest_stim, lowest_count = min(counts.items(), key=lambda x: x[1])
-                            indice_lowest_stim = random.choice([i for i, stim in enumerate(concatenated_stims) if lowest_stim in stim])
-                            NonZero_Mod1_final.append(NonZero_Mod1[indice_lowest_stim])
-                            NonZero_Mod2_final.append(NonZero_Mod2[indice_lowest_stim])
-                            # Add the correct stim twice with its two different positions
+                            if (i // 2) % 2 == 1:  # wenn gerade - hardcode fix
+                                correctResponseIndice2 = candidates[-1]
+                            else:
+                                correctResponseIndice2 = candidates[0]
+                            # append two of the correct indices stable randomly chosen
                             NonZero_Mod1_final.append(correctResponseIndice)
                             NonZero_Mod2_final.append(correctResponseIndice)
-                            # Randomly choose second position form
-                            highest_stim, highest_count = max(counts.items(), key=lambda x: x[1])
-                            randomIndice = correctResponseIndice
-                            while randomIndice == correctResponseIndice:
-                                randomIndice = random.choice([i for i, stim in enumerate(concatenated_stims) if highest_stim in stim])
-                            NonZero_Mod1_final.append(NonZero_Mod1[randomIndice])
-                            NonZero_Mod2_final.append(NonZero_Mod2[randomIndice])
+                            NonZero_Mod1_final.append(correctResponseIndice2)
+                            NonZero_Mod2_final.append(correctResponseIndice2)
+
+                            counts = Counter(concatenated_stims)
+
+                            # Append one of the other
+                            lowest_stim, _ = min(counts.items(), key=lambda x: x[1])
+                            candidate_lowest = sorted([idx for idx, stim in enumerate(concatenated_stims) if lowest_stim in stim])
+                            indice_lowest_stim = int(stable_choice(i, candidate_lowest))
+                            NonZero_Mod1_final.append(NonZero_Mod1[indice_lowest_stim])
+                            NonZero_Mod2_final.append(NonZero_Mod2[indice_lowest_stim])
+
+                            # # correct stim once (not twice) — if you want it twice adjust consciously
+                            # NonZero_Mod1_final.append(correctResponseIndice)
+                            # NonZero_Mod2_final.append(correctResponseIndice)
+                            #
+                            # # highest stim, excluding the correctResponseIndice
+                            # highest_stim, _ = max(counts.items(), key=lambda x: x[1])
+                            # candidate_highest = sorted([idx for idx, stim in enumerate(concatenated_stims)
+                            #                             if highest_stim in stim and NonZero_Mod1[
+                            #                                 idx] != correctResponseIndice])
+                            # if len(candidate_highest) == 0:
+                            #     # fallback: choose any index different from correctResponseIndice
+                            #     candidate_highest = sorted([idx for idx in range(len(concatenated_stims)) if
+                            #                                 NonZero_Mod1[idx] != correctResponseIndice])
+                            # randomIndice = int(stable_choice(i, candidate_highest))
+                            # NonZero_Mod1_final.append(NonZero_Mod1[randomIndice])
+                            # NonZero_Mod2_final.append(NonZero_Mod2[randomIndice])
 
                         elif 'RP_Ctx1' in task:
                             form_counts = Counter()
@@ -1113,7 +1173,7 @@ def preprocess_RP(opened_xlsxFile, questionnare_files, list_allSessions, sequenc
                             NonZero_Mod2_final.append(correctResponseIndice)
                             # Add one of the most common stims twice as incorrect stims
                             highest_stim, highest_count = max(form_counts.items(), key=lambda x: x[1])
-                            indice_highest_stim = [i for i, stim in enumerate(concatenated_stims) if highest_stim in stim] # attention: It is probably that one
+                            indice_highest_stim = [idx for idx, stim in enumerate(concatenated_stims) if highest_stim in stim] # attention: It is probably that one
                             NonZero_Mod1_final.append(NonZero_Mod1[indice_highest_stim[0]])
                             NonZero_Mod2_final.append(NonZero_Mod2[indice_highest_stim[0]])
                             NonZero_Mod1_final.append(NonZero_Mod1[indice_highest_stim[1]])
@@ -1131,12 +1191,12 @@ def preprocess_RP(opened_xlsxFile, questionnare_files, list_allSessions, sequenc
                             # Randomly choose second position from NonZero_Mod1
                             randomIndice = correctResponseIndice
                             while randomIndice == correctResponseIndice:
-                                randomIndice = random.choice(NonZero_Mod1)
+                                randomIndice = stable_choice(i, NonZero_Mod1)
                             NonZero_Mod1_final.append(randomIndice)
                             NonZero_Mod2_final.append(randomIndice)
                             # Add one of the lowest stims once as the incorrect stim
                             lowest_stim, lowest_count = min(form_counts.items(), key=lambda x: x[1])
-                            indice_lowest_stim = random.choice([i for i, stim in enumerate(concatenated_stims) if lowest_stim in stim])
+                            indice_lowest_stim = stable_choice(i, [idx for idx, stim in enumerate(concatenated_stims) if lowest_stim in stim])
                             NonZero_Mod1_final.append(NonZero_Mod1[indice_lowest_stim])
                             NonZero_Mod2_final.append(NonZero_Mod2[indice_lowest_stim])
 
@@ -1147,7 +1207,7 @@ def preprocess_RP(opened_xlsxFile, questionnare_files, list_allSessions, sequenc
                             NonZero_Mod2_final.append(correctResponseIndice)
                             # Add one of the wrong stims twice
                             highest_stim, highest_count = max(counts.items(), key=lambda x: x[1])
-                            indice_highest_stim = [i for i, stim in enumerate(concatenated_stims) if highest_stim in stim]
+                            indice_highest_stim = [idx for idx, stim in enumerate(concatenated_stims) if highest_stim in stim]
                             NonZero_Mod1_final.append(NonZero_Mod1[indice_highest_stim[0]])
                             NonZero_Mod2_final.append(NonZero_Mod2[indice_highest_stim[0]])
                             NonZero_Mod1_final.append(NonZero_Mod1[indice_highest_stim[1]])
@@ -1184,6 +1244,14 @@ def preprocess_RP(opened_xlsxFile, questionnare_files, list_allSessions, sequenc
                     Input[i][j][k] = np.float32(Input[i][j][k])
         # Also change dtype for entire array
         Input = Input.astype('float32')
+
+        # # fix hardcoded bug fix for RP_Anti ############################################################################
+        # if 'RP_Anti' in task:
+        #     # Overtake first row as row for all other
+        #     for j in range(0, Input.shape[1]):
+        #         for i in range(36, Input.shape[0]):
+        #             Input[i, j, 0:77] = Input[35, j, 0:77]
+        # # fix hardcoded bug fix for RP_Anti ############################################################################
 
         # Save input data
         os.chdir(os.path.join(os.getcwd(), main_path, taskShorts))
@@ -1243,8 +1311,17 @@ def preprocess_RP(opened_xlsxFile, questionnare_files, list_allSessions, sequenc
                 if correctAnswer[i][j] != 'screen' and correctAnswer[i][j] != 'noResponse' and correctAnswer[i][j] != 'NoResponse' and correctAnswer[i][j] != 'Fixation Cross':
                     # response = [l for l in range(0,len(Output_copy)) if currentTimeStepOutput[l] == correctAnswer[i][j]]
                     # info: changed for 3stimTC
-                    np.random.seed(j)  # j representing the number of trials, where each has a different correct repsonse
-                    indice = random.choice(np.where(Output_copy[i][j][0:32] == correctAnswer[i][j]))[0]
+                    np.random.seed(j)  # j representing the number of trials, where each has a different correct response
+
+                    # Stim taken for groundTruth
+                    candidates = np.sort(np.where(Output_copy[i][j][0:32] == correctAnswer[i][j])[0])
+
+                    if (i // 2) % 2 == 1: # wenn gerade - hardcode fix
+                        indice = candidates[0]
+                    else:
+                        indice = candidates[-1]
+
+                    # indice = int(stable_choice(i, candidates))
 
                     # Allocate first unit ring
                     unitRingOutput = np.zeros(32, dtype='float32')
@@ -1304,6 +1381,14 @@ def preprocess_RP(opened_xlsxFile, questionnare_files, list_allSessions, sequenc
                     Output[i][j][k] = np.float32(Output[i][j][k])
         # Also change dtype for entire array
         Output = Output.astype('float32')
+
+        # # fix hardcoded bug fix for RP_Anti ############################################################################
+        # if 'RP_Anti' in task:
+        #     # Overtake first row as row for all other
+        #     for j in range(0, Output.shape[1]):
+        #         for i in range(36, Output.shape[0]):
+        #             Output[i, j, 0:77] = Output[35, j, 0:77]
+        # # fix hardcoded bug fix for RP_Anti ############################################################################
 
         # Save output data
         output_filename = participant + '-' + 'month_' + str(month) + '-' + 'batch_' + str(batchNumber) + '-' + taskShorts + '-' + \
@@ -1685,7 +1770,8 @@ def preprocess_WM(opened_xlsxFile, questionnare_files, list_allSessions, sequenc
 
                     else:
                         # Get activity and model gradient activation around it
-                        currentOutputLoc = pref[indice[0]]
+                        randomIndice = random.choice(np.where(Output_copy[i][j][0:32] == correctAnswer[i][j])[0]) # attention: Fix it
+                        currentOutputLoc = pref[randomIndice]
                         currentActivation_Output = add_x_loc(currentOutputLoc, pref) + 0.05  # adding noise
                         unitRingOutput = np.around(unitRingOutput + currentActivation_Output, decimals=2)
                         # Store
@@ -1695,7 +1781,7 @@ def preprocess_WM(opened_xlsxFile, questionnare_files, list_allSessions, sequenc
                         for k in range(0, numFixStepsAverage):
                             y_loc[k][j] = np.float(0.05) # info: yang et al.: -1
                         for k in range(numFixStepsAverage, totalStepsAverage):
-                            y_loc[k][j] = pref[indice[0]]
+                            y_loc[k][j] = pref[randomIndice]
                 else:
                     for k in range(1, 33):
                         Output[i][j][k] = np.float32(0.05)
@@ -1743,9 +1829,10 @@ def check_permissions(file_path):
 dataFolder = "Data"
 subfolders = ['DM', 'DM_Anti', 'EF', 'EF_Anti', 'RP', 'RP_Anti', 'RP_Ctx1', 'RP_Ctx2', 'WM', 'WM_Anti', 'WM_Ctx1', 'WM_Ctx2']
 preprocessing_folder = 'data_highDim_correctOnly_3stimTC'
-participants = ['BeRNN_04']
-# participants = ['beRNN_01', 'beRNN_02', 'beRNN_03', 'BeRNN_04', 'beRNN_05']
+# participants = ['BeRNN_05']
+participants = ['beRNN_01', 'beRNN_02', 'beRNN_03', 'BeRNN_04', 'beRNN_05']
 months = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12'] # info: debugging '13'
+# months = ['4', '5', '6'] # info: debugging '13'
 
 for participant in participants:
     # attention: change to right path
@@ -1785,6 +1872,7 @@ for participant in participants:
 
             # remove session_completion and monthly_feedback files
             for file in xlsx_files:
+
                 try:
                     file_path = os.path.join(processing_path_month, file)
                     opened_xlsxFile = pd.read_excel(file_path, engine='openpyxl')
@@ -1798,6 +1886,7 @@ for participant in participants:
             questionnare_files = [os.path.basename(file) for file in xlsx_files if 'task' not in os.path.basename(file).lower()]
             # Iterate through all .xlsx files in current month folder
             for xlsxFile in task_files:
+
                 file_path = os.path.join(processing_path_month, xlsxFile)
                 print(' ')
                 print(' NEW FILE ---------------------------------------------------------------------------------------')
@@ -1811,6 +1900,11 @@ for participant in participants:
                     if os.path.isfile(file_path):
                         try:
                             opened_xlsxFile = pd.read_excel(file_path, engine='openpyxl')
+
+                            # if 'RP_Anti' not in opened_xlsxFile['Spreadsheet'][2] and 'RP_Ctx2' not in opened_xlsxFile['Spreadsheet'][2]:
+                            #     print('Skipping    ', opened_xlsxFile['Spreadsheet'][2])
+                            #     continue
+
                             file = file_path.split('\\')[-1]
                             print(f"Processing file: {file}")
                             print(' ')

@@ -25,13 +25,14 @@ dataFormatList = ['highDim', 'highDim_correctOnly', 'highDim_3stimTC']
 dataFormat = dataFormatList[2]
 # Define participant
 participantList = ['beRNN_01', 'beRNN_02', 'beRNN_03', 'beRNN_04', 'beRNN_05']
-participant = participantList[4]
+participant = participantList[2]
 
 # info: Change the directories for hitkip run ##########################################################################
 data = ['', '_correctOnly', '_3stimTC'][2] # highDim is 0
+folder = 'capacityLimitationTest_32'
 
 # ---- Load the original list (not line-by-line!) ----
-with open(fr"C:\Users\oliver.frank\Desktop\PyProjects\beRNNmodels\paperPlanes\highDim{data}\{participant}\visuals\performance_test\bestModels_performance_test.txt", "r") as f:
+with open(fr"C:\Users\oliver.frank\Desktop\PyProjects\beRNNmodels\{folder}\highDim{data}\{participant}\visuals\performance_test\bestModels_performance_test.txt", "r") as f:
     old_paths = json.load(f)  # loads full list
 
 # ---- Transform paths ----
@@ -42,11 +43,12 @@ for path in old_paths:
 
     # Replace Windows base path with Linux path
     suffix = path.split(f"/highDim{data}/")[1]
-    new_path = f"/zi/home/oliver.frank/Desktop/beRNNmodels/finalGridSearch_allSubjects{data}/{suffix}"
+    # new_path = f"/zi/home/oliver.frank/Desktop/beRNNmodels/finalGridSearch_allSubjects{data}/{suffix}"
+    new_path = f"/zi/home/oliver.frank/Desktop/beRNNmodels/networkSize_32units_gridSearch/{suffix}"
     new_paths.append(new_path)
 
 # ---- Save as proper list again (as .txt with JSON structure) ----
-with open(fr"C:\Users\oliver.frank\Desktop\PyProjects\beRNNmodels\paperPlanes\highDim{data}\{participant}\visuals\performance_test\bestModels_{participant}_highDim{data}_performance_test_hitkipVersion.txt", "w") as f:
+with open(fr"C:\Users\oliver.frank\Desktop\PyProjects\beRNNmodels\{folder}\highDim{data}\{participant}\visuals\performance_test\bestModels_{participant}_highDim{data}_performance_test_hitkipVersion.txt", "w") as f:
     json.dump(new_paths, f, indent=2)  # indent for readability
 # info: ################################################################################################################
 

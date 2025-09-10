@@ -56,6 +56,8 @@ rule_color = {
     'WM_Ctx2': '#fdda9c'  # Light Yellow
 }
 
+comparison = False
+
 def smoothed(data, window_size):
     smoothed_data = np.convolve(data, np.ones(window_size) / window_size, mode='valid')
     # Calculate how many points we need to add to match the length of the original data
@@ -127,7 +129,7 @@ def define_data_folder(split_parts):
     # Predefined categories or flags to look for
     possible_keys = [
         'highDim', 'lowDim',
-        'correctOnly', 'correctOnly_3stimTC', 'correctOnly_timeCompressed',
+        'correctOnly', 'correctOnly_3stimTC', '3stimTC', 'correctOnly_timeCompressed',
         'lowCognition', 'noCognition', 'timeCompressed'
     ]
 
@@ -309,7 +311,7 @@ def plot_cost_test_BeRNN(model_dir, figurePath_overview, model, figurePath, rule
         # Safe log transform (shift to avoid log(0))
         y_cost_log = np.log10(list(map(lambda x: x + 1e-8, y_cost)))
         # Normalize log costs
-        y_cost_log_norm = (y_cost_log - cost_log_min) / (cost_log_max - cost_log_min)
+        y_cost_log_norm = (y_cost_log - cost_log_min) / (cost_log_max - cost_log_min) # fix: It seems there is some issue here
 
         line = ax.plot(x_plot, y_cost_log_norm, color=rule_color[rule], linewidth=3)
         lines.append(line[0])
@@ -539,13 +541,9 @@ if __name__ == "__main__":
 
         return fig, axs
 
-    folder, dataType, participant, batch, months = 'robustnessTest', 'highDim_correctOnly', 'beRNN_01', '0', ['month_4', 'month_5', 'month_6']
+    folder, dataType, participant, batch, months = 'autoCorrelationTest_04', 'highDim_correctOnly_3stimTC', 'beRNN_04', '01', ['month_4', 'month_5', 'month_6']
     _finalPath = Path('C:/Users/oliver.frank/Desktop/PyProjects/beRNNmodels', f'{folder}/{dataType}/{participant}/{batch}')
     _data_dir = Path('C:/Users/oliver.frank/Desktop/PyProjects/Data')
-
-    # Define variables for topological marker distribution comparison
-    participant1, batch1 = 'beRNN_01', '32'
-    participant2, batch2 = 'beRNN_03', '32'
 
     # Define paths
     participant_id = participant  # Change this for each participant
@@ -685,8 +683,9 @@ if __name__ == "__main__":
 
             print(f"Overview saved to: {overview_path}")
 
-        except:
+        except Exception as e:
             print("An exception occurred with model number: ", model_dir)
+            print("Error: ", e)
 
 
 
@@ -816,12 +815,16 @@ if __name__ == "__main__":
     print(f"Distributions saved for participant {participant_id} in {distribution_dir}")
 
 
-
+if comparison == True:
     # # info: ################################################################################################################
     # # info: Comparison - Only apply after previous analysis ################################################################
     # # info: ################################################################################################################
     from scipy.stats import ttest_ind, ks_2samp
     import seaborn as sns
+
+    # Define variables for topological marker distribution comparison
+    participant1, batch1 = 'beRNN_01', '32'
+    participant2, batch2 = 'beRNN_03', '32'
 
     def load_distributions(distribution_dir,topMarkers,months):
         """

@@ -421,6 +421,84 @@ def createSplittedDatasets(hp, preprocessedData_path, month):
 
     return train_data, eval_data
 
+def createSplittedDatasets_generalizationTest(hp, preprocessedData_path, month, distanceOfEvaluationData):
+    month1 = month
+    month2 = '_'.join(['month', str(int(month.split('_')[1])+distanceOfEvaluationData)])
+
+    # Split the data into training and test data -----------------------------------------------------------------------
+    # List of the subdirectories
+    subdirs = [os.path.join(preprocessedData_path, d) for d in os.listdir(preprocessedData_path) if
+               os.path.isdir(os.path.join(preprocessedData_path, d))]
+
+
+    # Initialize dictionaries to store training and evaluation data
+    train_data1 = {}
+    eval_data1 = {}
+
+    # info: Get training data
+    for subdir in subdirs:
+        # Collect all file triplets in the current subdirectory
+        file_quartett = []
+        for file in os.listdir(subdir):
+            if file.endswith('Input.npy'):
+                # # III: Exclude files with specific substrings in their names
+                # if any(exclude in file for exclude in ['Randomization', 'Segmentation', 'Mirrored', 'Rotation']):
+                #     continue
+                # Include only files that contain any of the months in monthsConsidered
+                if month1 not in file:  # Sort out months which should not be considered
+                    continue
+                # Add all necessary files to triplets
+                base_name = file.split('Input')[0]
+                input_file = os.path.join(subdir, base_name + 'Input.npy')
+                yloc_file = os.path.join(subdir, base_name + 'yLoc.npy')
+                output_file = os.path.join(subdir, base_name + 'Output.npy')
+                response_file = os.path.join(subdir, base_name + 'Response.npy')
+
+                file_quartett.append((input_file, yloc_file, output_file, response_file))
+
+        # Split the file triplets
+        train_files1, eval_files1 = split_files(hp, file_quartett)
+
+        # Store the results in the dictionaries
+        train_data1[subdir] = train_files1
+        eval_data1[subdir] = eval_files1
+
+
+    # Initialize dictionaries to store training and evaluation data
+    train_data2 = {}
+    eval_data2 = {}
+
+    # info: Get eval data
+    for subdir in subdirs:
+        # Collect all file triplets in the current subdirectory
+        file_quartett = []
+        for file in os.listdir(subdir):
+            if file.endswith('Input.npy'):
+                # # III: Exclude files with specific substrings in their names
+                # if any(exclude in file for exclude in ['Randomization', 'Segmentation', 'Mirrored', 'Rotation']):
+                #     continue
+                # Include only files that contain any of the months in monthsConsidered
+                if month2 not in file:  # Sort out months which should not be considered
+                    continue
+                # Add all necessary files to triplets
+                base_name = file.split('Input')[0]
+                input_file = os.path.join(subdir, base_name + 'Input.npy')
+                yloc_file = os.path.join(subdir, base_name + 'yLoc.npy')
+                output_file = os.path.join(subdir, base_name + 'Output.npy')
+                response_file = os.path.join(subdir, base_name + 'Response.npy')
+
+                file_quartett.append((input_file, yloc_file, output_file, response_file))
+
+        # Split the file triplets
+        train_files2, eval_files2 = split_files(hp, file_quartett)
+
+        # Store the results in the dictionaries
+        train_data2[subdir] = train_files2
+        eval_data2[subdir] = eval_files2
+
+
+    return train_data1, eval_data2
+
 def split_files(hp, files, split_ratio=0.8):
     if 'rng' not in hp:
         hp['rng'] = np.random.default_rng()

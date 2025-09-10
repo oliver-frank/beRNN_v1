@@ -100,7 +100,7 @@ def get_default_hp(ruleset):
     machine = 'local' # 'local' 'pandora' 'hitkip'
     data = 'data_highDim_correctOnly_3stimTC' # 'data_highDim' , data_highDim_correctOnly , data_highDim_lowCognition , data_lowDim , data_lowDim_correctOnly , data_lowDim_lowCognition, 'data_highDim_correctOnly_3stimTC'
     trainingBatch = '01'
-    trainingYear_Month = 'testModularityValue'
+    trainingYear_Month = 'liberalEvaluation_correctOnly_3stimTC'
 
     if 'highDim' in data: # fix: lowDim_timeCompressed needs to be skipped here
         n_eachring = 32
@@ -127,13 +127,13 @@ def get_default_hp(ruleset):
         'tau': 100, # # Time constant (ms)- default 100
         'dt': 20, # discretization time step (ms) .
         # 'alpha': 0.2, # (redundant) discretization time step/time constant - dt/tau = alpha - ratio decides on how much previous states are taken into account for current state - low alpha more memory, high alpha more forgetting - alpha * h(t-1)
-        'sigma_rec': 0.01, # recurrent noise - directly influencing the noise added to the network
-        'sigma_x': 0.01, # input noise
-        'w_rec_init': 'randortho', # leaky_rec weight initialization, diag, randortho, randgauss, brainStructure (only accessible with LeakyRNN : 32-256)
-        'l1_h': 1e-4, # l1 lambda (regularizing with absolute value of magnitude of coefficients, leading to sparse features)
-        'l2_h': 5e-6, # l2 lambda (regularizing with squared value of magnitude of coefficients, decreasing influence of features)
-        'l1_weight': 1e-5, # l2 regularization on weight
-        'l2_weight': 1e-4, # l2 regularization on weight
+        'sigma_rec': 0, # recurrent noise - directly influencing the noise added to the network
+        'sigma_x': 0, # input noise
+        'w_rec_init': 'diag', # leaky_rec weight initialization, diag, randortho, randgauss, brainStructure (only accessible with LeakyRNN : 32-256)
+        'l1_h': 0, # l1 lambda (regularizing with absolute value of magnitude of coefficients, leading to sparse features)
+        'l2_h': 0, # l2 lambda (regularizing with squared value of magnitude of coefficients, decreasing influence of features)
+        'l1_weight': 1e-3, # l2 regularization on weight
+        'l2_weight': 0, # l2 regularization on weight
         'l2_weight_init': 0, # l2 regularization on deviation from initialization
         'p_weight_train': None, # proportion of weights not to be regularized, None or float between (0, 1) - 1-p_weight_train will be multiplied by w_mask_value
         'w_mask_value': 0.1, # default .1 - value that will be multiplied with L2 regularization (combined with p_weight_train), <1 will decrease it
@@ -147,10 +147,10 @@ def get_default_hp(ruleset):
         'rng': np.random.default_rng(), # add seed here if you want to make it reproducible e.g. (42)
         'ruleset': ruleset, # number of input units
         'save_name': 'test', # name to save
-        'learning_rate': 0.0015, # learning rate
-        'learning_rate_mode': None, # Will overwrite learning_rate if it is not None - 'triangular', 'triangular2', 'exp_range', 'decay'
-        'base_lr': [1e-5],
-        'max_lr': [1e-3],
+        'learning_rate': 0.0005, # learning rate
+        'learning_rate_mode': 'triangular2', # Will overwrite learning_rate if it is not None - 'triangular', 'triangular2', 'exp_range', 'decay'
+        'base_lr': [5e-4],
+        'max_lr': [15e-4],
         'errorBalancingValue': 1., # will be multiplied with c_mask_responseValue for objective error trials - 1. means no difference between errors and corrects are made
         'c_mask_responseValue': 5., # c_mask response epoch value - strenght response epoch is taken into account for error calculation
         's_mask': None, # 'sc1000', None - info: only accesible on local machine
@@ -158,13 +158,15 @@ def get_default_hp(ruleset):
         'use_separate_input': False,  # whether rule and stimulus inputs are represented separately
         # 'c_intsyn': 0, # intelligent synapses parameters, tuple (c, ksi) -> Yang et al. only apply these in sequential training
         # 'ksi_intsyn': 0,
-        'monthsConsidered': ['month_3', 'month_4', 'month_5'], # months to train and test
-        'monthsString': '3-5', # monthsTaken
+        'monthsConsidered': ['month_4', 'month_5', 'month_6'], # months to train and test
+        'monthsString': '4-6', # monthsTaken
+        'generalizationTest': False, # SHould their be a month-wise distance applied between train and eval data
+        'distanceOfEvaluationData': 0, # distance between test and evaluation data month-wise to check generalization performance
         'rule_prob_map': {"DM": 1,"DM_Anti": 1,"EF": 1,"EF_Anti": 1,"RP": 1,"RP_Anti": 1,"RP_Ctx1": 1,"RP_Ctx2": 1,"WM": 1,"WM_Anti": 1,"WM_Ctx1": 1,"WM_Ctx2": 1},
-        # 'rule_prob_map': {"DM": 0,"DM_Anti": 0,"EF": 0,"EF_Anti": 0,"RP": 0,"RP_Anti": 1,"RP_Ctx1": 0,"RP_Ctx2": 0,"WM": 0,"WM_Anti": 0,"WM_Ctx1": 0,"WM_Ctx2": 0}, # fraction of tasks represented in training data
+        # 'rule_prob_map': {"DM": 0,"DM_Anti": 0,"EF": 0,"EF_Anti": 0,"RP": 0,"RP_Anti": 1,"RP_Ctx1": 0,"RP_Ctx2": 0,"WM": 0,"WM_Anti": 0,"WM_Ctx1": 0,"WM_Ctx2": 0},
         'tasksString': 'Alltask', # tasks taken
         'sequenceMode': True, # Decide if models are trained sequentially month-wise
-        'participant': 'beRNN_02', # Participant to take
+        'participant': 'beRNN_03', # Participant to take
         'data': data, # 'data_highDim' , data_highDim_correctOnly , data_highDim_lowCognition , data_lowDim , data_lowDim_correctOnly , data_lowDim_lowCognition, data_timeCompressed, data_lowDim_timeCompressed
         'machine': machine,
         'trainingBatch': trainingBatch,
@@ -225,9 +227,69 @@ def do_eval(sess, model, log, rule_train, eval_data):
 
                 if 'lowDim' in hp['data']:
                     perf_test = np.mean(get_perf_lowDIM(y_hat_test, y_loc))
+
+                elif 'RP_Anti' in task:
+                    performanceList = []
+                    perf_test = np.mean(get_perf(y_hat_test, y_loc))  # info: y_loc is participant response as groundTruth
+                    performanceList.append(perf_test)
+
+                    pref = np.arange(0, 2 * np.pi, 2 * np.pi / 32)
+                    # Check how many corrects are available per trial
+                    for trial in range(np.shape(y_loc)[1]):
+                        # Get number of correct responses
+                        correctResponseDirection = np.where(pref == y_loc[-1][trial])[0][0]
+                        correctIndicesArray_color = np.where(x[-1, trial, 1:33] == x[-1, trial, correctResponseDirection+1])[0]
+                        correctIndicesArray_form = np.where(x[-1, trial, 33:65] == x[-1, trial, correctResponseDirection+33])[0]
+                        # Compare both lists and keep only overlaps
+                        correctIndicesArray_ = [x for x in correctIndicesArray_color if x in correctIndicesArray_form]
+
+                        # Keep all except the one you already used for perf_test calculation
+                        correctIndicesArray = [x for x in correctIndicesArray_ if x != correctResponseDirection]
+
+
+                        # Generate perf_test for each possible correct response
+                        if len(correctIndicesArray) > 0:
+                                y_loc[35:, trial] = pref[correctIndicesArray[0]] # store the second objectively correct response direction as y_loc - last one enough for evaluation
+
+                    # Calculate performance one more time
+                    perf_test = np.mean(get_perf(y_hat_test, y_loc))  # info: y_loc is participant response as groundTruth
+                    performanceList.append(perf_test)
+
+                    # Compare both perf_test and take the most sucessful (giving the network the possibility to correctly respond to several correct directions)
+                    perf_test = np.max(performanceList)
+
+                elif 'RP_Ctx2' in task:
+                    performanceList = []
+                    perf_test = np.mean(get_perf(y_hat_test, y_loc))  # info: y_loc is participant response as groundTruth
+                    performanceList.append(perf_test)
+
+                    pref = np.arange(0, 2 * np.pi, 2 * np.pi / 32)
+                    # Check how many corrects are available per trial
+                    for trial in range(np.shape(y_loc)[1]):
+                        # Get number of correct responses
+                        correctResponseDirection = np.where(pref == y_loc[-1][trial])[0][0]
+                        # correctIndicesArray_color = np.where(x[-1, trial, 1:33] == x[-1, trial, correctResponseDirection + 1])[0]
+                        correctIndicesArray_form = np.where(x[-1, trial, 33:65] == x[-1, trial, correctResponseDirection + 33])[0]
+                        # Compare both lists and keep only overlaps
+                        # correctIndicesArray_ = [x for x in correctIndicesArray_color if x in correctIndicesArray_form]
+
+                        # Keep all except the one you already used for perf_test calculation
+                        correctIndicesArray = [x for x in correctIndicesArray_form if x != correctResponseDirection]
+
+                        # Generate perf_test for each possible correct response
+                        if len(correctIndicesArray) > 0:
+                            y_loc[35:, trial] = pref[correctIndicesArray[0]]  # store the second objectively correct response direction as y_loc - last one enough for evaluation
+
+                    # Calculate performance one more time
+                    perf_test = np.mean(get_perf(y_hat_test, y_loc))  # info: y_loc is participant response as groundTruth
+                    performanceList.append(perf_test)
+
+                    # Compare both perf_test and take the most sucessful (giving the network the possibility to correctly respond to several correct directions)
+                    perf_test = np.max(performanceList)
+
                 else:
                     perf_test = np.mean(get_perf(y_hat_test, y_loc)) # info: y_loc is participant response as groundTruth
-                print('perf_test   ', perf_test)
+
                 clsq_tmp.append(c_lsq)
                 creg_tmp.append(c_reg)
                 perf_tmp.append(perf_test)
@@ -275,7 +337,7 @@ def do_eval(sess, model, log, rule_train, eval_data):
 
     return log
 
-def train(data_dir, model_dir,train_data ,eval_data,hp=None,max_steps=1e6,display_step=500,ruleset='all',rule_trains=None,rule_prob_map=None,seed=0,
+def train(data_dir, model_dir,train_data ,eval_data,hp=None,max_steps=3e6,display_step=500,ruleset='all',rule_trains=None,rule_prob_map=None,seed=0,
           load_dir=None,trainables=None, robustnessTest= True):
     """Train the network.
 
@@ -571,8 +633,14 @@ if __name__ == '__main__':
             if not os.path.exists(model_dir):
                 os.makedirs(model_dir)
 
-            # Create train and eval data
-            train_data, eval_data = tools.createSplittedDatasets(hp, preprocessedData_path, month)
+
+            if hp['generalizationTest'] == True:
+                # Create train and eval data
+                train_data, eval_data = tools.createSplittedDatasets_generalizationTest(hp, preprocessedData_path, month, hp['distanceOfEvaluationData'])
+            else:
+                # Create train and eval data
+                train_data, eval_data = tools.createSplittedDatasets(hp, preprocessedData_path, month)
+
 
             # info: If you want to initialize the new model with an old one
             # load_dir = 'C:\\Users\\oliver.frank\\Desktop\\PyProjects\\beRNNmodels\\2025_03\\sc_mask_final\\beRNN_03_All_3-5_data_highDim_correctOnly_iteration1_LeakyRNN_1000_relu\\model_month_3'
