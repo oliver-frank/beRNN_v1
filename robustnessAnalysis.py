@@ -8,7 +8,7 @@ from hyperparameterOverview import get_n_clusters, compute_n_cluster
 import os
 
 participant = ['beRNN_01', 'beRNN_02', 'beRNN_03', 'beRNN_04', 'beRNN_05'][2]
-dataType = ['highDim', 'highDim_3stimTC', 'highDim_correctOnly'][1]
+dataType = ['highDim', 'highDim_3stimTC', 'highDim_correctOnly'][2]
 
 mode = ['train', 'test'][1]
 # sort_variable = ['clustering', 'performance', 'silhouette'][1]

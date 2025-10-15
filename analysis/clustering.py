@@ -113,30 +113,42 @@ class Analysis(object):
         # attention: fallback if clustering is not possible
         if h_var_all.shape[0] < 2 or np.all(h_var_all.sum(axis=1) <= 1e-2):
         # if h_var_all.shape[0] < 2 or np.where(h_var_all_.sum(axis=1) < activityThreshold):
-            print(f"Skipping clustering for model {model_dir} — insufficient data or variance.")
+            print(f"Creating dummy clustering and rdm for model {model_dir} — insufficient data or variance.")
 
-            self.h_var_all = np.ones([2, 12])
-            self.h_normvar_all = np.array([[1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
-                                           [0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]])
-            self.labels = np.array([0, 1])  # Use 2 dummy clusters
+            # Determine expected dimensions safely
+            hp = tools.load_hp(model_dir)
+            n_tasks = len(hp.get('rules', [])) or 12  # use actual number of tasks if available
+            n_units = int(hp.get('n_rnn', 128)) if 'n_rnn' in hp else 128  # typical hidden dim fallback
+
+            # Create minimal but consistent dummy data
+            self.h_var_all = np.ones((2, n_tasks))
+            self.h_normvar_all = np.full((n_tasks, n_units), 0.5, dtype=float)
+
+            self.labels = np.array([0, 1])
             self.ind_active = np.array([0, 1])
             self.n_clusters = [2]
             self.scores = [0.0]
             self.n_cluster = 2
             self.unique_labels = np.array([0, 1])
 
+            # Metadata
             self.normalization_method = normalization_method
             self.model_dir = model_dir
             self.hp = hp
             self.data_type = data_type
-            self.rules = hp['rules']
+            self.rules = hp.get('rules', [f"task_{i}" for i in range(n_tasks)])
 
-            task_matrix = self.h_normvar_all.T  # shape: (n_tasks, n_units)
-            n_tasks = task_matrix.shape[0]
-            # Safe dummy RDM (0 = no dissimilarity)
-            self.rdm = np.full((n_tasks, n_tasks), 0.5)  # or np.full((n_tasks, n_tasks), 0.5) if you prefer mid-range dissimilarity
-            self.rdm_vector = np.zeros(int(n_tasks * (n_tasks - 1) / 2))
+            # Create dummy RDM of proper size and symmetry
+            # A neutral, symmetric matrix: diagonal 0 (self-similarity), off-diagonals 0.5
+            self.rdm = np.full((n_tasks, n_tasks), 0.5, dtype=float)
+            np.fill_diagonal(self.rdm, 0.0)
+
+            # Vectorized upper triangle (like in real RDMs)
+            self.rdm_vector = self.rdm[np.triu_indices_from(self.rdm, k=1)]
             self.rdm_metric = rdm_metric
+
+            # Ensure consistent attributes for downstream alignment
+            self.coords_dummy = np.zeros((n_tasks, 2))  # optional: MDS-compatible placeholder
 
         else:
             # Normalize by the total variance across tasks

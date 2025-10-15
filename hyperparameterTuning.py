@@ -80,7 +80,7 @@ n_input, n_output = 1 + num_ring * n_eachring + n_rule, n_outputring + 1
 adjParams = {
     'batch_size': [80],
     'in_type': ['normal'],
-    'rnn_type': ['LeakyGRU'], # 'LeakyGRU'
+    'rnn_type': ['LeakyRNN'], # 'LeakyGRU'
     'n_input': [n_input], # number of input units
     'n_output': [n_output], # number of output units
     'use_separate_input': [False],
@@ -93,6 +93,7 @@ adjParams = {
     'sigma_rec': [0, 0.01],
     'sigma_x': [0, 0.01],
     'w_rec_init': ['randortho', 'randgauss', 'diag', 'brainStructure'],
+    # 'w_rec_init': ['randortho', 'randgauss', 'diag', 'brainStructure'],
     'l1_h': [0, 0.00001, 0.0001, 0.001],
     'l2_h': [0, 0.00001, 0.0001, 0.001],
     'l1_weight': [0, 0.00001, 0.0001, 0.001],
@@ -106,38 +107,39 @@ adjParams = {
     'max_lr': [0.0015],
     'n_rnn': [128],
     'multiLayer': [False],
-    'n_rnn_per_layer': [[8, 8, 8]],
+    'n_rnn_per_layer': [[32, 32, 32]],
     'activations_per_layer': [['relu', 'relu', 'relu'], ['softplus', 'softplus', 'softplus'], ['tanh', 'tanh', 'tanh']],
     'errorBalancingValue': [1.],
     'c_mask_responseValue': [5.],
-    's_mask': [None], # 'sc1000', None
+    's_mask': [None], # 'brain_256', None
     'monthsConsidered': [['month_4', 'month_5', 'month_6']], # list of lists
     'monthsString': ['4-6'],
-    'rule_prob_map': [{"DM": 1,"DM_Anti": 1,"EF": 1,"EF_Anti": 1,"RP": 1,"RP_Anti": 1,"RP_Ctx1": 1,"RP_Ctx2": 1,"WM": 1,"WM_Anti": 1,"WM_Ctx1": 1,"WM_Ctx2": 1}],
-    # 'rule_prob_map': [{"DM": 1,"DM_Anti": 1,"EF": 0,"EF_Anti": 0,"RP": 0,"RP_Anti": 0,"RP_Ctx1": 0,"RP_Ctx2": 0,"WM": 0,"WM_Anti": 0,"WM_Ctx1": 0,"WM_Ctx2": 0}], # fraction of tasks represented in training data
-    'participant': ['beRNN_03'], # Participant to take
-    'data': ['data_highDim_correctOnly_3stimTC'],
+    # 'rule_prob_map': [{"DM": 1,"DM_Anti": 1,"EF": 1,"EF_Anti": 1,"RP": 1,"RP_Anti": 1,"RP_Ctx1": 1,"RP_Ctx2": 1,"WM": 1,"WM_Anti": 1,"WM_Ctx1": 1,"WM_Ctx2": 1}],
+    'rule_prob_map': [{"DM": 1,"DM_Anti": 1,"EF": 1,"EF_Anti": 1,"RP": 1,"RP_Anti": 1,"RP_Ctx1": 1,"RP_Ctx2": 1,"WM": 1,"WM_Anti": 1,"WM_Ctx1": 1,"WM_Ctx2": 1}], # fraction of tasks represented in training data
+    'participant': ['beRNN_05'], # Participant to take
+    'data': ['data_highDim'],
     'machine': ['hitkip'], # 'local' 'pandora' 'hitkip'
     'tasksString': ['AllTask'], # tasksTaken
     'sequenceMode': [True], # Decide if models are trained sequentially month-wise
     'trainingBatch': ['1'],
-    'trainingYear_Month': ['networkSize_128units_LeakyGRU_gridSearch']
+    'trainingYear_Month': ['gridSearch_allTask_highDim_shallow_networkSize_128']
 }
+
 # # attention: all other setups ##########################################################################################
-
-# Randomly sample combinations
-# sampled_combinations = sample_param_combinations(adjParams, 20)
-
-# # Create one combination and repeat it according to sample_size
-# sampled_repeated_combinations = create_repeated_param_combinations(best_params, 5)
+#
+# # Randomly sample combinations
+# # sampled_combinations = sample_param_combinations(adjParams, 20)
+#
+# # # Create one combination and repeat it according to sample_size
+# # sampled_repeated_combinations = create_repeated_param_combinations(best_params, 5)
 
 
 # info: dataset adjustments ############################################################################################
-dir = fr'C:\Users\oliver.frank\Desktop\PyProjects\beRNN_v1\paramCombinations_{adjParams["data"][0].split("data_")[1]}_hitkip_128units_LeakyGRU_gridSearch'
+dir = fr'C:\Users\oliver.frank\Desktop\PyProjects\beRNN_v1\paramCombinations_{adjParams["data"][0].split("data_")[1]}_{adjParams["trainingYear_Month"][0].split("networkSize_")[1]}'
 os.makedirs(dir, exist_ok=True)
 os.chdir(dir)
 
-for paramBatch in range(1,33):
+for paramBatch in range(1,17):
     # Randomly sample combinations
     sampled_combinations = sample_param_combinations(adjParams, 8)
 
@@ -145,18 +147,18 @@ for paramBatch in range(1,33):
     #     json.dump(sampled_combinations, f, indent=4)
     # with open(f'sampled_combinations_beRNN_02_{paramBatch}.json', 'w') as f:
     #     json.dump(sampled_combinations, f, indent=4)
-    with open(f'sampled_combinations_beRNN_03_{paramBatch}.json', 'w') as f:
-        json.dump(sampled_combinations, f, indent=4)
+    # with open(f'sampled_combinations_beRNN_03_{paramBatch}.json', 'w') as f:
+    #     json.dump(sampled_combinations, f, indent=4)
     # with open(f'sampled_combinations_beRNN_04_{paramBatch}.json', 'w') as f:
     #     json.dump(sampled_combinations, f, indent=4)
-    # with open(f'sampled_combinations_beRNN_05_{paramBatch}.json', 'w') as f:
-    #     json.dump(sampled_combinations, f, indent=4)
+    with open(f'sampled_combinations_beRNN_05_{paramBatch}.json', 'w') as f:
+        json.dump(sampled_combinations, f, indent=4)
 
 # info: Adjust values for already created json files ###################################################################
 # participantList = ['beRNN_01', 'beRNN_02', 'beRNN_03', 'beRNN_04', 'beRNN_05']
-participantList = ['beRNN_03']
+participantList = ['beRNN_05']
 for participant in participantList:
-    for paramBatch in range(1, 33):
+    for paramBatch in range(1, 17):
         with open(f'sampled_combinations_{participant}_{paramBatch}.json', 'r') as f:
             sampled_combinations = json.load(f)
             for i in range(len(sampled_combinations)):
@@ -212,13 +214,13 @@ for modelNumber, params in enumerate(sampled_combinations): # info: either sampl
                 numberOfLayers = len(params['n_rnn_per_layer'])
                 params['rnn_type'] = 'LeakyRNN'  # info: force rnn_type to always be LeakyRNN for multiLayer case
                 if numberOfLayers == 2:
-                    model_dir = os.path.join(f"{path}\\beRNNmodels\\{params['trainingYear_Month']}\\{params['participant']}\\{params['trainingBatch']}\\{params['participant']}_{params['tasksString']}_{params['monthsString']}_{params['data']}_trainingBatch{params['trainingBatch']}_iteration{modelNumber}_{params['rnn_type']}_{params['n_rnn_per_layer'][0]}-{params['n_rnn_per_layer'][1]}_{params['activations_per_layer'][0]}-{params['activations_per_layer'][1]}",model_name)
+                    model_dir = os.path.join(f"{path}\\beRNNmodels\\{params['trainingYear_Month']}\\{params['data'].split('data_')[-1]}\\{params['participant']}\\{params['trainingBatch']}\\{params['participant']}_{params['tasksString']}_{params['monthsString']}_{params['data']}_trainingBatch{params['trainingBatch']}_iteration{modelNumber}_{params['rnn_type']}_{params['n_rnn_per_layer'][0]}-{params['n_rnn_per_layer'][1]}_{params['activations_per_layer'][0]}-{params['activations_per_layer'][1]}",model_name)
                 else:
                     model_dir = os.path.join(
-                        f"{path}\\beRNNmodels\\{params['trainingYear_Month']}\\{params['participant']}\\{params['trainingBatch']}\\{params['participant']}_{params['tasksString']}_{params['monthsString']}_{params['data']}_trainingBatch{params['trainingBatch']}_iteration{modelNumber}_{params['rnn_type']}_{params['n_rnn_per_layer'][0]}-{params['n_rnn_per_layer'][1]}-{params['n_rnn_per_layer'][2]}_{params['activations_per_layer'][0]}-{params['activations_per_layer'][1]}-{params['activations_per_layer'][2]}",model_name)
+                        f"{path}\\beRNNmodels\\{params['trainingYear_Month']}\\{params['data'].split('data_')[-1]}\\{params['participant']}\\{params['trainingBatch']}\\{params['participant']}_{params['tasksString']}_{params['monthsString']}_{params['data']}_trainingBatch{params['trainingBatch']}_iteration{modelNumber}_{params['rnn_type']}_{params['n_rnn_per_layer'][0]}-{params['n_rnn_per_layer'][1]}-{params['n_rnn_per_layer'][2]}_{params['activations_per_layer'][0]}-{params['activations_per_layer'][1]}-{params['activations_per_layer'][2]}",model_name)
             else:
                 model_dir = os.path.join(
-                    f"{path}\\beRNNmodels\\{params['trainingYear_Month']}\\{params['participant']}\\{params['trainingBatch']}\\{params['participant']}_{params['tasksString']}_{params['monthsString']}_{params['data']}_trainingBatch{params['trainingBatch']}_iteration{modelNumber}_{params['rnn_type']}_{params['n_rnn']}_{params['activation']}",model_name)
+                    f"{path}\\beRNNmodels\\{params['trainingYear_Month']}\\{params['data'].split('data_')[-1]}\\{params['participant']}\\{params['trainingBatch']}\\{params['participant']}_{params['tasksString']}_{params['monthsString']}_{params['data']}_trainingBatch{params['trainingBatch']}_iteration{modelNumber}_{params['rnn_type']}_{params['n_rnn']}_{params['activation']}",model_name)
 
         elif params['machine'] == 'hitkip' or params['machine'] == 'pandora':
 
@@ -227,13 +229,13 @@ for modelNumber, params in enumerate(sampled_combinations): # info: either sampl
                 numberOfLayers = len(params['n_rnn_per_layer'])
                 if numberOfLayers == 2:
                     model_dir = os.path.join(
-                        f"{path}/beRNNmodels/{params['trainingYear_Month']}/{params['participant']}/{params['trainingBatch']}/{params['participant']}_{params['tasksString']}_{params['monthsString']}_{params['data']}_trainingBatch{params['trainingBatch']}_iteration{modelNumber}_{params['rnn_type']}_{params['n_rnn_per_layer'][0]}-{params['n_rnn_per_layer'][1]}_{params['activations_per_layer'][0]}-{params['activations_per_layer'][1]}",model_name)
+                        f"{path}/beRNNmodels/{params['trainingYear_Month']}/{params['data'].split('data_')[-1]}/{params['participant']}/{params['trainingBatch']}/{params['participant']}_{params['tasksString']}_{params['monthsString']}_{params['data']}_trainingBatch{params['trainingBatch']}_iteration{modelNumber}_{params['rnn_type']}_{params['n_rnn_per_layer'][0]}-{params['n_rnn_per_layer'][1]}_{params['activations_per_layer'][0]}-{params['activations_per_layer'][1]}",model_name)
                 else:
                     model_dir = os.path.join(
-                        f"{path}/beRNNmodels/{params['trainingYear_Month']}/{params['participant']}/{params['trainingBatch']}/{params['participant']}_{params['tasksString']}_{params['monthsString']}_{params['data']}_trainingBatch{params['trainingBatch']}_iteration{modelNumber}_{params['rnn_type']}_{params['n_rnn_per_layer'][0]}-{params['n_rnn_per_layer'][1]}-{params['n_rnn_per_layer'][2]}_{params['activations_per_layer'][0]}-{params['activations_per_layer'][1]}-{params['activations_per_layer'][2]}",model_name)
+                        f"{path}/beRNNmodels/{params['trainingYear_Month']}/{params['data'].split('data_')[-1]}/{params['participant']}/{params['trainingBatch']}/{params['participant']}_{params['tasksString']}_{params['monthsString']}_{params['data']}_trainingBatch{params['trainingBatch']}_iteration{modelNumber}_{params['rnn_type']}_{params['n_rnn_per_layer'][0]}-{params['n_rnn_per_layer'][1]}-{params['n_rnn_per_layer'][2]}_{params['activations_per_layer'][0]}-{params['activations_per_layer'][1]}-{params['activations_per_layer'][2]}",model_name)
             else:
                 model_dir = os.path.join(
-                    f"{path}/beRNNmodels/{params['trainingYear_Month']}/{params['participant']}/{params['trainingBatch']}/{params['participant']}_{params['tasksString']}_{params['monthsString']}_{params['data']}_trainingBatch{params['trainingBatch']}_iteration{modelNumber}_{params['rnn_type']}_{params['n_rnn']}_{params['activation']}",model_name)
+                    f"{path}/beRNNmodels/{params['trainingYear_Month']}/{params['data'].split('data_')[-1]}/{params['participant']}/{params['trainingBatch']}/{params['participant']}_{params['tasksString']}_{params['monthsString']}_{params['data']}_trainingBatch{params['trainingBatch']}_iteration{modelNumber}_{params['rnn_type']}_{params['n_rnn']}_{params['activation']}",model_name)
 
         print('MODELDIR: ', model_dir)
 
@@ -301,7 +303,7 @@ for modelNumber, params in enumerate(sampled_combinations): # info: either sampl
 
 
 # Save training time for each model to current batch folder as a text file
-file_path = os.path.join(path, 'beRNNmodels', params['trainingYear_Month'], params['participant'], params['trainingBatch'], 'times.txt')
+file_path = os.path.join(path, 'beRNNmodels', params['trainingYear_Month'], params['data'].split('data_')[-1], params['participant'], params['trainingBatch'], 'times.txt')
 
 with open(file_path, 'w') as f:
     f.write(f"training time total (hours): {trainingTimeTotal_hours}\n")

@@ -51,19 +51,30 @@ def compute_n_cluster(model_dirs, mode):
 
             # Average performance for training at the last time point
             totalPerformanceTraining = 0
+            totalPerformanceTesting = 0
             numberOfTasks = 0
+
+            tasksToTakeIntoAccount = [i for i in hp['rule_prob_map'] if hp['rule_prob_map'][i] > 0]
+
             for key in log.keys():
-                if 'perf_train' in key and 'avg' not in key:
+                if 'perf_train' in key and 'avg' not in key and any(task in key for task in tasksToTakeIntoAccount): # Only rule_prob_map > 0 are saved during training
                     totalPerformanceTraining += log[key][-1]
                     numberOfTasks += 1
             averageTotalPerformanceTraining = totalPerformanceTraining / numberOfTasks
 
+            for key in log.keys():
+                if 'perf_' in key and 'avg' not in key and any(task for task in tasksToTakeIntoAccount if task == key.split('perf_')[-1]): # All tasks in rule_prob_map are saved during training
+                    totalPerformanceTesting += log[key][-1]
+            averageTotalPerformanceTesting = totalPerformanceTesting / numberOfTasks
+
             log['avg_perf_train'] = averageTotalPerformanceTraining
-            log['avg_perf_test'] = log['perf_avg'][-1]
+            log['avg_perf_test'] = averageTotalPerformanceTesting
+            # log['avg_perf_test'] = log['perf_avg'][-1]
             log['n_cluster'] = analysis.n_cluster
             log['score'] = max(analysis.scores)
             log['model_dir'] = model_dir
             tools.save_log(log)
+
             # except IOError:
                 # Training never finished
                 # assert log['perf_min'][-1] <= hp['target_perf']
@@ -77,26 +88,20 @@ def compute_n_cluster(model_dirs, mode):
 
         except Exception as e:
             print(f"An exception occurred in compute_n_cluster: {e}")
-            try:
-                log = tools.load_log(model_dir)
-                # Overwrite most important values in already existing log for later plotting
-                if log is not None:
-                    log['avg_perf_train'] = 0
-                    log['avg_perf_test'] = 0
-                    log['n_cluster'] = 0
-                    log['score'] = 0
-                    log['model_dir'] = model_dir
 
-                    tools.save_log(log)
+            # Create dummy log for plotting
+            log = {}
 
-                    successful_model_dirs.append(model_dir)
-                    print("fallback done")
-                else:
-                    print("no log found. Skip model")
-                    continue
+            log['avg_perf_train'] = 0
+            log['avg_perf_test'] = 0
+            log['n_cluster'] = 0
+            log['score'] = 0
+            log['model_dir'] = model_dir
 
-            except Exception as e:
-                print("Skip model")
+            tools.save_log(log)
+
+            successful_model_dirs.append(model_dir)
+            print("fallback done - dummy log created")
 
     return successful_model_dirs
 
@@ -107,7 +112,7 @@ def get_n_clusters(model_dirs):
     silhouette_score = list()
     avg_perf_train_list = list()
     avg_perf_test_list = list()
-    modularity_list = list()
+    modularity_list_sparse = list()
 
     for i, model_dir in enumerate(model_dirs):
         if i % 50 == 0:
@@ -131,9 +136,16 @@ def get_n_clusters(model_dirs):
         silhouette_score.append(log['score'])
         avg_perf_train_list.append(log['avg_perf_train'])
         avg_perf_test_list.append(log['avg_perf_test'])
-        modularity_list.append(log['modularity'][-1])
+        if hp.get('multiLayer') == False:
+            try:
+                modularity_list_sparse.append(log['modularity_sparse'][-1])
+            except Exception as e:
+                modularity_list_sparse.append(0)
 
-    return n_clusters, hp_list, silhouette_score, avg_perf_train_list, avg_perf_test_list, modularity_list
+        else:
+            modularity_list_sparse = []
+
+    return n_clusters, hp_list, silhouette_score, avg_perf_train_list, avg_perf_test_list, modularity_list_sparse
 
 def plot_histogram():
     initdict = defaultdict(list)
@@ -248,17 +260,18 @@ def _get_hp_ranges():
     hp_ranges = OrderedDict()
     hp_ranges['activation'] = ['softplus', 'relu', 'tanh']
     hp_ranges['rnn_type'] = ['LeakyRNN', 'LeakyGRU', 'MultiLayer']
-    hp_ranges['n_rnn'] = [16, 32, 64, 128, 256, 512]
+    hp_ranges['n_rnn'] = [8, 16, 24, 32, 48, 64, 96, 128, 256, 512]
     hp_ranges['w_rec_init'] = ['randortho', 'randgauss', 'diag', 'brainStructure']
     hp_ranges['l1_h'] = [0, 1e-6, 1e-5, 1e-4, 1e-3]
     hp_ranges['l1_weight'] = [0, 1e-6, 1e-5, 1e-4, 1e-3]
     hp_ranges['l2_h'] = [0, 1e-6, 1e-5, 1e-4, 1e-3]
     hp_ranges['l2_weight'] = [0, 1e-6, 1e-5, 1e-4, 1e-3]
-    hp_ranges['learning_rate'] = [0.002, 0.0015, 0.001, 0.0005, 0.0001]
+    hp_ranges['learning_rate'] = [0.002, 0.0015, 0.001, 0.0005, 0.0001, 0.00005]
     hp_ranges['learning_rate_mode'] = ['constant', 'exp_range', 'triangular2']
+    hp_ranges['errorBalancingValue'] = [1., 5.]
     return hp_ranges
 
-def general_hp_plot(n_clusters, silhouette_score, hp_list, avg_perf_train_list, avg_perf_test_list, modularity_list, directory, sort_variable, mode, batchPlot, model_dir_batches):
+def general_hp_plot(n_clusters, silhouette_score, hp_list, avg_perf_train_list, avg_perf_test_list, modularity_list_sparse, directory, sort_variable, mode, batchPlot, model_dir_batches):
     hp_ranges = _get_hp_ranges()
     hp_plots = list(hp_ranges.keys())
 
@@ -271,15 +284,16 @@ def general_hp_plot(n_clusters, silhouette_score, hp_list, avg_perf_train_list, 
         ind_sort = np.argsort(n_clusters)[::-1]
     elif sort_variable == 'silhouette':
         ind_sort = np.argsort(silhouette_score)[::-1]
-    elif sort_variable == 'silhouette':
-        ind_sort = np.argsort(modularity_list)[::-1]
+    elif sort_variable == 'modularity':
+        ind_sort = np.argsort(modularity_list_sparse)[::-1]
 
     n_clusters_sorted = [n_clusters[i] for i in ind_sort]
     silhouette_score_sorted = [silhouette_score[i] for i in ind_sort]
     hp_list_sorted = [hp_list[i] for i in ind_sort]
     avg_perf_train_list_sorted = [avg_perf_train_list[i] for i in ind_sort]
     avg_perf_test_list_sorted = [avg_perf_test_list[i] for i in ind_sort]
-    modularity_list_sorted = [modularity_list[i] for i in ind_sort]
+    if hp_list[0]['rnn_type'] != 'MultiLayer':
+        modularity_list_sparse_sorted = [modularity_list_sparse[i] for i in ind_sort]
     successful_model_dirs_sorted = [successful_model_dirs[i] for i in ind_sort]
 
     # Prepare heatmap data
@@ -296,20 +310,21 @@ def general_hp_plot(n_clusters, silhouette_score, hp_list, avg_perf_train_list, 
     fig, axs = plt.subplots(5, 1, figsize=(8, 6), sharex=True, gridspec_kw={'height_ratios': [1, 1, 1, 1, 1.5]})
     plt.subplots_adjust(hspace=0.5)
 
-    # axs[0].plot(silhouette_score_sorted, '-')
-    # axs[0].set_ylabel(f'Silhouette score ({mode})', fontsize=7)
-    # axs[0].set_yticks([0, 0.25, 0.5, 0.75, 1.0])
-    # axs[0].spines["top"].set_visible(False)
-    # axs[0].spines["right"].set_visible(False)
-
-    axs[0].plot(modularity_list_sorted, '-')
-    axs[0].set_ylabel(f'Modularity score ({mode})', fontsize=7)
-    axs[0].set_yticks([0, 0.25, 0.5, 0.75, 1.0])
-    axs[0].spines["top"].set_visible(False)
-    axs[0].spines["right"].set_visible(False)
-    # Add light grey dashed lines at y=0.3, 0.5, 0.7
-    for y in [0.3, 0.5, 0.7]:
-        axs[0].axhline(y=y, color='lightgrey', linestyle='--', linewidth=0.8, zorder=0)
+    if hp_list[0]['rnn_type'] != 'MultiLayer': # attention: You have to add the calculation for modularity for multiRNN
+        axs[0].plot(modularity_list_sparse_sorted, '-')
+        axs[0].set_ylabel(f'Modularity score ({mode})', fontsize=7)
+        axs[0].set_yticks([0, 0.25, 0.5, 0.75, 1.0])
+        axs[0].spines["top"].set_visible(False)
+        axs[0].spines["right"].set_visible(False)
+        # Add light grey dashed lines at y=0.3, 0.5, 0.7
+        for y in [0.3, 0.5, 0.7]:
+            axs[0].axhline(y=y, color='lightgrey', linestyle='--', linewidth=0.8, zorder=0)
+    else:
+        axs[0].plot(silhouette_score_sorted, '-')
+        axs[0].set_ylabel(f'Silhouette score ({mode})', fontsize=7)
+        axs[0].set_yticks([0, 0.25, 0.5, 0.75, 1.0])
+        axs[0].spines["top"].set_visible(False)
+        axs[0].spines["right"].set_visible(False)
 
     axs[1].plot(n_clusters_sorted, '-')
     axs[1].set_ylabel(f'Num. clusters ({mode})', fontsize=7)
@@ -409,7 +424,7 @@ def plot_vertical_hp_legend(hp_ranges, hp_plots, HP_NAME, directory):
 
     plt.show()
 
-def _individual_hp_plot(hp_plot, sort_variable, mode, directory, batchPlot, model_dir_batches, n_clusters=None, silhouette_score=None, avg_perf_test_list=None, avg_perf_train_list=None, hp_list=None, modularity_list=None):
+def _individual_hp_plot(hp_plot, sort_variable, mode, directory, batchPlot, model_dir_batches, n_clusters=None, silhouette_score=None, avg_perf_test_list=None, avg_perf_train_list=None, hp_list=None, modularity_list_sparse=None):
     """Plot histogram for number of clusters, separating by an attribute.
 
     Args:
@@ -418,7 +433,7 @@ def _individual_hp_plot(hp_plot, sort_variable, mode, directory, batchPlot, mode
         hp_list: list of hp dictionary
     """
     if hp_list is None: # attention: Maybe wrong fix here
-        n_clusters, hp_list, silhouette_score, avg_perf_train_list, avg_perf_test_list, modularity_list = get_n_clusters(successful_model_dirs) # fix: variable still to deliver
+        n_clusters, hp_list, silhouette_score, avg_perf_train_list, avg_perf_test_list, modularity_list_sparse = get_n_clusters(successful_model_dirs) # fix: variable still to deliver
 
     # Compare activation, ignore tanh that can not be trained with LeakyRNN
     # hp_plot = 'activation'
@@ -447,7 +462,7 @@ def _individual_hp_plot(hp_plot, sort_variable, mode, directory, batchPlot, mode
             sort_variable_dict[hp[hp_plot]].append(silhouette)
 
     elif sort_variable == 'modularity':
-        for hp, modu in zip(hp_list, modularity_list):
+        for hp, modu in zip(hp_list, modularity_list_sparse):
             sort_variable_dict[hp[hp_plot]].append(modu)
 
     label_map = {'softplus': 'Softplus',
@@ -543,17 +558,17 @@ def _individual_hp_plot(hp_plot, sort_variable, mode, directory, batchPlot, mode
 
     return sort_variable_dict
 
-def individual_hp_plot(n_clusters, silhouette_score, avg_perf_train_list, avg_perf_test_list, modularity_list, directory, hp_list, sort_variable, mode, batchPlot, model_dir_batches):
+def individual_hp_plot(n_clusters, silhouette_score, avg_perf_train_list, avg_perf_test_list, modularity_list_sparse, directory, hp_list, sort_variable, mode, batchPlot, model_dir_batches):
     """Plot histogram of number of clusters.
 
     Args:
         n_clusters: list of cluster numbers
         hp_list: list of hp dictionary
     """
-    hp_plots = ['activation', 'rnn_type', 'n_rnn', 'w_rec_init', 'l1_h', 'l1_weight', 'l2_h', 'l2_weight', 'learning_rate', 'learning_rate_mode']
+    hp_plots = ['activation', 'rnn_type', 'n_rnn', 'w_rec_init', 'l1_h', 'l1_weight', 'l2_h', 'l2_weight', 'learning_rate', 'learning_rate_mode', 'errorBalancingValue']
 
     for hp_plot in hp_plots:
-        n_cluster_dict = _individual_hp_plot(hp_plot, sort_variable, mode, directory, batchPlot, model_dir_batches, n_clusters, silhouette_score, avg_perf_test_list, avg_perf_train_list, hp_list, modularity_list)
+        n_cluster_dict = _individual_hp_plot(hp_plot, sort_variable, mode, directory, batchPlot, model_dir_batches, n_clusters, silhouette_score, avg_perf_test_list, avg_perf_train_list, hp_list, modularity_list_sparse)
 
 # fix: Add network size here please
 HP_NAME = {'activation': 'Activation fun.',
@@ -566,18 +581,19 @@ HP_NAME = {'activation': 'Activation fun.',
            'l2_weight': 'L2 weight',
            'target_perf': 'Target perf.',
            'learning_rate': 'Learning rate',
-           'learning_rate_mode': 'Learning rate mode'}
+           'learning_rate_mode': 'Learning rate mode',
+           'errorBalancingValue': 'Error balancing value'}
 
 if __name__ == '__main__':
     final_model_dirs = []
 
-    participant = ['beRNN_01', 'beRNN_02', 'beRNN_03', 'beRNN_04', 'beRNN_05'][2]
-    dataType = ['highDim', 'highDim_3stimTC', 'highDim_correctOnly'][1]
-    folder = ['paperPlanes', 'robustnessTest', 'capacityLimitationTest_512'][2]
+    participant = ['beRNN_01', 'beRNN_02', 'beRNN_03', 'beRNN_04', 'beRNN_05'][4]
+    dataType = ['highDim', 'highDim_3stimTC', 'highDim_correctOnly'][2]
+    folder = ['paperPlanes', 'robustnessTest', 'networkSize_128units_gridSearch', 'brainInitialization_brainMasking_test_4task'][3]
 
     mode = ['train', 'test'][1]
     sort_variable = ['clustering', 'performance', 'silhouette'][1]
-    batchPlot = [True, False][1] # attention: important for folder structure
+    batchPlot = [True, False][1]
     lastMonth = '6'
 
     directory = fr'C:\Users\oliver.frank\Desktop\PyProjects\beRNNmodels\{folder}\{dataType}\{participant}'
@@ -596,21 +612,27 @@ if __name__ == '__main__':
             model_dir_lastMonth_ = os.listdir(os.path.join(directory, model_dir_batch, model_dir))
             model_dir_lastMonth = [model_dir for model_dir in model_dir_lastMonth_ if lastMonth in model_dir]
             # Concatenate all models in one list
-            if 'model' in model_dir_lastMonth[0]: # Be sure to add anything else but models
-                final_model_dirs.append(os.path.join(directory, model_dir_batch, model_dir, model_dir_lastMonth[0]))
+            try:
+                if 'model' in model_dir_lastMonth[0]: # Be sure to add anything else but models
+                    final_model_dirs.append(os.path.join(directory, model_dir_batch, model_dir, model_dir_lastMonth[0]))
+
+            except Exception as e:
+                # if something goes wrong (e.g. index error), skip this model_dir
+                print(f"Skipping {model_dir} due to error: {e}")
+                continue
 
     # First compute n_clusters for each model then collect them in lists
     successful_model_dirs = compute_n_cluster(final_model_dirs, mode)
-    n_clusters, hp_list, silhouette_score, avg_perf_train_list, avg_perf_test_list, modularity_list = get_n_clusters(successful_model_dirs)
+    n_clusters, hp_list, silhouette_score, avg_perf_train_list, avg_perf_test_list, modularity_list_sparse = get_n_clusters(successful_model_dirs)
 
     # Create hp_plots sorted by performance or clustering
-    general_hp_plot(n_clusters, silhouette_score, hp_list, avg_perf_train_list, avg_perf_test_list, modularity_list, directory, sort_variable, mode, batchPlot, model_dir_batches)
+    general_hp_plot(n_clusters, silhouette_score, hp_list, avg_perf_train_list, avg_perf_test_list, modularity_list_sparse, directory, sort_variable, mode, batchPlot, model_dir_batches)
     # Create legend
     hp_ranges = _get_hp_ranges()
     hp_plots = list(hp_ranges.keys())
     plot_vertical_hp_legend(hp_ranges, hp_plots, HP_NAME, directory)
 
     # Create histogramms for each hyperparameter seperatly w.r.t. performance or clustering
-    individual_hp_plot(n_clusters, silhouette_score, avg_perf_train_list, avg_perf_test_list, modularity_list, directory, hp_list, sort_variable, mode, batchPlot, model_dir_batches)
+    individual_hp_plot(n_clusters, silhouette_score, avg_perf_train_list, avg_perf_test_list, modularity_list_sparse, directory, hp_list, sort_variable, mode, batchPlot, model_dir_batches)
 
 

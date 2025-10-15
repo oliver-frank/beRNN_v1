@@ -314,36 +314,56 @@ class LeakyRNNCell(RNNCell):
             w_rec0 = self._w_rec_start * tools.gen_ortho_matrix(n_hidden, rng=self.rng)
         elif self._w_rec_init == 'randgauss':
             w_rec0 = (self._w_rec_start * self.rng.randn(n_hidden, n_hidden) / np.sqrt(n_hidden))
+
+
         elif self._w_rec_init == 'brainStructure':
             # Define main path
-            if machine == 'local' or machine == 'hitkip' or machine == 'pandora': # attention: scenario only when computing networks locally
-                connectomePath = f'C:\\Users\\oliver.frank\\Desktop\\PyProjects\\beRNN_v1\\masks\\connectomes_{participant}'
+            # attention: Currently set up for local machine analysis of remotely trained models ############################
+            print("attention @ network.py (322): Currently set up for local machine analysis of remotely trained models")
+            if machine == 'hitkip':
+                connectomePath = fr'C:\Users\oliver.frank\Desktop\PyProjects\beRNN_v1\masks\connectomes_{participant}'
             # elif machine == 'hitkip':
             #     connectomePath = f'/zi/home/oliver.frank/Desktop/RNN/multitask_BeRNN-main/masks/connectomes_{participant}'
             # elif machine == 'pandora':
             #     connectomePath = f'/pandora/home/oliver.frank/01_Projects/RNN/multitask_BeRNN-main/masks/connectomes_{participant}'
+            # attention: Currently set up for local machine analysis of remotely trained models ############################
+
+            if w_rec_init == 'brainStructure' and isinstance(mask, str):
+                maskSize = int(mask.split('_')[1])
+                structuralMask = np.load(os.path.join(
+                        fr'C:\Users\oliver.frank\Desktop\PyProjects\beRNN_v1\masks\connectomes_{participant}',
+                        f'connectome_{participant}_{maskSize}.npy'))
+
+                structuralMask_binary = structuralMask.copy()
+                counter1 = 0
+
+                for i in range(0, maskSize):
+                    for j in range(0, maskSize):
+                        if structuralMask[i, j] > 0.025:
+                            structuralMask_binary[i, j] = 1
+                            counter1 += 1
+                        else:
+                            structuralMask_binary[i, j] = 0
+
+                mask = structuralMask_binary
+
 
             # Load right weight matrix & rotated for equivalent randomness factor while preserving the spectral characteristics
-            w_rec0_ = np.load(os.path.join(connectomePath, f'connectome_{participant}_{n_hidden}_sigNorm.npy')) # fix: Add number for brainStructVariations
+            w_rec0_ = np.load(os.path.join(connectomePath, f'connectome_{participant}_{str(np.shape(mask)[0])}.npy')) # fix: Add number for brainStructVariations
+
+            # Ensure symmetry and remove NaNs
+            w_rec0_ = np.nan_to_num((w_rec0_ + w_rec0_.T) / 2, nan=0.0, posinf=0.0, neginf=0.0)
+
             # Draw a new random rotation each run (or per epoch if you like)
             Q = random_orthogonal(w_rec0_.shape[0])
+            w_rec0 = Q @ w_rec0_ @ Q.T
 
-            # Symmetric similarity transform (keeps eigenvalues & symmetry)
-            w_rec0 = Q @ w_rec0_ @ Q.T  # shape (n, n)
+            # Normalize to controlled spectral radius (~1)
+            eigvals = np.linalg.eigvals(w_rec0)
+            max_eig = np.max(np.abs(eigvals))
+            if max_eig > 0:
+                w_rec0 = w_rec0 / max_eig * self._w_rec_start
 
-
-        # # --- Matrix Visualization ---
-        # fig1, ax1 = plt.subplots(figsize=(8, 8))
-        # im = ax1.imshow(w_rec0, cmap='coolwarm', vmin=0, vmax=1)
-        # plt.colorbar(im, ax=ax1)
-        # ax1.set_title("Visualization of w_rec0")
-        # plt.show()
-        #
-        # # --- Histogram ---
-        # fig2, ax2 = plt.subplots(figsize=(8, 8))
-        # ax2.hist(w_rec0.flatten(), bins=1000)
-        # ax2.set_title("Weight Distribution (300×300 matrix)")
-        # plt.show()
 
         print('>>>>>>>>>>>>>> w_rec0.shape', w_rec0.shape)
         print('>>>>>>>>>>>>>> w_in0.shape', w_in0.shape)
@@ -377,9 +397,15 @@ class LeakyRNNCell(RNNCell):
         w_in, w_rec = tf.split(self._kernel, [input_depth, self._num_units], axis=0)
         # info: Apply structural mask only to the recurrent part (w_rec)
         if isinstance(self.mask, np.ndarray):
-            w_rec = w_rec * self.mask
-        # Concatenate the input and masked recurrent weights back together
-        self._kernel = tf.concat([w_in, w_rec], axis=0)
+            # Convert mask to tensor (ensure dtype matches)
+            mask_tensor = tf.convert_to_tensor(self.mask, dtype=w_rec.dtype)
+            # Apply mask (do not overwrite the variable!)
+            w_rec_masked = w_rec * mask_tensor
+            # Recombine masked recurrent weights with input weights
+            self._kernel_masked = tf.concat([w_in, w_rec_masked], axis=0)
+        else:
+            # Concatenate the input and masked recurrent weights back together
+            self._kernel = tf.concat([w_in, w_rec], axis=0)
 
         self._bias = self.add_variable(
             'bias',
@@ -391,15 +417,22 @@ class LeakyRNNCell(RNNCell):
     def call(self, inputs, state):
         """Most basic RNN: output = new_state = act(W * input + U * state + B)."""
 
+        # Use masked kernel if available (mask applied only to recurrent weights)
+        kernel = getattr(self, "_kernel_masked", self._kernel)
+
+        # Combine input and previous state
         gate_inputs = math_ops.matmul(
-            array_ops.concat([inputs, state], 1), self._kernel)
+            array_ops.concat([inputs, state], 1), kernel)
         gate_inputs = nn_ops.bias_add(gate_inputs, self._bias)
 
+        # Add Gaussian noise to the gate inputs
         noise = tf.random_normal(tf.shape(state), mean=0, stddev=self._sigma)
         gate_inputs = gate_inputs + noise
 
+        # Apply activation
         output = self._activation(gate_inputs)
 
+        # Leaky integration
         output = (1 - self._alpha) * state + self._alpha * output
 
         return output, output

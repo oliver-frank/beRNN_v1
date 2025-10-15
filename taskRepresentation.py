@@ -78,7 +78,7 @@ def plot_taskVariance_and_lesioning(directory, mode, sort_variable, rdm_metric, 
         layer = [1 if hp['multiLayer'] == False else 3][0]
 
         # info: Create TaskVariance Plot
-        knowledgeBase = clustering.Analysis(data_dir, best_model_dir, layer, rdm_metric, 'test', hp['monthsConsidered'],'rule', False)
+        knowledgeBase = clustering.Analysis(data_dir, best_model_dir, layer, rdm_metric, 'test', hp['monthsConsidered'],'rule', True)
         figurePath = os.path.join(directory, 'visuals')
 
         # Plot task variance anyway
@@ -124,7 +124,7 @@ class TaskSetAnalysis(object):
             model.restore()
 
             for rule in rules:
-                month = hp['monthsConsidered'][0]
+                month = hp['monthsConsidered'][-1]
                 train_data, test_data = tools.createSplittedDatasets(hp, preprocessedData_path, month)
 
                 x, y, y_loc, response = tools.load_trials(hp['rng'], rule, 'test', hp['batch_size'], test_data,
@@ -132,19 +132,18 @@ class TaskSetAnalysis(object):
                 c_mask = tools.create_cMask(y, response, hp, 'test')
                 feed_dict = tools.gen_feed_dict(model, x, y, c_mask, hp)
 
-                h = sess.run(model.h,
-                             feed_dict=feed_dict)  # info: Trainables are actualized - train_step should represent the step in training.py and the global_step in network.py
+                h = sess.run(model.h, feed_dict=feed_dict)  # info: Trainables are actualized - train_step should represent the step in training.py and the global_step in network.py
 
                 # c_lsq, c_reg, y_hat_test = sess.run([model.cost_lsq, model.cost_reg, model.y_hat], feed_dict=feed_dict)
 
-                # Average across stimulus conditions
+                # Average across trials
                 h_stimavg = h.mean(axis=1)
 
                 # dt_new = 50
                 # every_t = int(dt_new/hp['dt'])
 
                 t_start = int(500 / hp['dt'])  # Important: Ignore the initial transition
-                # Average across stimulus conditions
+                # Extract epoch of interest - most often response epoch
                 h_stimavg_byrule[rule] = h_stimavg[t_start:, :]
 
                 fixation_steps, response_steps = tools.getEpochSteps(y)
@@ -354,10 +353,11 @@ class TaskSetAnalysis(object):
                 h_trans_all[key] = val * np.array([1, -1])
 
         return h_trans_all
+
 ########################################################################################################################
 
 # RDM & RSA ############################################################################################################
-def plot_group_rdm_mds(directory, mode, sort_variable, rdm_metric, numberOfModels):
+def plot_group_rdm_mds(directory, mode, sort_variable, rdm_metric, numberOfModels, ruleset):
     def plot_rdm_heatmap(rdm, metric, task_labels=None, title='RDM Heatmap'):
         n_tasks = rdm.shape[0]
         fig_size = max(6, n_tasks * 0.5)  # auto-scale figure for more tasks
@@ -416,7 +416,7 @@ def plot_group_rdm_mds(directory, mode, sort_variable, rdm_metric, numberOfModel
     # Apply non-linear dimensionality reduction that maps element-wise distance as good as possible into n-dim space
     mds = MDS(n_components=2, dissimilarity='precomputed', random_state=42)  # euclidean distance based by default
 
-    for model in range(1, numberOfModels):  # Best of x models - max. 256 - always start with 1
+    for model in range(1, numberOfModels+1):  # Best of x models - max. 256 - always start with 1
         best_model_dir = cleaned_lines[model]
 
         if best_model_dir == '':
@@ -434,21 +434,18 @@ def plot_group_rdm_mds(directory, mode, sort_variable, rdm_metric, numberOfModel
         # Create task variance matrix for current model in loop
         knowledgeBase = clustering.Analysis(data_dir, best_model_dir, layer, rdm_metric, 'test', hp['monthsConsidered'],'rule', True)
 
-        # Skip dummy RDMs
-        if np.allclose(knowledgeBase.rdm, knowledgeBase.rdm[0, 0]):
-            print(f"Skipping model {model} from final plot due to dummy RDM (constant dissimilarity).")
-            continue
+        # # Skip dummy RDMs
+        # if np.allclose(knowledgeBase.rdm, knowledgeBase.rdm[0, 0]):
+        #     print(f"Skipping model {model} from final plot due to dummy RDM (constant dissimilarity).")
+        #     continue
 
-        # info: Initialize mds models
-        coords_model = mds.fit_transform(knowledgeBase.rdm)
-
-        # attention: For highDim rotation alignment doesn't work
-        # if model == 1:
-        coords_ref = coords_model
-        coords_aligned = coords_model
-        # else:
-        #     R, _ = orthogonal_procrustes(coords_model, coords_ref)
-        #     coords_aligned = coords_model @ R
+        if model == 1:
+            coords_ref = mds.fit_transform(knowledgeBase.rdm)
+            coords_aligned = coords_ref
+        else:
+            coords_model = mds.fit_transform(knowledgeBase.rdm)
+            R, _ = orthogonal_procrustes(coords_model, coords_ref)
+            coords_aligned = coords_model @ R
 
         all_coords.append(coords_aligned)
         all_keys.append(knowledgeBase.keys)
@@ -459,7 +456,7 @@ def plot_group_rdm_mds(directory, mode, sort_variable, rdm_metric, numberOfModel
         # performanceTest_dir = os.path.join(directory, 'visuals', f'{sort_variable}_{mode}', 'performanceTest')
         # performanceTrain_dir = os.path.join(directory, 'visuals', f'{sort_variable}_{mode}', 'performanceTrain')
         representationalDissimilarity_dir = os.path.join(directory, 'visuals', f'{sort_variable}_{mode}',
-                                                         f'representationalDissimilarity_{rdm_metric}')
+                                                         f'representationalDissimilarity_{rdm_metric}_{ruleset}')
         # os.makedirs(performanceTest_dir, exist_ok=True)
         # os.makedirs(performanceTrain_dir, exist_ok=True)
         os.makedirs(representationalDissimilarity_dir, exist_ok=True)
@@ -468,7 +465,7 @@ def plot_group_rdm_mds(directory, mode, sort_variable, rdm_metric, numberOfModel
         np.save(os.path.join(representationalDissimilarity_dir,
                              f'{model}_{sort_variable}_{mode}' + '_' + 'batch_' + best_model_dir.split("\\")[-5] + '_' +
                              best_model_dir.split("\\")[-3].split('_')[
-                                 -4] + f'_rdmArray_{knowledgeBase.rdm_metric}.npy'), knowledgeBase.rdm)
+                                 -4] + f'_rdmArray_{knowledgeBase.rdm_metric}_{ruleset}.npy'), knowledgeBase.rdm)
 
         # info: Create RDM Heatmaps and 2D representations
         label_list = [tools.rule_name[key] for key in knowledgeBase.keys]
@@ -476,14 +473,14 @@ def plot_group_rdm_mds(directory, mode, sort_variable, rdm_metric, numberOfModel
         fig_rdm.savefig(os.path.join(representationalDissimilarity_dir,
                                      f'{model}_{sort_variable}_{mode}' + '_' + 'batch_' + best_model_dir.split("\\")[
                                          -5] + '_' + best_model_dir.split("\\")[-3].split('_')[
-                                         -4] + f'_representationalDissimilarity_{knowledgeBase.rdm_metric}.png'),
+                                         -4] + f'_representationalDissimilarity_{knowledgeBase.rdm_metric}_{ruleset}.png'),
                         format='png', dpi=300)
         fig_rdm_mds = plot_rdm_mds(knowledgeBase.rdm, knowledgeBase.rdm_metric, task_keys=knowledgeBase.keys,
                                    rule_color=rule_color)
         fig_rdm.savefig(os.path.join(representationalDissimilarity_dir,
                                      f'{model}_{sort_variable}_{mode}' + '_' + 'batch_' + best_model_dir.split("\\")[
                                          -5] + '_' + best_model_dir.split("\\")[-3].split('_')[
-                                         -4] + f'_representationalDissimilarity_{knowledgeBase.rdm_metric}_2DspaceGeometry.png'),
+                                         -4] + f'_representationalDissimilarity_{knowledgeBase.rdm_metric}_{ruleset}_2DspaceGeometry.png'),
                         format='png', dpi=300)
 
     if numberOfModels > 1:
@@ -518,7 +515,7 @@ def plot_group_rdm_mds(directory, mode, sort_variable, rdm_metric, numberOfModel
         # plt.show()
 
         plt.savefig(os.path.join(representationalDissimilarity_dir, best_model_dir.split("\\")[-3].split('_')[
-            -4] + f'_representationalDissimilarity_{knowledgeBase.rdm_metric}_2DspaceGeometry_modelAlignment_{numberOfModels}.png'), format='png', dpi=300)
+            -4] + f'_representationalDissimilarity_{knowledgeBase.rdm_metric}_{ruleset}_2DspaceGeometry_modelAlignment_{numberOfModels}.png'), format='png', dpi=300)
         plt.close()
 
 def plot_rsa(directory, participantList):
@@ -534,7 +531,10 @@ def plot_rsa(directory, participantList):
     # Gather rdmFiles in dict lists
     rdm_dict = {}
     for participant in participantList:
-        directory_ = Path(*directory.parts[:-1], f'{participant}/visuals/performance_test/representationalDissimilarity_cosine')
+        # if ruleset == 'all':
+        #     directory_ = Path(*directory.parts[:-1], f'{participant}/visuals/performance_test/representationalDissimilarity_cosine')
+        # else:
+        directory_ = Path(*directory.parts[:-1],f'{participant}/visuals/performance_test/representationalDissimilarity_cosine_{ruleset}')
 
         # Check if all defined participant in list were preprocessed - exit function if not
         if not directory_.exists():
@@ -547,12 +547,17 @@ def plot_rsa(directory, participantList):
 
     # Align rdmLists to same length
     min_length = min([len(rdm_dict[rdmList]) for rdmList in rdm_dict])
+    # min_length = 10
     for participant in participantList:
         rdm_dict[participant] = rdm_dict[participant][:min_length]
     # Load the rdm files
     for participant in participantList:
         # Re-allocate the right participant-specific path
-        directory_ = Path(*directory.parts[:-1],f'{participant}/visuals/performance_test/representationalDissimilarity_cosine')
+        # if ruleset == 'all':
+        #     directory_ = Path(*directory.parts[:-1],f'{participant}/visuals/performance_test/representationalDissimilarity_cosine')
+        # else:
+        directory_ = Path(*directory.parts[:-1],f'{participant}/visuals/performance_test/representationalDissimilarity_cosine_{ruleset}')
+
         for rdm in range(min_length):
             rdm_dict[participant][rdm] = np.load(os.path.join(str(directory_).format(participant=participant), rdm_dict[participant][rdm]))
 
@@ -620,9 +625,9 @@ def plot_rsa(directory, participantList):
             'shrink': 0.5,
             'aspect': 10,
             'label': 'RDA (1 - Spearman ρ)',
-            'ticks': np.linspace(0, 1, 6)
+            'ticks': np.linspace(0, 1.0, 6)
         },
-        vmin=0, vmax=1
+        vmin=0, vmax=1.0
     )
 
     plt.title("RDA matrix between all (66_upTri) RDM model representations", fontsize=10)
@@ -639,24 +644,25 @@ def plot_rsa(directory, participantList):
 
 # Task representation analysis - variable allocation ###################################################################
 # info: The script can only be run after participants have been analyzed by hyperparameterOverview.py
-dataType = ['highDim', 'highDim_correctOnly', 'highDim_3stimTC', 'highDim_CCN'][3]
-participantList =  ['beRNN_01', 'beRNN_04', 'beRNN_05'] # info: Only choose participants who were analyzed for RDM first
-participant = participantList[0]
-folder = ['robustnessTest', 'paperPlanes'][0]
+dataType = ['highDim', 'highDim_correctOnly', 'highDim_3stimTC', 'highDim_CCN'][1]
+# participantList =  ['beRNN_01', 'beRNN_04', 'beRNN_05'] # info: Only choose participants who were analyzed for RDM first
+participantList =  ['beRNN_01', 'beRNN_02', 'beRNN_03', 'beRNN_04', 'beRNN_05'] # info: Only choose participants who were analyzed for RDM first
+participant = participantList[4]
+folder = ['brainInitialization_brainMasking_test_4task'][0]
 directory = Path(f'C:/Users/oliver.frank/Desktop/PyProjects/beRNNmodels/{folder}/{dataType}/{participant}')
 
 mode = ['test', 'train'][0]
 sort_variable = ['performance', 'clustering'][0]
 rdm_metric = ['cosine', 'correlation'][0]
-standard_analysis = [True, False][1]
-rsa_analysis = [True, False][0]
-robustnessTest, batch = [True, False][0], '0'
+standard_analysis = [True, False][0]
+rsa_analysis = [True, False][1]
+robustnessTest, batch = [True, False][1], '0'
 
-ruleset = ['all'][0]
+ruleset = ['fundamentals', 'all'][0]
 representation = ['rate', 'weight'][0]
 restore = False
 
-numberOfModels = 21
+numberOfModels = 5 # max. number of models in folder
 
 # Define for different folder structure
 if robustnessTest == False:
@@ -670,47 +676,45 @@ cleaned_lines = [line.strip().strip('\'",') for line in lines]
 
 
 if standard_analysis == True:
-    # # head: Create individual task variance and lesioning plots ##############################################################
+    # head: Create individual task variance and lesioning plots ##############################################################
     # plot_taskVariance_and_lesioning(directory, mode, sort_variable, rdm_metric, robustnessTest, batch, numberOfModels=numberOfModels)
-    #
-    #
-    # # head: Create task variance space plots - tsne/PCA based ################################################################
-    # tsa_exist = False
-    # h_trans_all = OrderedDict()
-    # # Iterate over all models and create TR individually and on group-level
-    # for model in range(1, numberOfModels - 1):
-    #     rules = tools.rules_dict[ruleset]
-    #
-    #     best_model_dir = cleaned_lines[model]  # Choose model of interest, starting with [1]
-    #
-    #     fname = 'taskset{:s}_space_2DtaskVarianceRepresentation'.format(ruleset) + '.pkl'  # fix: set subgroups of tasks as variable here too
-    #     fname = os.path.join(best_model_dir, fname)
-    #     figName = 'taskset{:s}_space_2DtaskVarianceRepresentation_'.format(ruleset) + '_'.join(best_model_dir.split('\\')[-3].split('_')[-5:-3])
-    #
-    #     try:
-    #         if restore and os.path.isfile(fname):
-    #             print('Reloading results from ' + fname)
-    #             h_trans = tools.load_pickle(fname)
-    #         else:
-    #             tsa, tsa_exist = TaskSetAnalysis(best_model_dir), True
-    #             h_trans = tsa.compute_taskspace(fname, dim_reduction_type='PCA', epochs=['response']) # Focus on response epoch
-    #             tsa.plot_taskspace(h_trans, directory, sort_variable, mode, figName, 'individual')
-    #             # Collect all h_trans (2DtaskRepresentations) for group plot
-    #             h_trans_all = tsa.collect_h_trans(h_trans, h_trans_all, model)
-    #     except ValueError:
-    #         print('Skipping model: ' + best_model_dir.split('\\')[-3])
-    #         continue
-    #
-    # if tsa_exist:
-    #     tsa.plot_taskspace(h_trans_all, directory, sort_variable, mode, figName, 'group', lxy=(1.1, 1.1))
+
+
+    # head: Create task variance space plots - tsne/PCA based ################################################################
+    tsa_exist = False
+    h_trans_all = OrderedDict()
+    # Iterate over all models and create TR individually and on group-level
+    for model in range(1, numberOfModels + 1):
+        # rules = tools.rules_dict[ruleset]
+
+        best_model_dir = cleaned_lines[model]  # Choose model of interest, starting with [1]
+
+        fname = 'taskset{:s}_space_2DtaskVarianceRepresentation'.format(ruleset) + '.pkl'  # fix: set subgroups of tasks as variable here too
+        fname = os.path.join(best_model_dir, fname)
+        figName = 'taskset{:s}_space_2DtaskVarianceRepresentation_'.format(ruleset) + '_'.join(best_model_dir.split('\\')[-3].split('_')[-5:-3])
+
+        try:
+            tsa, tsa_exist = TaskSetAnalysis(best_model_dir), True
+            h_trans = tsa.compute_taskspace(fname, dim_reduction_type='MDS', epochs=['response']) # Focus on response epoch
+            tsa.plot_taskspace(h_trans, directory, sort_variable, mode, figName, 'individual')
+            # Collect all h_trans (2DtaskRepresentations) for group plot
+            h_trans_all = tsa.collect_h_trans(h_trans, h_trans_all, model)
+        except ValueError:
+            print('Skipping model: ' + best_model_dir.split('\\')[-3])
+            continue
+
+    if tsa_exist:
+        tsa.plot_taskspace(h_trans_all, directory, sort_variable, mode, figName, 'group', lxy=(1.1, 1.1))
 
 
     # head: Create individual rdm heatmaps, rdm 2D representations and one grouped rdm 2D representation #####################
-    plot_group_rdm_mds(directory, mode, sort_variable, rdm_metric, numberOfModels=numberOfModels)
+    plot_group_rdm_mds(directory, mode, sort_variable, rdm_metric, numberOfModels, ruleset)
+
 
 
 # Create RSA matrix for comparing rdm representations between participants #############################################
 if rsa_analysis == True:
+    # participantList = ['beRNN_03']
     plot_rsa(directory, participantList)
 
 

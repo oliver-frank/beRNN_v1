@@ -182,13 +182,13 @@ from tools import rule_name
 # import matplotlib.dates as mdates
 
 # Participant list
-participant_dir = 'C:\\Users\\oliver.frank\\Desktop\\BackUp\\Data'
+participant_dir = r'C:\Users\oliver.frank\Desktop\PyProjects\Data'
 # participantList = os.listdir(participant_dir)
 # participant = participantList[0] # choose which particpant to analyze
 months = ['1','2','3','4','5','6','7','8','9','10','11','12'] # choose which month to analyze
 strToSave = months[0] + '-' + months[-1]
 
-newParticpantList = ['BeRNN_01'] #
+newParticpantList = ['beRNN_04'] #
 
 # Assign a color to each task
 filename_color_dict = {
@@ -293,8 +293,12 @@ for participant in newParticpantList:
     max_date = max(all_x_values)
     date_range = (max_date - min_date) / 11 # info: Add one label for every newly added month - number of months  -1
 
-    x_ticks = [min_date + i * date_range for i in range(12)] # info: Add one label for every newly added month - number of months
-    x_labels = ['month 1', 'month 2', 'month 3', 'month 4', 'month 5', 'month 6', 'month 7', 'month 8', 'month 9', 'month 10', 'month 11', 'month 12']
+    # x_ticks = [min_date + i * date_range for i in range(12)] # info: Add one label for every newly added month - number of months
+    # x_labels = ['month 1', 'month 2', 'month 3', 'month 4', 'month 5', 'month 6', 'month 7', 'month 8', 'month 9', 'month 10', 'month 11', 'month 12']
+
+    start_date = min_date  # month 1
+    x_ticks = pd.date_range(start=start_date, periods=12, freq='MS')
+    x_labels = [f'Month {i}' for i in range(1, 13)]
 
     fs = 18
     plt.legend(loc='center left',fontsize=fs, ncol=2, bbox_to_anchor=(1, 0.5))
@@ -303,8 +307,10 @@ for participant in newParticpantList:
     plt.title(participant, fontsize=18)
     plt.xticks(ticks=x_ticks, labels=x_labels)
 
+    plt.xlim(x_ticks[0], x_ticks[-1])
+
     # Let matplotlib autoscale the x-axis
-    plt.autoscale(enable=True, axis='x')
+    # plt.autoscale(enable=True, axis='x')
 
     # Save the figure to the folder where the data is from
     figure_path = os.path.join(participant_dir,participant,participant + '_' + strToSave + '_' + 'PerformanceOverTime.png')

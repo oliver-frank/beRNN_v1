@@ -26,7 +26,8 @@ rules_dict = {'all' : ['DM', 'DM_Anti', 'EF', 'EF_Anti', 'RP', 'RP_Anti', 'RP_Ct
               'RPtasks' : ['RP', 'RP_Anti', 'RP_Ctx1', 'RP_Ctx2'], # RP tasks isolated
               'WMtasks' : ['WM', 'WM_Anti', 'WM_Ctx1', 'WM_Ctx2'], # WM tasks isolated
               'RP&WMCTXtasks' : ['RP', 'RP_Anti', 'RP_Ctx1', 'RP_Ctx2', 'WM_Ctx1', 'WM_Ctx2'], # cog. complexity level 2
-              'WM&WMANTItasks' : ['WM', 'WM_Anti']} # cog. complexity level 3
+              'WM&WMANTItasks' : ['WM', 'WM_Anti'], # cog. complexity level 3
+              'fundamentals' : ['DM', 'EF', 'RP', 'WM']}
 
 rule_name = {
             'DM': 'Decison Making (DM)',
@@ -655,11 +656,6 @@ def load_hp(model_dir):
     # with open(fname, 'r') as f:
     #     content = f.read()
     #     if not content.strip():
-    #         print('###################################################################################################')
-    #         print('###################################################################################################')
-    #         print('###################################################################################################')
-    #         print('###################################################################################################')
-    #         print('###################################################################################################')
     #         raise ValueError(f"Hyperparameter file '{fname}' is empty.")
     #     hp = json.loads(content)
 
@@ -667,6 +663,7 @@ def load_hp(model_dir):
     # since loading is typically for analysis
     # hp['rng'] = np.random.RandomState(hp['seed']+1000)
     # hp['rng'] = np.random.default_rng()
+
     return hp
 
 def save_hp(hp, model_dir):

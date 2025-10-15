@@ -297,6 +297,7 @@ def plot_cost_test_BeRNN(model_dir, figurePath_overview, model, figurePath, rule
     # if rule_plot == None:
     #     # rule_plot = hp['rules']
 
+    # fix cost plotting, seems to be wrongly normalized in some cases w. ceiling effect
     # Collect all log-transformed costs for scaling
     all_costs_log = ([np.log10(np.array(log['cost_train_' + rule]) + 1e-8) for rule in rule_plot]
                      + [np.log10(np.array(log['cost_' + rule]) + 1e-8) for rule in rule_plot])
@@ -541,7 +542,7 @@ if __name__ == "__main__":
 
         return fig, axs
 
-    folder, dataType, participant, batch, months = 'autoCorrelationTest_04', 'highDim_correctOnly_3stimTC', 'beRNN_04', '01', ['month_4', 'month_5', 'month_6']
+    folder, dataType, participant, batch, months = 'brainInitialization_brainMasking_test', 'highDim_correctOnly', 'beRNN_03', '01', ['month_4', 'month_5', 'month_6']
     _finalPath = Path('C:/Users/oliver.frank/Desktop/PyProjects/beRNNmodels', f'{folder}/{dataType}/{participant}/{batch}')
     _data_dir = Path('C:/Users/oliver.frank/Desktop/PyProjects/Data')
 

@@ -44,9 +44,18 @@ def _compute_variance_bymodel(data_dir, model_dir, layer, data_type, networkAnal
     hp.setdefault('rng', np.random.default_rng())
     # model_dir = model.model_dir
 
-    if rules is None:
-        rules = hp['rules']
-    print(rules)
+    # attention: ###################################################################################################
+    rules = [key for key in hp["rule_prob_map"].keys() if hp["rule_prob_map"][key] != 0]
+
+    if len(rules) == 12:
+        ruleset = 'all'
+    elif rules == ["DM", "EF", "RP", "WM"]:
+        ruleset = 'fundamentals'
+    else:
+        ruleset = 'taskSubset'
+    # attention: ###################################################################################################
+
+    # print(rules)
 
     if hp.get('multiLayer') == True:
         # n_hidden = hp['n_rnn_per_layer'][layer-1]
@@ -66,7 +75,7 @@ def _compute_variance_bymodel(data_dir, model_dir, layer, data_type, networkAnal
     train_data, eval_data = tools.createSplittedDatasets(hp, data_dir, month)
 
     # Skip taskVariance creation if already exists
-    save_name = 'var_' + mode + '_lay' + str(layer) + '_' + data_type
+    save_name = 'var_' + mode + '_lay' + str(layer) + '_' + data_type + f'_{ruleset}'
     if random_rotation:
         save_name += '_rr'
     fname = os.path.join(model_dir, save_name + '.pkl')
@@ -160,7 +169,7 @@ def _compute_variance_bymodel(data_dir, model_dir, layer, data_type, networkAnal
                     h_var_all[:, i] = val.var(axis=1).mean(axis=0)
 
                 result = {'h_var_all': h_var_all, 'keys': list(h_all.keys())}
-                save_name = 'var_' + mode + '_lay' + str(layer) + '_' + data_type
+                save_name = 'var_' + mode + '_lay' + str(layer) + '_' + data_type + f'_{ruleset}'
 
                 if random_rotation:
                     save_name += '_rr'

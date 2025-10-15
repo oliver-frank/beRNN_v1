@@ -39,6 +39,16 @@ def apply_threshold(matrix, threshold):
     matrix_thresholded = np.where(np.abs(matrix) > threshold, matrix,0)
     return matrix_thresholded
 
+def apply_density_threshold(matrix, density=0.1):
+    """Keep top X% of edges globally (density in [0,1])."""
+    n = matrix.shape[0]
+    # Get all upper-triangle values
+    triu_vals = matrix[np.triu_indices(n, k=1)]
+    cutoff = np.quantile(triu_vals, 1 - density)  # e.g., top 10%
+    # Zero out everything below cutoff
+    thresholded = np.where(matrix >= cutoff, matrix, 0)
+    return thresholded
+
 def getAndSafeModValue(data_dir, model_dir, hp, model, sess, log):
     fname = variance.compute_variance(data_dir, model_dir, layer=1, mode='test',
                                       monthsConsidered=hp['monthsConsidered'], data_type='rule', networkAnalysis=False,
@@ -49,18 +59,16 @@ def getAndSafeModValue(data_dir, model_dir, hp, model, sess, log):
     h_var_all_ = res['h_var_all']
 
     activityThreshold = 1e-5
-    ind_active = np.where(h_var_all_.sum(axis=1) >= activityThreshold)[
-        0]  # attention: > 1e-3 - min > 0 | it seems like hidden architecture can have very low h_var
+    ind_active = np.where(h_var_all_.sum(axis=1) >= activityThreshold)[0]  # info: > 1e-3 - min > 0
     h_var_all = h_var_all_[ind_active, :]
 
-    # attention: fallback if clustering is not possible
+    # info: fallback if clustering is not possible
     if h_var_all.shape[0] < 2 or np.all(h_var_all.sum(axis=1) <= 1e-2):
         # if h_var_all.shape[0] < 2 or np.where(h_var_all_.sum(axis=1) < activityThreshold):
         print(f"Skipping clustering for model {model_dir} — insufficient data or variance.")
 
-        h_normvar_all = np.array([[1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
-                                  [0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-                                   0.0]])
+        # Create meaningless dummy matrix for further calculation and to prevent code crashing
+        h_normvar_all = np.ones((12, 128)) * 0.5
 
     else:
         # Normalize by the total variance across tasks
@@ -72,17 +80,25 @@ def getAndSafeModValue(data_dir, model_dir, hp, model, sess, log):
     norm[norm == 0] = 1e-8  # Prevent division by zero
     data_normalized = data_centered / norm
     correlation = np.dot(data_normalized, data_normalized.T)
-    # Compute topological marker
-    threshold = 0.5  # info: can be adjusted!
-    functionalCorrelation_thresholded = apply_threshold(correlation, threshold)
-    # Function to apply a threshold to the matrix
-    G = nx.from_numpy_array(functionalCorrelation_thresholded)
-    # Modularity: Modularity measures the strength of division of a graph into communities (clusters/modules). A higher modularity means
-    # many within-cluster edges and few between-cluster edges.
-    communities = greedy_modularity_communities(G)
-    mod_value = modularity(G, communities)
 
-    log['modularity'].append(mod_value)
+    # Compute modularity
+    functionalCorrelation_density = apply_density_threshold(correlation, density=0.1)
+    np.fill_diagonal(functionalCorrelation_density, 0)  # prevent self-loops
+    G_sparse = nx.from_numpy_array(functionalCorrelation_density)
+
+    if G_sparse.number_of_edges() == 0 or G_sparse.number_of_nodes() < 2:
+        print(f"Skipping modularity calculation for {model_dir} — graph has no edges.")
+        mod_value_sparse = 0
+    else:
+        try:
+            communities_sparse = greedy_modularity_communities(G_sparse)
+            mod_value_sparse = modularity(G_sparse, communities_sparse)
+        except Exception as e:
+            print(f"Greedy modularity failed for {model_dir}. Setting mod_value=0. ({e})")
+            mod_value_sparse = 0
+
+    # log['modularity_weighted'].append(mod_value_weighted)
+    log['modularity_sparse'].append(mod_value_sparse)
     tools.save_log(log)
 
 def get_default_hp(ruleset):
@@ -98,11 +114,11 @@ def get_default_hp(ruleset):
     n_rule = tools.get_num_rule(ruleset)
 
     machine = 'local' # 'local' 'pandora' 'hitkip'
-    data = 'data_highDim_correctOnly_3stimTC' # 'data_highDim' , data_highDim_correctOnly , data_highDim_lowCognition , data_lowDim , data_lowDim_correctOnly , data_lowDim_lowCognition, 'data_highDim_correctOnly_3stimTC'
+    data = 'data_highDim_correctOnly'  # 'data_highDim' , data_highDim_correctOnly , data_highDim_lowCognition , data_lowDim , data_lowDim_correctOnly , data_lowDim_lowCognition, 'data_highDim_correctOnly_3stimTC'
     trainingBatch = '01'
-    trainingYear_Month = 'liberalEvaluation_correctOnly_3stimTC'
+    trainingYear_Month = 'randInitialization_noMasking_test'
 
-    if 'highDim' in data: # fix: lowDim_timeCompressed needs to be skipped here
+    if 'highDim' in data:  # fix: lowDim_timeCompressed needs to be skipped here
         n_eachring = 32
         n_outputring = n_eachring
         n_input, n_output = 1 + num_ring * n_eachring + n_rule, n_outputring + 1
@@ -113,61 +129,72 @@ def get_default_hp(ruleset):
 
     hp = {
         # batch size for training and evaluations
-        'batch_size': 80, # 20/40/80/120/160
+        'batch_size': 80,  # 20/40/80/120/160
         # 'batch_size_test': 640, # batch_size for testing
-        'in_type': 'normal', # input type: normal, multi
-        'rnn_type': 'LeakyRNN', # Type of RNNs: NonRecurrent, LeakyRNN, LeakyGRU, EILeakyGRU | GRU, LSTM
-        'multiLayer': False, # only applicaple with LeakyRNN
-        'n_rnn': 128,  # number of recurrent units for one hidden layer architecture
-        'activation': 'relu',  # Type of activation runctions, relu, softplus, tanh, elu, linear
+        'in_type': 'normal',  # input type: normal, multi
+        'rnn_type': 'LeakyRNN',  # Type of RNNs: NonRecurrent, LeakyRNN, LeakyGRU, EILeakyGRU | GRU, LSTM
+        'multiLayer': False,  # only applicaple with LeakyRNN
+        'n_rnn': 256,  # number of recurrent units for one hidden layer architecture
+        'activation': 'softplus',  # Type of activation runctions, relu, softplus, tanh, elu, linear
         'n_rnn_per_layer': [256, 128, 64],
         'activations_per_layer': ['relu', 'tanh', 'linear'],
-        'loss_type': 'lsq', # # Type of loss functions - Cross-entropy loss
-        'optimizer': 'adam', # 'adam', 'sgd'
-        'tau': 100, # # Time constant (ms)- default 100
-        'dt': 20, # discretization time step (ms) .
+        'loss_type': 'lsq',  # # Type of loss functions - Cross-entropy loss
+        'optimizer': 'adam',  # 'adam', 'sgd'
+        'tau': 100,  # # Time constant (ms)- default 100
+        'dt': 20,  # discretization time step (ms) .
         # 'alpha': 0.2, # (redundant) discretization time step/time constant - dt/tau = alpha - ratio decides on how much previous states are taken into account for current state - low alpha more memory, high alpha more forgetting - alpha * h(t-1)
-        'sigma_rec': 0, # recurrent noise - directly influencing the noise added to the network
-        'sigma_x': 0, # input noise
-        'w_rec_init': 'diag', # leaky_rec weight initialization, diag, randortho, randgauss, brainStructure (only accessible with LeakyRNN : 32-256)
-        'l1_h': 0, # l1 lambda (regularizing with absolute value of magnitude of coefficients, leading to sparse features)
-        'l2_h': 0, # l2 lambda (regularizing with squared value of magnitude of coefficients, decreasing influence of features)
-        'l1_weight': 1e-3, # l2 regularization on weight
-        'l2_weight': 0, # l2 regularization on weight
-        'l2_weight_init': 0, # l2 regularization on deviation from initialization
-        'p_weight_train': None, # proportion of weights not to be regularized, None or float between (0, 1) - 1-p_weight_train will be multiplied by w_mask_value
-        'w_mask_value': 0.1, # default .1 - value that will be multiplied with L2 regularization (combined with p_weight_train), <1 will decrease it
-        'target_perf': 1.0, # Stopping performance
-        'n_eachring': n_eachring, # number of units each ring
-        'num_ring': num_ring, # number of rings
-        'n_rule': n_rule, # number of rules
-        'rule_start': 1 + num_ring * n_eachring, # first input index for rule units
-        'n_input': n_input, # number of input units
-        'n_output': n_output, # number of output units
-        'rng': np.random.default_rng(), # add seed here if you want to make it reproducible e.g. (42)
-        'ruleset': ruleset, # number of input units
-        'save_name': 'test', # name to save
-        'learning_rate': 0.0005, # learning rate
-        'learning_rate_mode': 'triangular2', # Will overwrite learning_rate if it is not None - 'triangular', 'triangular2', 'exp_range', 'decay'
+        'sigma_rec': 0.01,  # recurrent noise - directly influencing the noise added to the network
+        'sigma_x': 0,  # input noise
+        'w_rec_init': 'randgauss',
+        # leaky_rec weight initialization, diag, randortho, randgauss, brainStructure (only accessible with LeakyRNN : 32-256)
+        'l1_h': 1e-05,
+        # l1 lambda (regularizing with absolute value of magnitude of coefficients, leading to sparse features)
+        'l2_h': 0,
+        # l2 lambda (regularizing with squared value of magnitude of coefficients, decreasing influence of features)
+        'l1_weight': 0.001,  # l2 regularization on weight
+        'l2_weight': 0,  # l2 regularization on weight
+        'l2_weight_init': 0,  # l2 regularization on deviation from initialization
+        'p_weight_train': None,
+        # proportion of weights not to be regularized, None or float between (0, 1) - 1-p_weight_train will be multiplied by w_mask_value
+        'w_mask_value': 0.1,
+        # default .1 - value that will be multiplied with L2 regularization (combined with p_weight_train), <1 will decrease it
+        'target_perf': 1.0,  # Stopping performance
+        'n_eachring': n_eachring,  # number of units each ring
+        'num_ring': num_ring,  # number of rings
+        'n_rule': n_rule,  # number of rules
+        'rule_start': 1 + num_ring * n_eachring,  # first input index for rule units
+        'n_input': n_input,  # number of input units
+        'n_output': n_output,  # number of output units
+        'rng': np.random.default_rng(),  # add seed here if you want to make it reproducible e.g. (42)
+        'ruleset': ruleset,  # number of input units
+        'save_name': 'test',  # name to save
+        'learning_rate': 0.0005,  # learning rate
+        'learning_rate_mode': 'triangular2',
+        # Will overwrite learning_rate if it is not None - 'triangular', 'triangular2', 'exp_range', 'decay'
         'base_lr': [5e-4],
         'max_lr': [15e-4],
-        'errorBalancingValue': 1., # will be multiplied with c_mask_responseValue for objective error trials - 1. means no difference between errors and corrects are made
-        'c_mask_responseValue': 5., # c_mask response epoch value - strenght response epoch is taken into account for error calculation
-        's_mask': None, # 'sc1000', None - info: only accesible on local machine
-        'rule_probs': None, # Rule probabilities to be drawn
+        'errorBalancingValue': 1.,
+        # will be multiplied with c_mask_responseValue for objective error trials - 1. means no difference between errors and corrects are made
+        'c_mask_responseValue': 5.,
+        # c_mask response epoch value - strenght response epoch is taken into account for error calculation
+        's_mask': None,  # 'brain_256', None - info: only accesible on local machine
+        'rule_probs': None,  # Rule probabilities to be drawn
         'use_separate_input': False,  # whether rule and stimulus inputs are represented separately
         # 'c_intsyn': 0, # intelligent synapses parameters, tuple (c, ksi) -> Yang et al. only apply these in sequential training
         # 'ksi_intsyn': 0,
-        'monthsConsidered': ['month_4', 'month_5', 'month_6'], # months to train and test
-        'monthsString': '4-6', # monthsTaken
-        'generalizationTest': False, # SHould their be a month-wise distance applied between train and eval data
-        'distanceOfEvaluationData': 0, # distance between test and evaluation data month-wise to check generalization performance
-        'rule_prob_map': {"DM": 1,"DM_Anti": 1,"EF": 1,"EF_Anti": 1,"RP": 1,"RP_Anti": 1,"RP_Ctx1": 1,"RP_Ctx2": 1,"WM": 1,"WM_Anti": 1,"WM_Ctx1": 1,"WM_Ctx2": 1},
-        # 'rule_prob_map': {"DM": 0,"DM_Anti": 0,"EF": 0,"EF_Anti": 0,"RP": 0,"RP_Anti": 1,"RP_Ctx1": 0,"RP_Ctx2": 0,"WM": 0,"WM_Anti": 0,"WM_Ctx1": 0,"WM_Ctx2": 0},
-        'tasksString': 'Alltask', # tasks taken
-        'sequenceMode': True, # Decide if models are trained sequentially month-wise
-        'participant': 'beRNN_03', # Participant to take
-        'data': data, # 'data_highDim' , data_highDim_correctOnly , data_highDim_lowCognition , data_lowDim , data_lowDim_correctOnly , data_lowDim_lowCognition, data_timeCompressed, data_lowDim_timeCompressed
+        'monthsConsidered': ['month_4', 'month_5', 'month_6'],  # months to train and test
+        'monthsString': '4-6',  # monthsTaken
+        'generalizationTest': False,  # Should their be a month-wise distance applied between train and eval data
+        'distanceOfEvaluationData': 0,
+        # distance between test and evaluation data month-wise to check generalization performance
+        'rule_prob_map': {"DM": 1, "DM_Anti": 1, "EF": 1, "EF_Anti": 1, "RP": 1, "RP_Anti": 1, "RP_Ctx1": 1,
+                          "RP_Ctx2": 1, "WM": 1, "WM_Anti": 1, "WM_Ctx1": 1, "WM_Ctx2": 1},
+        # 'rule_prob_map': {"DM": 0,"DM_Anti": 0,"EF": 0,"EF_Anti": 0,"RP": 0,"RP_Anti": 1,"RP_Ctx1": 0,"RP_Ctx2": 0,"WM": 0,"WM_Anti": 0,"WM_Ctx1": 0,"WM_Ctx2": 0}, # fraction of tasks represented in training data
+        'tasksString': 'Alltask',  # tasks taken
+        'sequenceMode': True,  # Decide if models are trained sequentially month-wise
+        'participant': 'beRNN_05',  # Participant to take
+        'data': data,
+        # 'data_highDim' , data_highDim_correctOnly , data_highDim_lowCognition , data_lowDim , data_lowDim_correctOnly , data_lowDim_lowCognition, data_timeCompressed, data_lowDim_timeCompressed
         'machine': machine,
         'trainingBatch': trainingBatch,
         'trainingYear_Month': trainingYear_Month
@@ -202,7 +229,6 @@ def do_eval(sess, model, log, rule_train, eval_data):
         creg_tmp = list()
         perf_tmp = list()
 
-
         for i_rep in range(n_rep):
             try:
                 x,y,y_loc,response = tools.load_trials(hp['rng'], task, mode, hp['batch_size'], eval_data, False)  # y_loc is participantResponse_perfEvalForm
@@ -236,20 +262,25 @@ def do_eval(sess, model, log, rule_train, eval_data):
                     pref = np.arange(0, 2 * np.pi, 2 * np.pi / 32)
                     # Check how many corrects are available per trial
                     for trial in range(np.shape(y_loc)[1]):
-                        # Get number of correct responses
-                        correctResponseDirection = np.where(pref == y_loc[-1][trial])[0][0]
-                        correctIndicesArray_color = np.where(x[-1, trial, 1:33] == x[-1, trial, correctResponseDirection+1])[0]
-                        correctIndicesArray_form = np.where(x[-1, trial, 33:65] == x[-1, trial, correctResponseDirection+33])[0]
-                        # Compare both lists and keep only overlaps
-                        correctIndicesArray_ = [x for x in correctIndicesArray_color if x in correctIndicesArray_form]
+                        try:
+                            if y_loc[-1][trial] != 0.05: # exclude highDim noResponse responses
+                                # Get number of correct responses
+                                correctResponseDirection = np.where(pref == y_loc[-1][trial])[0][0]
+                                correctIndicesArray_color = np.where(x[-1, trial, 1:33] == x[-1, trial, correctResponseDirection+1])[0]
+                                correctIndicesArray_form = np.where(x[-1, trial, 33:65] == x[-1, trial, correctResponseDirection+33])[0]
+                                # Compare both lists and keep only overlaps
+                                correctIndicesArray_ = [x for x in correctIndicesArray_color if x in correctIndicesArray_form]
 
-                        # Keep all except the one you already used for perf_test calculation
-                        correctIndicesArray = [x for x in correctIndicesArray_ if x != correctResponseDirection]
+                                # Keep all except the one you already used for perf_test calculation
+                                correctIndicesArray = [x for x in correctIndicesArray_ if x != correctResponseDirection]
 
+                                # Generate perf_test for each possible correct response
+                                if len(correctIndicesArray) > 0:
+                                        y_loc[35:, trial] = pref[correctIndicesArray[0]] # store the second objectively correct response direction as y_loc - last one enough for evaluation
 
-                        # Generate perf_test for each possible correct response
-                        if len(correctIndicesArray) > 0:
-                                y_loc[35:, trial] = pref[correctIndicesArray[0]] # store the second objectively correct response direction as y_loc - last one enough for evaluation
+                        except Exception as e: # Mainly issues with data_highDim occure
+                            print(f"Skipping trial {trial} due to error: {e}")
+                            continue
 
                     # Calculate performance one more time
                     perf_test = np.mean(get_perf(y_hat_test, y_loc))  # info: y_loc is participant response as groundTruth
@@ -266,19 +297,25 @@ def do_eval(sess, model, log, rule_train, eval_data):
                     pref = np.arange(0, 2 * np.pi, 2 * np.pi / 32)
                     # Check how many corrects are available per trial
                     for trial in range(np.shape(y_loc)[1]):
-                        # Get number of correct responses
-                        correctResponseDirection = np.where(pref == y_loc[-1][trial])[0][0]
-                        # correctIndicesArray_color = np.where(x[-1, trial, 1:33] == x[-1, trial, correctResponseDirection + 1])[0]
-                        correctIndicesArray_form = np.where(x[-1, trial, 33:65] == x[-1, trial, correctResponseDirection + 33])[0]
-                        # Compare both lists and keep only overlaps
-                        # correctIndicesArray_ = [x for x in correctIndicesArray_color if x in correctIndicesArray_form]
+                        try:
+                            if y_loc[-1][trial] != 0.05:  # exclude highDim noResponse responses
+                                # Get number of correct responses
+                                correctResponseDirection = np.where(pref == y_loc[-1][trial])[0][0]
+                                # correctIndicesArray_color = np.where(x[-1, trial, 1:33] == x[-1, trial, correctResponseDirection + 1])[0]
+                                correctIndicesArray_form = np.where(x[-1, trial, 33:65] == x[-1, trial, correctResponseDirection + 33])[0]
+                                # Compare both lists and keep only overlaps
+                                # correctIndicesArray_ = [x for x in correctIndicesArray_color if x in correctIndicesArray_form]
 
-                        # Keep all except the one you already used for perf_test calculation
-                        correctIndicesArray = [x for x in correctIndicesArray_form if x != correctResponseDirection]
+                                # Keep all except the one you already used for perf_test calculation
+                                correctIndicesArray = [x for x in correctIndicesArray_form if x != correctResponseDirection]
 
-                        # Generate perf_test for each possible correct response
-                        if len(correctIndicesArray) > 0:
-                            y_loc[35:, trial] = pref[correctIndicesArray[0]]  # store the second objectively correct response direction as y_loc - last one enough for evaluation
+                                # Generate perf_test for each possible correct response
+                                if len(correctIndicesArray) > 0:
+                                    y_loc[35:, trial] = pref[correctIndicesArray[0]]  # store the second objectively correct response direction as y_loc - last one enough for evaluation
+
+                        except Exception as e: # Mainly issues with data_highDim occure
+                            print(f"Skipping trial {trial} due to error: {e}")
+                            continue
 
                     # Calculate performance one more time
                     perf_test = np.mean(get_perf(y_hat_test, y_loc))  # info: y_loc is participant response as groundTruth
@@ -390,35 +427,58 @@ def train(data_dir, model_dir,train_data ,eval_data,hp=None,max_steps=3e6,displa
     # head: Add 'rng' here after it was pop out
     hp['rng'] = np.random.default_rng()
 
+
     # # info: Create structural mask to multiply with hidden layer
     # if hp['s_mask'] == 'sc1000':
     #     import scipy.io
-    #     sc = scipy.io.loadmat('C:\\Users\\oliver.frank\\Desktop\\PyProjects\\beRNN_v1\\masks\\sc1000')
+    #      sc = scipy.io.loadmat('C:\\Users\\oliver.frank\\Desktop\\PyProjects\\beRNN_v1\\masks\\sc1000')
     #     # sc = scipy.io.loadmat('C:\\Users\\oliver.frank\\Desktop\\PyProjects\\beRNN_v1\\masks\\sc100')
     #     sc_mask = sc['mat_zero'] # 1000
     #     # sc_mask = sc['shaefer_rsn'] # 100
     #
-    #     # info: quadratic mask matrix necessary - attention: maskSize = numberHiddenUnits !
+    #     # info: quadratic mask matrix necessary - maskSize = numberHiddenUnits !
     #     maskSize = sc_mask.shape[0]
     #     for i in range(0, maskSize):
     #         for j in range(0, maskSize):
-    #             sc_mask[i, j] = 1 if sc_mask[i, j] > 11 else 0
+    #             sc_mask[i, j] = 1 if sc_mask[i, j] > 11 else 0 # threshold set here
+    #
+    #     import numpy as np
+    #     count_ones = np.count_nonzero(sc_mask[0,:] == 1)
+    #
+    #     import matplotlib.pyplot as plt
+    #
+    #     plt.figure(figsize=(8, 8))
+    #     plt.imshow(sc_mask, aspect='auto', cmap='coolwarm')
+    #     plt.colorbar()
+    #     plt.title("Visualization of a 1000x1000 ndarray")
+    #     plt.show()
 
-        # import numpy as np
-        # count_ones = np.count_nonzero(sc_mask[0,:] == 1) # info: 495 hidden units are trained if threshold = ß
-        #
-        # # info: Visualize the structural matrix
-        # import matplotlib.pyplot as plt
-        #
-        # plt.figure(figsize=(8, 8))
-        # plt.imshow(sc_mask, aspect='auto', cmap='coolwarm')
-        # plt.colorbar()
-        # plt.title("Visualization of a 1000x1000 ndarray")
-        # plt.show()
 
         # hp['s_mask'] = sc_mask
-    # elif # fix: Add other structural masks here
+    if hp['s_mask'] != None:
+        maskSize = int(hp['s_mask'].split('_')[1])
+        # attention: Currently set up for local machine analysis of remotely trained models ############################
+        if hp['machine'] == 'hitkip':
+            structuralMask = np.load(os.path.join(
+                fr'C:\Users\oliver.frank\Desktop\PyProjects\beRNN_v1\masks\connectomes_{hp["participant"]}', f'connectome_{hp["participant"]}_{maskSize}.npy'))
+        # elif hp['machine'] == 'hitkip':
+        #     structuralMask = np.load(os.path.join(
+        #         fr'/zi/home/oliver.frank/Desktop/RNN/multitask_BeRNN-main/masks/connectomes_{hp["participant"]}', f'connectome_{hp["participant"]}_{maskSize}.npy'))
+        # np.mean(structuralMask != 0)
+        # attention: Currently set up for local machine analysis of remotely trained models ############################
 
+        structuralMask_binary = structuralMask.copy()
+        counter1 = 0
+
+        for i in range(0, maskSize):
+            for j in range(0, maskSize):
+                if structuralMask[i, j] > 0.025:
+                    structuralMask_binary[i, j] = 1
+                    counter1 += 1
+                else:
+                    structuralMask_binary[i, j] = 0
+
+        hp['s_mask'] = structuralMask_binary
 
     # Build the model
     model = Model(model_dir, hp=hp)
@@ -547,7 +607,6 @@ def train(data_dir, model_dir,train_data ,eval_data,hp=None,max_steps=3e6,displa
                 else:
                     perf_train = np.round(np.mean(get_perf(y_hat_train, y_loc)),3) # info: y_loc is participant response as groundTruth
 
-                print('perf_train   ', perf_train)
                 clsq_train_tmp.append(c_lsq_train)
                 creg_train_tmp.append(c_reg_train)
                 perf_train_tmp.append(perf_train)
@@ -598,7 +657,7 @@ if __name__ == '__main__':
         # Define data path
         preprocessedData_path = os.path.join(path, 'Data', hp['participant'], hp['data'])
 
-        for month in hp['monthsConsidered']: # attention: You have to delete this if cascade training should be set OFF
+        for month in hp['monthsConsidered']: # info: You have to delete this if cascade training should be set OFF
             # Adjust variables manually as needed
             model_name = f'model_{month}'
 
@@ -609,11 +668,11 @@ if __name__ == '__main__':
                     numberOfLayers = len(hp['n_rnn_per_layer'])
                     if numberOfLayers == 2:
                         model_dir = os.path.join(
-                            f"{path}\\beRNNmodels\\{hp['trainingYear_Month']}\\{hp['participant']}\\{hp['trainingBatch']}\\{hp['participant']}_{hp['tasksString']}_{hp['monthsString']}_{hp['data']}_iteration{modelNumber}_{hp['rnn_type']}_{hp['w_rec_init']}_{hp['n_rnn_per_layer'][0]}-{hp['n_rnn_per_layer'][1]}_{hp['activations_per_layer'][0]}-{hp['activations_per_layer'][1]}",model_name)
+                            f"{path}\\beRNNmodels\\{hp['trainingYear_Month']}\\{hp['data'].split('data_')[-1]}\\{hp['participant']}\\{hp['trainingBatch']}\\{hp['participant']}_{hp['tasksString']}_{hp['monthsString']}_{hp['data'].split('data_')[-1]}_iter{modelNumber}_{hp['rnn_type']}_{hp['w_rec_init']}_{hp['n_rnn_per_layer'][0]}-{hp['n_rnn_per_layer'][1]}_{hp['activations_per_layer'][0][0]}-{hp['activations_per_layer'][1][0]}",model_name)
                     else:
-                        model_dir = os.path.join(f"{path}\\beRNNmodels\\{hp['trainingYear_Month']}\\{hp['participant']}\\{hp['trainingBatch']}\\{hp['participant']}_{hp['tasksString']}_{hp['monthsString']}_{hp['data']}_iteration{modelNumber}_{hp['rnn_type']}_{hp['w_rec_init']}_{hp['n_rnn_per_layer'][0]}-{hp['n_rnn_per_layer'][1]}-{hp['n_rnn_per_layer'][2]}_{hp['activations_per_layer'][0]}-{hp['activations_per_layer'][1]}-{hp['activations_per_layer'][2]}", model_name)
+                        model_dir = os.path.join(f"{path}\\beRNNmodels\\{hp['trainingYear_Month']}\\{hp['data'].split('data_')[-1]}\\{hp['participant']}\\{hp['trainingBatch']}\\{hp['participant']}_{hp['tasksString']}_{hp['monthsString']}_{hp['data'].split('data_')[-1]}_iter{modelNumber}_{hp['rnn_type']}_{hp['w_rec_init']}_{hp['n_rnn_per_layer'][0]}-{hp['n_rnn_per_layer'][1]}-{hp['n_rnn_per_layer'][2]}_{hp['activations_per_layer'][0][0]}-{hp['activations_per_layer'][1][0]}-{hp['activations_per_layer'][2][0]}", model_name)
                 else:
-                    model_dir = os.path.join(f"{path}\\beRNNmodels\\{hp['trainingYear_Month']}\\{hp['participant']}\\{hp['trainingBatch']}\\{hp['participant']}_{hp['tasksString']}_{hp['monthsString']}_{hp['data']}_iteration{modelNumber}_{hp['rnn_type']}_{hp['w_rec_init']}_{hp['n_rnn']}_{hp['activation']}",model_name)
+                    model_dir = os.path.join(f"{path}\\beRNNmodels\\{hp['trainingYear_Month']}\\{hp['data'].split('data_')[-1]}\\{hp['participant']}\\{hp['trainingBatch']}\\{hp['participant']}_{hp['tasksString']}_{hp['monthsString']}_{hp['data'].split('data_')[-1]}_iter{modelNumber}_{hp['rnn_type']}_{hp['w_rec_init']}_{hp['n_rnn']}_{hp['activation']}",model_name)
 
             elif hp['machine'] == 'hitkip' or hp['machine'] == 'pandora':
                 if hp['multiLayer'] == True:
@@ -621,13 +680,13 @@ if __name__ == '__main__':
                     numberOfLayers = len(hp['n_rnn_per_layer'])
                     if numberOfLayers == 2:
                         model_dir = os.path.join(
-                            f"{path}/beRNNmodels/{hp['trainingYear_Month']}/{hp['participant']}/{hp['trainingBatch']}/{hp['participant']}_{hp['tasksString']}_{hp['monthsString']}_{hp['data']}_iteration{modelNumber}_{hp['rnn_type']}_{hp['w_rec_init']}_{hp['n_rnn_per_layer'][0]}-{hp['n_rnn_per_layer'][1]}_{hp['activations_per_layer'][0]}-{hp['activations_per_layer'][1]}",model_name)
+                            f"{path}/beRNNmodels/{hp['trainingYear_Month']}/{hp['data'].split('data_')[-1]}/{hp['participant']}/{hp['trainingBatch']}/{hp['participant']}_{hp['tasksString']}_{hp['monthsString']}_{hp['data'].split('data_')[-1]}_iter{modelNumber}_{hp['rnn_type']}_{hp['w_rec_init']}_{hp['n_rnn_per_layer'][0]}-{hp['n_rnn_per_layer'][1]}_{hp['activations_per_layer'][0][0]}-{hp['activations_per_layer'][1][0]}",model_name)
                     else:
                         model_dir = os.path.join(
-                            f"{path}/beRNNmodels/{hp['trainingYear_Month']}/{hp['participant']}/{hp['trainingBatch']}/{hp['participant']}_{hp['tasksString']}_{hp['monthsString']}_{hp['data']}_iteration{modelNumber}_{hp['rnn_type']}_{hp['w_rec_init']}_{hp['n_rnn_per_layer'][0]}-{hp['n_rnn_per_layer'][1]}-{hp['n_rnn_per_layer'][2]}_{hp['activations_per_layer'][0]}-{hp['activations_per_layer'][1]}-{hp['activations_per_layer'][2]}",model_name)
+                            f"{path}/beRNNmodels/{hp['trainingYear_Month']}/{hp['data'].split('data_')[-1]}/{hp['participant']}/{hp['trainingBatch']}/{hp['participant']}_{hp['tasksString']}_{hp['monthsString']}_{hp['data'].split('data_')[-1]}_iter{modelNumber}_{hp['rnn_type']}_{hp['w_rec_init']}_{hp['n_rnn_per_layer'][0]}-{hp['n_rnn_per_layer'][1]}-{hp['n_rnn_per_layer'][2]}_{hp['activations_per_layer'][0][0]}-{hp['activations_per_layer'][1][0]}-{hp['activations_per_layer'][2][0]}",model_name)
                 else:
                     model_dir = os.path.join(
-                        f"{path}/beRNNmodels/{hp['trainingYear_Month']}/{hp['participant']}/{hp['trainingBatch']}/{hp['participant']}_{hp['tasksString']}_{hp['monthsString']}_{hp['data']}_iteration{modelNumber}_{hp['rnn_type']}_{hp['w_rec_init']}_{hp['n_rnn']}_{hp['activation']}",model_name)
+                        f"{path}/beRNNmodels/{hp['trainingYear_Month']}/{hp['data'].split('data_')[-1]}/{hp['participant']}/{hp['trainingBatch']}/{hp['participant']}_{hp['tasksString']}_{hp['monthsString']}_{hp['data'].split('data_')[-1]}_iter{modelNumber}_{hp['rnn_type']}_{hp['w_rec_init']}_{hp['n_rnn']}_{hp['activation']}",model_name)
 
 
             if not os.path.exists(model_dir):
@@ -666,7 +725,7 @@ if __name__ == '__main__':
         trainingTimeTotal_hours += elapsed_time_hours
 
     # Save training time total and list to folder as a text file
-    file_path = os.path.join(path, 'beRNNmodels', hp['trainingYear_Month'], hp['participant'], hp['trainingBatch'], 'times.txt')
+    file_path = os.path.join(path, 'beRNNmodels', hp['trainingYear_Month'], hp['data'].split('data_')[-1], hp['participant'], hp['trainingBatch'], 'times.txt')
 
     with open(file_path, 'w') as f:
         f.write(f"training time total (hours): {trainingTimeTotal_hours}\n")
@@ -675,5 +734,24 @@ if __name__ == '__main__':
             f.write(f"{time}\n")
 
     print(f"Training times saved to {file_path}")
+
+
+
+# import os
+#
+# # your main directory
+# base_dir = r"C:\Users\oliver.frank\Desktop\PyProjects\beRNNmodels\brainInitialization_brainMasking_test_networkSize_256_gridSearch\highDim_correctOnly\beRNN_05"
+#
+# # walk from deepest subfolders upward to avoid path issues
+# for root, dirs, files in os.walk(base_dir, topdown=False):
+#     for d in dirs:
+#         # print(os.path.join(root, d))
+#         old_path = os.path.join(root, d)
+#         new_name = d.replace("trainingBatch", "tB").replace("iteration", "iter")
+#         new_path = os.path.join(root, new_name)
+#
+#         if old_path != new_path:
+#             os.rename(old_path, new_path)
+#             print(f"Renamed:\n  {old_path}\n→ {new_path}\n")
 
 
