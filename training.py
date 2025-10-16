@@ -116,7 +116,7 @@ def get_default_hp(ruleset):
     machine = 'local' # 'local' 'pandora' 'hitkip'
     data = 'data_highDim_correctOnly'  # 'data_highDim' , data_highDim_correctOnly , data_highDim_lowCognition , data_lowDim , data_lowDim_correctOnly , data_lowDim_lowCognition, 'data_highDim_correctOnly_3stimTC'
     trainingBatch = '01'
-    trainingYear_Month = 'randInitialization_noMasking_test'
+    trainingYear_Month = 'justAnotherTest_1e6_'
 
     if 'highDim' in data:  # fix: lowDim_timeCompressed needs to be skipped here
         n_eachring = 32
@@ -134,7 +134,7 @@ def get_default_hp(ruleset):
         'in_type': 'normal',  # input type: normal, multi
         'rnn_type': 'LeakyRNN',  # Type of RNNs: NonRecurrent, LeakyRNN, LeakyGRU, EILeakyGRU | GRU, LSTM
         'multiLayer': False,  # only applicaple with LeakyRNN
-        'n_rnn': 256,  # number of recurrent units for one hidden layer architecture
+        'n_rnn': 128,  # number of recurrent units for one hidden layer architecture
         'activation': 'softplus',  # Type of activation runctions, relu, softplus, tanh, elu, linear
         'n_rnn_per_layer': [256, 128, 64],
         'activations_per_layer': ['relu', 'tanh', 'linear'],
@@ -177,13 +177,16 @@ def get_default_hp(ruleset):
         # will be multiplied with c_mask_responseValue for objective error trials - 1. means no difference between errors and corrects are made
         'c_mask_responseValue': 5.,
         # c_mask response epoch value - strenght response epoch is taken into account for error calculation
+        'grad_clip': None,  # set None to disable
+        'grad_clip_by': 'global_norm',  # or 'value'
         's_mask': None,  # 'brain_256', None - info: only accesible on local machine
         'rule_probs': None,  # Rule probabilities to be drawn
         'use_separate_input': False,  # whether rule and stimulus inputs are represented separately
         # 'c_intsyn': 0, # intelligent synapses parameters, tuple (c, ksi) -> Yang et al. only apply these in sequential training
         # 'ksi_intsyn': 0,
-        'monthsConsidered': ['month_4', 'month_5', 'month_6'],  # months to train and test
-        'monthsString': '4-6',  # monthsTaken
+        # 'monthsConsidered': ['month_4', 'month_5', 'month_6'],  # months to train and test
+        'monthsConsidered': ['month_6'],  # months to train and test
+        'monthsString': '6',  # monthsTaken
         'generalizationTest': False,  # Should their be a month-wise distance applied between train and eval data
         'distanceOfEvaluationData': 0,
         # distance between test and evaluation data month-wise to check generalization performance
@@ -192,7 +195,7 @@ def get_default_hp(ruleset):
         # 'rule_prob_map': {"DM": 0,"DM_Anti": 0,"EF": 0,"EF_Anti": 0,"RP": 0,"RP_Anti": 1,"RP_Ctx1": 0,"RP_Ctx2": 0,"WM": 0,"WM_Anti": 0,"WM_Ctx1": 0,"WM_Ctx2": 0}, # fraction of tasks represented in training data
         'tasksString': 'Alltask',  # tasks taken
         'sequenceMode': True,  # Decide if models are trained sequentially month-wise
-        'participant': 'beRNN_05',  # Participant to take
+        'participant': 'beRNN_02',  # Participant to take
         'data': data,
         # 'data_highDim' , data_highDim_correctOnly , data_highDim_lowCognition , data_lowDim , data_lowDim_correctOnly , data_lowDim_lowCognition, data_timeCompressed, data_lowDim_timeCompressed
         'machine': machine,
@@ -374,7 +377,7 @@ def do_eval(sess, model, log, rule_train, eval_data):
 
     return log
 
-def train(data_dir, model_dir,train_data ,eval_data,hp=None,max_steps=3e6,display_step=500,ruleset='all',rule_trains=None,rule_prob_map=None,seed=0,
+def train(data_dir, model_dir,train_data ,eval_data,hp=None,max_steps=1e6,display_step=500,ruleset='all',rule_trains=None,rule_prob_map=None,seed=0,
           load_dir=None,trainables=None, robustnessTest= True):
     """Train the network.
 
@@ -635,7 +638,7 @@ def train(data_dir, model_dir,train_data ,eval_data,hp=None,max_steps=3e6,displa
 if __name__ == '__main__':
     # Initialize list for all training times for each model
     trainingTimeList = []
-    for modelNumber in range(1,2): # Define number of iterations and models to be created for every month, respectively
+    for modelNumber in range(7,8): # Define number of iterations and models to be created for every month, respectively
 
         # Measure time for every model, respectively
         trainingTimeTotal_hours = 0

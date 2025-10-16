@@ -111,8 +111,7 @@ def load_trials(rng,task,mode,batchSize,data,errorComparison):
                         currenTask_values.extend(values)
                 # Select number of batches according to defined batchSize
                 currentQuartett = rng.choice(currenTask_values, size=numberOfBatches, replace=False).tolist()
-                # base_name = currentQuartett[0][0].split('\\')[-1].split('Input')
-                # print('chosenFile:  ', base_name)
+
                 # Load the files
                 if numberOfBatches <= 1:
                     x = np.load(currentQuartett[0][0]) # Input
@@ -236,8 +235,10 @@ def load_trials(rng,task,mode,batchSize,data,errorComparison):
                             currenTask_values.extend(values)
                     if len(currenTask_values) < numberOfBatches: # info: In case there is not enough data to create batches with trials > 40
                         currentQuartett = rng.choice(currenTask_values, size=numberOfBatches, replace=True).tolist()
+
                     else:
                         currentQuartett = rng.choice(currenTask_values, size=numberOfBatches, replace=False).tolist()
+
                 elif errorComparison == True:
                     currentQuartett = rng.choice(data, size=numberOfBatches, replace=False).tolist() # info: for errorComparison.py
                     base_name = currentQuartett[0][0].split('Input')[0]
@@ -345,6 +346,16 @@ def load_trials(rng,task,mode,batchSize,data,errorComparison):
                     for timeStep in range(0,x.shape[0]):
                         for trial in range(0,x.shape[1]):
                             x[timeStep,trial,:] = x[timeStep,trial,:] * 2
+
+                # fix: Hardcode debug for batches having arbitrary single nan encodings
+                # print("NaNs in x:", np.isnan(x).any())
+                if np.isnan(x).any():
+                    x = np.nan_to_num(x, nan=0.0, posinf=1e6, neginf=-1e6)
+                # print("Infs in x:", np.isinf(x).any())
+                # print("NaNs in y:", np.isnan(y).any())
+                # print("Infs in y:", np.isinf(y).any())
+                # print("NaNs in y_loc:", np.isnan(y_loc).any())
+                # print("Infs in y_loc:", np.isinf(y_loc).any())
 
                 return x,y,y_loc,response
         except Exception as e:

@@ -644,11 +644,11 @@ def plot_rsa(directory, participantList):
 
 # Task representation analysis - variable allocation ###################################################################
 # info: The script can only be run after participants have been analyzed by hyperparameterOverview.py
-dataType = ['highDim', 'highDim_correctOnly', 'highDim_3stimTC', 'highDim_CCN'][1]
+dataType = ['highDim', 'highDim_correctOnly', 'highDim_3stimTC', 'highDim_CCN'][0]
 # participantList =  ['beRNN_01', 'beRNN_04', 'beRNN_05'] # info: Only choose participants who were analyzed for RDM first
 participantList =  ['beRNN_01', 'beRNN_02', 'beRNN_03', 'beRNN_04', 'beRNN_05'] # info: Only choose participants who were analyzed for RDM first
 participant = participantList[4]
-folder = ['brainInitialization_brainMasking_test_4task'][0]
+folder = ['robustnessTest_allParticipants_softplus4win_fundamentals'][0]
 directory = Path(f'C:/Users/oliver.frank/Desktop/PyProjects/beRNNmodels/{folder}/{dataType}/{participant}')
 
 mode = ['test', 'train'][0]

@@ -46,10 +46,11 @@ def popvec(y):
 
     Args:
         y: population output on a ring network. Numpy array (Batch, Units)
-
+^^
     Returns:
         Readout locations: Numpy array (Batch,)
     """
+
     pref = np.arange(0, 2 * np.pi, 2 * np.pi / y.shape[-1])  # preferences
     temp_sum = y.sum(axis=-1)  # Sum of activity at last time point of response epoch for every trial in the batch, respectively
     temp_cos = np.sum(y * np.cos(pref),axis=-1) / temp_sum  # Multiplies each unit's activation by the cosine of its preferred direction.
@@ -1298,14 +1299,6 @@ class Model(object):
         print("Model saved in file: %s" % save_path)
 
     def set_optimizer(self, extra_cost=None, var_list=None):
-        """Recompute the optimizer to reflect the latest cost function.
-
-        This is useful when the cost function is modified throughout training
-
-        Args:
-            extra_cost : tensorflow variable,
-            added to the lsq and regularization cost
-        """
         cost = self.cost_lsq + self.cost_reg
         if extra_cost is not None:
             cost += extra_cost
@@ -1318,10 +1311,48 @@ class Model(object):
             print(v)
 
         self.grads_and_vars = self.opt.compute_gradients(cost, var_list)
-        # gradient clipping
-        capped_gvs = [(tf.clip_by_value(grad, -1., 1.), var)
-                      for grad, var in self.grads_and_vars]
-        # info: necessary to check for old models before learning rate schedule was implemented
+
+        hp = getattr(self, 'hp', {})
+        grad_clip = hp.get('grad_clip', 1.0)
+        grad_clip_by = hp.get('grad_clip_by', 'value')
+
+        grads = []
+        vars_ = []
+        for g, v in self.grads_and_vars:
+            if g is not None:
+                grads.append(g)
+                vars_.append(v)
+
+        clipped_grads = []
+
+        if grad_clip is not None and grad_clip > 0:
+            if grad_clip_by == 'global_norm':
+                clipped_grads, global_norm = tf.clip_by_global_norm(grads, grad_clip)
+                clip_factor = grad_clip / tf.maximum(global_norm, grad_clip)
+
+                # Attach a print to the first clipped gradient (guaranteed to run)
+                clipped_grads[0] = tf.Print(
+                    clipped_grads[0],
+                    [global_norm, clip_factor],
+                    message="Global norm, Clip factor: "
+                )
+
+            else:
+                for g, v in zip(grads, vars_):
+                    g_clipped = tf.clip_by_value(g, -grad_clip, grad_clip)
+                    # Attach tf.Print to the clipped tensor so it runs during training
+                    g_clipped = tf.Print(
+                        g_clipped,
+                        [tf.reduce_max(g_clipped), tf.reduce_min(g_clipped), tf.reduce_mean(g_clipped)],
+                        message=f'Grad stats for {v.name}: max, min, mean = '
+                    )
+                    clipped_grads.append(g_clipped)
+        else:
+            clipped_grads = grads
+
+        capped_gvs = list(zip(clipped_grads, vars_))
+        self._capped_grads_and_vars = capped_gvs
+
         if not hasattr(self, 'global_step'):
             self.train_step = self.opt.apply_gradients(capped_gvs)
         else:

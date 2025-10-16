@@ -72,6 +72,7 @@ def stable_choice(i, candidates):
     # use i as the seed, and also include the candidate list to make it unique
     seed = hash((i, tuple(candidates))) % (2 ** 32 - 1)
     rng = np.random.RandomState(seed=seed)
+
     return rng.choice(candidates)
 
 ########################################################################################################################
@@ -1185,6 +1186,8 @@ def preprocess_RP(opened_xlsxFile, questionnare_files, list_allSessions, sequenc
                             randomIndice = correctResponseIndice
                             while randomIndice == correctResponseIndice:
                                 randomIndice = stable_choice(i, NonZero_Mod1)
+                                random.shuffle(NonZero_Mod1)
+
                             NonZero_Mod1_final.append(randomIndice)
                             NonZero_Mod2_final.append(randomIndice)
                             # Add one of the lowest stims once as the incorrect stim
@@ -1802,8 +1805,8 @@ subfolders = ['DM', 'DM_Anti', 'EF', 'EF_Anti', 'RP', 'RP_Anti', 'RP_Ctx1', 'RP_
 preprocessing_folder = 'data_highDim_correctOnly_3stimTC'
 participants = ['BeRNN_05']
 # participants = ['beRNN_01', 'beRNN_02', 'beRNN_03', 'BeRNN_04', 'beRNN_05']
-# months = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12'] # info: debugging '13'
-months = ['7'] # info: debugging '13'
+months = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12'] # info: debugging '13'
+# months = ['7'] # info: debugging '13'
 
 for participant in participants:
     # attention: change to right path
@@ -1872,9 +1875,9 @@ for participant in participants:
                         try:
                             opened_xlsxFile = pd.read_excel(file_path, engine='openpyxl')
 
-                            if 'RP_Ctx2' not in opened_xlsxFile['Spreadsheet'][5]:
-                                print('Skipping    ', opened_xlsxFile['Spreadsheet'][2])
-                                continue
+                            # if 'RP_Ctx2' not in opened_xlsxFile['Spreadsheet'][5]:
+                            #     print('Skipping    ', opened_xlsxFile['Spreadsheet'][2])
+                            #     continue
 
                             file = file_path.split('\\')[-1]
                             print(f"Processing file: {file}")
