@@ -425,7 +425,8 @@ def plot_group_rdm_mds(directory, mode, sort_variable, rdm_metric, numberOfModel
 
         dataFolder = define_data_folder(best_model_dir.split('_'))
 
-        participant = [i for i in best_model_dir.split('\\') if 'beRNN_' in i][0]
+        participant = [i for i in best_model_dir.split('\\') if 'beRNN_' in i and len(i) == 8][0]
+
         data_dir = os.path.join('C:\\Users\\oliver.frank\\Desktop\\PyProjects\\Data', participant, dataFolder)
 
         hp = tools.load_hp(best_model_dir)
@@ -455,8 +456,13 @@ def plot_group_rdm_mds(directory, mode, sort_variable, rdm_metric, numberOfModel
         # rule_plot = [i for i in hp['rule_prob_map'] if hp['rule_prob_map'][i] > 0]
         # performanceTest_dir = os.path.join(directory, 'visuals', f'{sort_variable}_{mode}', 'performanceTest')
         # performanceTrain_dir = os.path.join(directory, 'visuals', f'{sort_variable}_{mode}', 'performanceTrain')
-        representationalDissimilarity_dir = os.path.join(directory, 'visuals', f'{sort_variable}_{mode}',
-                                                         f'representationalDissimilarity_{rdm_metric}_{ruleset}')
+        if robustnessTest == True:
+            representationalDissimilarity_dir = os.path.join(directory, 'visuals', f'{sort_variable}_{mode}', 'batchPlots', str(batch),
+                                                             f'representationalDissimilarity_{rdm_metric}_{ruleset}')
+        else:
+            representationalDissimilarity_dir = os.path.join(directory, 'visuals', f'{sort_variable}_{mode}',
+                                                             f'representationalDissimilarity_{rdm_metric}_{ruleset}')
+
         # os.makedirs(performanceTest_dir, exist_ok=True)
         # os.makedirs(performanceTrain_dir, exist_ok=True)
         os.makedirs(representationalDissimilarity_dir, exist_ok=True)
@@ -534,7 +540,10 @@ def plot_rsa(directory, participantList):
         # if ruleset == 'all':
         #     directory_ = Path(*directory.parts[:-1], f'{participant}/visuals/performance_test/representationalDissimilarity_cosine')
         # else:
-        directory_ = Path(*directory.parts[:-1],f'{participant}/visuals/performance_test/representationalDissimilarity_cosine_{ruleset}')
+        if robustnessTest == True:
+            directory_ = Path(*directory.parts[:-1], f'{participant}/visuals/performance_test/batchPlots/{str(batch)}/representationalDissimilarity_cosine_{ruleset}')
+        else:
+            directory_ = Path(*directory.parts[:-1],f'{participant}/visuals/performance_test/representationalDissimilarity_cosine_{ruleset}')
 
         # Check if all defined participant in list were preprocessed - exit function if not
         if not directory_.exists():
@@ -556,7 +565,10 @@ def plot_rsa(directory, participantList):
         # if ruleset == 'all':
         #     directory_ = Path(*directory.parts[:-1],f'{participant}/visuals/performance_test/representationalDissimilarity_cosine')
         # else:
-        directory_ = Path(*directory.parts[:-1],f'{participant}/visuals/performance_test/representationalDissimilarity_cosine_{ruleset}')
+        if robustnessTest == True:
+            directory_ = Path(*directory.parts[:-1], f'{participant}/visuals/performance_test/batchPlots/{str(batch)}/representationalDissimilarity_cosine_{ruleset}')
+        else:
+            directory_ = Path(*directory.parts[:-1],f'{participant}/visuals/performance_test/representationalDissimilarity_cosine_{ruleset}')
 
         for rdm in range(min_length):
             rdm_dict[participant][rdm] = np.load(os.path.join(str(directory_).format(participant=participant), rdm_dict[participant][rdm]))
@@ -638,17 +650,17 @@ def plot_rsa(directory, participantList):
     plt.tight_layout()
 
     # plt.show()
-    plt.savefig(os.path.join(rsa_directory, 'RDAmatrix.png'))
+    # plt.savefig(os.path.join(rsa_directory, 'RDAmatrix_relu6.png'))
 ########################################################################################################################
 
 
 # Task representation analysis - variable allocation ###################################################################
 # info: The script can only be run after participants have been analyzed by hyperparameterOverview.py
-dataType = ['highDim', 'highDim_correctOnly', 'highDim_3stimTC', 'highDim_CCN'][0]
-# participantList =  ['beRNN_01', 'beRNN_04', 'beRNN_05'] # info: Only choose participants who were analyzed for RDM first
-participantList =  ['beRNN_01', 'beRNN_02', 'beRNN_03', 'beRNN_04', 'beRNN_05'] # info: Only choose participants who were analyzed for RDM first
-participant = participantList[4]
-folder = ['robustnessTest_allParticipants_softplus4win_fundamentals'][0]
+dataType = ['highDim', 'highDim_correctOnly', 'highDim_3stimTC', 'highDim_CCN'][1]
+participantList =  ['beRNN_03'] # info: Only choose participants who were analyzed for RDM first
+# participantList =  ['beRNN_01', 'beRNN_02', 'beRNN_03', 'beRNN_04', 'beRNN_05'] # info: Only choose participants who were analyzed for RDM first
+participant = participantList[0]
+folder = ['_robustnessTest_multiTask_beRNN_03_highDimCorrects_256'][0]
 directory = Path(f'C:/Users/oliver.frank/Desktop/PyProjects/beRNNmodels/{folder}/{dataType}/{participant}')
 
 mode = ['test', 'train'][0]
@@ -656,13 +668,13 @@ sort_variable = ['performance', 'clustering'][0]
 rdm_metric = ['cosine', 'correlation'][0]
 standard_analysis = [True, False][0]
 rsa_analysis = [True, False][1]
-robustnessTest, batch = [True, False][1], '0'
+robustnessTest, batch = [True, False][0], '10'
 
-ruleset = ['fundamentals', 'all'][0]
+ruleset = ['fundamentals', 'all'][1]
 representation = ['rate', 'weight'][0]
 restore = False
 
-numberOfModels = 5 # max. number of models in folder
+numberOfModels = 20 # max. number of models in folder
 
 # Define for different folder structure
 if robustnessTest == False:

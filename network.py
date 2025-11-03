@@ -315,47 +315,42 @@ class LeakyRNNCell(RNNCell):
             w_rec0 = self._w_rec_start * tools.gen_ortho_matrix(n_hidden, rng=self.rng)
         elif self._w_rec_init == 'randgauss':
             w_rec0 = (self._w_rec_start * self.rng.randn(n_hidden, n_hidden) / np.sqrt(n_hidden))
-
-
         elif self._w_rec_init == 'brainStructure':
             # Define main path
             # attention: Currently set up for local machine analysis of remotely trained models ############################
             print("attention @ network.py (322): Currently set up for local machine analysis of remotely trained models")
-            if machine == 'hitkip':
-                connectomePath = fr'C:\Users\oliver.frank\Desktop\PyProjects\beRNN_v1\masks\connectomes_{participant}'
+            if machine == 'local':
+                connectomePath = fr'C:\Users\oliver.frank\Desktop\PyProjects\beRNN_v1\masks'
             # elif machine == 'hitkip':
-            #     connectomePath = f'/zi/home/oliver.frank/Desktop/RNN/multitask_BeRNN-main/masks/connectomes_{participant}'
+            #     connectomePath = f'/zi/home/oliver.frank/Desktop/RNN/multitask_BeRNN-main/masks'
             # elif machine == 'pandora':
-            #     connectomePath = f'/pandora/home/oliver.frank/01_Projects/RNN/multitask_BeRNN-main/masks/connectomes_{participant}'
+            #     connectomePath = f'/pandora/home/oliver.frank/01_Projects/RNN/multitask_BeRNN-main/masks'
             # attention: Currently set up for local machine analysis of remotely trained models ############################
 
-            if w_rec_init == 'brainStructure' and isinstance(mask, str):
-                maskSize = int(mask.split('_')[1])
-                structuralMask = np.load(os.path.join(
-                        fr'C:\Users\oliver.frank\Desktop\PyProjects\beRNN_v1\masks\connectomes_{participant}',
-                        f'connectome_{participant}_{maskSize}.npy'))
+            structuralMask = np.load(os.path.join(connectomePath, f'{participant}_ses-03_atlas-4S256Parcels_mapping-standardized.npy'))
 
-                structuralMask_binary = structuralMask.copy()
-                counter1 = 0
+            maskSize = int(mask.split('_')[1])
+            mean_activity = np.mean(structuralMask)
+            structuralMask_binary = structuralMask.copy()
+            counter1 = 0
+            threshold = mean_activity - mean_activity * .999  # # fix hard code .975/.999 threshold defined for all values > 5%/.1% area around mean - after first paper
+            for i in range(0, maskSize):
+                for j in range(0, maskSize):
+                    if np.abs(structuralMask[i, j]) > np.abs(threshold):
+                        structuralMask_binary[i, j] = 1
+                        counter1 += 1
+                    else:
+                        structuralMask_binary[i, j] = 0
 
-                for i in range(0, maskSize):
-                    for j in range(0, maskSize):
-                        if structuralMask[i, j] > 0.025:
-                            structuralMask_binary[i, j] = 1
-                            counter1 += 1
-                        else:
-                            structuralMask_binary[i, j] = 0
-
-                mask = structuralMask_binary
-
+            self.mask = structuralMask_binary
 
             # Load right weight matrix & rotated for equivalent randomness factor while preserving the spectral characteristics
-            w_rec0_ = np.load(os.path.join(connectomePath, f'connectome_{participant}_{str(np.shape(mask)[0])}.npy')) # fix: Add number for brainStructVariations
+            w_rec0_ = structuralMask
 
             # Ensure symmetry and remove NaNs
             w_rec0_ = np.nan_to_num((w_rec0_ + w_rec0_.T) / 2, nan=0.0, posinf=0.0, neginf=0.0)
 
-            # Draw a new random rotation each run (or per epoch if you like)
+            # Draw a new random rotation each run
             Q = random_orthogonal(w_rec0_.shape[0])
             w_rec0 = Q @ w_rec0_ @ Q.T
 

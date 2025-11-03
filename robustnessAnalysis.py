@@ -12,13 +12,18 @@ dataType = ['highDim', 'highDim_3stimTC', 'highDim_correctOnly'][2]
 
 mode = ['train', 'test'][1]
 # sort_variable = ['clustering', 'performance', 'silhouette'][1]
-batchPlot, batch = [True, False][0], '0'
+batchPlot, batch = [True, False][0], '1'
 lastMonth = '6'
 
-directory = fr'C:\Users\oliver.frank\Desktop\PyProjects\beRNNmodels\robustnessTest\{dataType}\{participant}'
-model_dir_batches = [mdb for mdb in os.listdir(directory) if mdb != 'visuals']
+directory = fr'C:\Users\oliver.frank\Desktop\PyProjects\beRNNmodels\_robustnessTest_multiTask_beRNN_03_highDimCorrects_256\{dataType}\{participant}'
+
+if batchPlot == False:
+    model_dir_batches = [mdb for mdb in os.listdir(directory) if mdb != 'visuals']
+else:
+    model_dir_batches = ['1']  # info: For creating a hp overview for one batch (e.g. in robustnessTest)
 
 robustnessDict = {
+    'modularity_scroes': [],
     'silhouette_scores': [],
     'n_clusters_scores': [],
     'avg_perf_train_scores': [],
@@ -41,16 +46,17 @@ for model_dir_batch in model_dir_batches:
     print(len(final_model_dirs))
     # Compute all values for model group of current batch
     successful_model_dirs = compute_n_cluster(final_model_dirs, mode)
-    n_clusters, hp_list, silhouette_score, avg_perf_train_list, avg_perf_test_list = get_n_clusters(successful_model_dirs)
+    n_clusters, hp_list, silhouette_score, avg_perf_train_list, avg_perf_test_list, modularity_list_sparse = get_n_clusters(successful_model_dirs)
 
     robustnessDict['silhouette_scores'].append(silhouette_score)
+    robustnessDict['modularity_scroes'].append(modularity_list_sparse)
     robustnessDict['n_clusters_scores'].append(n_clusters)
     robustnessDict['avg_perf_train_scores'].append(avg_perf_train_list)
     robustnessDict['avg_perf_test_scores'].append(avg_perf_test_list)
 
 
 # info: Create one distribution representing x best models once
-model_dir_batches = [mdb for mdb in os.listdir(directory) if mdb != 'visuals']
+# model_dir_batches = [mdb for mdb in os.listdir(directory) if mdb != 'visuals']
 final_model_dirs = []
 
 for model_dir_batch in model_dir_batches:
@@ -59,10 +65,11 @@ for model_dir_batch in model_dir_batches:
 
 # Compute all values for model group of current batch
 successful_model_dirs = compute_n_cluster(final_model_dirs, mode)
-n_clusters, hp_list, silhouette_score, avg_perf_train_list, avg_perf_test_list = get_n_clusters(successful_model_dirs)
+n_clusters, hp_list, silhouette_score, avg_perf_train_list, avg_perf_test_list, modularity_list_sparse = get_n_clusters(successful_model_dirs)
 
 # info: [-1] list is always the general representative distribution to compare all other distributions with
 robustnessDict['silhouette_scores'].append(silhouette_score)
+robustnessDict['modularity_scroes'].append(modularity_list_sparse)
 robustnessDict['n_clusters_scores'].append(n_clusters)
 robustnessDict['avg_perf_train_scores'].append(avg_perf_train_list)
 robustnessDict['avg_perf_test_scores'].append(avg_perf_test_list)
@@ -122,7 +129,11 @@ def robustnessPlots(robustnessVariable, distributions, directory):
 
     plt.tight_layout()
 
-    saveDirectory = os.path.join(directory, 'visuals', 'robustnessPlots')
+    if batchPlot == True:
+        saveDirectory = os.path.join(directory, 'visuals', 'robustnessPlots', 'batchPlots', model_dir_batches[0])
+    else:
+        saveDirectory = os.path.join(directory, 'visuals', 'robustnessPlots')
+
     os.makedirs(saveDirectory, exist_ok=True)
     plt.savefig(os.path.join(saveDirectory, f'{robustnessVariable}_plot.png'))
     # plt.show()

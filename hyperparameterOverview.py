@@ -33,7 +33,8 @@ def compute_n_cluster(model_dirs, mode):
             hp = tools.load_hp(model_dir)
             # info: Add try, except and assert if you only want to take models into account that overcome certain performance threshold
             dataFolder = define_data_folder(model_dir.split('_'))
-            participant = [i for i in model_dir.split('\\') if 'beRNN_' in i][0]
+            # participant = [i for i in model_dir.split('\\') if 'beRNN_' in i][0]
+            participant = '_'.join(['beRNN', [string for string in model_dir.split('_') if '0' in string and len(string) == 2][0]]) # fix new ---
             layer = [1 if hp['multiLayer'] == False else 3][0]
 
             # Info: Important overwriting of incongruent information in hp between single and multiLayer architecture
@@ -259,16 +260,16 @@ def _get_hp_ranges():
     """Get ranges of hp."""
     hp_ranges = OrderedDict()
     hp_ranges['activation'] = ['softplus', 'relu', 'tanh']
-    hp_ranges['rnn_type'] = ['LeakyRNN', 'LeakyGRU', 'MultiLayer']
+    # hp_ranges['rnn_type'] = ['LeakyRNN', 'LeakyGRU', 'MultiLayer']
     hp_ranges['n_rnn'] = [8, 16, 24, 32, 48, 64, 96, 128, 256, 512]
     hp_ranges['w_rec_init'] = ['randortho', 'randgauss', 'diag', 'brainStructure']
-    hp_ranges['l1_h'] = [0, 1e-6, 1e-5, 1e-4, 1e-3]
-    hp_ranges['l1_weight'] = [0, 1e-6, 1e-5, 1e-4, 1e-3]
-    hp_ranges['l2_h'] = [0, 1e-6, 1e-5, 1e-4, 1e-3]
-    hp_ranges['l2_weight'] = [0, 1e-6, 1e-5, 1e-4, 1e-3]
+    hp_ranges['l1_h'] = [0, 1e-5, 1e-4, 1e-3]
+    hp_ranges['l1_weight'] = [0, 1e-5, 1e-4, 1e-3]
+    hp_ranges['l2_h'] = [0, 1e-5, 1e-4, 1e-3]
+    hp_ranges['l2_weight'] = [0, 1e-5, 1e-4, 1e-3]
     hp_ranges['learning_rate'] = [0.002, 0.0015, 0.001, 0.0005, 0.0001, 0.00005]
     hp_ranges['learning_rate_mode'] = ['constant', 'exp_range', 'triangular2']
-    hp_ranges['errorBalancingValue'] = [1., 5.]
+    # hp_ranges['errorBalancingValue'] = [1., 5.]
     return hp_ranges
 
 def general_hp_plot(n_clusters, silhouette_score, hp_list, avg_perf_train_list, avg_perf_test_list, modularity_list_sparse, directory, sort_variable, mode, batchPlot, model_dir_batches):
@@ -565,14 +566,15 @@ def individual_hp_plot(n_clusters, silhouette_score, avg_perf_train_list, avg_pe
         n_clusters: list of cluster numbers
         hp_list: list of hp dictionary
     """
-    hp_plots = ['activation', 'rnn_type', 'n_rnn', 'w_rec_init', 'l1_h', 'l1_weight', 'l2_h', 'l2_weight', 'learning_rate', 'learning_rate_mode', 'errorBalancingValue']
+    hp_plots = ['activation', 'n_rnn', 'w_rec_init', 'l1_h', 'l1_weight', 'l2_h', 'l2_weight', 'learning_rate', 'learning_rate_mode']
+    # hp_plots = ['activation', 'rnn_type', 'n_rnn', 'w_rec_init', 'l1_h', 'l1_weight', 'l2_h', 'l2_weight', 'learning_rate', 'learning_rate_mode', 'errorBalancingValue']
 
     for hp_plot in hp_plots:
         n_cluster_dict = _individual_hp_plot(hp_plot, sort_variable, mode, directory, batchPlot, model_dir_batches, n_clusters, silhouette_score, avg_perf_test_list, avg_perf_train_list, hp_list, modularity_list_sparse)
 
 # fix: Add network size here please
 HP_NAME = {'activation': 'Activation fun.',
-           'rnn_type': 'Network type',
+           # 'rnn_type': 'Network type',
            'w_rec_init': 'Initialization',
            'n_rnn': 'Num. hidden units',
            'l1_h': 'L1 rate',
@@ -581,15 +583,15 @@ HP_NAME = {'activation': 'Activation fun.',
            'l2_weight': 'L2 weight',
            'target_perf': 'Target perf.',
            'learning_rate': 'Learning rate',
-           'learning_rate_mode': 'Learning rate mode',
-           'errorBalancingValue': 'Error balancing value'}
+           'learning_rate_mode': 'Learning rate mode'}
+           # 'errorBalancingValue': 'Error balancing value'}
 
 if __name__ == '__main__':
     final_model_dirs = []
 
-    participant = ['beRNN_01', 'beRNN_02', 'beRNN_03', 'beRNN_04', 'beRNN_05'][4]
+    participant = ['beRNN_01', 'beRNN_02', 'beRNN_03', 'beRNN_04', 'beRNN_05'][2]
     dataType = ['highDim', 'highDim_3stimTC', 'highDim_correctOnly'][2]
-    folder = ['paperPlanes', 'robustnessTest', 'networkSize_128units_gridSearch', 'brainInitialization_brainMasking_test_4task'][3]
+    folder = ['_gridSearch_domainTask-DM_beRNN_03_highDim_correctOnly_256'][0]
 
     mode = ['train', 'test'][1]
     sort_variable = ['clustering', 'performance', 'silhouette'][1]
@@ -601,7 +603,7 @@ if __name__ == '__main__':
     if batchPlot == False:
         model_dir_batches = os.listdir(directory)
     else:
-        model_dir_batches = ['0'] # info: For creating a hp overview for one batch (e.g. in robustnessTest)
+        model_dir_batches = ['9'] # info: For creating a hp overview for one batch (e.g. in robustnessTest)
 
     # Create list of models to integrate in one hp overview plot
     model_dir_batches = [batch for batch in model_dir_batches if batch != 'visuals']
