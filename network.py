@@ -319,10 +319,10 @@ class LeakyRNNCell(RNNCell):
             # Define main path
             # attention: Currently set up for local machine analysis of remotely trained models ############################
             print("attention @ network.py (322): Currently set up for local machine analysis of remotely trained models")
-            if machine == 'local':
+            if machine == 'local' or machine == 'hitkip':
                 connectomePath = fr'C:\Users\oliver.frank\Desktop\PyProjects\beRNN_v1\masks'
-            # elif machine == 'hitkip':
-            #     connectomePath = f'/zi/home/oliver.frank/Desktop/RNN/multitask_BeRNN-main/masks'
+            elif machine == 'notAvailable':
+                connectomePath = f'/zi/home/oliver.frank/Desktop/RNN/multitask_BeRNN-main/masks'
             # elif machine == 'pandora':
             #     connectomePath = f'/pandora/home/oliver.frank/01_Projects/RNN/multitask_BeRNN-main/masks'
             # attention: Currently set up for local machine analysis of remotely trained models ############################
@@ -824,20 +824,20 @@ class Model(object):
                 [tf.nn.l2_loss(v) for v in self.weight_list])
 
         # info: for old models before lerning rate schedule was implemented
-        if 'learning_rate_mode' not in hp:
-            hp['learning_rate_mode'] = None
+        if 'learning_rate_mode' not in hp or hp['learning_rate_mode'] is None:
+            # ensure base_lr and max_lr exist for consistency
+            if 'learning_rate' not in hp:
+                hp['learning_rate'] = 0.0015  # default fallback
+            self.learning_rate = hp['learning_rate']
 
-        if hp['learning_rate_mode'] != None:
+        else:
             # Define global step
             self.global_step = tf.Variable(0, trainable=False, name='global_step')
             # Define cyclic learning rate
-            hp['learning_rate'] = tf.squeeze(
+            self.learning_rate = tf.squeeze(
                 cyclic_learning_rate(self.global_step, hp['learning_rate_mode'], base_lr=hp['base_lr'],
                                      max_lr=hp['max_lr'], step_size=2000, decay_rate=0.999,
                                      decay_steps=50000))
-
-        # Store the learning rate as an attribute for debugging
-        self.learning_rate = hp['learning_rate']
 
         # Create an optimizer.
         if 'optimizer' not in hp or hp['optimizer'] == 'adam':
@@ -1308,7 +1308,7 @@ class Model(object):
         self.grads_and_vars = self.opt.compute_gradients(cost, var_list)
 
         hp = getattr(self, 'hp', {})
-        grad_clip = hp.get('grad_clip', 1.0)
+        grad_clip = hp.get('grad_clip', None)
         grad_clip_by = hp.get('grad_clip_by', 'value')
 
         grads = []

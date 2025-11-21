@@ -76,11 +76,17 @@ def _compute_variance_bymodel(data_dir, model_dir, layer, data_type, networkAnal
 
     # Skip taskVariance creation if already exists
     save_name = 'var_' + mode + '_lay' + str(layer) + '_' + data_type + f'_{ruleset}'
+    save_name2 = 'corr_' + mode + '_lay' + str(layer) + '_' + data_type + f'_{ruleset}'
+    save_name3 = 'mean_' + mode + '_lay' + str(layer) + '_' + data_type + f'_{ruleset}'
+
     if random_rotation:
         save_name += '_rr'
-    fname = os.path.join(model_dir, save_name + '.pkl')
 
-    if os.path.exists(fname) == False:
+    fname = os.path.join(model_dir, save_name + '.pkl')
+    fname2 = os.path.join(model_dir, save_name2 + '.pkl')
+    fname3 = os.path.join(model_dir, save_name3 + '.pkl')
+
+    if os.path.exists(fname) == False or os.path.exists(fname2) == False or os.path.exists(fname3) == False:
         try:
 
             for task in rules:
@@ -95,34 +101,9 @@ def _compute_variance_bymodel(data_dir, model_dir, layer, data_type, networkAnal
 
                 c_mask = tools.create_cMask(y, response, hp, mode)
 
-                # # info: ################################################################################################
-                # fixation_steps = tools.getEpochSteps(y)
-                #
-                # # Creat c_mask for current batch
-                # if hp['loss_type'] == 'lsq':
-                #     c_mask = np.zeros((y.shape[0], y.shape[1], y.shape[2]), dtype='float32')
-                #     for i in range(y.shape[1]):
-                #         # Fixation epoch
-                #         c_mask[:fixation_steps, i, :] = 1.
-                #         # Response epoch
-                #         c_mask[fixation_steps:, i, :] = 1.
-                #
-                #     # self.c_mask[:, :, 0] *= self.n_eachring # Fixation is important
-                #     c_mask[:, :, 0] *= 2.  # Fixation is important
-                #     c_mask = c_mask.reshape((y.shape[0] * y.shape[1], y.shape[2]))
-                #     c_mask /= c_mask.mean()
-                #
-                # else:
-                #     c_mask = np.zeros((y.shape[0], y.shape[1]), dtype='float32')
-                #     for i in range(y.shape[1]):
-                #         # Fixation epoch
-                #         c_mask[:fixation_steps, i, :] = 1.
-                #         # Response epoch
-                #         c_mask[fixation_steps:, i, :] = 1.
-                #
-                #     c_mask = c_mask.reshape((y.shape[0] * y.shape[1],))
-                #     c_mask /= c_mask.mean()
-                # # info: ################################################################################################
+                if c_mask is None:
+                    print(f"Skipping {task} in _compute_variance_bymodel: invalid c_mask (random beRNN_02 bug)")
+                    continue
 
                 feed_dict = tools.gen_feed_dict(model, x, y, c_mask, hp)
 
@@ -157,7 +138,9 @@ def _compute_variance_bymodel(data_dir, model_dir, layer, data_type, networkAnal
                 elif data_type == 'epoch':
                     h_all = h_all_byepoch # info: task and epoch orientated (fixation excluded), similar to h_all_byrule as there is only fixation and response epoch
 
+                h_mean_all = np.zeros((n_hidden, len(h_all.keys())))
                 h_var_all = np.zeros((n_hidden, len(h_all.keys())))
+                h_corr_all = np.zeros((n_hidden, n_hidden, len(h_all.keys())))
                 for i, val in enumerate(h_all.values()):
                     # info: Iterating through all tasks and creating an individual task variance value representing distribution
                     #  of average unit activities over trials in current batch (n_rnn_units x variance value for average unit
@@ -165,16 +148,29 @@ def _compute_variance_bymodel(data_dir, model_dir, layer, data_type, networkAnal
                     # val is Time, Batch, Units
                     # Variance across time and stimulus
                     # h_var_all[:, i] = val[t_start:].reshape((-1, n_hidden)).var(axis=0)
-                    # Variance acros stimulus, then averaged across time
-                    h_var_all[:, i] = val.var(axis=1).mean(axis=0)
+                    # Variance acros trial, then averaged across time
+                    h_var_all[:, i] = val.var(axis=1).mean(axis=0) # info: Yang
+                    # reorder tensor - flatten across timesteps and trials - correlate all hidden unit vectors over flattened dimension
+                    h_corr_all[:, :, i] = np.corrcoef(val.transpose(2, 0, 1).reshape(val.shape[2], -1))  # info: Frank correlation matrices for topological markers
+                    h_corr_all = np.nan_to_num(h_corr_all)  # replaces NaNs with 0
+                    # Generate average activity representations for each hidden unit and each task individually
+                    h_mean_all[:, i] = val.mean(axis=(0, 1))
+                    h_mean_all = np.nan_to_num(h_mean_all) # replaces NaNs with 0
 
                 result = {'h_var_all': h_var_all, 'keys': list(h_all.keys())}
+                result2 = {'h_corr_all': h_corr_all, 'keys': list(h_all.keys())}
+                result3 = {'h_mean_all': h_mean_all, 'keys': list(h_all.keys())}
+
                 save_name = 'var_' + mode + '_lay' + str(layer) + '_' + data_type + f'_{ruleset}'
+                save_name2 = 'corr_' + mode + '_lay' + str(layer) + '_' + data_type + f'_{ruleset}'
+                save_name3 = 'mean_' + mode + '_lay' + str(layer) + '_' + data_type + f'_{ruleset}'
 
                 if random_rotation:
                     save_name += '_rr'
 
                 fname = os.path.join(model_dir, save_name + '.pkl')
+                fname2 = os.path.join(model_dir, save_name2 + '.pkl')
+                fname3 = os.path.join(model_dir, save_name3 + '.pkl')
                 # dir_path = os.path.dirname(fname)
 
                 # C:\\Users\\oliver.frank\\Desktop\\PyProjects\\beRNNmodels\\2025_04_multiLayerHpGridSearch\\1\\beRNN_03_AllTask_3-5_data_highDim_correctOnly_3stimTC_iteration0_LeakyRNN_64-64-64_relu-relu-linear\\model_month_3\\variance_test_layer0_rule_data_highDim_correctOnly_3stimTC.pkl
@@ -185,6 +181,8 @@ def _compute_variance_bymodel(data_dir, model_dir, layer, data_type, networkAnal
 
         try:
             os.makedirs(os.path.dirname(fname), exist_ok=True)
+            os.makedirs(os.path.dirname(fname2), exist_ok=True)
+            os.makedirs(os.path.dirname(fname3), exist_ok=True)
 
             print("Saving to:", fname)
             print("Dir to create:", os.path.dirname(fname))
@@ -194,7 +192,14 @@ def _compute_variance_bymodel(data_dir, model_dir, layer, data_type, networkAnal
 
             with open(fname, 'wb') as f:
                 pickle.dump(result, f)
-            print(f"Variance file saved: {fname}")
+
+            with open(fname2, 'wb') as f:
+                pickle.dump(result2, f)
+
+            with open(fname3, 'wb') as f:
+                pickle.dump(result3, f)
+
+            print(f"Variance, Correlation and Mean file saved: {fname}")
 
         except OSError as e:
             if e.errno == errno.EEXIST:
@@ -206,7 +211,9 @@ def _compute_variance_bymodel(data_dir, model_dir, layer, data_type, networkAnal
 
     else:
         print(f"task variance file: {fname} already exists. Skipping repetition.")
-    return fname
+        print(f"task correlation file: {fname2} already exists. Skipping repetition.")
+        print(f"task correlation file: {fname3} already exists. Skipping repetition.")
+    return fname, fname2, fname3
 
 def _compute_variance(data_dir, model_dir, layer, mode, monthsConsidered, data_type, networkAnalysis, rules=None, random_rotation=False, **kwargs):
     """Compute variance for all tasks.
@@ -220,15 +227,15 @@ def _compute_variance(data_dir, model_dir, layer, mode, monthsConsidered, data_t
         model = Model(model_dir, sigma_rec=0)
         with tf.Session() as sess:
             model.restore()
-            fname = _compute_variance_bymodel(data_dir, model_dir, layer, data_type, networkAnalysis, model, sess, mode, monthsConsidered, rules, random_rotation)
-            return fname
+            fname, fname2, fname3 = _compute_variance_bymodel(data_dir, model_dir, layer, data_type, networkAnalysis, model, sess, mode, monthsConsidered, rules, random_rotation)
+            return fname, fname2, fname3
     else:
         # Get model and sess from kwargs
         model = kwargs.get('model')
         sess = kwargs.get('sess')
 
-        fname = _compute_variance_bymodel(data_dir, model_dir, layer, data_type, networkAnalysis, model, sess, mode, monthsConsidered, rules, random_rotation)
-        return fname
+        fname, fname2, fname3 = _compute_variance_bymodel(data_dir, model_dir, layer, data_type, networkAnalysis, model, sess, mode, monthsConsidered, rules, random_rotation)
+        return fname, fname2, fname3
 
 def compute_variance(data_dir, model_dir, layer, mode, monthsConsidered, data_type, networkAnalysis, rules=None, random_rotation=False, **kwargs):
     """Compute variance for all tasks.
@@ -240,8 +247,8 @@ def compute_variance(data_dir, model_dir, layer, mode, monthsConsidered, data_ty
     """
     dirs = tools.valid_model_dirs(model_dir)
     for d in dirs:
-        fname = _compute_variance(data_dir, d, layer, mode, monthsConsidered, data_type, networkAnalysis, rules, random_rotation, **kwargs)
-        return fname
+        fname, fname2, fname3 = _compute_variance(data_dir, d, layer, mode, monthsConsidered, data_type, networkAnalysis, rules, random_rotation, **kwargs)
+        return fname, fname2, fname3
 
 
 if __name__ == '__main__':

@@ -537,6 +537,17 @@ def plot_rsa(directory, participantList):
     # Gather rdmFiles in dict lists
     rdm_dict = {}
     for participant in participantList:
+
+        # attention: *****************************
+        if participant == 'beRNN_03':
+            directory = Path(f'C:/Users/oliver.frank/Desktop/PyProjects/beRNNmodels/_robustnessTest_multiTask_{participant}_highDimCorrects_256/{dataType}/{participant}')
+            robustnessTest = True
+            batch = 10
+        else:
+            directory = Path(f'C:/Users/oliver.frank/Desktop/PyProjects/beRNNmodels/_robustnessTest_multiTask_{participant}_highDimCorrects_256_hp_10/{dataType}/{participant}')
+            robustnessTest = False
+        # attention: *****************************
+
         # if ruleset == 'all':
         #     directory_ = Path(*directory.parts[:-1], f'{participant}/visuals/performance_test/representationalDissimilarity_cosine')
         # else:
@@ -561,6 +572,17 @@ def plot_rsa(directory, participantList):
         rdm_dict[participant] = rdm_dict[participant][:min_length]
     # Load the rdm files
     for participant in participantList:
+
+        # attention: *****************************
+        if participant == 'beRNN_03':
+            directory = Path(f'C:/Users/oliver.frank/Desktop/PyProjects/beRNNmodels/_robustnessTest_multiTask_{participant}_highDimCorrects_256/{dataType}/{participant}')
+            robustnessTest = True
+            batch = 10
+        else:
+            directory = Path(f'C:/Users/oliver.frank/Desktop/PyProjects/beRNNmodels/_robustnessTest_multiTask_{participant}_highDimCorrects_256_hp_10/{dataType}/{participant}')
+            robustnessTest = False
+        # attention: *****************************
+
         # Re-allocate the right participant-specific path
         # if ruleset == 'all':
         #     directory_ = Path(*directory.parts[:-1],f'{participant}/visuals/performance_test/representationalDissimilarity_cosine')
@@ -649,26 +671,26 @@ def plot_rsa(directory, participantList):
     plt.yticks(rotation=0, fontsize=6)
     plt.tight_layout()
 
-    # plt.show()
-    # plt.savefig(os.path.join(rsa_directory, 'RDAmatrix_relu6.png'))
+    plt.show()
+    plt.savefig(os.path.join(rsa_directory, f'RDAmatrix_{within_mean.mean():.3f}.png'))
 ########################################################################################################################
-
 
 # Task representation analysis - variable allocation ###################################################################
 # info: The script can only be run after participants have been analyzed by hyperparameterOverview.py
 dataType = ['highDim', 'highDim_correctOnly', 'highDim_3stimTC', 'highDim_CCN'][1]
-participantList =  ['beRNN_03'] # info: Only choose participants who were analyzed for RDM first
-# participantList =  ['beRNN_01', 'beRNN_02', 'beRNN_03', 'beRNN_04', 'beRNN_05'] # info: Only choose participants who were analyzed for RDM first
-participant = participantList[0]
-folder = ['_robustnessTest_multiTask_beRNN_03_highDimCorrects_256'][0]
+# participantList =  ['beRNN_03'] # info: Only choose participants who were analyzed for RDM first
+participantList =  ['beRNN_01', 'beRNN_02', 'beRNN_03', 'beRNN_04', 'beRNN_05'] # info: Only choose participants who were analyzed for RDM first
+participant = participantList[2]
+# folder = [f'_robustnessTest_multiTask_{participant}_highDimCorrects_256_hp_10'][0]
+folder = [f'_robustnessTest_multiTask_{participant}_highDimCorrects_256'][0]
 directory = Path(f'C:/Users/oliver.frank/Desktop/PyProjects/beRNNmodels/{folder}/{dataType}/{participant}')
 
 mode = ['test', 'train'][0]
 sort_variable = ['performance', 'clustering'][0]
 rdm_metric = ['cosine', 'correlation'][0]
-standard_analysis = [True, False][0]
-rsa_analysis = [True, False][1]
-robustnessTest, batch = [True, False][0], '10'
+standard_analysis = [True, False][1]
+rsa_analysis = [True, False][0]
+robustnessTest, batch = [True, False][1], '10'
 
 ruleset = ['fundamentals', 'all'][1]
 representation = ['rate', 'weight'][0]

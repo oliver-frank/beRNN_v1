@@ -536,8 +536,8 @@ HP_NAME = {'activation': 'Activation fun.',
 
 if __name__ == '__main__':
 
-    foldersToOverlay = ['_gridSearch_domainTask-EF_beRNN_03_highDim_16', '_gridSearch_domainTask-EF_beRNN_03_highDim_32', '_gridSearch_domainTask-EF_beRNN_03_highDim_64',\
-                        '_gridSearch_domainTask-EF_beRNN_03_highDim_128', '_gridSearch_domainTask-EF_beRNN_03_highDim_256', '_gridSearch_domainTask-EF_beRNN_03_highDim_512']
+    foldersToOverlay = ['_gridSearch_multiTask_beRNN_03_highDimCorrects_16', '_gridSearch_multiTask_beRNN_03_highDimCorrects_32', '_gridSearch_multiTask_beRNN_03_highDimCorrects_64',\
+                        '_gridSearch_multiTask_beRNN_03_highDimCorrects_128', '_gridSearch_multiTask_beRNN_03_highDimCorrects_256', '_gridSearch_multiTask_beRNN_03_highDim_correctOnly_512']
 
     directory_metaOverlayVisual = r'C:\Users\oliver.frank\Desktop\PyProjects\beRNNmodels\__metaOverlayVisual'
     os.makedirs(directory_metaOverlayVisual, exist_ok=True)
@@ -553,7 +553,7 @@ if __name__ == '__main__':
         final_model_dirs = []
 
         participant = ['beRNN_01', 'beRNN_02', 'beRNN_03', 'beRNN_04', 'beRNN_05'][2]
-        dataType = ['highDim', 'highDim_3stimTC', 'highDim_correctOnly'][0]
+        dataType = ['highDim', 'highDim_3stimTC', 'highDim_correctOnly'][2]
 
         mode = ['train', 'test'][1]
         sort_variable = ['clustering', 'performance', 'silhouette'][1]

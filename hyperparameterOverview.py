@@ -587,54 +587,182 @@ HP_NAME = {'activation': 'Activation fun.',
            # 'errorBalancingValue': 'Error balancing value'}
 
 if __name__ == '__main__':
-    final_model_dirs = []
+    folderList = [r'__paper1_placeholders\brainInitialization_brainMasking_test_4task']
+    for folder in folderList:
+        final_model_dirs = []
 
-    participant = ['beRNN_01', 'beRNN_02', 'beRNN_03', 'beRNN_04', 'beRNN_05'][2]
-    dataType = ['highDim', 'highDim_3stimTC', 'highDim_correctOnly'][2]
-    folder = ['_gridSearch_domainTask-DM_beRNN_03_highDim_correctOnly_256'][0]
+        participant = ['beRNN_01', 'beRNN_02', 'beRNN_03', 'beRNN_04', 'beRNN_05'][0]
+        dataType = ['highDim', 'highDim_3stimTC', 'highDim_correctOnly'][2]
 
-    mode = ['train', 'test'][1]
-    sort_variable = ['clustering', 'performance', 'silhouette'][1]
-    batchPlot = [True, False][1]
-    lastMonth = '6'
+        mode = ['train', 'test'][1]
+        sort_variable = ['clustering', 'performance', 'silhouette'][1]
+        batchPlot = [True, False][1]
+        lastMonth = '6'
 
-    directory = fr'C:\Users\oliver.frank\Desktop\PyProjects\beRNNmodels\{folder}\{dataType}\{participant}'
+        directory = fr'C:\Users\oliver.frank\Desktop\PyProjects\beRNNmodels\{folder}\{dataType}\{participant}'
 
-    if batchPlot == False:
-        model_dir_batches = os.listdir(directory)
-    else:
-        model_dir_batches = ['9'] # info: For creating a hp overview for one batch (e.g. in robustnessTest)
+        if batchPlot == False:
+            model_dir_batches = os.listdir(directory)
+        else:
+            model_dir_batches = ['1'] # info: For creating a hp overview for one batch (e.g. in robustnessTest)
 
-    # Create list of models to integrate in one hp overview plot
-    model_dir_batches = [batch for batch in model_dir_batches if batch != 'visuals']
-    for model_dir_batch in model_dir_batches:
-        model_dirs_ = os.listdir(os.path.join(directory, model_dir_batch))
-        model_dirs = [model_dir for model_dir in model_dirs_ if model_dir != 'overviews' and not model_dir.endswith('.txt')]
-        for model_dir in model_dirs:
-            model_dir_lastMonth_ = os.listdir(os.path.join(directory, model_dir_batch, model_dir))
-            model_dir_lastMonth = [model_dir for model_dir in model_dir_lastMonth_ if lastMonth in model_dir]
-            # Concatenate all models in one list
-            try:
-                if 'model' in model_dir_lastMonth[0]: # Be sure to add anything else but models
-                    final_model_dirs.append(os.path.join(directory, model_dir_batch, model_dir, model_dir_lastMonth[0]))
+        # Create list of models to integrate in one hp overview plot
+        model_dir_batches = [batch for batch in model_dir_batches if batch != 'visuals']
+        for model_dir_batch in model_dir_batches:
+            model_dirs_ = os.listdir(os.path.join(directory, model_dir_batch))
+            model_dirs = [model_dir for model_dir in model_dirs_ if model_dir != 'overviews' and not model_dir.endswith('.txt')]
+            for model_dir in model_dirs:
+                model_dir_lastMonth_ = os.listdir(os.path.join(directory, model_dir_batch, model_dir))
+                model_dir_lastMonth = [model_dir for model_dir in model_dir_lastMonth_ if lastMonth in model_dir]
+                # Concatenate all models in one list
+                try:
+                    if 'model' in model_dir_lastMonth[0]: # Be sure to add anything else but models
+                        final_model_dirs.append(os.path.join(directory, model_dir_batch, model_dir, model_dir_lastMonth[0]))
 
-            except Exception as e:
-                # if something goes wrong (e.g. index error), skip this model_dir
-                print(f"Skipping {model_dir} due to error: {e}")
-                continue
+                except Exception as e:
+                    # if something goes wrong (e.g. index error), skip this model_dir
+                    print(f"Skipping {model_dir} due to error: {e}")
+                    continue
 
-    # First compute n_clusters for each model then collect them in lists
-    successful_model_dirs = compute_n_cluster(final_model_dirs, mode)
-    n_clusters, hp_list, silhouette_score, avg_perf_train_list, avg_perf_test_list, modularity_list_sparse = get_n_clusters(successful_model_dirs)
+        # First compute n_clusters for each model then collect them in lists
+        successful_model_dirs = compute_n_cluster(final_model_dirs, mode)
+        n_clusters, hp_list, silhouette_score, avg_perf_train_list, avg_perf_test_list, modularity_list_sparse = get_n_clusters(successful_model_dirs)
 
-    # Create hp_plots sorted by performance or clustering
-    general_hp_plot(n_clusters, silhouette_score, hp_list, avg_perf_train_list, avg_perf_test_list, modularity_list_sparse, directory, sort_variable, mode, batchPlot, model_dir_batches)
-    # Create legend
-    hp_ranges = _get_hp_ranges()
-    hp_plots = list(hp_ranges.keys())
-    plot_vertical_hp_legend(hp_ranges, hp_plots, HP_NAME, directory)
+        # Create hp_plots sorted by performance or clustering
+        general_hp_plot(n_clusters, silhouette_score, hp_list, avg_perf_train_list, avg_perf_test_list, modularity_list_sparse, directory, sort_variable, mode, batchPlot, model_dir_batches)
+        # Create legend
+        hp_ranges = _get_hp_ranges()
+        hp_plots = list(hp_ranges.keys())
+        plot_vertical_hp_legend(hp_ranges, hp_plots, HP_NAME, directory)
 
-    # Create histogramms for each hyperparameter seperatly w.r.t. performance or clustering
-    individual_hp_plot(n_clusters, silhouette_score, avg_perf_train_list, avg_perf_test_list, modularity_list_sparse, directory, hp_list, sort_variable, mode, batchPlot, model_dir_batches)
+        # Create histogramms for each hyperparameter seperatly w.r.t. performance or clustering
+        individual_hp_plot(n_clusters, silhouette_score, avg_perf_train_list, avg_perf_test_list, modularity_list_sparse, directory, hp_list, sort_variable, mode, batchPlot, model_dir_batches)
 
 
+# info: DEBUG
+# import os
+# folderList = ['_gridSearch_domainTask-WM_beRNN_03_highDim_correctOnly_16', '_gridSearch_domainTask-WM_beRNN_03_highDim_correctOnly_32', '_gridSearch_domainTask-WM_beRNN_03_highDim_correctOnly_64',
+#                   '_gridSearch_domainTask-WM_beRNN_03_highDim_correctOnly_128', '_gridSearch_domainTask-WM_beRNN_03_highDim_correctOnly_256', '_gridSearch_domainTask-WM_beRNN_03_highDim_correctOnly_512']
+#
+# participant = ['beRNN_01', 'beRNN_02', 'beRNN_03', 'beRNN_04', 'beRNN_05'][2]
+# dataType = ['highDim', 'highDim_3stimTC', 'highDim_correctOnly'][2]
+#
+# for folder in folderList:
+#     directory = fr'C:\Users\oliver.frank\Desktop\PyProjects\beRNNmodels\{folder}\{dataType}\{participant}'
+#     counter = 0
+#     for modelBatch in os.listdir(directory):
+#         for model in os.listdir(os.path.join(directory, modelBatch)):
+#             if model == 'times.txt':
+#                 continue
+#             if len(os.listdir(os.path.join(directory, modelBatch, model, 'model_month_6'))) < 3:
+#                 counter += 1
+#     print(folder)
+#     print(counter)
+#     print('******************************')
+
+
+
+# # Robustness tests for topological marker
+# def apply_density_threshold(matrix, density=0.1):
+#     """
+#     Applies proportional (density) thresholding to keep the top X%
+#     of edges globally based on absolute strength (either strong positive or negative).
+#
+#     Args:
+#         matrix (np.ndarray): Input symmetric correlation matrix.
+#         density (float): The proportion of edges to keep (e.g., 0.1 for 10%).
+#
+#     Returns:
+#         np.ndarray: The thresholded matrix with strong correlations retained.
+#     """
+#     # info: modularity function aligned with training pipeline - 17.11.25
+#     # Use a copy to avoid modifying the original input matrix
+#     temp_matrix = matrix.copy()
+#     n = temp_matrix.shape[0]
+#
+#     # Ensure diagonal is 0 for edge calculation
+#     np.fill_diagonal(temp_matrix, 0)
+#
+#     upper_tri_indices = np.triu_indices(n, k=1)
+#     triu_vals_signed = temp_matrix[upper_tri_indices]
+#     abs_triu_vals = np.abs(triu_vals_signed)
+#
+#     cutoff = np.quantile(abs_triu_vals, 1 - density)
+#     thresholded = np.where(np.abs(matrix) >= cutoff, matrix, 0)
+#
+#     # Ensure diagonal remains 0
+#     np.fill_diagonal(thresholded, 0)
+#
+#     return thresholded
+#
+# import os
+# import pickle
+# import networkx as nx
+# import numpy as np
+#
+# avg_clustering_list = []
+# avg_betweenness_list = []
+# avg_closeness_list = []
+#
+# participant = 'beRNN_01'
+# hp_set = '2'
+# models = os.listdir(fr'C:\Users\oliver.frank\Desktop\PyProjects\beRNNmodels\_robustnessTest_multiTask_{participant}_highDimCorrects_256_hp_{hp_set}\highDim_correctOnly\{participant}\{hp_set}')
+#
+# correlationMatrixList = []
+#
+# for model in models:
+#     if model == 'times.txt':
+#         continue
+#     else:
+#         pkl_beRNN = rf'C:\Users\oliver.frank\Desktop\PyProjects\beRNNmodels\_robustnessTest_multiTask_{participant}_highDimCorrects_256_hp_{hp_set}\highDim_correctOnly\{participant}\{hp_set}\{model}\model_month_6\corr_test_lay1_rule_all.pkl'
+#         # print(pkl_beRNN)
+#         with open(pkl_beRNN, 'rb') as f:
+#             correlationMatrix_taskwise = pickle.load(f)
+#             np.nan_to_num(correlationMatrix_taskwise['h_corr_all'], copy=False, nan=0)
+#             correlationMatrix = np.mean(correlationMatrix_taskwise['h_corr_all'], axis=2)
+#
+#             correlationMatrixList.append(correlationMatrix)
+#
+#             # # Define a threshold (you can experiment with this value)
+#             # threshold = .1
+#             # # averaged_correlation_matrix_thresholded = apply_absolute_threshold(matrix_brain, threshold)
+#             # averaged_correlation_matrix_thresholded = apply_density_threshold(correlationMatrix, threshold)
+#             # np.fill_diagonal(averaged_correlation_matrix_thresholded, 0)  # prevent self-loops
+#             #
+#             # # Function to apply a threshold to the matrix
+#             # G_beRNN = nx.from_numpy_array(averaged_correlation_matrix_thresholded)
+#             #
+#             # clustering = nx.clustering(G_beRNN)
+#             # avg_clustering = np.mean(list(clustering.values()))
+#             # avg_clustering_list.append(avg_clustering)
+#             #
+#             # betweenness = nx.betweenness_centrality(G_beRNN)
+#             # avg_betweenness = np.mean(list(betweenness.values()))
+#             # avg_betweenness_list.append(avg_betweenness)
+#             #
+#             # closeness = nx.closeness_centrality(G_beRNN)  # Closeness centrality measures the average distance from a node to all other nodes in the network.
+#             # avg_closeness = np.mean(list(closeness.values()))
+#             # avg_closeness_list.append(avg_closeness)
+#
+# std_clustering = np.std(avg_clustering_list)
+# print(std_clustering)
+# std_betweenness = np.std(avg_betweenness_list)
+# print(std_betweenness)
+# std_closeness = np.std(avg_closeness_list)
+# print(std_closeness)
+#
+# print('************************************')
+#
+# avg_clustering = np.mean(avg_clustering_list)
+# print(avg_clustering)
+# avg_betweenness = np.mean(avg_betweenness_list)
+# print(avg_betweenness)
+# avg_closeness = np.mean(avg_closeness_list)
+# print(avg_closeness)
+
+
+
+
+###
+# import numpy as np
+# matrix = np.load(r'W:\group_csp\analyses\oliver.frank\share\functional_matrices\sub-6IECX_ses-01-task-faces-atlas-4S256Parcels.npy')

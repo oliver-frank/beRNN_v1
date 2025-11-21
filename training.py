@@ -35,25 +35,46 @@ import tools
 # Predefine functions
 ########################################################################################################################
 def apply_threshold(matrix, threshold):
-    # info: added function second time from networkAnalysis for training on server with only training.py and friends
+    # info: added function second time from networkAnalysis for training on server with only training.py
     # Set all values below the threshold to zero
     matrix_thresholded = np.where(np.abs(matrix) > threshold, matrix, 0)
     return matrix_thresholded
 
 
-def apply_density_threshold(matrix, density=0.1):
-    """Keep top X% of edges globally (density in [0,1])."""
-    n = matrix.shape[0]
-    # Get all upper-triangle values
-    triu_vals = matrix[np.triu_indices(n, k=1)]
-    cutoff = np.quantile(triu_vals, 1 - density)  # e.g., top 10%
-    # Zero out everything below cutoff
-    thresholded = np.where(matrix >= cutoff, matrix, 0)
+def apply_density_threshold(matrix, density=0.1): # fix: density thresholds: .0, .1, .3, .5
+    """
+    Applies proportional (density) thresholding to keep the top X%
+    of edges globally based on absolute strength (either strong positive or negative).
+
+    Args:
+        matrix (np.ndarray): Input symmetric correlation matrix.
+        density (float): The proportion of edges to keep (e.g., 0.1 for 10%).
+
+    Returns:
+        np.ndarray: The thresholded matrix with strong correlations retained.
+    """
+    # Use a copy to avoid modifying the original input matrix
+    temp_matrix = matrix.copy()
+    n = temp_matrix.shape[0]
+
+    # Ensure diagonal is 0 for edge calculation
+    np.fill_diagonal(temp_matrix, 0)
+
+    upper_tri_indices = np.triu_indices(n, k=1)
+    triu_vals_signed = temp_matrix[upper_tri_indices]
+    abs_triu_vals = np.abs(triu_vals_signed)
+
+    cutoff = np.quantile(abs_triu_vals, 1 - density)
+    thresholded = np.where(np.abs(matrix) >= cutoff, matrix, 0)
+
+    # Ensure diagonal remains 0
+    np.fill_diagonal(thresholded, 0)
+
     return thresholded
 
 
 def getAndSafeModValue(data_dir, model_dir, hp, model, sess, log):
-    fname = variance.compute_variance(data_dir, model_dir, layer=1, mode='test',
+    fname, fname2, fname3 = variance.compute_variance(data_dir, model_dir, layer=1, mode='test',
                                       monthsConsidered=hp['monthsConsidered'], data_type='rule', networkAnalysis=False,
                                       model=model, sess=sess)
     # (data_dir, model_dir, layer, mode, monthsConsidered, data_type, networkAnalysis, rules=None, random_rotation=False)
@@ -61,11 +82,15 @@ def getAndSafeModValue(data_dir, model_dir, hp, model, sess, log):
     res = tools.load_pickle(fname)
     h_var_all_ = res['h_var_all']
 
+    res2 = tools.load_pickle(fname2)
+    h_corr_all_ = res2['h_corr_all']
+    h_corr_all = h_corr_all_.mean(axis=2) # average over all tasks
+
     activityThreshold = 1e-5
     ind_active = np.where(h_var_all_.sum(axis=1) >= activityThreshold)[0]  # info: > 1e-3 - min > 0
     h_var_all = h_var_all_[ind_active, :]
 
-    # info: fallback if clustering is not possible
+    # info: fallback if clustering is not possible - keep h_var_all as criterium but witch to h_corr_all for evaluation of modularity
     if h_var_all.shape[0] < 2 or np.all(h_var_all.sum(axis=1) <= 1e-2):
         # if h_var_all.shape[0] < 2 or np.where(h_var_all_.sum(axis=1) < activityThreshold):
         print(f"Skipping clustering for model {model_dir} — insufficient data or variance.")
@@ -77,15 +102,15 @@ def getAndSafeModValue(data_dir, model_dir, hp, model, sess, log):
         # Normalize by the total variance across tasks
         h_normvar_all = (h_var_all.T / np.sum(h_var_all, axis=1)).T
 
-    # Center and normalize the data
-    data_centered = h_normvar_all - h_normvar_all.mean(axis=1, keepdims=True)
-    norm = np.linalg.norm(data_centered, axis=1, keepdims=True)
-    norm[norm == 0] = 1e-8  # Prevent division by zero
-    data_normalized = data_centered / norm
-    correlation = np.dot(data_normalized, data_normalized.T)
+    # info: legacy - Center and normalize the data
+    # data_centered = h_normvar_all - h_normvar_all.mean(axis=1, keepdims=True)
+    # norm = np.linalg.norm(data_centered, axis=1, keepdims=True)
+    # norm[norm == 0] = 1e-8  # Prevent division by zero
+    # data_normalized = data_centered / norm
+    # correlation = np.dot(data_normalized, data_normalized.T)
 
     # Compute modularity
-    functionalCorrelation_density = apply_density_threshold(correlation, density=0.1)
+    functionalCorrelation_density = apply_density_threshold(h_corr_all, density=0.1)
     np.fill_diagonal(functionalCorrelation_density, 0)  # prevent self-loops
     G_sparse = nx.from_numpy_array(functionalCorrelation_density)
 
@@ -117,10 +142,10 @@ def get_default_hp(ruleset):
     num_ring = tools.get_num_ring(ruleset)
     n_rule = tools.get_num_rule(ruleset)
 
-    machine = 'hitkip'  # 'local' 'pandora' 'hitkip'
+    machine = 'local'  # 'local' 'pandora' 'hitkip'
     data = 'data_highDim_correctOnly'  # 'data_highDim' , data_highDim_correctOnly , data_highDim_lowCognition , data_lowDim , data_lowDim_correctOnly , data_lowDim_lowCognition, 'data_highDim_correctOnly_3stimTC'
     trainingBatch = '01'
-    trainingYear_Month = 'test_brainInit'
+    trainingYear_Month = 'test'
 
     if 'highDim' in data:  # fix: lowDim_timeCompressed needs to be skipped here
         n_eachring = 32
@@ -149,7 +174,7 @@ def get_default_hp(ruleset):
         # 'alpha': 0.2, # (redundant) discretization time step/time constant - dt/tau = alpha - ratio decides on how much previous states are taken into account for current state - low alpha more memory, high alpha more forgetting - alpha * h(t-1)
         'sigma_rec': 0.01,  # recurrent noise - directly influencing the noise added to the network
         'sigma_x': 0,  # input noise
-        'w_rec_init': 'brainStructure',
+        'w_rec_init': 'diag',
         's_mask': 'brain_256',  # 'brain_256', None - info: only accesible on local machine
         # 'mask_threshold': .999,  # .999 or .975
         # leaky_rec weight initialization, diag, randortho, randgauss, brainStructure (only accessible with LeakyRNN : 32-256)
@@ -559,7 +584,8 @@ def train(data_dir, model_dir, train_data, eval_data, hp=None, max_steps=1e6, di
                 c_mask = tools.create_cMask(y, response, hp, mode)
 
                 # fix: for inconcruence between y and response on dimension 1 - probably preprocessing related
-                if c_mask.any() == None:
+                # fix: for inconcruence between y and response on dimension 1 - probably preprocessing related
+                if (c_mask is None or (isinstance(c_mask, np.ndarray) and (c_mask.size == 0 or np.all(c_mask == None) or np.any(c_mask == None)))):
                     continue
 
                 trialsLoaded += 1
@@ -614,8 +640,7 @@ def train(data_dir, model_dir, train_data, eval_data, hp=None, max_steps=1e6, di
 if __name__ == '__main__':
     # Initialize list for all training times for each model
     trainingTimeList = []
-    for modelNumber in range(1,
-                             21):  # Define number of iterations and models to be created for every month, respectively
+    for modelNumber in range(1, 21):  # Define number of iterations and models to be created for every month, respectively
 
         # Measure time for every model, respectively
         trainingTimeTotal_hours = 0
@@ -624,12 +649,12 @@ if __name__ == '__main__':
         print(f'START TRAINING MODEL: {modelNumber}')
 
         # attention: standard hp #############################################################################################
-        info: if used, comment out standard hp in train(), too!
+        # info: if used, comment out standard hp in train()
         hp = get_default_hp('all')
         # attention: standard hp #############################################################################################
 
         # # attention: hitkip cluster ##########################################################################################
-        # info: if used, comment standard hp in train()
+        # info: if used, comment out standard hp in train()
         # import argparse
         # import json
         # parser = argparse.ArgumentParser()
@@ -644,21 +669,19 @@ if __name__ == '__main__':
         # hp['trainingYear_Month'] = f'_robustnessTest_multiTask_{hp['participant']}_highDimCorrects_256_{robustnessTest_model}'
         # # attention: hitkip cluster ##########################################################################################
 
-        # # attention: hitkip local ############################################################################################
-        # # info: if used, comment standard hp in train()
+        # # attention: hitkip robustness ############################################################################################
         # import json
-        #
         # # Convert the JSON string to a Python dictionary
-        # robustnessTest_model = 'hp_8'
+        # robustnessTest_model = 'hp_7'
         # with open(
         #         f"/zi/home/oliver.frank/Desktop/RNN/multitask_BeRNN-main/_bestModels_scripts/best10_gridSearch_multiTask_beRNN_03_highDimCorrects_256/{robustnessTest_model}.json",
         #         "r") as f:
         #     hp = json.load(f)
         #
-        # hp['participant'] = 'beRNN_05'
+        # hp['participant'] = 'beRNN_01'
         # participant = hp['participant']
         # hp['trainingYear_Month'] = f'_robustnessTest_multiTask_{participant}_highDimCorrects_256_{robustnessTest_model}'
-        # # attention: hitkip local #############################################################################################
+        # # attention: hitkip robustness #############################################################################################
 
         load_dir = None
 

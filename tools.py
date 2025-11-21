@@ -522,7 +522,7 @@ def create_cMask(y, response, hp, mode):
     fixation_steps, response_steps = getEpochSteps(y)
 
     if fixation_steps == None or response_steps == None:  # if no fixation_steps could be found
-        return np.array(None)
+        return None
     # Creat c_mask for current batch
     if hp['loss_type'] == 'lsq':
 
@@ -531,7 +531,7 @@ def create_cMask(y, response, hp, mode):
         if mode == 'train':
             # fix: random beRNN_02 bug: inconcruence between y and response dimension 1
             if response.shape[1] != y.shape[1]:
-                return np.array(None)
+                return None
 
             # info: Create a c_mask that emphasizes errors by multiplying the error contribution for backProp by 5. and corrects by 1.
             errorBalancingVector = np.zeros(response.shape[1], dtype='float32')

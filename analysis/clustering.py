@@ -84,7 +84,7 @@ class Analysis(object):
         #     numberOfLayers = 1
         #
         # if not all_variance_files_exist(model_dir, numberOfLayers, mode, data_dir):
-        fname = variance.compute_variance(data_dir, model_dir, layer, mode, monthsConsidered, data_type, networkAnalysis)
+        fname, fname2, fname3 = variance.compute_variance(data_dir, model_dir, layer, mode, monthsConsidered, data_type, networkAnalysis)
 
         # compVarianceList = [compVariance for compVariance in os.listdir(model_dir) if compVariance.startswith('var')]
         # self.h_normvar_all_list = []
@@ -111,6 +111,7 @@ class Analysis(object):
 
 
         # attention: fallback if clustering is not possible
+        # info: fallback if clustering is not possible - keep h_var_all as criterium but witch to h_corr_all for evaluation of modularity
         if h_var_all.shape[0] < 2 or np.all(h_var_all.sum(axis=1) <= 1e-2):
         # if h_var_all.shape[0] < 2 or np.where(h_var_all_.sum(axis=1) < activityThreshold):
             print(f"Creating dummy clustering and rdm for model {model_dir} — insufficient data or variance.")
@@ -162,7 +163,9 @@ class Analysis(object):
                 raise NotImplementedError()
 
             # head: Compute Representational Dissimilarity Matrix (RSA-style) ==========================================
-            task_matrix = h_normvar_all.T  # shape: (n_tasks, n_units)
+            res3 = tools.load_pickle(fname3)
+            h_mean_all = res3['h_mean_all']
+            task_matrix = h_mean_all.T  # shape: (n_tasks, n_units)
             self.rdm_metric = rdm_metric # correlation - cosine - ...
             self.rdm = squareform(pdist(task_matrix, metric=self.rdm_metric))
             self.rdm_vector = self.rdm[np.triu_indices_from(self.rdm, k=1)]

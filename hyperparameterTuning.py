@@ -44,14 +44,14 @@ def create_repeated_param_combinations(param_grid, sample_size):
     return repeated_combinations
 
 
-# # attention: hitkip cluster ##########################################################################################
-# parser = argparse.ArgumentParser()
-# parser.add_argument("--adjParams", type=str, required=True)
-# args = parser.parse_args()
-#
-# # Convert the JSON string to a Python dictionary
-# sampled_combinations = json.loads(args.adjParams)
-# # attention: hitkip cluster ##########################################################################################
+# attention: hitkip cluster ##########################################################################################
+parser = argparse.ArgumentParser()
+parser.add_argument("--adjParams", type=str, required=True)
+args = parser.parse_args()
+
+# Convert the JSON string to a Python dictionary
+sampled_combinations = json.loads(args.adjParams)
+# attention: hitkip cluster ##########################################################################################
 
 
 # # attention: hitkip local ############################################################################################
@@ -61,308 +61,309 @@ def create_repeated_param_combinations(param_grid, sample_size):
 # # attention: hitkip local ############################################################################################
 
 
-# # attention: all other setups ########################################################################################
-# Get input and output dimension for network, depending on higDim and lowDim data and ruleset (standard: 'all')
-num_ring = tools.get_num_ring('all')
-n_rule = tools.get_num_rule('all')
-# Choose right dataset
-# data = None # 'data_highDim' , data_highDim_correctOnly , data_highDim_lowCognition , data_lowDim , data_lowDim_correctOnly , data_lowDim_lowCognition
-
-# if 'highDim' in data[0]:
-n_eachring = 32
-n_outputring = n_eachring
-n_input, n_output = 1 + num_ring * n_eachring + n_rule, n_outputring + 1
-# else:
-#     n_eachring = 10
-#     n_outputring = 2
-#     n_input, n_output = 1 + num_ring * n_eachring + n_rule, n_outputring + 1
-
-adjParams = {
-    'batch_size': [80],
-    'in_type': ['normal'],
-    'rnn_type': ['LeakyRNN'], # 'LeakyGRU'
-    'n_input': [n_input], # number of input units
-    'n_output': [n_output], # number of output units
-    'use_separate_input': [False],
-    'loss_type': ['lsq'],
-    'optimizer': ['adam'], # 'sgd'
-    'activation': ['relu', 'softplus', 'tanh'], # 'elu', 'tanh', 'softplus'
-    'tau': [100], # Decides how fast previous information decays to calculate current state activity
-    'dt': [20],
-    # 'alpha': 0.2,
-    'sigma_rec': [0, 0.01],
-    'sigma_x': [0, 0.01],
-    'w_rec_init': ['randortho', 'randgauss', 'diag'], # , 'brainStructure'
-    # 'w_rec_init': ['randortho', 'randgauss', 'diag', 'brainStructure'],
-    'l1_h': [0, 0.00001, 0.0001, 0.001],
-    'l2_h': [0, 0.00001, 0.0001, 0.001],
-    'l1_weight': [0, 0.00001, 0.0001, 0.001],
-    'l2_weight': [0, 0.00001, 0.0001, 0.001],
-    'l2_weight_init': [0],
-    'p_weight_train': [None],
-    'w_mask_value': [0.1], # default .1 - value that will be multiplied with L2 regularization (combined with p_weight_train), <1 will decrease it
-    'learning_rate': [0.0015, 0.001, 0.0005, 0.0001],
-    'learning_rate_mode': [None, None, 'exp_range', 'triangular2'], # Will overwrite learning_rate if it is not None - 'triangular', 'triangular2', 'exp_range'
-    'base_lr': [0.0005],
-    'max_lr': [0.0015],
-    'n_rnn': [512],
-    'multiLayer': [False],
-    'n_rnn_per_layer': [[32, 32, 32]],
-    'activations_per_layer': [['relu', 'relu', 'relu'], ['softplus', 'softplus', 'softplus'], ['tanh', 'tanh', 'tanh']],
-    'errorBalancingValue': [1.],
-    'c_mask_responseValue': [5.],
-    's_mask': [None], # 'brain_256', None
-    'monthsConsidered': [['month_4', 'month_5', 'month_6']], # list of lists
-    'monthsString': ['4-6'],
-    'rule_prob_map': [{"DM": 1,"DM_Anti": 1,"EF": 1,"EF_Anti": 1,"RP": 1,"RP_Anti": 1,"RP_Ctx1": 1,"RP_Ctx2": 1,"WM": 1,"WM_Anti": 1,"WM_Ctx1": 1,"WM_Ctx2": 1}],
-    # 'rule_prob_map': [{"DM": 0,"DM_Anti": 0,"EF": 1,"EF_Anti": 1,"RP": 0,"RP_Anti": 0,"RP_Ctx1": 0,"RP_Ctx2": 0,"WM": 0,"WM_Anti": 0,"WM_Ctx1": 0,"WM_Ctx2": 0}], # fraction of tasks represented in training data
-    'participant': ['beRNN_03'], # Participant to take
-    'data': ['data_highDim'],
-    'machine': ['hitkip'], # 'local' 'pandora' 'hitkip'
-    'tasksString': ['AllTask'], # tasksTaken
-    'sequenceMode': [True], # Decide if models are trained sequentially month-wise
-    'trainingBatch': ['1'],
-    'trainingYear_Month': ['_gridSearch_multiTask_beRNN_03_highDim_512']
-}
-
+# # # attention: all other setups ########################################################################################
+# # Get input and output dimension for network, depending on higDim and lowDim data and ruleset (standard: 'all')
+# num_ring = tools.get_num_ring('all')
+# n_rule = tools.get_num_rule('all')
+# # Choose right dataset
+# # data = None # 'data_highDim' , data_highDim_correctOnly , data_highDim_lowCognition , data_lowDim , data_lowDim_correctOnly , data_lowDim_lowCognition
+#
+# # if 'highDim' in data[0]:
+# n_eachring = 32
+# n_outputring = n_eachring
+# n_input, n_output = 1 + num_ring * n_eachring + n_rule, n_outputring + 1
+# # else:
+# #     n_eachring = 10
+# #     n_outputring = 2
+# #     n_input, n_output = 1 + num_ring * n_eachring + n_rule, n_outputring + 1
+#
+# adjParams = {
+#     'batch_size': [80],
+#     'in_type': ['normal'],
+#     'rnn_type': ['LeakyRNN'], # 'LeakyGRU'
+#     'n_input': [n_input], # number of input units
+#     'n_output': [n_output], # number of output units
+#     'use_separate_input': [False],
+#     'loss_type': ['lsq'],
+#     'optimizer': ['adam'], # 'sgd'
+#     'activation': ['relu', 'softplus', 'tanh'], # 'elu', 'tanh', 'softplus'
+#     'tau': [100], # Decides how fast previous information decays to calculate current state activity
+#     'dt': [20],
+#     # 'alpha': 0.2,
+#     'sigma_rec': [0, 0.01],
+#     'sigma_x': [0, 0.01],
+#     'w_rec_init': ['randortho', 'randgauss', 'diag'], # , 'brainStructure'
+#     # 'w_rec_init': ['randortho', 'randgauss', 'diag', 'brainStructure'],
+#     'l1_h': [0, 0.00001, 0.0001, 0.001],
+#     'l2_h': [0, 0.00001, 0.0001, 0.001],
+#     'l1_weight': [0, 0.00001, 0.0001, 0.001],
+#     'l2_weight': [0, 0.00001, 0.0001, 0.001],
+#     'l2_weight_init': [0],
+#     'p_weight_train': [None],
+#     'w_mask_value': [0.1], # default .1 - value that will be multiplied with L2 regularization (combined with p_weight_train), <1 will decrease it
+#     'learning_rate': [0.0015, 0.001, 0.0005, 0.0001],
+#     'learning_rate_mode': [None, None, 'exp_range', 'triangular2'], # Will overwrite learning_rate if it is not None - 'triangular', 'triangular2', 'exp_range'
+#     'base_lr': [0.0005],
+#     'max_lr': [0.0015],
+#     'n_rnn': [512],
+#     'multiLayer': [False],
+#     'n_rnn_per_layer': [[32, 32, 32]],
+#     'activations_per_layer': [['relu', 'relu', 'relu'], ['softplus', 'softplus', 'softplus'], ['tanh', 'tanh', 'tanh']],
+#     'errorBalancingValue': [1.],
+#     'c_mask_responseValue': [5.],
+#     's_mask': [None], # 'brain_256', None
+#     'monthsConsidered': [['month_4', 'month_5', 'month_6']], # list of lists
+#     'monthsString': ['4-6'],
+#     'rule_prob_map': [{"DM": 1,"DM_Anti": 1,"EF": 1,"EF_Anti": 1,"RP": 1,"RP_Anti": 1,"RP_Ctx1": 1,"RP_Ctx2": 1,"WM": 1,"WM_Anti": 1,"WM_Ctx1": 1,"WM_Ctx2": 1}],
+#     # 'rule_prob_map': [{"DM": 0,"DM_Anti": 0,"EF": 1,"EF_Anti": 1,"RP": 0,"RP_Anti": 0,"RP_Ctx1": 0,"RP_Ctx2": 0,"WM": 0,"WM_Anti": 0,"WM_Ctx1": 0,"WM_Ctx2": 0}], # fraction of tasks represented in training data
+#     'participant': ['beRNN_03'], # Participant to take
+#     'data': ['data_highDim'],
+#     'machine': ['local'], # 'local' 'pandora' 'hitkip'
+#     'tasksString': ['AllTask'], # tasksTaken
+#     'sequenceMode': [True], # Decide if models are trained sequentially month-wise
+#     'trainingBatch': ['1'],
+#     'trainingYear_Month': ['test']
+# }
+#
 # # attention: all other setups ##########################################################################################
 #
 # # Randomly sample combinations
-# # sampled_combinations = sample_param_combinations(adjParams, 20)
-#
-# # # Create one combination and repeat it according to sample_size
-# # sampled_repeated_combinations = create_repeated_param_combinations(best_params, 5)
+# sampled_combinations = sample_param_combinations(adjParams, 20)
+
+# # Create one combination and repeat it according to sample_size
+# sampled_repeated_combinations = create_repeated_param_combinations(best_params, 5)
 
 
-# info: dataset adjustments ############################################################################################
-dir = fr'C:\Users\oliver.frank\Desktop\PyProjects\beRNN_v1\paramCombinations_{adjParams["trainingYear_Month"][0]}'
-os.makedirs(dir, exist_ok=True)
-os.chdir(dir)
-
-for paramBatch in range(1,17):
-    # Randomly sample combinations
-    sampled_combinations = sample_param_combinations(adjParams, 8)
-
-    # with open(f'sampled_combinations_beRNN_01_{paramBatch}.json', 'w') as f:
-    #     json.dump(sampled_combinations, f, indent=4)
-    # with open(f'sampled_combinations_beRNN_02_{paramBatch}.json', 'w') as f:
-    #     json.dump(sampled_combinations, f, indent=4)
-    with open(f'sampled_combinations_beRNN_03_{paramBatch}.json', 'w') as f:
-        json.dump(sampled_combinations, f, indent=4)
-    # with open(f'sampled_combinations_beRNN_04_{paramBatch}.json', 'w') as f:
-    #     json.dump(sampled_combinations, f, indent=4)
-    # with open(f'sampled_combinations_beRNN_05_{paramBatch}.json', 'w') as f:
-    #     json.dump(sampled_combinations, f, indent=4)
-
-# info: Adjust values for already created json files ###################################################################
-# participantList = ['beRNN_01', 'beRNN_02', 'beRNN_03', 'beRNN_04', 'beRNN_05']
-participantList = ['beRNN_03']
-for participant in participantList:
-    for paramBatch in range(1, 17):
-        with open(f'sampled_combinations_{participant}_{paramBatch}.json', 'r') as f:
-            sampled_combinations = json.load(f)
-            for i in range(len(sampled_combinations)):
-                # sampled_combinations[i]['participant'] = participant # attention: You have to define participant for paperGridSearch
-                # sampled_combinations[i]['machine'] = 'hitkip' # attention: You have to define machine for paperGridSearch
-                # sampled_combinations[i]['data'] = 'data_highDim_correctOnly_3stimTC' # attention: You have to define data for paperGridSearch
-                sampled_combinations[i]['trainingBatch'] = str(paramBatch) # attention: You have to define trainingBatch
-                # sampled_combinations[i]['trainingYear_Month'] = "finalGridSearch_allSubjects_correctOnly"
-        # info: Overwrite previous file
-        with open(f'sampled_combinations_{participant}_{paramBatch}.json', 'w') as f:
-            json.dump(sampled_combinations, f, indent=4)
-# info: dataset adjustments ############################################################################################
-
-
-# # Training #############################################################################################################
-# # Initialize list for all training times for each model
-# trainingTimeList = []
-# # Measure time for every model, respectively
-# trainingTimeTotal_hours = 0
-# # Example iteration through the grid
-# for modelNumber, params in enumerate(sampled_combinations): # info: either sampled_combinations OR sampled_repeated_combinations
+# # info: dataset adjustments ############################################################################################
+# dir = fr'C:\Users\oliver.frank\Desktop\PyProjects\beRNN_v1\paramCombinations_{adjParams["trainingYear_Month"][0]}'
+# os.makedirs(dir, exist_ok=True)
+# os.chdir(dir)
 #
-#     # Start
-#     start_time = time.perf_counter()
-#     print(f'START TRAINING MODEL: {modelNumber}')
+# for paramBatch in range(1,17):
+#     # Randomly sample combinations
+#     sampled_combinations = sample_param_combinations(adjParams, 8)
 #
-#     print(params)
-#     print(modelNumber)
+#     # with open(f'sampled_combinations_beRNN_01_{paramBatch}.json', 'w') as f:
+#     #     json.dump(sampled_combinations, f, indent=4)
+#     # with open(f'sampled_combinations_beRNN_02_{paramBatch}.json', 'w') as f:
+#     #     json.dump(sampled_combinations, f, indent=4)
+#     with open(f'sampled_combinations_beRNN_03_{paramBatch}.json', 'w') as f:
+#         json.dump(sampled_combinations, f, indent=4)
+#     # with open(f'sampled_combinations_beRNN_04_{paramBatch}.json', 'w') as f:
+#     #     json.dump(sampled_combinations, f, indent=4)
+#     # with open(f'sampled_combinations_beRNN_05_{paramBatch}.json', 'w') as f:
+#     #     json.dump(sampled_combinations, f, indent=4)
 #
-#     print('START TRAINING FOR NEW MODEL')
-#
-#     load_dir = None
-#
-#     # Define main path
-#     if params['machine'] == 'local':
-#         path = 'C:\\Users\\oliver.frank\\Desktop\\PyProjects'
-#     elif params['machine'] == 'hitkip':
-#         path = '/zi/home/oliver.frank/Desktop'
-#     elif params['machine'] == 'pandora':
-#         path = '/pandora/home/oliver.frank/01_Projects/RNN/multitask_BeRNN-main'
-#
-#     # Define data path
-#     preprocessedData_path = os.path.join(path, 'Data', params['participant'], params['data'])
-#
-#     for month in params['monthsConsidered']:  # attention: You have to delete this if cascade training should be set OFF
-#         # Adjust variables manually as needed
-#         model_name = f'model_{month}'
-#
-#         # Define model_dir for different servers
-#         if params['machine'] == 'local':
-#
-#             if params['multiLayer'] == True:
-#                 numberOfLayers = len(params['n_rnn_per_layer'])
-#                 params['rnn_type'] = 'LeakyRNN'  # info: force rnn_type to always be LeakyRNN for multiLayer case
-#                 if numberOfLayers == 2:
-#                     model_dir = os.path.join(f"{path}\\beRNNmodels\\{params['trainingYear_Month']}\\{params['data'].split('data_')[-1]}\\{params['participant']}\\{params['trainingBatch']}\\{params['participant']}_{params['tasksString']}_{params['monthsString']}_{params['data']}_tB{params['trainingBatch']}_iter{modelNumber}_{params['rnn_type']}_{params['n_rnn_per_layer'][0]}-{params['n_rnn_per_layer'][1]}_{params['activations_per_layer'][0]}-{params['activations_per_layer'][1]}",model_name)
-#                 else:
-#                     model_dir = os.path.join(
-#                         f"{path}\\beRNNmodels\\{params['trainingYear_Month']}\\{params['data'].split('data_')[-1]}\\{params['participant']}\\{params['trainingBatch']}\\{params['participant']}_{params['tasksString']}_{params['monthsString']}_{params['data']}_tB{params['trainingBatch']}_iter{modelNumber}_{params['rnn_type']}_{params['n_rnn_per_layer'][0]}-{params['n_rnn_per_layer'][1]}-{params['n_rnn_per_layer'][2]}_{params['activations_per_layer'][0]}-{params['activations_per_layer'][1]}-{params['activations_per_layer'][2]}",model_name)
-#             else:
-#                 model_dir = os.path.join(
-#                     f"{path}\\beRNNmodels\\{params['trainingYear_Month']}\\{params['data'].split('data_')[-1]}\\{params['participant']}\\{params['trainingBatch']}\\{params['participant']}_{params['tasksString']}_{params['monthsString']}_{params['data']}_tB{params['trainingBatch']}_iter{modelNumber}_{params['rnn_type']}_{params['n_rnn']}_{params['activation']}",model_name)
-#
-#         elif params['machine'] == 'hitkip' or params['machine'] == 'pandora':
-#
-#             if params['multiLayer'] == True:
-#                 params['rnn_type'] = 'LeakyRNN'  # info: force rnn_type to always be LeakyRNN for multiLayer case
-#                 numberOfLayers = len(params['n_rnn_per_layer'])
-#                 if numberOfLayers == 2:
-#                     model_dir = os.path.join(
-#                         f"{path}/beRNNmodels/{params['trainingYear_Month']}/{params['data'].split('data_')[-1]}/{params['participant']}/{params['trainingBatch']}/{params['participant']}_{params['tasksString']}_{params['monthsString']}_{params['data']}_tB{params['trainingBatch']}_iter{modelNumber}_{params['rnn_type']}_{params['n_rnn_per_layer'][0]}-{params['n_rnn_per_layer'][1]}_{params['activations_per_layer'][0]}-{params['activations_per_layer'][1]}",model_name)
-#                 else:
-#                     model_dir = os.path.join(
-#                         f"{path}/beRNNmodels/{params['trainingYear_Month']}/{params['data'].split('data_')[-1]}/{params['participant']}/{params['trainingBatch']}/{params['participant']}_{params['tasksString']}_{params['monthsString']}_{params['data']}_tB{params['trainingBatch']}_iter{modelNumber}_{params['rnn_type']}_{params['n_rnn_per_layer'][0]}-{params['n_rnn_per_layer'][1]}-{params['n_rnn_per_layer'][2]}_{params['activations_per_layer'][0]}-{params['activations_per_layer'][1]}-{params['activations_per_layer'][2]}",model_name)
-#             else:
-#                 model_dir = os.path.join(
-#                     f"{path}/beRNNmodels/{params['trainingYear_Month']}/{params['data'].split('data_')[-1]}/{params['participant']}/{params['trainingBatch']}/{params['participant']}_{params['tasksString']}_{params['monthsString']}_{params['data']}_tB{params['trainingBatch']}_iter{modelNumber}_{params['rnn_type']}_{params['n_rnn']}_{params['activation']}",model_name)
-#
-#         print('MODELDIR: ', model_dir)
-#
-#         if not os.path.exists(model_dir):
-#             os.makedirs(model_dir)
-#
-#         # Split the data ---------------------------------------------------------------------------------------------------
-#         # List of the subdirectories
-#         subdirs = [os.path.join(preprocessedData_path, d) for d in os.listdir(preprocessedData_path) if os.path.isdir(os.path.join(preprocessedData_path, d))]
-#
-#         # Initialize dictionaries to store training and evaluation data
-#         train_data = {}
-#         eval_data = {}
-#
-#         # Function to split the files
-#         for subdir in subdirs:
-#             # Collect all file triplets in the current subdirectory
-#             file_quartett = []
-#             for file in os.listdir(subdir):
-#                 if file.endswith('Input.npy'):
-#                     # III: Exclude files with specific substrings in their names
-#                     # if any(exclude in file for exclude in ['Randomization', 'Segmentation', 'Mirrored', 'Rotation']):
-#                     #     continue
-#                     if month not in file:  # Sort out months which should not be considered
-#                         continue
-#                     # Add all necessary files to triplets
-#                     base_name = file.split('Input')[0]
-#                     input_file = os.path.join(subdir, base_name + 'Input.npy')
-#                     yloc_file = os.path.join(subdir, base_name + 'yLoc.npy')
-#                     output_file = os.path.join(subdir, base_name + 'Output.npy')
-#                     response_file = os.path.join(subdir, base_name + 'Response.npy')
-#
-#                     file_quartett.append((input_file, yloc_file, output_file, response_file))
-#
-#             # Split the file triplets
-#             train_files, eval_files = tools.split_files(params, file_quartett)
-#
-#             # Store the results in the dictionaries
-#             train_data[subdir] = train_files
-#             eval_data[subdir] = eval_files
-#
-#         try:
-#             # Start Training ---------------------------------------------------------------------------------------------------
-#             training.train(preprocessedData_path, model_dir=model_dir, train_data=train_data, eval_data=eval_data, hp=params, load_dir=load_dir)
-#
-#         except:
-#             print("An exception occurred with model number: ", modelNumber)
-#
-#         # info: If True previous model parameters will be taken to initialize consecutive model, creating sequential training
-#         if params['sequenceMode'] == True:
-#             load_dir = model_dir
-#
-#     end_time = time.perf_counter()
-#     elapsed_time_seconds = end_time - start_time
-#     elapsed_time_minutes = elapsed_time_seconds / 60
-#     elapsed_time_hours = elapsed_time_minutes / 60
-#
-#     print(f"TIME TAKEN TO TRAIN MODEL {modelNumber}: {elapsed_time_seconds:.2f} seconds")
-#     print(f"TIME TAKEN TO TRAIN MODEL {modelNumber}: {elapsed_time_minutes:.2f} minutes")
-#     print(f"TIME TAKEN TO TRAIN MODEL {modelNumber}: {elapsed_time_hours:.2f} hours")
-#
-#     # Accumulate trainingTime
-#     trainingTimeList.append(elapsed_time_hours)
-#     trainingTimeTotal_hours += elapsed_time_hours
-#
-#
-# # Save training time for each model to current batch folder as a text file
-# file_path = os.path.join(path, 'beRNNmodels', params['trainingYear_Month'], params['data'].split('data_')[-1], params['participant'], params['trainingBatch'], 'times.txt')
-#
-# with open(file_path, 'w') as f:
-#     f.write(f"training time total (hours): {trainingTimeTotal_hours}\n")
-#     f.write("training time each individual model (hours):\n")
-#     for time in trainingTimeList:
-#         f.write(f"{time}\n")
-#
-# print(f"Training times saved to {file_path}")
+# # info: Adjust values for already created json files ###################################################################
+# # participantList = ['beRNN_01', 'beRNN_02', 'beRNN_03', 'beRNN_04', 'beRNN_05']
+# participantList = ['beRNN_03']
+# for participant in participantList:
+#     for paramBatch in range(1, 17):
+#         with open(f'sampled_combinations_{participant}_{paramBatch}.json', 'r') as f:
+#             sampled_combinations = json.load(f)
+#             for i in range(len(sampled_combinations)):
+#                 # sampled_combinations[i]['participant'] = participant # attention: You have to define participant for paperGridSearch
+#                 # sampled_combinations[i]['machine'] = 'hitkip' # attention: You have to define machine for paperGridSearch
+#                 # sampled_combinations[i]['data'] = 'data_highDim_correctOnly_3stimTC' # attention: You have to define data for paperGridSearch
+#                 sampled_combinations[i]['trainingBatch'] = str(paramBatch) # attention: You have to define trainingBatch
+#                 # sampled_combinations[i]['trainingYear_Month'] = "finalGridSearch_allSubjects_correctOnly"
+#         # info: Overwrite previous file
+#         with open(f'sampled_combinations_{participant}_{paramBatch}.json', 'w') as f:
+#             json.dump(sampled_combinations, f, indent=4)
+# # info: dataset adjustments ############################################################################################
 
 
+# Training #############################################################################################################
+# Initialize list for all training times for each model
+trainingTimeList = []
+# Measure time for every model, respectively
+trainingTimeTotal_hours = 0
+# Example iteration through the grid
+for modelNumber, params in enumerate(sampled_combinations): # info: either sampled_combinations OR sampled_repeated_combinations
 
-# head: Create folder with hp's for robustnessTests on hitkip cluster ##################################################
-import os
-import os
-import json
-import shutil
+    # Start
+    start_time = time.perf_counter()
+    print(f'START TRAINING MODEL: {modelNumber}')
 
-# --- Settings ---
-bestModel_txtFile_directory = r'C:\Users\oliver.frank\Desktop\PyProjects\beRNNmodels\_gridSearch_multiTask_beRNN_03_highDimCorrects_256\highDim_correctOnly\beRNN_03\visuals\performance_test'
-output_base_dir = r'C:\Users\oliver.frank\Desktop\PyProjects\beRNN_v1'
-output_folder_name = 'best10__multiTask_beRNN_03_highDimCorrects_256'
-numberOfModelsToTest = 10
+    print(params)
+    print(modelNumber)
 
-# Create output folder if it doesn't exist
-output_folder = os.path.join(output_base_dir, output_folder_name)
-os.makedirs(output_folder, exist_ok=True)
+    print('START TRAINING FOR NEW MODEL')
 
-# Read first 10 directories from the text file
-txt_path = os.path.join(bestModel_txtFile_directory, 'bestModels_performance_test.txt')
-with open(txt_path, 'r', encoding='utf-8') as f:
-    listOfModelsToTest_ = []
-    for line in f:
-        clean_line = line.strip()          # remove whitespace and newlines
-        clean_line = clean_line.strip(',') # remove trailing commas
-        clean_line = clean_line.strip('"') # remove double quotes at both ends
-        clean_line = clean_line.strip("'") # remove single quotes if any
-        listOfModelsToTest_.append(clean_line)
+    load_dir = None
 
-listOfModelsToTest = listOfModelsToTest_[1:numberOfModelsToTest+1]
+    # Define main path
+    if params['machine'] == 'local':
+        path = 'C:\\Users\\oliver.frank\\Desktop\\PyProjects'
+    elif params['machine'] == 'hitkip':
+        path = '/zi/home/oliver.frank/Desktop'
+    elif params['machine'] == 'pandora':
+        path = '/pandora/home/oliver.frank/01_Projects/RNN/multitask_BeRNN-main'
 
-# Loop over directories
-for idx, model_dir in enumerate(listOfModelsToTest, start=1):
-    hp_file = os.path.join(model_dir, "hp.json")
+    # Define data path
+    preprocessedData_path = os.path.join(path, 'Data', params['participant'], params['data'])
 
-    if os.path.exists(hp_file):
-        # Load JSON
-        with open(hp_file, 'r') as f:
-            hp_data = json.load(f)
+    for month in params['monthsConsidered']:  # attention: You have to delete this if cascade training should be set OFF
+        # Adjust variables manually as needed
+        model_name = f'model_{month}'
 
-        # Prepare new filename with index
-        new_hp_filename = f'hp_{idx}.json'
-        new_hp_path = os.path.join(output_folder, new_hp_filename)
+        # Define model_dir for different servers
+        if params['machine'] == 'local':
 
-        # Save JSON to new location
-        with open(new_hp_path, 'w') as f:
-            json.dump(hp_data, f, indent=4)
+            if params['multiLayer'] == True:
+                numberOfLayers = len(params['n_rnn_per_layer'])
+                params['rnn_type'] = 'LeakyRNN'  # info: force rnn_type to always be LeakyRNN for multiLayer case
+                if numberOfLayers == 2:
+                    model_dir = os.path.join(f"{path}\\beRNNmodels\\{params['trainingYear_Month']}\\{params['data'].split('data_')[-1]}\\{params['participant']}\\{params['trainingBatch']}\\{params['participant']}_{params['tasksString']}_{params['monthsString']}_{params['data']}_tB{params['trainingBatch']}_iter{modelNumber}_{params['rnn_type']}_{params['n_rnn_per_layer'][0]}-{params['n_rnn_per_layer'][1]}_{params['activations_per_layer'][0]}-{params['activations_per_layer'][1]}",model_name)
+                else:
+                    model_dir = os.path.join(
+                        f"{path}\\beRNNmodels\\{params['trainingYear_Month']}\\{params['data'].split('data_')[-1]}\\{params['participant']}\\{params['trainingBatch']}\\{params['participant']}_{params['tasksString']}_{params['monthsString']}_{params['data']}_tB{params['trainingBatch']}_iter{modelNumber}_{params['rnn_type']}_{params['n_rnn_per_layer'][0]}-{params['n_rnn_per_layer'][1]}-{params['n_rnn_per_layer'][2]}_{params['activations_per_layer'][0]}-{params['activations_per_layer'][1]}-{params['activations_per_layer'][2]}",model_name)
+            else:
+                model_dir = os.path.join(
+                    f"{path}\\beRNNmodels\\{params['trainingYear_Month']}\\{params['data'].split('data_')[-1]}\\{params['participant']}\\{params['trainingBatch']}\\{params['participant']}_{params['tasksString']}_{params['monthsString']}_{params['data']}_tB{params['trainingBatch']}_iter{modelNumber}_{params['rnn_type']}_{params['n_rnn']}_{params['activation']}",model_name)
 
-        print(f"Saved: {new_hp_filename}")
-    else:
-        print(f"WARNING: hp.json not found in {model_dir}")
+        elif params['machine'] == 'hitkip' or params['machine'] == 'pandora':
+
+            if params['multiLayer'] == True:
+                params['rnn_type'] = 'LeakyRNN'  # info: force rnn_type to always be LeakyRNN for multiLayer case
+                numberOfLayers = len(params['n_rnn_per_layer'])
+                if numberOfLayers == 2:
+                    model_dir = os.path.join(
+                        f"{path}/beRNNmodels/{params['trainingYear_Month']}/{params['data'].split('data_')[-1]}/{params['participant']}/{params['trainingBatch']}/{params['participant']}_{params['tasksString']}_{params['monthsString']}_{params['data']}_tB{params['trainingBatch']}_iter{modelNumber}_{params['rnn_type']}_{params['n_rnn_per_layer'][0]}-{params['n_rnn_per_layer'][1]}_{params['activations_per_layer'][0]}-{params['activations_per_layer'][1]}",model_name)
+                else:
+                    model_dir = os.path.join(
+                        f"{path}/beRNNmodels/{params['trainingYear_Month']}/{params['data'].split('data_')[-1]}/{params['participant']}/{params['trainingBatch']}/{params['participant']}_{params['tasksString']}_{params['monthsString']}_{params['data']}_tB{params['trainingBatch']}_iter{modelNumber}_{params['rnn_type']}_{params['n_rnn_per_layer'][0]}-{params['n_rnn_per_layer'][1]}-{params['n_rnn_per_layer'][2]}_{params['activations_per_layer'][0]}-{params['activations_per_layer'][1]}-{params['activations_per_layer'][2]}",model_name)
+            else:
+                model_dir = os.path.join(
+                    f"{path}/beRNNmodels/{params['trainingYear_Month']}/{params['data'].split('data_')[-1]}/{params['participant']}/{params['trainingBatch']}/{params['participant']}_{params['tasksString']}_{params['monthsString']}_{params['data']}_tB{params['trainingBatch']}_iter{modelNumber}_{params['rnn_type']}_{params['n_rnn']}_{params['activation']}",model_name)
+
+        print('MODELDIR: ', model_dir)
+
+        if not os.path.exists(model_dir):
+            os.makedirs(model_dir)
+
+        # Split the data ---------------------------------------------------------------------------------------------------
+        # List of the subdirectories
+        subdirs = [os.path.join(preprocessedData_path, d) for d in os.listdir(preprocessedData_path) if os.path.isdir(os.path.join(preprocessedData_path, d))]
+
+        # Initialize dictionaries to store training and evaluation data
+        train_data = {}
+        eval_data = {}
+
+        # Function to split the files
+        for subdir in subdirs:
+            # Collect all file triplets in the current subdirectory
+            file_quartett = []
+            for file in os.listdir(subdir):
+                if file.endswith('Input.npy'):
+                    # III: Exclude files with specific substrings in their names
+                    # if any(exclude in file for exclude in ['Randomization', 'Segmentation', 'Mirrored', 'Rotation']):
+                    #     continue
+                    if month not in file:  # Sort out months which should not be considered
+                        continue
+                    # Add all necessary files to triplets
+                    base_name = file.split('Input')[0]
+                    input_file = os.path.join(subdir, base_name + 'Input.npy')
+                    yloc_file = os.path.join(subdir, base_name + 'yLoc.npy')
+                    output_file = os.path.join(subdir, base_name + 'Output.npy')
+                    response_file = os.path.join(subdir, base_name + 'Response.npy')
+
+                    file_quartett.append((input_file, yloc_file, output_file, response_file))
+
+            # Split the file triplets
+            train_files, eval_files = tools.split_files(params, file_quartett)
+
+            # Store the results in the dictionaries
+            train_data[subdir] = train_files
+            eval_data[subdir] = eval_files
+
+        try:
+            # Start Training ---------------------------------------------------------------------------------------------------
+            training.train(preprocessedData_path, model_dir=model_dir, train_data=train_data, eval_data=eval_data, hp=params, load_dir=load_dir)
+
+        except Exception as e:
+            print("An exception occurred with model number:", modelNumber)
+            print("Error message:", str(e))
+
+        # info: If True previous model parameters will be taken to initialize consecutive model, creating sequential training
+        if params['sequenceMode'] == True:
+            load_dir = model_dir
+
+    end_time = time.perf_counter()
+    elapsed_time_seconds = end_time - start_time
+    elapsed_time_minutes = elapsed_time_seconds / 60
+    elapsed_time_hours = elapsed_time_minutes / 60
+
+    print(f"TIME TAKEN TO TRAIN MODEL {modelNumber}: {elapsed_time_seconds:.2f} seconds")
+    print(f"TIME TAKEN TO TRAIN MODEL {modelNumber}: {elapsed_time_minutes:.2f} minutes")
+    print(f"TIME TAKEN TO TRAIN MODEL {modelNumber}: {elapsed_time_hours:.2f} hours")
+
+    # Accumulate trainingTime
+    trainingTimeList.append(elapsed_time_hours)
+    trainingTimeTotal_hours += elapsed_time_hours
+
+
+# Save training time for each model to current batch folder as a text file
+file_path = os.path.join(path, 'beRNNmodels', params['trainingYear_Month'], params['data'].split('data_')[-1], params['participant'], params['trainingBatch'], 'times.txt')
+
+with open(file_path, 'w') as f:
+    f.write(f"training time total (hours): {trainingTimeTotal_hours}\n")
+    f.write("training time each individual model (hours):\n")
+    for time in trainingTimeList:
+        f.write(f"{time}\n")
+
+print(f"Training times saved to {file_path}")
+
+
+
+# # head: Create folder with hp's for robustnessTests on hitkip cluster ##################################################
+# import os
+# import os
+# import json
+# import shutil
+#
+# # --- Settings ---
+# bestModel_txtFile_directory = r'C:\Users\oliver.frank\Desktop\PyProjects\beRNNmodels\_gridSearch_multiTask_beRNN_03_highDimCorrects_256\highDim_correctOnly\beRNN_03\visuals\performance_test'
+# output_base_dir = r'C:\Users\oliver.frank\Desktop\PyProjects\beRNN_v1'
+# output_folder_name = 'test'
+# numberOfModelsToTest = 10
+#
+# # Create output folder if it doesn't exist
+# output_folder = os.path.join(output_base_dir, output_folder_name)
+# os.makedirs(output_folder, exist_ok=True)
+#
+# # Read first 10 directories from the text file
+# txt_path = os.path.join(bestModel_txtFile_directory, 'bestModels_performance_test.txt')
+# with open(txt_path, 'r', encoding='utf-8') as f:
+#     listOfModelsToTest_ = []
+#     for line in f:
+#         clean_line = line.strip()          # remove whitespace and newlines
+#         clean_line = clean_line.strip(',') # remove trailing commas
+#         clean_line = clean_line.strip('"') # remove double quotes at both ends
+#         clean_line = clean_line.strip("'") # remove single quotes if any
+#         listOfModelsToTest_.append(clean_line)
+#
+# listOfModelsToTest = listOfModelsToTest_[1:numberOfModelsToTest+1]
+#
+# # Loop over directories
+# for idx, model_dir in enumerate(listOfModelsToTest, start=1):
+#     hp_file = os.path.join(model_dir, "hp.json")
+#
+#     if os.path.exists(hp_file):
+#         # Load JSON
+#         with open(hp_file, 'r') as f:
+#             hp_data = json.load(f)
+#
+#         # Prepare new filename with index
+#         new_hp_filename = f'hp_{idx}.json'
+#         new_hp_path = os.path.join(output_folder, new_hp_filename)
+#
+#         # Save JSON to new location
+#         with open(new_hp_path, 'w') as f:
+#             json.dump(hp_data, f, indent=4)
+#
+#         print(f"Saved: {new_hp_filename}")
+#     else:
+#         print(f"WARNING: hp.json not found in {model_dir}")
 
 
