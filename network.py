@@ -329,7 +329,8 @@ class LeakyRNNCell(RNNCell):
 
             structuralMask = np.load(os.path.join(connectomePath, f'{participant}_ses-03_atlas-4S256Parcels_mapping-standardized.npy'))
 
-            maskSize = int(mask.split('_')[1])
+            # maskSize = int(mask.split('_')[1]) # fix: extract size from mask name string
+            maskSize = 256
             mean_activity = np.mean(structuralMask)
             structuralMask_binary = structuralMask.copy()
             counter1 = 0
@@ -943,13 +944,13 @@ class Model(object):
             elif hp['rnn_type'] == 'LeakyGRU':
                 cell = LeakyGRUCell(
                     n_rnn, hp['alpha'],
-                    sigma_rec=hp['sigma_rec'], activation=f_act, mask=hp['s_mask'])
+                    sigma_rec=hp['sigma_rec'], activation=f_act, mask=hp['s_mask']) # fix: s_mask - outdated
 
             elif hp['rnn_type'] == 'LSTM':
                 cell = tf.contrib.rnn.LSTMCell(n_rnn, activation=f_act)
 
             elif hp['rnn_type'] == 'GRU':
-                cell = tf.contrib.rnn.GRUCell(n_rnn, activation=f_act, mask=hp['s_mask'])
+                cell = tf.contrib.rnn.GRUCell(n_rnn, activation=f_act, mask=hp['s_mask']) # fix: s_mask - outdated
 
             else:
                 raise NotImplementedError("""rnn_type must be one of LeakyRNN,
