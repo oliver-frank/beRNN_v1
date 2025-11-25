@@ -677,78 +677,84 @@ def plot_rsa(directory, participantList):
 
 # Task representation analysis - variable allocation ###################################################################
 # info: The script can only be run after participants have been analyzed by hyperparameterOverview.py
-dataType = ['highDim', 'highDim_correctOnly', 'highDim_3stimTC', 'highDim_CCN'][1]
-# participantList =  ['beRNN_03'] # info: Only choose participants who were analyzed for RDM first
-participantList =  ['beRNN_01', 'beRNN_02', 'beRNN_03', 'beRNN_04', 'beRNN_05'] # info: Only choose participants who were analyzed for RDM first
-participant = participantList[2]
-# folder = [f'_robustnessTest_multiTask_{participant}_highDimCorrects_256_hp_10'][0]
-folder = [f'_robustnessTest_multiTask_{participant}_highDimCorrects_256'][0]
-directory = Path(f'C:/Users/oliver.frank/Desktop/PyProjects/beRNNmodels/{folder}/{dataType}/{participant}')
+dataType = ['highDim', 'highDim_correctOnly', 'highDim_3stimTC', 'highDim_CCN'][0]
+participantList =  ['beRNN_01', 'beRNN_02', 'beRNN_03', 'beRNN_04', 'beRNN_05']
+folders = ['_robustnessTest_fundamentals_beRNN_01_highDim_256_hp_2', '_robustnessTest_fundamentals_beRNN_02_highDim_256_hp_2', '_robustnessTest_fundamentals_beRNN_03_highDim_256_hp_2',
+           '_robustnessTest_fundamentals_beRNN_04_highDim_256_hp_2', '_robustnessTest_fundamentals_beRNN_05_highDim_256_hp_2']
 
-mode = ['test', 'train'][0]
-sort_variable = ['performance', 'clustering'][0]
-rdm_metric = ['cosine', 'correlation'][0]
-standard_analysis = [True, False][1]
-rsa_analysis = [True, False][0]
-robustnessTest, batch = [True, False][1], '10'
+for folder in folders:
+    participant = [participant for participant in participantList if participant in folder][0]
+    directory = Path(f'C:/Users/oliver.frank/Desktop/PyProjects/beRNNmodels/{folder}/{dataType}/{participant}')
 
-ruleset = ['fundamentals', 'all'][1]
-representation = ['rate', 'weight'][0]
-restore = False
+    mode = ['test', 'train'][0]
+    sort_variable = ['performance', 'clustering'][0]
+    rdm_metric = ['cosine', 'correlation'][0]
+    standard_analysis = [True, False][0]
+    rsa_analysis = [True, False][1]
+    robustnessTest, batch = [True, False][1], '10'
 
-numberOfModels = 20 # max. number of models in folder
+    if 'fundamentals' in folder:
+        ruleset = 'fundamentals'
+    elif 'multiTask' in folder:
+        ruleset = 'all'
+    else:
+        ruleset = 'domainTask'
+    representation = ['rate', 'weight'][0]
+    restore = False
 
-# Define for different folder structure
-if robustnessTest == False:
-    txtFile = os.path.join(directory, 'visuals', f'{sort_variable}_{mode}', f'bestModels_{sort_variable}_{mode}.txt')
-else:
-    txtFile = os.path.join(directory, 'visuals', f'{sort_variable}_{mode}', 'batchPlots', batch, f'bestModels_{sort_variable}_{mode}_{batch}.txt')
+    numberOfModels = 20 # max. number of models in folder
 
-with open(txtFile, "r") as file:
-    lines = file.read().splitlines()
-cleaned_lines = [line.strip().strip('\'",') for line in lines]
+    # Define for different folder structure
+    if robustnessTest == False:
+        txtFile = os.path.join(directory, 'visuals', f'{sort_variable}_{mode}', f'bestModels_{sort_variable}_{mode}.txt')
+    else:
+        txtFile = os.path.join(directory, 'visuals', f'{sort_variable}_{mode}', 'batchPlots', batch, f'bestModels_{sort_variable}_{mode}_{batch}.txt')
 
-
-if standard_analysis == True:
-    # head: Create individual task variance and lesioning plots ##############################################################
-    # plot_taskVariance_and_lesioning(directory, mode, sort_variable, rdm_metric, robustnessTest, batch, numberOfModels=numberOfModels)
-
-
-    # head: Create task variance space plots - tsne/PCA based ################################################################
-    tsa_exist = False
-    h_trans_all = OrderedDict()
-    # Iterate over all models and create TR individually and on group-level
-    for model in range(1, numberOfModels + 1):
-        # rules = tools.rules_dict[ruleset]
-
-        best_model_dir = cleaned_lines[model]  # Choose model of interest, starting with [1]
-
-        fname = 'taskset{:s}_space_2DtaskVarianceRepresentation'.format(ruleset) + '.pkl'  # fix: set subgroups of tasks as variable here too
-        fname = os.path.join(best_model_dir, fname)
-        figName = 'taskset{:s}_space_2DtaskVarianceRepresentation_'.format(ruleset) + '_'.join(best_model_dir.split('\\')[-3].split('_')[-5:-3])
-
-        try:
-            tsa, tsa_exist = TaskSetAnalysis(best_model_dir), True
-            h_trans = tsa.compute_taskspace(fname, dim_reduction_type='MDS', epochs=['response']) # Focus on response epoch
-            tsa.plot_taskspace(h_trans, directory, sort_variable, mode, figName, 'individual')
-            # Collect all h_trans (2DtaskRepresentations) for group plot
-            h_trans_all = tsa.collect_h_trans(h_trans, h_trans_all, model)
-        except ValueError:
-            print('Skipping model: ' + best_model_dir.split('\\')[-3])
-            continue
-
-    if tsa_exist:
-        tsa.plot_taskspace(h_trans_all, directory, sort_variable, mode, figName, 'group', lxy=(1.1, 1.1))
+    with open(txtFile, "r") as file:
+        lines = file.read().splitlines()
+    cleaned_lines = [line.strip().strip('\'",') for line in lines]
 
 
-    # head: Create individual rdm heatmaps, rdm 2D representations and one grouped rdm 2D representation #####################
-    plot_group_rdm_mds(directory, mode, sort_variable, rdm_metric, numberOfModels, ruleset)
+    if standard_analysis == True:
+        # head: Create individual task variance and lesioning plots ##############################################################
+        # plot_taskVariance_and_lesioning(directory, mode, sort_variable, rdm_metric, robustnessTest, batch, numberOfModels=numberOfModels)
+
+
+        # head: Create task variance space plots - tsne/PCA based ################################################################
+        tsa_exist = False
+        h_trans_all = OrderedDict()
+        # Iterate over all models and create TR individually and on group-level
+        for model in range(1, numberOfModels + 1):
+            # rules = tools.rules_dict[ruleset]
+
+            best_model_dir = cleaned_lines[model]  # Choose model of interest, starting with [1]
+
+            fname = 'taskset{:s}_space_2DtaskVarianceRepresentation'.format(ruleset) + '.pkl'  # fix: set subgroups of tasks as variable here too
+            fname = os.path.join(best_model_dir, fname)
+            figName = 'taskset{:s}_space_2DtaskVarianceRepresentation_'.format(ruleset) + '_'.join(best_model_dir.split('\\')[-3].split('_')[-5:-3])
+
+            try:
+                tsa, tsa_exist = TaskSetAnalysis(best_model_dir), True
+                h_trans = tsa.compute_taskspace(fname, dim_reduction_type='MDS', epochs=['response']) # Focus on response epoch
+                tsa.plot_taskspace(h_trans, directory, sort_variable, mode, figName, 'individual')
+                # Collect all h_trans (2DtaskRepresentations) for group plot
+                h_trans_all = tsa.collect_h_trans(h_trans, h_trans_all, model)
+            except ValueError:
+                print('Skipping model: ' + best_model_dir.split('\\')[-3])
+                continue
+
+        if tsa_exist:
+            tsa.plot_taskspace(h_trans_all, directory, sort_variable, mode, figName, 'group', lxy=(1.1, 1.1))
+
+
+        # head: Create individual rdm heatmaps, rdm 2D representations and one grouped rdm 2D representation #####################
+        plot_group_rdm_mds(directory, mode, sort_variable, rdm_metric, numberOfModels, ruleset)
 
 
 
-# Create RSA matrix for comparing rdm representations between participants #############################################
-if rsa_analysis == True:
-    # participantList = ['beRNN_03']
-    plot_rsa(directory, participantList)
+    # Create RSA matrix for comparing rdm representations between participants #############################################
+    if rsa_analysis == True:
+        # participantList = ['beRNN_03']
+        plot_rsa(directory, participantList)
 
 

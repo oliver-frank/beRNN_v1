@@ -2,9 +2,7 @@
 # info: dataAugmentation
 ########################################################################################################################
 # Augment/ Multiply data with geometrical transformations of the real collected data (Rotation, Mirroring, Randomization,
-# Pertubation). Intention was to not generate new data that equals the distribution of the original data, but to multiply
-# the original data to reduce unnatural variance in the particpant'sbehavior learned by the models.
-# Fix: Even though the augmented data seems to create still to much variance leading to poor model performance.
+# Pertubation) - approach not feasible for individual human behavioral data due to its already high-variant nature.
 ########################################################################################################################
 
 ########################################################################################################################

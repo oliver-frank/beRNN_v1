@@ -88,7 +88,6 @@ def _compute_variance_bymodel(data_dir, model_dir, layer, data_type, networkAnal
 
     if os.path.exists(fname) == False or os.path.exists(fname2) == False or os.path.exists(fname3) == False:
         try:
-
             for task in rules:
                 # print(task)
                 if mode == 'train':
@@ -96,14 +95,18 @@ def _compute_variance_bymodel(data_dir, model_dir, layer, data_type, networkAnal
                 elif mode == 'test':
                     data = eval_data
 
+                # c_mask = None
+                # while c_mask == None:
                 x, y, y_loc, response = tools.load_trials(hp['rng'], task, mode, hp['batch_size'], data, False)
                 epochs = tools.find_epochs(x)
 
                 c_mask = tools.create_cMask(y, response, hp, mode)
 
+                # attention: hard-coded bug fix ************************************************************************
                 if c_mask is None:
-                    print(f"Skipping {task} in _compute_variance_bymodel: invalid c_mask (random beRNN_02 bug)")
+                    print(f"Skipping {task} in _compute_variance_bymodel: invalid c_mask (random bug - mainly on RP)")
                     continue
+                # attention: hard-coded bug fix ************************************************************************
 
                 feed_dict = tools.gen_feed_dict(model, x, y, c_mask, hp)
 
@@ -149,32 +152,33 @@ def _compute_variance_bymodel(data_dir, model_dir, layer, data_type, networkAnal
                     # Variance across time and stimulus
                     # h_var_all[:, i] = val[t_start:].reshape((-1, n_hidden)).var(axis=0)
                     # Variance acros trial, then averaged across time
-                    h_var_all[:, i] = val.var(axis=1).mean(axis=0) # info: Yang
+                    h_var_all[:, i] = val.var(axis=1).mean(axis=0) # info: yang - task variance vectors
+                    h_var_all = np.nan_to_num(h_var_all)
                     # reorder tensor - flatten across timesteps and trials - correlate all hidden unit vectors over flattened dimension
-                    h_corr_all[:, :, i] = np.corrcoef(val.transpose(2, 0, 1).reshape(val.shape[2], -1))  # info: Frank correlation matrices for topological markers
+                    h_corr_all[:, :, i] = np.corrcoef(val.transpose(2, 0, 1).reshape(val.shape[2], -1))  # info: frank - correlation matrices for topological markers
                     h_corr_all = np.nan_to_num(h_corr_all)  # replaces NaNs with 0
                     # Generate average activity representations for each hidden unit and each task individually
-                    h_mean_all[:, i] = val.mean(axis=(0, 1))
+                    h_mean_all[:, i] = val.mean(axis=(0, 1)) # info: frank - mean matrices for RDA
                     h_mean_all = np.nan_to_num(h_mean_all) # replaces NaNs with 0
 
                 result = {'h_var_all': h_var_all, 'keys': list(h_all.keys())}
                 result2 = {'h_corr_all': h_corr_all, 'keys': list(h_all.keys())}
                 result3 = {'h_mean_all': h_mean_all, 'keys': list(h_all.keys())}
 
-                save_name = 'var_' + mode + '_lay' + str(layer) + '_' + data_type + f'_{ruleset}'
-                save_name2 = 'corr_' + mode + '_lay' + str(layer) + '_' + data_type + f'_{ruleset}'
-                save_name3 = 'mean_' + mode + '_lay' + str(layer) + '_' + data_type + f'_{ruleset}'
+            save_name = 'var_' + mode + '_lay' + str(layer) + '_' + data_type + f'_{ruleset}'
+            save_name2 = 'corr_' + mode + '_lay' + str(layer) + '_' + data_type + f'_{ruleset}'
+            save_name3 = 'mean_' + mode + '_lay' + str(layer) + '_' + data_type + f'_{ruleset}'
 
-                if random_rotation:
-                    save_name += '_rr'
+            # if random_rotation:
+            #     save_name += '_rr'
 
-                fname = os.path.join(model_dir, save_name + '.pkl')
-                fname2 = os.path.join(model_dir, save_name2 + '.pkl')
-                fname3 = os.path.join(model_dir, save_name3 + '.pkl')
-                # dir_path = os.path.dirname(fname)
+            fname = os.path.join(model_dir, save_name + '.pkl')
+            fname2 = os.path.join(model_dir, save_name2 + '.pkl')
+            fname3 = os.path.join(model_dir, save_name3 + '.pkl')
+            # dir_path = os.path.dirname(fname)
 
-                # C:\\Users\\oliver.frank\\Desktop\\PyProjects\\beRNNmodels\\2025_04_multiLayerHpGridSearch\\1\\beRNN_03_AllTask_3-5_data_highDim_correctOnly_3stimTC_iteration0_LeakyRNN_64-64-64_relu-relu-linear\\model_month_3\\variance_test_layer0_rule_data_highDim_correctOnly_3stimTC.pkl
-                # C:\Users\oliver.frank\Desktop\PyProjects\beRNNmodels\2025_04_multiLayerHpGridSearch\1\beRNN_03_AllTask_3-5_data_highDim_correctOnly_3stimTC_iteration0_LeakyRNN_64-64-64_relu-relu-linear\model_month_3
+            # C:\\Users\\oliver.frank\\Desktop\\PyProjects\\beRNNmodels\\2025_04_multiLayerHpGridSearch\\1\\beRNN_03_AllTask_3-5_data_highDim_correctOnly_3stimTC_iteration0_LeakyRNN_64-64-64_relu-relu-linear\\model_month_3\\variance_test_layer0_rule_data_highDim_correctOnly_3stimTC.pkl
+            # C:\Users\oliver.frank\Desktop\PyProjects\beRNNmodels\2025_04_multiLayerHpGridSearch\1\beRNN_03_AllTask_3-5_data_highDim_correctOnly_3stimTC_iteration0_LeakyRNN_64-64-64_relu-relu-linear\model_month_3
 
         except Exception as e:
             print(f"Error in _compute_variance_bymodel: {e}")

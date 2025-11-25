@@ -389,8 +389,10 @@ def getEpochSteps(y):
 
             previous_value = current_value
 
-        else:
-            continue
+    # Fallback if steps were not created
+    if fixation_steps == None and response_steps == None:
+        fixation_steps, response_steps = 35, 35
+        # continue
 
     return fixation_steps, response_steps
 
@@ -521,15 +523,16 @@ def split_files(hp, files, split_ratio=0.8):
 def create_cMask(y, response, hp, mode):
     fixation_steps, response_steps = getEpochSteps(y)
 
-    if fixation_steps == None or response_steps == None:  # if no fixation_steps could be found
+    if fixation_steps == None or response_steps == None:  # hardcoded bug fix: if no fixation_steps could be found
         return None
+
     # Creat c_mask for current batch
     if hp['loss_type'] == 'lsq':
 
         c_mask = np.zeros((y.shape[0], y.shape[1], y.shape[2]), dtype='float32')
 
         if mode == 'train':
-            # fix: random beRNN_02 bug: inconcruence between y and response dimension 1
+            # fix: random bug: inconcruence between y and response dimension 1
             if response.shape[1] != y.shape[1]:
                 return None
 

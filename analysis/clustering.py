@@ -84,12 +84,14 @@ class Analysis(object):
         #     numberOfLayers = 1
         #
         # if not all_variance_files_exist(model_dir, numberOfLayers, mode, data_dir):
+
         fname, fname2, fname3 = variance.compute_variance(data_dir, model_dir, layer, mode, monthsConsidered, data_type, networkAnalysis)
 
         # compVarianceList = [compVariance for compVariance in os.listdir(model_dir) if compVariance.startswith('var')]
         # self.h_normvar_all_list = []
         # for compVariance in compVarianceList:
         # fname = os.path.join(model_dir, compVariance)
+
         res = tools.load_pickle(fname)
         h_var_all_ = res['h_var_all']
         self.keys  = res['keys']
@@ -118,7 +120,8 @@ class Analysis(object):
 
             # Determine expected dimensions safely
             hp = tools.load_hp(model_dir)
-            n_tasks = len(hp.get('rules', [])) or 12  # use actual number of tasks if available
+            rules = [key for key in hp["rule_prob_map"].keys() if hp["rule_prob_map"][key] != 0]
+            n_tasks = len(rules)
             n_units = int(hp.get('n_rnn', 128)) if 'n_rnn' in hp else 128  # typical hidden dim fallback
 
             # Create minimal but consistent dummy data
@@ -275,7 +278,7 @@ class Analysis(object):
                 save_name = self.hp['activation']
             fig_name = fig_name + save_name
             plt.savefig('figure/'+fig_name+'.pdf', transparent=True)
-        plt.show()
+        # plt.show()
 
     def plot_variance(self, model_dir, figurePath, mode_, save_name=None):
         labels = self.labels
@@ -692,7 +695,7 @@ class Analysis(object):
         # Save the figure with a tight bounding box to ensure alignment
         save_path = os.path.join('W:\\group_csp\\analyses\\oliver.frank', 'BeRNN_models\\Visuals\\Similiarity\\finalReport', model_dir.split("\\")[-1] + '_' + mode + '.png')
         plt.savefig(save_path, format='png', dpi=300, bbox_inches='tight')
-        plt.show()
+        # plt.show()
 
     def plot_2Dvisualization(self, model_dir, mode, method='tSNE'):
         labels = self.labels
@@ -728,7 +731,7 @@ class Analysis(object):
         plt.savefig(os.path.join('W:\\group_csp\\analyses\\oliver.frank', 'BeRNN_models\\Visuals\\2D_Clustering',model_dir.split("\\")[-1] + '_' + mode + '.png'), \
                     format='png', dpi=300, bbox_inches='tight', pad_inches=0.1)
         # if show == True:
-        plt.show()
+        # plt.show()
         # else:
         #     plt.close(fig)
         # else:
@@ -762,7 +765,7 @@ class Analysis(object):
             if save:
                 plt.savefig('figure/exampleunit_variance.pdf', transparent=True)
             # if show == True:
-            plt.show()
+            # plt.show()
             # else:
             #     plt.close(fig)
 
@@ -854,7 +857,7 @@ class Analysis(object):
         ax2.axis('off')
         plt.savefig(os.path.join('W:\\group_csp\\analyses\\oliver.frank', 'BeRNN_models\\Visuals\\connectivityByClusters',model_dir.split("\\")[-1] + '_' + mode + '.png'), \
                     format='png', dpi=300, bbox_inches='tight', pad_inches=0.1)
-        plt.show()
+        # plt.show()
 
     def plot_connectivity_byclusters_WrecOnly(self, model_dir, mode):
         """Plot connectivity of the model's recurrent weights only"""
@@ -910,7 +913,7 @@ class Analysis(object):
         # plt.savefig(
         #     os.path.join('W:\\group_csp\\analyses\\oliver.frank', 'BeRNN_models\\Visuals\\connectivityByClustersWrecOnly\\finalReport',
         #                  model_dir.split("\\")[-1] + '_' + mode + '.png'), format='png', dpi=300, bbox_inches='tight', pad_inches=0.1) # fix
-        plt.show()
+        # plt.show()
 
     def easy_connectivity_plot(self, model_dir):
         """A simple plot of network connectivity."""
@@ -939,7 +942,7 @@ class Analysis(object):
             plt.colorbar()
             plt.xlabel('From')
             plt.ylabel('To')
-            plt.show()
+            # plt.show()
 
     def easy_connectivity_plot_recurrentWeightsOnly(self, model_dir):
         """A simple plot of network weight connectivity."""

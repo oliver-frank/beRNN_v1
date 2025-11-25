@@ -587,11 +587,12 @@ HP_NAME = {'activation': 'Activation fun.',
            # 'errorBalancingValue': 'Error balancing value'}
 
 if __name__ == '__main__':
-    folderList = [r'__paper1_placeholders\brainInitialization_brainMasking_test_4task']
+    folderList = ['_robustnessTest_multiTask_beRNN_04_highDimCorrects_256_hp_7', '_robustnessTest_multiTask_beRNN_05_highDimCorrects_256_hp_7']
     for folder in folderList:
         final_model_dirs = []
 
-        participant = ['beRNN_01', 'beRNN_02', 'beRNN_03', 'beRNN_04', 'beRNN_05'][0]
+        participantList = ['beRNN_01', 'beRNN_02', 'beRNN_03', 'beRNN_04', 'beRNN_05']
+        participant = [participant for participant in participantList if participant in folder][0]
         dataType = ['highDim', 'highDim_3stimTC', 'highDim_correctOnly'][2]
 
         mode = ['train', 'test'][1]
@@ -639,7 +640,7 @@ if __name__ == '__main__':
         individual_hp_plot(n_clusters, silhouette_score, avg_perf_train_list, avg_perf_test_list, modularity_list_sparse, directory, hp_list, sort_variable, mode, batchPlot, model_dir_batches)
 
 
-# info: DEBUG
+# info: DEBUG - check if model folders are complete ********************************************************************
 # import os
 # folderList = ['_gridSearch_domainTask-WM_beRNN_03_highDim_correctOnly_16', '_gridSearch_domainTask-WM_beRNN_03_highDim_correctOnly_32', '_gridSearch_domainTask-WM_beRNN_03_highDim_correctOnly_64',
 #                   '_gridSearch_domainTask-WM_beRNN_03_highDim_correctOnly_128', '_gridSearch_domainTask-WM_beRNN_03_highDim_correctOnly_256', '_gridSearch_domainTask-WM_beRNN_03_highDim_correctOnly_512']
@@ -761,8 +762,3 @@ if __name__ == '__main__':
 # print(avg_closeness)
 
 
-
-
-###
-# import numpy as np
-# matrix = np.load(r'W:\group_csp\analyses\oliver.frank\share\functional_matrices\sub-6IECX_ses-01-task-faces-atlas-4S256Parcels.npy')
