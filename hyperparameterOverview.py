@@ -91,10 +91,10 @@ def compute_n_cluster(model_dirs, mode):
             print(f"An exception occurred in compute_n_cluster: {e}")
 
             # Create dummy log for plotting
-            log = {}
+            # log = {} # attention: Don't create new log and overwrite old !
+            # log['avg_perf_train'] = 0
+            # log['avg_perf_test'] = 0
 
-            log['avg_perf_train'] = 0
-            log['avg_perf_test'] = 0
             log['n_cluster'] = 0
             log['score'] = 0
             log['model_dir'] = model_dir
@@ -587,13 +587,14 @@ HP_NAME = {'activation': 'Activation fun.',
            # 'errorBalancingValue': 'Error balancing value'}
 
 if __name__ == '__main__':
-    folderList = ['_robustnessTest_multiTask_beRNN_04_highDimCorrects_256_hp_7', '_robustnessTest_multiTask_beRNN_05_highDimCorrects_256_hp_7']
+    folderList = ['_gridSearch_domainTask-RP_beRNN_03_highDim_correctOnly_16', '_gridSearch_domainTask-RP_beRNN_03_highDim_correctOnly_32', '_gridSearch_domainTask-RP_beRNN_03_highDim_correctOnly_64',
+                  '_gridSearch_domainTask-RP_beRNN_03_highDim_correctOnly_128', '_gridSearch_domainTask-RP_beRNN_03_highDim_correctOnly_256', '_gridSearch_domainTask-RP_beRNN_03_highDim_correctOnly_512']
     for folder in folderList:
         final_model_dirs = []
 
         participantList = ['beRNN_01', 'beRNN_02', 'beRNN_03', 'beRNN_04', 'beRNN_05']
         participant = [participant for participant in participantList if participant in folder][0]
-        dataType = ['highDim', 'highDim_3stimTC', 'highDim_correctOnly'][2]
+        dataType = 'highDim_correctOnly' if 'highDim_correctOnly' in folder else 'highDim'
 
         mode = ['train', 'test'][1]
         sort_variable = ['clustering', 'performance', 'silhouette'][1]

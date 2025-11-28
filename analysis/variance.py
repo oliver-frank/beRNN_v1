@@ -86,7 +86,7 @@ def _compute_variance_bymodel(data_dir, model_dir, layer, data_type, networkAnal
     fname2 = os.path.join(model_dir, save_name2 + '.pkl')
     fname3 = os.path.join(model_dir, save_name3 + '.pkl')
 
-    if os.path.exists(fname) == False or os.path.exists(fname2) == False or os.path.exists(fname3) == False:
+    if os.path.exists(fname) == True or os.path.exists(fname2) == False or os.path.exists(fname3) == False:
         try:
             for task in rules:
                 # print(task)
@@ -145,10 +145,7 @@ def _compute_variance_bymodel(data_dir, model_dir, layer, data_type, networkAnal
                 h_var_all = np.zeros((n_hidden, len(h_all.keys())))
                 h_corr_all = np.zeros((n_hidden, n_hidden, len(h_all.keys())))
                 for i, val in enumerate(h_all.values()):
-                    # info: Iterating through all tasks and creating an individual task variance value representing distribution
-                    #  of average unit activities over trials in current batch (n_rnn_units x variance value for average unit
-                    #  activity over trials)
-                    # val is Time, Batch, Units
+                    # val is Time, Batch, Units for each task in h_all dict
                     # Variance across time and stimulus
                     # h_var_all[:, i] = val[t_start:].reshape((-1, n_hidden)).var(axis=0)
                     # Variance acros trial, then averaged across time

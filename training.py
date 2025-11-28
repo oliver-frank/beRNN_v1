@@ -77,37 +77,10 @@ def getAndSafeModValue(data_dir, model_dir, hp, model, sess, log):
     fname, fname2, fname3 = variance.compute_variance(data_dir, model_dir, layer=1, mode='test',
                                       monthsConsidered=hp['monthsConsidered'], data_type='rule', networkAnalysis=False,
                                       model=model, sess=sess)
-    # (data_dir, model_dir, layer, mode, monthsConsidered, data_type, networkAnalysis, rules=None, random_rotation=False)
-
-    res = tools.load_pickle(fname)
-    h_var_all_ = res['h_var_all']
 
     res2 = tools.load_pickle(fname2)
     h_corr_all_ = res2['h_corr_all']
     h_corr_all = h_corr_all_.mean(axis=2) # average over all tasks
-
-    activityThreshold = 1e-5
-    ind_active = np.where(h_var_all_.sum(axis=1) >= activityThreshold)[0]  # info: > 1e-3 - min > 0
-    h_var_all = h_var_all_[ind_active, :]
-
-    # info: fallback if clustering is not possible - keep h_var_all as criterium but witch to h_corr_all for evaluation of modularity
-    if h_var_all.shape[0] < 2 or np.all(h_var_all.sum(axis=1) <= 1e-2):
-        # if h_var_all.shape[0] < 2 or np.where(h_var_all_.sum(axis=1) < activityThreshold):
-        print(f"Skipping clustering for model {model_dir} — insufficient data or variance.")
-
-        # Create meaningless dummy matrix for further calculation and to prevent code crashing
-        h_normvar_all = np.ones((12, 128)) * 0.5
-
-    else:
-        # Normalize by the total variance across tasks
-        h_normvar_all = (h_var_all.T / np.sum(h_var_all, axis=1)).T
-
-    # info: legacy - Center and normalize the data
-    # data_centered = h_normvar_all - h_normvar_all.mean(axis=1, keepdims=True)
-    # norm = np.linalg.norm(data_centered, axis=1, keepdims=True)
-    # norm[norm == 0] = 1e-8  # Prevent division by zero
-    # data_normalized = data_centered / norm
-    # correlation = np.dot(data_normalized, data_normalized.T)
 
     # Compute modularity
     functionalCorrelation_density = apply_density_threshold(h_corr_all, density=0.1)

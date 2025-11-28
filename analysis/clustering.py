@@ -75,8 +75,10 @@ def all_variance_files_exist(model_dir, numberOfLayers, mode, data_dir):
 
 class Analysis(object):
     def __init__(self, data_dir, model_dir, layer, rdm_metric, mode, monthsConsidered, data_type, networkAnalysis, normalization_method='sum'):
+
         hp = tools.load_hp(model_dir)
 
+        # future: multiLayer *******************************************************************************************
         # # Do a task variance analysis for each hidden layer
         # if hp.get('multiLayer') == True:
         #     numberOfLayers = len(hp['n_rnn_per_layer'])
@@ -85,48 +87,49 @@ class Analysis(object):
         #
         # if not all_variance_files_exist(model_dir, numberOfLayers, mode, data_dir):
 
-        fname, fname2, fname3 = variance.compute_variance(data_dir, model_dir, layer, mode, monthsConsidered, data_type, networkAnalysis)
-
         # compVarianceList = [compVariance for compVariance in os.listdir(model_dir) if compVariance.startswith('var')]
         # self.h_normvar_all_list = []
         # for compVariance in compVarianceList:
         # fname = os.path.join(model_dir, compVariance)
+        # **************************************************************************************************************
 
-        res = tools.load_pickle(fname)
-        h_var_all_ = res['h_var_all']
-        self.keys  = res['keys']
+        fname, fname2, fname3 = variance.compute_variance(data_dir, model_dir, layer, mode, monthsConsidered, data_type, networkAnalysis)
 
-        # First only get active units. Total variance across tasks larger than 1e-3
-        # info: This decides the granularity of summarized nodes that will be taken to create the clusters, also very
-        #  important in connection with the number of clusters created below, as they can never overcome this number of
-        #  summarized nodes
-        # activityThreshold = 0 if hp['multiLayer'] else 1e-5
-        activityThreshold = 1e-5
-        ind_active = np.where(h_var_all_.sum(axis=1) >= activityThreshold)[0] # attention: > 1e-3 - min > 0 | it seems like hidden architecture can have very low h_var
-        h_var_all  = h_var_all_[ind_active, :]
+        # res = tools.load_pickle(fname)
+        res3 = tools.load_pickle(fname3)
+        # h_var_all_ = res['h_var_all']
+        h_mean_all_ = res3['h_mean_all']
+        self.keys  = res3['keys']
 
+        # First only get active units. Total variance per unit across tasks larger than 1e-3
+        # activityThreshold = 0 if hp['multiLayer'] else 1e-5 # future: multiLayer
+        activityThreshold = 1e-3 # > 1e-3 - min > 0
+        # yang legancy: task representation based on h_var_all
+        # ind_active = np.where(h_var_all_.sum(axis=1) >= activityThreshold)[0]
+        # h_var_all  = h_var_all_[ind_active, :]
+        # now: task representation based on h_mean_all
+        ind_active = np.where(h_mean_all_.sum(axis=1) >= activityThreshold)[0]
+        h_mean_all = h_mean_all_[ind_active, :]
 
-        # Info: Debug not working models
-        print(f"Model: {model_dir}")
+        # print(f"Model: {model_dir}")
         print(f"Active units after thresholding: {len(ind_active)}")
         # print(f"Variance sum across tasks for active units: {h_var_all_.sum(axis=1)[ind_active]}")
 
 
-        # attention: fallback if clustering is not possible
-        # info: fallback if clustering is not possible - keep h_var_all as criterium but witch to h_corr_all for evaluation of modularity
-        if h_var_all.shape[0] < 2 or np.all(h_var_all.sum(axis=1) <= 1e-2):
-        # if h_var_all.shape[0] < 2 or np.where(h_var_all_.sum(axis=1) < activityThreshold):
+        # attention: fallback if activity across task is too low is not possible +++++++++++++++++++++++++++++++++++++++
+        if h_mean_all.shape[0] < 2 or np.all(h_mean_all.sum(axis=1) <= 1e-2):
+        # if h_var_all.shape[0] < 2 or np.where(h_var_all_.sum(axis=1) < activityThreshold): # legacy: Yang
             print(f"Creating dummy clustering and rdm for model {model_dir} — insufficient data or variance.")
 
             # Determine expected dimensions safely
             hp = tools.load_hp(model_dir)
             rules = [key for key in hp["rule_prob_map"].keys() if hp["rule_prob_map"][key] != 0]
             n_tasks = len(rules)
-            n_units = int(hp.get('n_rnn', 128)) if 'n_rnn' in hp else 128  # typical hidden dim fallback
+            n_units = h_mean_all_.shape[0]
 
             # Create minimal but consistent dummy data
-            self.h_var_all = np.ones((2, n_tasks))
-            self.h_normvar_all = np.full((n_tasks, n_units), 0.5, dtype=float)
+            self.h_mean_all = h_mean_all
+            self.h_normmean_all = np.full((n_units, n_tasks), 0.1, dtype=float)
 
             self.labels = np.array([0, 1])
             self.ind_active = np.array([0, 1])
@@ -142,8 +145,7 @@ class Analysis(object):
             self.data_type = data_type
             self.rules = hp.get('rules', [f"task_{i}" for i in range(n_tasks)])
 
-            # Create dummy RDM of proper size and symmetry
-            # A neutral, symmetric matrix: diagonal 0 (self-similarity), off-diagonals 0.5
+            # Create dummy RDM of proper size and symmetry - neutral, symmetric matrix: diagonal 0 (self-similarity), off-diagonals 0.5
             self.rdm = np.full((n_tasks, n_tasks), 0.5, dtype=float)
             np.fill_diagonal(self.rdm, 0.0)
 
@@ -153,51 +155,45 @@ class Analysis(object):
 
             # Ensure consistent attributes for downstream alignment
             self.coords_dummy = np.zeros((n_tasks, 2))  # optional: MDS-compatible placeholder
+        # attention: fallback if activity across task is too low is not possible +++++++++++++++++++++++++++++++++++++++
+
 
         else:
-            # Normalize by the total variance across tasks
-            if normalization_method == 'sum':
-                h_normvar_all = (h_var_all.T/np.sum(h_var_all, axis=1)).T
-            elif normalization_method == 'max':
-                h_normvar_all = (h_var_all.T/np.max(h_var_all, axis=1)).T
-            elif normalization_method == 'none':
-                h_normvar_all = h_var_all
-            else:
-                raise NotImplementedError()
+            # # Normalize by the total variance across tasks
+            # if normalization_method == 'sum':
+            #     h_normvar_all = (h_var_all.T/np.sum(h_var_all, axis=1)).T
+            # elif normalization_method == 'max':
+            #     h_normvar_all = (h_var_all.T/np.max(h_var_all, axis=1)).T
+            # elif normalization_method == 'none':
+            #     h_normvar_all = h_var_all
+            # else:
+            #     raise NotImplementedError()
 
             # head: Compute Representational Dissimilarity Matrix (RSA-style) ==========================================
-            res3 = tools.load_pickle(fname3)
-            h_mean_all = res3['h_mean_all']
-            task_matrix = h_mean_all.T  # shape: (n_tasks, n_units)
+            h_normmean_all = (h_mean_all.T/np.sum(h_mean_all, axis=1)).T
             self.rdm_metric = rdm_metric # correlation - cosine - ...
-            self.rdm = squareform(pdist(task_matrix, metric=self.rdm_metric))
+            self.rdm = squareform(pdist(h_normmean_all.T, metric=self.rdm_metric)) # shape: (n_tasks, n_units) - legacy: h_normvar_all.T
             self.rdm_vector = self.rdm[np.triu_indices_from(self.rdm, k=1)]
-
 
             # head: Clustering =========================================================================================
             from sklearn import metrics
-            X = h_normvar_all
-
+            X = h_normmean_all # legacy: h_normVar_all
 
             # Clustering
             from sklearn.cluster import AgglomerativeClustering, KMeans
 
-            # fix: Sometimes n-samples < 30
-            if len(X) < 30:
-                range2 = len(X)
-            else:
-                range2 = 30
+            # if n-units after thresholding < 30
+            range2 = len(X) if len(X) < 30 else 30
 
             # Choose number of clusters that maximize silhouette score
-            n_clusters = range(2, range2) # attention: 2,30
+            n_clusters = range(2, range2)  # attention: 2,30
             scores = list()
             labels_list = list()
             for n_cluster in n_clusters:
                 # clustering = AgglomerativeClustering(n_cluster, affinity='cosine', linkage='average')
                 clustering = KMeans(n_cluster, algorithm='full', n_init=20, random_state=0)
-                clustering.fit(X) # n_samples, n_features = n_units, n_rules/n_epochs
-                labels = clustering.labels_ # cluster labels
-
+                clustering.fit(X)  # n_samples, n_features = n_units, n_rules/n_epochs
+                labels = clustering.labels_  # cluster labels
                 score = metrics.silhouette_score(X, labels)
 
                 scores.append(score)
@@ -207,49 +203,87 @@ class Analysis(object):
 
             # Heuristic elbow method
             # Choose the number of cluster when Silhouette score first falls
-            # Choose the number of cluster when Silhouette score is maximum
             if data_type == 'rule':
-                #i = np.where((scores[1:]-scores[:-1])<0)[0][0]
-                # try:
-                i = np.argmax(scores)
-                # except:
-                #     i = 0
-                #     labels_list = ['1']
-                #     n_clusters = [1]
+                # fallback = False
+                if len(scores) != 0:
+                    i = np.argmax(scores)
+                # else:
+                #     # Fallback: ensure valid index and cluster settings
+                #     # Determine expected dimensions safely
+                #     hp = tools.load_hp(model_dir)
+                #     rules = [key for key in hp["rule_prob_map"].keys() if hp["rule_prob_map"][key] != 0]
+                #     n_tasks = len(rules)
+                #     n_units = int(hp.get('n_rnn', 128)) if 'n_rnn' in hp else 128  # typical hidden dim fallback
+                #
+                #     # Create minimal but consistent dummy data
+                #     self.h_mean_all = np.ones((2, n_tasks))
+                #     self.h_meanvar_all = np.full((n_tasks, n_units), 0.5, dtype=float)
+                #
+                #     self.labels = np.array([0, 1])
+                #     self.ind_active = np.array([0, 1])
+                #     self.n_clusters = [2]
+                #     self.scores = [0.0]
+                #     self.n_cluster = 2
+                #     self.unique_labels = np.array([0, 1])
+                #
+                #     # Metadata
+                #     self.normalization_method = normalization_method
+                #     self.model_dir = model_dir
+                #     self.hp = hp
+                #     self.data_type = data_type
+                #     self.rules = hp.get('rules', [f"task_{i}" for i in range(n_tasks)])
+                #
+                #     # Create dummy RDM of proper size and symmetry
+                #     # A neutral, symmetric matrix: diagonal 0 (self-similarity), off-diagonals 0.5
+                #     self.rdm = np.full((n_tasks, n_tasks), 0.5, dtype=float)
+                #     np.fill_diagonal(self.rdm, 0.0)
+                #
+                #     # Vectorized upper triangle (like in real RDMs)
+                #     self.rdm_vector = self.rdm[np.triu_indices_from(self.rdm, k=1)]
+                #     self.rdm_metric = rdm_metric
+                #
+                #     # Ensure consistent attributes for downstream alignment
+                #     self.coords_dummy = np.zeros((n_tasks, 2))  # optional: MDS-compatible placeholder
+                #
+                #     print(f"Creating dummy clustering and rdm for model {model_dir} — insufficient data or variance.")
+                #     fallback = True
             else:
-                # The more rigorous method doesn't work well in this case
                 i = n_clusters.index(10)
 
+            # if fallback == False:
             labels = labels_list[i]
             n_cluster = n_clusters[i]
             print('Choosing {:d} clusters'.format(n_cluster))
 
             # Sort clusters by its task preference (important for consistency across nets)
+            # if labels is None or labels.shape[0] != h_normmean_all.shape[0]:
+            #     print("Warning: labels shape mismatch. Skipping preference ordering.")
+            #     ind_sort = np.arange(len(labels))
+            # else:
             if data_type == 'rule':
-                label_prefs = [np.argmax(h_normvar_all[labels==l].sum(axis=0)) for l in set(labels)]
+                label_prefs = [np.argmax(h_normmean_all[labels == l].sum(axis=0)) for l in set(labels)] # legacy: h_normvar_all
             elif data_type == 'epoch':
-                ## info: this may no longer work!
-                label_prefs = [self.keys[np.argmax(h_normvar_all[labels==l].sum(axis=0))][0] for l in set(labels)]
+                label_prefs = [self.keys[np.argmax(h_normmean_all[labels == l].sum(axis=0))][0] for l in set(labels)]
 
             ind_label_sort = np.argsort(label_prefs)
             label_prefs = np.array(label_prefs)[ind_label_sort]
             # Relabel
             labels2 = np.zeros_like(labels)
             for i, ind in enumerate(ind_label_sort):
-                labels2[labels==ind] = i
+                labels2[labels == ind] = i
             labels = labels2
 
             ind_sort = np.argsort(labels)
+            labels = labels[ind_sort]
 
-            labels          = labels[ind_sort]
-            self.h_normvar_all = h_normvar_all[ind_sort, :]
+            self.h_normmean_all = h_normmean_all[ind_sort, :] # legacy: h_normvar_all
             self.ind_active      = ind_active[ind_sort]
 
             self.n_clusters = n_clusters
             self.scores = scores
             self.n_cluster = n_cluster
 
-            self.h_var_all = h_var_all
+            self.h_mean_all = h_mean_all # legacy: h_var_all
             self.normalization_method = normalization_method
             self.labels = labels
             self.unique_labels = np.unique(labels)
