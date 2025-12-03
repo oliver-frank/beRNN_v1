@@ -720,24 +720,24 @@ def plot_rsa(directory, participantList):
 
 # Task representation analysis - variable allocation ###################################################################
 # info: The script can only be run after participants have been analyzed by hyperparameterOverview.py
-dataType = ['highDim', 'highDim_correctOnly', 'highDim_3stimTC', 'highDim_CCN'][1]
-participantList =  ['beRNN_01', 'beRNN_02', 'beRNN_03', 'beRNN_04', 'beRNN_05']
-folders = ['_robustnessTest_multiTask_beRNN_01_highDimCorrects_256_hp_4']
-
-
 mode = ['test', 'train'][0]
 sort_variable = ['performance', 'clustering'][0]
 rdm_metric = ['cosine', 'correlation'][0]
+representation = ['rate', 'weight'][0]
+restore = False
+
+participantList =  ['beRNN_01', 'beRNN_02', 'beRNN_03', 'beRNN_04', 'beRNN_05']
+folders = ['_robustnessTest_multiTask_beRNN_05_highDimCorrects_256_hp_2', '_robustnessTest_multiTask_beRNN_05_highDimCorrects_256_hp_7',
+           '_robustnessTest_multiTask_beRNN_05_highDimCorrects_256_hp_4', '_robustnessTest_multiTask_beRNN_05_highDimCorrects_256_hp_10',
+           '_robustnessTest_multiTask_beRNN_05_highDimCorrects_256_hp_5']
 standard_analysis = [True, False][0]
 rsa_analysis = [True, False][1]
 robustnessTest, batch = [True, False][1], '2'
-representation = ['rate', 'weight'][0]
-restore = False
 numberOfModels = 20 # max. number of models in folder
-
 
 for folder in folders:
 
+    dataType = 'highDim_correctOnly' if 'highDim_correctOnly' in folder or 'highDimCorrects' in folder else 'highDim'
     participant = [participant for participant in participantList if participant in folder][0]
     directory = Path(f'C:/Users/oliver.frank/Desktop/PyProjects/beRNNmodels/{folder}/{dataType}/{participant}')
 

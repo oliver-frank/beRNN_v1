@@ -53,23 +53,31 @@ def apply_density_threshold(matrix, density=0.1): # fix: density thresholds: .0,
     Returns:
         np.ndarray: The thresholded matrix with strong correlations retained.
     """
-    # Use a copy to avoid modifying the original input matrix
-    temp_matrix = matrix.copy()
-    n = temp_matrix.shape[0]
+    # # Use a copy to avoid modifying the original input matrix
+    # temp_matrix = matrix.copy()
+    # n = temp_matrix.shape[0]
+    #
+    # # Ensure diagonal is 0 for edge calculation
+    # np.fill_diagonal(temp_matrix, 0)
+    #
+    # upper_tri_indices = np.triu_indices(n, k=1)
+    # triu_vals_signed = temp_matrix[upper_tri_indices]
+    # abs_triu_vals = np.abs(triu_vals_signed)
+    #
+    # cutoff = np.quantile(abs_triu_vals, 1 - density)
+    # thresholded = np.where(np.abs(matrix) >= cutoff, matrix, 0)
+    #
+    # # Ensure diagonal remains 0
+    # np.fill_diagonal(thresholded, 0)
+    #
+    # return thresholded
 
-    # Ensure diagonal is 0 for edge calculation
-    np.fill_diagonal(temp_matrix, 0)
-
-    upper_tri_indices = np.triu_indices(n, k=1)
-    triu_vals_signed = temp_matrix[upper_tri_indices]
-    abs_triu_vals = np.abs(triu_vals_signed)
-
-    cutoff = np.quantile(abs_triu_vals, 1 - density)
-    thresholded = np.where(np.abs(matrix) >= cutoff, matrix, 0)
-
-    # Ensure diagonal remains 0
-    np.fill_diagonal(thresholded, 0)
-
+    n = matrix.shape[0]
+    # Get all upper-triangle values
+    triu_vals = matrix[np.triu_indices(n, k=1)]
+    cutoff = np.quantile(triu_vals, 1 - density)  # cutoff represents the value that divides all values at 1-density
+    # Zero out everything below cutoff
+    thresholded = np.where(matrix >= cutoff, matrix, 0)
     return thresholded
 
 
@@ -78,12 +86,28 @@ def getAndSafeModValue(data_dir, model_dir, hp, model, sess, log):
                                       monthsConsidered=hp['monthsConsidered'], data_type='rule', networkAnalysis=False,
                                       model=model, sess=sess)
 
+    # h_mean_all as basis for thresholding dead neurons as h_corr_all can result in high values for dead neurons
+    res3 = tools.load_pickle(fname3)
+    h_mean_all_ = res3['h_mean_all']
+    activityThreshold = 1e-1
+    ind_active = np.where(h_mean_all_.sum(axis=1) >= activityThreshold)[0]
+
+    # h_corr_all as representative for modularity analysis reflecting similar neuron behavior
     res2 = tools.load_pickle(fname2)
     h_corr_all_ = res2['h_corr_all']
-    h_corr_all = h_corr_all_.mean(axis=2) # average over all tasks
+    h_corr_all_ = h_corr_all_.mean(axis=2)  # average over all tasks
+
+    numberOfHiddenUnits = hp['n_rnn']
+
+    if ind_active.shape[0] < h_corr_all_.shape[0] and ind_active.shape[0] < h_corr_all_.shape[1] and ind_active.shape[0] > 1:
+        h_corr_all_ = h_corr_all_[ind_active, :]
+        h_corr_all = h_corr_all_[:, ind_active]
+        # Apply threshold
+        functionalCorrelation_density = apply_density_threshold(h_corr_all, density=0.1)
+    else:
+        functionalCorrelation_density = np.zeros((numberOfHiddenUnits, numberOfHiddenUnits))  # fix: Get individual number of hidden units # Create different dummy matrix, that leads to lower realtive count
 
     # Compute modularity
-    functionalCorrelation_density = apply_density_threshold(h_corr_all, density=0.1)
     np.fill_diagonal(functionalCorrelation_density, 0)  # prevent self-loops
     G_sparse = nx.from_numpy_array(functionalCorrelation_density)
 

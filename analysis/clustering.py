@@ -103,7 +103,7 @@ class Analysis(object):
 
         # First only get active units. Total variance per unit across tasks larger than 1e-3
         # activityThreshold = 0 if hp['multiLayer'] else 1e-5 # future: multiLayer
-        activityThreshold = 1e-3 # > 1e-3 - min > 0
+        activityThreshold = 1e-1 # > 1e-3 - min > 0
         # yang legancy: task representation based on h_var_all
         # ind_active = np.where(h_var_all_.sum(axis=1) >= activityThreshold)[0]
         # h_var_all  = h_var_all_[ind_active, :]
@@ -177,7 +177,7 @@ class Analysis(object):
 
             # head: Clustering =========================================================================================
             from sklearn import metrics
-            X = h_normmean_all # legacy: h_normVar_all
+            X = h_normmean_all # legacy: h_normvar_all
 
             # Clustering
             from sklearn.cluster import AgglomerativeClustering, KMeans
@@ -207,46 +207,6 @@ class Analysis(object):
                 # fallback = False
                 if len(scores) != 0:
                     i = np.argmax(scores)
-                # else:
-                #     # Fallback: ensure valid index and cluster settings
-                #     # Determine expected dimensions safely
-                #     hp = tools.load_hp(model_dir)
-                #     rules = [key for key in hp["rule_prob_map"].keys() if hp["rule_prob_map"][key] != 0]
-                #     n_tasks = len(rules)
-                #     n_units = int(hp.get('n_rnn', 128)) if 'n_rnn' in hp else 128  # typical hidden dim fallback
-                #
-                #     # Create minimal but consistent dummy data
-                #     self.h_mean_all = np.ones((2, n_tasks))
-                #     self.h_meanvar_all = np.full((n_tasks, n_units), 0.5, dtype=float)
-                #
-                #     self.labels = np.array([0, 1])
-                #     self.ind_active = np.array([0, 1])
-                #     self.n_clusters = [2]
-                #     self.scores = [0.0]
-                #     self.n_cluster = 2
-                #     self.unique_labels = np.array([0, 1])
-                #
-                #     # Metadata
-                #     self.normalization_method = normalization_method
-                #     self.model_dir = model_dir
-                #     self.hp = hp
-                #     self.data_type = data_type
-                #     self.rules = hp.get('rules', [f"task_{i}" for i in range(n_tasks)])
-                #
-                #     # Create dummy RDM of proper size and symmetry
-                #     # A neutral, symmetric matrix: diagonal 0 (self-similarity), off-diagonals 0.5
-                #     self.rdm = np.full((n_tasks, n_tasks), 0.5, dtype=float)
-                #     np.fill_diagonal(self.rdm, 0.0)
-                #
-                #     # Vectorized upper triangle (like in real RDMs)
-                #     self.rdm_vector = self.rdm[np.triu_indices_from(self.rdm, k=1)]
-                #     self.rdm_metric = rdm_metric
-                #
-                #     # Ensure consistent attributes for downstream alignment
-                #     self.coords_dummy = np.zeros((n_tasks, 2))  # optional: MDS-compatible placeholder
-                #
-                #     print(f"Creating dummy clustering and rdm for model {model_dir} — insufficient data or variance.")
-                #     fallback = True
             else:
                 i = n_clusters.index(10)
 

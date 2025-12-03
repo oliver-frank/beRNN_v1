@@ -20,21 +20,23 @@ from analysis import clustering
 from networkAnalysis import define_data_folder
 # from analysis import standard_analysis
 
+import networkx as nx
+from training import apply_density_threshold
+from networkx.algorithms.community import greedy_modularity_communities, modularity
+
 ########################################################################################################################
 # head: Create histogramms to visualize and investigate interrelations of hyperparameter, modularity and performance ###
 ########################################################################################################################
 def compute_n_cluster(model_dirs, mode):
     successful_model_dirs = []
+    log = {}
 
     for model_dir in model_dirs:
-        print(model_dir)
         try:
             log = tools.load_log(model_dir)
-            # log = tools.load_log(r'C:\Users\oliver.frank\Desktop\PyProjects\beRNNmodels\paperPlanes\highDim3stimTC\beRNN_04\13\beRNN_04_AllTask_4-6_data_highDim_correctOnly_3stimTC_trainingBatch13_iteration6_LeakyGRU_128_softplus\model_month_6')
             hp = tools.load_hp(model_dir)
             # info: Add try, except and assert if you only want to take models into account that overcome certain performance threshold
             dataFolder = define_data_folder(model_dir.split('_'))
-            # participant = [i for i in model_dir.split('\\') if 'beRNN_' in i][0]
             participant = '_'.join(['beRNN', [string for string in model_dir.split('_') if '0' in string and len(string) == 2][0]]) # fix new ---
             layer = [1 if hp['multiLayer'] == False else 3][0]
 
@@ -91,14 +93,11 @@ def compute_n_cluster(model_dirs, mode):
         except Exception as e:
             print(f"An exception occurred in compute_n_cluster: {e}")
 
-            # Create dummy log for plotting
-            # log = {} # attention: Don't create new log and overwrite old !
-            # log['avg_perf_train'] = 0
-            # log['avg_perf_test'] = 0
-
+            log['model_dir'] = model_dir
             log['n_cluster'] = 0
             log['score'] = 0
-            log['model_dir'] = model_dir
+            log['avg_perf_train'] = 0
+            log['avg_perf_test'] = 0
 
             tools.save_log(log)
 
@@ -107,7 +106,7 @@ def compute_n_cluster(model_dirs, mode):
 
     return successful_model_dirs
 
-def get_n_clusters(model_dirs):
+def get_n_clusters(model_dirs, density):
     # model_dirs = tools.valid_model_dirs(root_dir)
     hp_list = list()
     n_clusters = list()
@@ -126,23 +125,73 @@ def get_n_clusters(model_dirs):
         # Handle internal matplotlib issue with None values for plotting legend
         if hp['learning_rate_mode'] is None:
             hp['learning_rate_mode'] = 'constant'
-            print('None overwritten with "constant"')
+
         hp['rnn_type'] = 'MultiLayer' if hp.get('multiLayer') else hp['rnn_type']
-        # load hp and calculate acerage performance
-        # if average performance > threshold
 
         # check if performance exceeds target
-        # if log['perf_min'][-1] > hp['target_perf']: # fix
-        n_clusters.append(log['n_cluster'])
         hp_list.append(hp)
+        n_clusters.append(log['n_cluster'])
         silhouette_score.append(log['score'])
         avg_perf_train_list.append(log['avg_perf_train'])
         avg_perf_test_list.append(log['avg_perf_test'])
+
         if hp.get('multiLayer') == False:
-            try:
-                modularity_list_sparse.append(log['modularity_sparse'][-1])
-            except Exception as e:
-                modularity_list_sparse.append(0)
+
+            # info: Calculate modularity again - if density threshold should change
+            if 'fundamentals' in model_dir or 'fm' in model_dir:
+                pkl_beRNN3 = rf'{model_dir}\mean_test_lay1_rule_fundamentals.pkl'
+                pkl_beRNN2 = rf'{model_dir}\corr_test_lay1_rule_fundamentals.pkl'
+            elif 'multiTask' in model_dir or 'AllTask' in model_dir:
+                pkl_beRNN3 = rf'{model_dir}\mean_test_lay1_rule_all.pkl'
+                pkl_beRNN2 = rf'{model_dir}\corr_test_lay1_rule_all.pkl'
+            else:
+                pkl_beRNN3 = rf'{model_dir}\mean_test_lay1_rule_taskSubset.pkl'
+                pkl_beRNN2 = rf'{model_dir}\corr_test_lay1_rule_taskSubset.pkl'
+
+            # h_mean_all as basis for thresholding dead neurons as h_corr_all can result in high values for dead neurons
+            res3 = tools.load_pickle(pkl_beRNN3)
+            h_mean_all_ = res3['h_mean_all']
+            activityThreshold = 1e-1
+            ind_active = np.where(h_mean_all_.sum(axis=1) >= activityThreshold)[0]
+
+            # h_corr_all as representative for modularity analysis reflecting similar neuron behavior
+            res2 = tools.load_pickle(pkl_beRNN2)
+            h_corr_all_ = res2['h_corr_all']
+            h_corr_all_ = h_corr_all_.mean(axis=2)  # average over all tasks
+
+            numberOfHiddenUnits = hp['n_rnn']
+
+            if ind_active.shape[0] < h_corr_all_.shape[0] and ind_active.shape[0] < h_corr_all_.shape[1] and ind_active.shape[0] > 1 :
+                h_corr_all_ = h_corr_all_[ind_active, :]
+                h_corr_all = h_corr_all_[:, ind_active]
+                # Apply threshold
+                functionalCorrelation_density = apply_density_threshold(h_corr_all, density=density)
+            else:
+                functionalCorrelation_density = np.zeros((numberOfHiddenUnits, numberOfHiddenUnits)) # fix: Get individual number of hidden units # Create different dummy matrix, that leads to lower realtive count
+
+            # Compute modularity
+            np.fill_diagonal(functionalCorrelation_density, 0)  # prevent self-loops
+            G_sparse = nx.from_numpy_array(functionalCorrelation_density)
+
+            if G_sparse.number_of_edges() == 0 or G_sparse.number_of_nodes() < 2: # fix Create list of relative amount of hidden units after thresholding
+                print(f"Skipping modularity calculation for {model_dir} — graph has no edges. Setting mod_value = 0.")
+                mod_value_sparse = 0
+                modularity_list_sparse.append(mod_value_sparse)
+            else:
+                try:
+                    communities_sparse = greedy_modularity_communities(G_sparse)
+                    mod_value_sparse = modularity(G_sparse, communities_sparse)
+                    modularity_list_sparse.append(mod_value_sparse)
+                except Exception as e:
+                    print(f"Greedy modularity failed for {model_dir}. Setting mod_value = 0. ({e})")
+                    mod_value_sparse = 0
+                    modularity_list_sparse.append(mod_value_sparse)
+
+            # # info: Alternatively take already calculatded mod value w. density threshold .1
+            # try:
+            #     modularity_list_sparse.append(log['modularity_sparse'][-1])
+            # except Exception as e:
+            #     modularity_list_sparse.append(0)
 
         else:
             modularity_list_sparse = []
@@ -279,8 +328,9 @@ def general_hp_plot_overlay_multiple(meta_n_clusters_list,
                                      meta_perf_train_list,
                                      meta_perf_test_list,
                                      meta_modularity_list,
-                                     models_labels,
+                                     folder_labels,
                                      directory,
+                                     density,
                                      sort_variable='performance',
                                      mode='test',
                                      alpha=0.6,
@@ -294,7 +344,7 @@ def general_hp_plot_overlay_multiple(meta_n_clusters_list,
 
     # Basic checks
     n_searches = len(meta_hp_list)
-    assert len(models_labels) == n_searches, "models_labels must match number of meta entries"
+    assert len(folder_labels) == n_searches, "folder_labels must match number of meta entries"
 
     hp_ranges = _get_hp_ranges()
     hp_plots = list(hp_ranges.keys())
@@ -319,7 +369,7 @@ def general_hp_plot_overlay_multiple(meta_n_clusters_list,
         avg_perf_test_list = list(meta_perf_test_list[s])
         modularity_list = list(meta_modularity_list[s]) if meta_modularity_list[s] is not None else [0] * len(n_clusters)
 
-        # get negative modularity scores to 0
+        # get negative modularity scores to 0 as they occur in ~0 cases
         modularity_list = [max(0, m) for m in modularity_list]
 
         # Sorting
@@ -348,9 +398,9 @@ def general_hp_plot_overlay_multiple(meta_n_clusters_list,
 
         # Plot main metrics
         if hp_list_sorted and hp_list_sorted[0].get('rnn_type') != 'MultiLayer':
-            axs[0].plot(x, modularity_sorted, '-', alpha=alpha, color=colors[s], label=models_labels[s])
+            axs[0].plot(x, modularity_sorted, '-', alpha=alpha, color=colors[s], label=folder_labels[s])
         else:
-            axs[0].plot(x, silhouette_sorted, '-', alpha=alpha, color=colors[s], label=models_labels[s])
+            axs[0].plot(x, silhouette_sorted, '-', alpha=alpha, color=colors[s], label=folder_labels[s])
 
         axs[1].plot(x, n_clusters_sorted, '-', alpha=alpha, color=colors[s])
         axs[2].plot(x, perf_train_sorted, '-', alpha=alpha, color=colors[s])
@@ -378,17 +428,17 @@ def general_hp_plot_overlay_multiple(meta_n_clusters_list,
 
     # Format upper plots
     if meta_hp_list and meta_hp_list[0] and meta_hp_list[0][0].get('rnn_type') != 'MultiLayer':
-        axs[0].set_ylabel(f'Mod. score ({mode})', fontsize=8)
+        axs[0].set_ylabel(f'Mod. score', fontsize=8)
     else:
-        axs[0].set_ylabel(f'Silhouette score ({mode})', fontsize=8)
-    axs[1].set_ylabel(f'Num. clusters ({mode})', fontsize=8)
+        axs[0].set_ylabel(f'Silhouette score', fontsize=8)
+    axs[1].set_ylabel(f'Num. clusters', fontsize=8)
     axs[2].set_ylabel('Avg. perf. train', fontsize=8)
     axs[3].set_ylabel('Avg. perf. test', fontsize=8)
 
     axs[0].set_yticks([0.0, 0.5, 1.0])
     axs[0].set_yticklabels(["0.0", "0.5", "1.0"])
     axs[1].set_yticks([0, 15, 30])
-    axs[1].set_yticklabels(["0", "15", "30"])
+    axs[1].set_yticklabels(["0", "10", "20"])
     axs[2].set_yticks([0.0, 0.5, 1.0])
     axs[2].set_yticklabels(["0.0", "0.5", "1.0"])
     axs[3].set_yticks([0.0, 0.5, 1.0])
@@ -402,7 +452,7 @@ def general_hp_plot_overlay_multiple(meta_n_clusters_list,
     axs[3].spines["top"].set_visible(False)
     axs[3].spines["right"].set_visible(False)
 
-    axs[0].legend(models_labels, fontsize=8, loc='best', frameon=False)
+    axs[0].legend(folder_labels, fontsize=8, loc='best', frameon=False)
 
     # HP overlay as dots
     axs[4].set_yticks(range(len(hp_plots)))
@@ -474,7 +524,7 @@ def general_hp_plot_overlay_multiple(meta_n_clusters_list,
 
     # === Save ===
     save_path = os.path.join(directory, 'visuals_overlay',
-                             f'overlay_multi_{"-".join(models_labels[0].split("_")[1:-1])}_{sort_variable}_{mode}.png')
+                             f'overlay_multi_density_{density}_{"-".join(folder_labels[0].split("_")[1:-1])}_{sort_variable}_{mode}.png')
     os.makedirs(os.path.dirname(save_path), exist_ok=True)
     plt.savefig(save_path, bbox_inches='tight', dpi=300)
     plt.show()
@@ -485,8 +535,9 @@ def general_hp_plot_overlay_multiple_robustnessTests(meta_n_clusters_list,
                                      meta_perf_train_list,
                                      meta_perf_test_list,
                                      meta_modularity_list,
-                                     models_labels,
+                                     folder_labels,
                                      directory,
+                                     density,
                                      sort_variable='performance',
                                      mode='test',
                                      alpha=0.6,
@@ -500,7 +551,7 @@ def general_hp_plot_overlay_multiple_robustnessTests(meta_n_clusters_list,
 
     # Basic checks
     n_searches = len(meta_hp_list)
-    assert len(models_labels) == n_searches, "models_labels must match number of meta entries"
+    assert len(folder_labels) == n_searches, "models_labels must match number of meta entries"
 
     hp_ranges = _get_hp_ranges()
     hp_plots = list(hp_ranges.keys())
@@ -525,7 +576,7 @@ def general_hp_plot_overlay_multiple_robustnessTests(meta_n_clusters_list,
         avg_perf_test_list = list(meta_perf_test_list[s])
         modularity_list = list(meta_modularity_list[s]) if meta_modularity_list[s] is not None else [0] * len(n_clusters)
 
-        # get negative modularity scores to 0
+        # get negative modularity scores to 0 as they occur in ~0 cases
         modularity_list = [max(0, m) for m in modularity_list]
 
         # Sorting
@@ -554,9 +605,9 @@ def general_hp_plot_overlay_multiple_robustnessTests(meta_n_clusters_list,
 
         # Plot main metrics
         if hp_list_sorted and hp_list_sorted[0].get('rnn_type') != 'MultiLayer':
-            axs[0].plot(x, modularity_sorted, '-', alpha=alpha, color=colors[s], label=models_labels[s])
+            axs[0].plot(x, modularity_sorted, '-', alpha=alpha, color=colors[s], label=folder_labels[s])
         else:
-            axs[0].plot(x, silhouette_sorted, '-', alpha=alpha, color=colors[s], label=models_labels[s])
+            axs[0].plot(x, silhouette_sorted, '-', alpha=alpha, color=colors[s], label=folder_labels[s])
 
         axs[1].plot(x, n_clusters_sorted, '-', alpha=alpha, color=colors[s])
         axs[2].plot(x, perf_train_sorted, '-', alpha=alpha, color=colors[s])
@@ -608,7 +659,7 @@ def general_hp_plot_overlay_multiple_robustnessTests(meta_n_clusters_list,
     axs[3].spines["top"].set_visible(False)
     axs[3].spines["right"].set_visible(False)
 
-    axs[0].legend(models_labels, fontsize=8, loc='best', frameon=False)
+    axs[0].legend(folder_labels, fontsize=8, loc='best', frameon=False)
 
     # HP overlay as dots
     axs[4].set_yticks(range(len(hp_plots)))
@@ -680,7 +731,7 @@ def general_hp_plot_overlay_multiple_robustnessTests(meta_n_clusters_list,
 
     # === Save ===
     save_path = os.path.join(directory, 'visuals_overlay_robustness',
-                             f'overlay_multi_{"-".join(models_labels[0].split("_")[1:-1])}_{sort_variable}_{mode}.png')
+                             f'overlay_multi_density_{density}_{"-".join(folder_labels[0].split("_")[1:-1])}_{sort_variable}_{mode}.png')
     os.makedirs(os.path.dirname(save_path), exist_ok=True)
     plt.savefig(save_path, bbox_inches='tight', dpi=300)
     plt.show()
@@ -743,7 +794,7 @@ HP_NAME = {'activation': 'Activation fun.',
 
 if __name__ == '__main__':
 
-    foldersToOverlay = ['_gridSearch_domainTask_DM_beRNN_03_highDim_512']
+    foldersToOverlay = ['_gridSearch_multiTask_beRNN_03_highDimCorrects_256']
 
     directory_metaOverlayVisual = r'C:\Users\oliver.frank\Desktop\PyProjects\beRNNmodels\__metaOverlayVisual'
     os.makedirs(directory_metaOverlayVisual, exist_ok=True)
@@ -759,7 +810,6 @@ if __name__ == '__main__':
         final_model_dirs = []
 
         participant = ['beRNN_01', 'beRNN_02', 'beRNN_03', 'beRNN_04', 'beRNN_05'][2]
-
 
         # # info robustness overlay ***************************************************
         # participantList = ['beRNN_01', 'beRNN_02', 'beRNN_03', 'beRNN_04', 'beRNN_05']
@@ -779,6 +829,7 @@ if __name__ == '__main__':
         # batchPlot = True if participant == 'beRNN_03' else False
         batchPlot = [True, False][1]
         lastMonth = '6'
+        density = 0.1
 
         directory = fr'C:\Users\oliver.frank\Desktop\PyProjects\beRNNmodels\{folder}\{dataType}\{participant}'
 
@@ -808,9 +859,8 @@ if __name__ == '__main__':
 
         # First compute n_clusters for each model then collect them in lists
         successful_model_dirs = compute_n_cluster(final_model_dirs, mode)
-        n_clusters, hp_list, silhouette_score, avg_perf_train_list, avg_perf_test_list, modularity_list_sparse = get_n_clusters(
-            successful_model_dirs)
-
+        n_clusters, hp_list, silhouette_score, avg_perf_train_list, avg_perf_test_list, modularity_list_sparse = get_n_clusters(successful_model_dirs, density)
+        # model_dirs, density = successful_model_dirs, density
         # info: After everything was done as in hyperparameterOverview.py, catch the important lists and save them to meta lists
         meta_silhouette_score_list.append(silhouette_score)
         meta_modularity_list.append(modularity_list_sparse)
@@ -819,24 +869,7 @@ if __name__ == '__main__':
         meta_perf_test_list.append(avg_perf_test_list)
         meta_hp_list.append(hp_list)
 
-    import json
-    with open(os.path.join(directory_metaOverlayVisual, 'meta_silhouette_score_list.json'), 'w') as f:
-        json.dump(meta_silhouette_score_list, f)
-    with open(os.path.join(directory_metaOverlayVisual, 'meta_modularity_list.json'), 'w') as f:
-        json.dump(meta_modularity_list, f)
-    with open(os.path.join(directory_metaOverlayVisual, 'meta_n_clusters_list.json'), 'w') as f:
-        json.dump(meta_n_clusters_list, f)
-    with open(os.path.join(directory_metaOverlayVisual, 'meta_perf_train_list.json'), 'w') as f:
-        json.dump(meta_perf_train_list, f)
-    with open(os.path.join(directory_metaOverlayVisual, 'meta_perf_test_list.json'), 'w') as f:
-        json.dump(meta_perf_test_list, f)
-    with open(os.path.join(directory_metaOverlayVisual, 'meta_hp_list.json'), 'w') as f:
-        json.dump(meta_hp_list, f)
-
     # Visualize big overlay
-    # general_hp_plot_overlay(n_clusters, silhouette_score, hp_list, avg_perf_train_list, avg_perf_test_list,
-    #                 modularity_list_sparse, directory, sort_variable, mode, batchPlot, model_dir_batches)
-
     general_hp_plot_overlay_multiple(meta_n_clusters_list,
                                      meta_silhouette_score_list,
                                      meta_hp_list,
@@ -845,6 +878,7 @@ if __name__ == '__main__':
                                      meta_modularity_list,
                                      foldersToOverlay,
                                      directory_metaOverlayVisual,
+                                     density,
                                      sort_variable='performance',
                                      mode='test',
                                      alpha=0.6,
