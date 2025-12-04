@@ -666,18 +666,6 @@ def load_hp(model_dir):
 
     with open(fname, 'r') as f:
         hp = json.load(f)
-
-    # with open(fname, 'r') as f:
-    #     content = f.read()
-    #     if not content.strip():
-    #         raise ValueError(f"Hyperparameter file '{fname}' is empty.")
-    #     hp = json.loads(content)
-
-    # Use a different seed aftering loading,
-    # since loading is typically for analysis
-    # hp['rng'] = np.random.RandomState(hp['seed']+1000)
-    # hp['rng'] = np.random.default_rng()
-
     return hp
 
 def save_hp(hp, model_dir):

@@ -141,12 +141,14 @@ def get_n_clusters(model_dirs, density):
             if 'fundamentals' in model_dir or 'fm' in model_dir:
                 pkl_beRNN3 = rf'{model_dir}\mean_test_lay1_rule_fundamentals.pkl'
                 pkl_beRNN2 = rf'{model_dir}\corr_test_lay1_rule_fundamentals.pkl'
+            elif 'domainTask' in model_dir:
+                pkl_beRNN3 = rf'{model_dir}\mean_test_lay1_rule_taskSubset.pkl'
+                pkl_beRNN2 = rf'{model_dir}\corr_test_lay1_rule_taskSubset.pkl'
             elif 'multiTask' in model_dir or 'AllTask' in model_dir:
                 pkl_beRNN3 = rf'{model_dir}\mean_test_lay1_rule_all.pkl'
                 pkl_beRNN2 = rf'{model_dir}\corr_test_lay1_rule_all.pkl'
             else:
-                pkl_beRNN3 = rf'{model_dir}\mean_test_lay1_rule_taskSubset.pkl'
-                pkl_beRNN2 = rf'{model_dir}\corr_test_lay1_rule_taskSubset.pkl'
+                print('No .pkl file found!')
 
             # h_mean_all as basis for thresholding dead neurons as h_corr_all can result in high values for dead neurons
             res3 = tools.load_pickle(pkl_beRNN3)
@@ -645,7 +647,7 @@ def general_hp_plot_overlay_multiple_robustnessTests(meta_n_clusters_list,
     axs[0].set_yticks([0.0, 0.5, 1.0])
     axs[0].set_yticklabels(["0.0", "0.5", "1.0"])
     axs[1].set_yticks([0, 15, 30])
-    axs[1].set_yticklabels(["0", "15", "30"])
+    axs[1].set_yticklabels(["0", "10", "20"])
     axs[2].set_yticks([0.0, 0.5, 1.0])
     axs[2].set_yticklabels(["0.0", "0.5", "1.0"])
     axs[3].set_yticks([0.0, 0.5, 1.0])
@@ -794,7 +796,15 @@ HP_NAME = {'activation': 'Activation fun.',
 
 if __name__ == '__main__':
 
-    foldersToOverlay = ['_gridSearch_multiTask_beRNN_03_highDimCorrects_256']
+    foldersToOverlay = ['_robustnessTest_multiTask_beRNN_01_highDimCorrects_256_hp_2', '_robustnessTest_multiTask_beRNN_02_highDimCorrects_256_hp_2', '_robustnessTest_multiTask_beRNN_03_highDimCorrects_256_hp_2',
+                        '_robustnessTest_multiTask_beRNN_04_highDimCorrects_256_hp_2', '_robustnessTest_multiTask_beRNN_05_highDimCorrects_256_hp_2']
+
+    mode = ['train', 'test'][1]
+    sort_variable = ['clustering', 'performance', 'silhouette'][1]
+    # batchPlot = True if participant == 'beRNN_03' else False
+    batchPlot = [True, False][0] # info: important for robustness overlay
+    lastMonth = '6'
+    density = 0.1
 
     directory_metaOverlayVisual = r'C:\Users\oliver.frank\Desktop\PyProjects\beRNNmodels\__metaOverlayVisual'
     os.makedirs(directory_metaOverlayVisual, exist_ok=True)
@@ -809,27 +819,22 @@ if __name__ == '__main__':
     for folder in foldersToOverlay:
         final_model_dirs = []
 
-        participant = ['beRNN_01', 'beRNN_02', 'beRNN_03', 'beRNN_04', 'beRNN_05'][2]
+        # info standard overlay ***************************************************
+        # participant = ['beRNN_01', 'beRNN_02', 'beRNN_03', 'beRNN_04', 'beRNN_05'][2]
+        # info standard overlay ***************************************************
 
-        # # info robustness overlay ***************************************************
-        # participantList = ['beRNN_01', 'beRNN_02', 'beRNN_03', 'beRNN_04', 'beRNN_05']
-        # for participant_ in participantList:
-        #     if participant_ in folder:
-        #         participant = participant_
-        #         continue
-        # # info robustness overlay ***************************************************
+        # info robustness overlay ***************************************************
+        participantList = ['beRNN_01', 'beRNN_02', 'beRNN_03', 'beRNN_04', 'beRNN_05']
+        for participant_ in participantList:
+            if participant_ in folder:
+                participant = participant_
+                continue
+        # info robustness overlay ***************************************************
 
         if 'highDim_correctOnly' in folder or 'highDimCorrects' in folder:
             dataType = 'highDim_correctOnly'
         elif 'highDim' in folder:
             dataType = 'highDim'
-
-        mode = ['train', 'test'][1]
-        sort_variable = ['clustering', 'performance', 'silhouette'][1]
-        # batchPlot = True if participant == 'beRNN_03' else False
-        batchPlot = [True, False][1]
-        lastMonth = '6'
-        density = 0.1
 
         directory = fr'C:\Users\oliver.frank\Desktop\PyProjects\beRNNmodels\{folder}\{dataType}\{participant}'
 
@@ -869,8 +874,22 @@ if __name__ == '__main__':
         meta_perf_test_list.append(avg_perf_test_list)
         meta_hp_list.append(hp_list)
 
-    # Visualize big overlay
-    general_hp_plot_overlay_multiple(meta_n_clusters_list,
+    # # Visualize big overlay
+    # general_hp_plot_overlay_multiple(meta_n_clusters_list,
+    #                                  meta_silhouette_score_list,
+    #                                  meta_hp_list,
+    #                                  meta_perf_train_list,
+    #                                  meta_perf_test_list,
+    #                                  meta_modularity_list,
+    #                                  foldersToOverlay,
+    #                                  directory_metaOverlayVisual,
+    #                                  density,
+    #                                  sort_variable='performance',
+    #                                  mode='test',
+    #                                  alpha=0.6,
+    #                                  cmap_name='viridis')
+
+    general_hp_plot_overlay_multiple_robustnessTests(meta_n_clusters_list,
                                      meta_silhouette_score_list,
                                      meta_hp_list,
                                      meta_perf_train_list,
@@ -883,18 +902,5 @@ if __name__ == '__main__':
                                      mode='test',
                                      alpha=0.6,
                                      cmap_name='viridis')
-
-    # general_hp_plot_overlay_multiple_robustnessTests(meta_n_clusters_list,
-    #                                  meta_silhouette_score_list,
-    #                                  meta_hp_list,
-    #                                  meta_perf_train_list,
-    #                                  meta_perf_test_list,
-    #                                  meta_modularity_list,
-    #                                  foldersToOverlay,
-    #                                  directory_metaOverlayVisual,
-    #                                  sort_variable='performance',
-    #                                  mode='test',
-    #                                  alpha=0.6,
-    #                                  cmap_name='viridis')
 
 

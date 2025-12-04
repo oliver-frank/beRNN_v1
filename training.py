@@ -41,37 +41,7 @@ def apply_threshold(matrix, threshold):
     return matrix_thresholded
 
 
-def apply_density_threshold(matrix, density=0.1): # fix: density thresholds: .0, .1, .3, .5
-    """
-    Applies proportional (density) thresholding to keep the top X%
-    of edges globally based on absolute strength (either strong positive or negative).
-
-    Args:
-        matrix (np.ndarray): Input symmetric correlation matrix.
-        density (float): The proportion of edges to keep (e.g., 0.1 for 10%).
-
-    Returns:
-        np.ndarray: The thresholded matrix with strong correlations retained.
-    """
-    # # Use a copy to avoid modifying the original input matrix
-    # temp_matrix = matrix.copy()
-    # n = temp_matrix.shape[0]
-    #
-    # # Ensure diagonal is 0 for edge calculation
-    # np.fill_diagonal(temp_matrix, 0)
-    #
-    # upper_tri_indices = np.triu_indices(n, k=1)
-    # triu_vals_signed = temp_matrix[upper_tri_indices]
-    # abs_triu_vals = np.abs(triu_vals_signed)
-    #
-    # cutoff = np.quantile(abs_triu_vals, 1 - density)
-    # thresholded = np.where(np.abs(matrix) >= cutoff, matrix, 0)
-    #
-    # # Ensure diagonal remains 0
-    # np.fill_diagonal(thresholded, 0)
-    #
-    # return thresholded
-
+def apply_density_threshold(matrix, density=0.1):
     n = matrix.shape[0]
     # Get all upper-triangle values
     triu_vals = matrix[np.triu_indices(n, k=1)]
@@ -552,12 +522,10 @@ def train(data_dir, model_dir, train_data, eval_data, hp=None, max_steps=1e6, di
                     log['trials'].append(step * hp['batch_size'])
                     log['times'].append(time.time() - t_start)
                     log = do_eval(sess, model, log, hp['rule_trains'], eval_data)
-                    elapsed_time = time.time() - t_start  # Calculate elapsed time
-                    print(f"Elapsed time after batch number {trialsLoaded}: {elapsed_time:.2f} seconds")
-                    # After training
+                    # training time
                     total_time = time.time() - t_start
                     print(f"Total training time: {total_time:.2f} seconds")
-                    # if log['perf_avg'][-1] > model.hp['target_perf']:
+
                     # check if minimum performance is above target
                     if log['perf_min'][-1] > model.hp['target_perf']:
                         print('Perf reached the target: {:0.2f}'.format(
