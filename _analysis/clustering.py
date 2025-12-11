@@ -1,5 +1,5 @@
 ########################################################################################################################
-# info: Clustering analysis
+# info: Clustering _analysis
 ########################################################################################################################
 # Analyze how units are involved in various tasks
 ########################################################################################################################
@@ -24,7 +24,7 @@ from network import Model
 import tools
 from tools import rule_name, createSplittedDatasets, create_cMask
 from network import get_perf
-from analysis import variance
+from _analysis import variance
 
 
 # Colors used for clusters
@@ -75,18 +75,21 @@ def all_variance_files_exist(model_dir, numberOfLayers, mode, data_dir):
     return True
 
 def compute_rdm(task_matrix, rdm_metric, normalize=False):
-    # Incoming matrix should represent average activity over time and trials (h_mean_all)
-    # Final matrix must have form (n_tasks, n_units)
+    # Incoming matrix should represent average activity over time and trials for each unit (h_mean_all) with form (n_units, n_tasks)
+    # Final matrix must have form (n_tasks, n_tasks)
     # Normalization over tasks (unit_activity_task_A/ all_unit_activity_task_A) - actually meaningless if cosine is calculated
     # rdm_metric: correlation or cosine
 
-    if normalize:
-        h_normmean_all = (task_matrix.T / np.sum(task_matrix, axis=1)).T
+    if normalize: # actually unnecessary as it won't change the rank
+        h_normmean_all = (task_matrix.T / np.sum(task_matrix, axis=1)) # (n_tasks, n_units)
     else:
-        h_normmean_all = task_matrix
+        h_normmean_all = task_matrix.T # objective shape: (n_tasks, n_units)
 
-    rdm = squareform(pdist(h_normmean_all.T, metric=rdm_metric))
+    rdm = squareform(pdist(h_normmean_all, metric=rdm_metric))
     rdm_vector = rdm[np.triu_indices_from(rdm, k=1)]
+
+    rdm = np.nan_to_num(rdm)  # replaces NaNs with 0
+    rdm_vector = np.nan_to_num(rdm_vector)  # replaces NaNs with 0
 
     return rdm, rdm_vector
 
@@ -97,7 +100,7 @@ class Analysis(object):
         hp = tools.load_hp(model_dir)
 
         # future: multiLayer *******************************************************************************************
-        # # Do a task variance analysis for each hidden layer
+        # # Do a task variance _analysis for each hidden layer
         # if hp.get('multiLayer') == True:
         #     numberOfLayers = len(hp['n_rnn_per_layer'])
         # else:
@@ -113,11 +116,14 @@ class Analysis(object):
 
         fname, fname2, fname3 = variance.compute_variance(data_dir, model_dir, layer, mode, monthsConsidered, data_type, networkAnalysis)
 
+        # fname = r'C:\Users\oliver.frank\Desktop\PyProjects\beRNNmodels\_gridSearch_domainTask-EF_beRNN_03_highDim_64\highDim\beRNN_03\1\beRNN_03_AllTask_4-6_data_highDim_trainingBatch1_iteration3_LeakyRNN_64_softplus\model_month_6\var_test_lay1_rule_taskSubset.pkl'
+        # res = tools.load_pickle(fname)
+
         res = tools.load_pickle(fname)
-        res3 = tools.load_pickle(fname3)
+        # res3 = tools.load_pickle(fname3) # only necessary for rdm
         h_var_all_ = res['h_var_all']
-        h_mean_all = res3['h_mean_all']
-        self.keys  = res3['keys']
+        # h_mean_all = res3['h_mean_all']
+        self.keys  = res['keys']
 
         # head: Clustering =========================================================================================
         # First only get active units. Total variance per unit across tasks larger than 1e-3
@@ -129,8 +135,8 @@ class Analysis(object):
 
         print(f"Active units after thresholding: {len(ind_active)}")
 
-        # attention: fallback if activity across task is too low is not possible +++++++++++++++++++++++++++++++++++++++
-        if h_var_all.shape[0] < 2 or np.all(h_var_all.sum(axis=1) <= 1e-2):
+        # fallback if total activity is too low
+        if h_var_all.shape[0] <= 2 or np.all(h_var_all.sum(axis=1) <= 1e-2):
         # if h_var_all.shape[0] < 2 or np.where(h_var_all_.sum(axis=1) < activityThreshold): # legacy: Yang
             print(f"Creating dummy clustering and rdm for model {model_dir} — insufficient data or variance.")
 
@@ -169,7 +175,7 @@ class Analysis(object):
 
             # Ensure consistent attributes for downstream alignment
             self.coords_dummy = np.zeros((n_tasks, 2))  # optional: MDS-compatible placeholder
-        # attention: fallback if activity across task is too low is not possible +++++++++++++++++++++++++++++++++++++++
+        # attention: fallback if activity across task is too low +++++++++++++++++++++++++++++++++++++++++++++++++++++++
         else:
             # Normalize by the total variance across tasks
             if normalization_method == 'sum':
@@ -206,47 +212,56 @@ class Analysis(object):
                 # fallback = False
                 if len(scores) != 0:
                     i = np.argmax(scores)
+                    labels = labels_list[i]
+                else:
+                    # another fallback
+                    i = 0
+                    scores = [0.0]
+                    labels = np.array([0, 1])
             else:
                 i = n_clusters.index(10)
 
             # if fallback == False:
-            labels = labels_list[i]
+            # labels = labels_list[i]
             n_cluster = n_clusters[i]
             print('Choosing {:d} clusters'.format(n_cluster))
 
             # Sort clusters by its task preference (important for consistency across nets)
+            # Task preference is the task vector with highest sum of activity over all its units (for that cluster assigned by kmeans)
+            # The labeled clusters have no intrinsic meaning
+            # By assining the most dominant predefined task vectors to the clusters we can derive meaning
             if labels is None or labels.shape[0] != h_normvar_all.shape[0]:
-                print("Warning: labels shape mismatch. Skipping preference ordering.")
+                print("Warning: labels/taskVector shape mismatch. Skipping preference ordering.")
                 ind_sort = np.arange(len(labels))
             else:
                 if data_type == 'rule':
-                    label_prefs = [np.argmax(h_normvar_all[labels == l].sum(axis=0)) for l in set(labels)] # legacy: h_normvar_all
+                    label_prefs = [np.argmax(h_normvar_all[labels == l].sum(axis=0)) for l in set(labels)]
                 elif data_type == 'epoch':
                     label_prefs = [self.keys[np.argmax(h_normvar_all[labels == l].sum(axis=0))][0] for l in set(labels)]
 
+                ind_label_sort = np.argsort(label_prefs)
+                # label_prefs = np.array(label_prefs)[ind_label_sort]
+                # Relabel
+                labels2 = np.zeros_like(labels)
+                for i, ind in enumerate(ind_label_sort):
+                    labels2[labels == ind] = i
+                labels = labels2
+
+                ind_sort = np.argsort(labels)
+                labels = labels[ind_sort]
+
+
+            self.h_normvar_all = h_normvar_all[ind_sort, :]  # legacy: h_normvar_all
+            self.ind_active = ind_active[ind_sort]
 
             # head: Compute Representational Dissimilarity Matrix (RSA-style) ==========================================
             # ind_active = np.where(h_mean_all_.sum(axis=1) >= activityThreshold)[0]
             # h_mean_all = h_mean_all_[ind_active, :]
-            rdm, rdm_vector = compute_rdm(h_mean_all, rdm_metric)
-
-            ind_label_sort = np.argsort(label_prefs)
-            label_prefs = np.array(label_prefs)[ind_label_sort]
-            # Relabel
-            labels2 = np.zeros_like(labels)
-            for i, ind in enumerate(ind_label_sort):
-                labels2[labels == ind] = i
-            labels = labels2
-
-            ind_sort = np.argsort(labels)
-            labels = labels[ind_sort]
-
-            self.h_normvar_all = h_normvar_all[ind_sort, :] # legacy: h_normvar_all
-            self.ind_active      = ind_active[ind_sort]
+            # rdm, rdm_vector = compute_rdm(h_mean_all, rdm_metric)
 
             self.rdm_metric = rdm_metric
-            self.rdm = rdm
-            self.rdm_vector = rdm_vector
+            # self.rdm = rdm.tolist() # not ideal for saving as json
+            # self.rdm_vector = rdm_vector # not ideal for saving as json
 
             self.n_clusters = n_clusters
             self.scores = scores

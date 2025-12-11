@@ -86,7 +86,7 @@ def _compute_variance_bymodel(data_dir, model_dir, layer, data_type, networkAnal
     fname2 = os.path.join(model_dir, save_name2 + '.pkl')
     fname3 = os.path.join(model_dir, save_name3 + '.pkl')
 
-    if os.path.exists(fname) == True or os.path.exists(fname2) == False or os.path.exists(fname3) == False:
+    if os.path.exists(fname) == True or os.path.exists(fname2) == False or os.path.exists(fname3) == False: # attention: Set all in False again
         try:
             for task in rules:
                 # print(task)
@@ -124,7 +124,7 @@ def _compute_variance_bymodel(data_dir, model_dir, layer, data_type, networkAnal
 
                 for e_name, e_time in epochs.items():
                     if 'fix' not in e_name:  # Ignore fixation period
-                        h_all_byepoch[(task, e_name)] = h[e_time[0]:e_time[1], :,:]
+                        h_all_byepoch[(task, e_name)] = h[e_time[0]:e_time[1], :, :]
 
                 # Ignore fixation period
                 h_all_byrule[task] = h[epochs['fix1'][1]:, :, :]
