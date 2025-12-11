@@ -25,7 +25,7 @@ import tensorflow as tf
 
 import networkx as nx
 from networkx.algorithms.community import greedy_modularity_communities, modularity
-from analysis import variance
+from _analysis import variance
 
 from network import Model, get_perf, get_perf_lowDIM
 import tools
@@ -35,7 +35,6 @@ import tools
 # Predefine functions
 ########################################################################################################################
 def apply_threshold(matrix, threshold):
-    # info: added function second time from networkAnalysis for training on server with only training.py
     # Set all values below the threshold to zero
     matrix_thresholded = np.where(np.abs(matrix) > threshold, matrix, 0)
     return matrix_thresholded
@@ -62,7 +61,7 @@ def getAndSafeModValue(data_dir, model_dir, hp, model, sess, log):
     activityThreshold = 1e-1
     ind_active = np.where(h_mean_all_.sum(axis=1) >= activityThreshold)[0]
 
-    # h_corr_all as representative for modularity analysis reflecting similar neuron behavior
+    # h_corr_all as representative for modularity _analysis reflecting similar neuron behavior
     res2 = tools.load_pickle(fname2)
     h_corr_all_ = res2['h_corr_all']
     h_corr_all_ = h_corr_all_.mean(axis=2)  # average over all tasks
@@ -112,7 +111,7 @@ def get_default_hp(ruleset):
     machine = 'local'  # 'local' 'pandora' 'hitkip'
     data = 'data_highDim_correctOnly'  # 'data_highDim' , data_highDim_correctOnly , data_highDim_lowCognition , data_lowDim , data_lowDim_correctOnly , data_lowDim_lowCognition, 'data_highDim_correctOnly_3stimTC'
     trainingBatch = '01'
-    trainingYear_Month = 'test'
+    trainingYear_Month = 'test' # as short as possible to avoid too long paths for avoiding linux2windows transfer issues
 
     if 'highDim' in data:  # fix: lowDim_timeCompressed needs to be skipped here
         n_eachring = 32
@@ -141,7 +140,7 @@ def get_default_hp(ruleset):
         # 'alpha': 0.2, # (redundant) discretization time step/time constant - dt/tau = alpha - ratio decides on how much previous states are taken into account for current state - low alpha more memory, high alpha more forgetting - alpha * h(t-1)
         'sigma_rec': 0.01,  # recurrent noise - directly influencing the noise added to the network
         'sigma_x': 0,  # input noise
-        'w_rec_init': 'diag',
+        'w_rec_init': 'diag', # randortho, brainStructure
         's_mask': 'brain_256',  # 'brain_256', None - info: only accesible on local machine
         # 'mask_threshold': .999,  # .999 or .975
         # leaky_rec weight initialization, diag, randortho, randgauss, brainStructure (only accessible with LeakyRNN : 32-256)
@@ -548,8 +547,8 @@ def train(data_dir, model_dir, train_data, eval_data, hp=None, max_steps=1e6, di
                 # Create cMask
                 c_mask = tools.create_cMask(y, response, hp, mode)
 
-                # fix: for inconcruence between y and response on dimension 1 - probably preprocessing related
-                # fix: for inconcruence between y and response on dimension 1 - probably preprocessing related
+                # fix: for inconcruence between y and response on dimension 1 - probably _preprocessing related
+                # fix: for inconcruence between y and response on dimension 1 - probably _preprocessing related
                 if (c_mask is None or (isinstance(c_mask, np.ndarray) and (c_mask.size == 0 or np.all(c_mask == None) or np.any(c_mask == None)))):
                     continue
 
@@ -561,7 +560,7 @@ def train(data_dir, model_dir, train_data, eval_data, hp=None, max_steps=1e6, di
                 # print(feed_dict)
 
                 sess.run(model.train_step,
-                         feed_dict=feed_dict)  # info: Trainables are actualized - train_step should represent the step in training.py and the global_step in network.py
+                         feed_dict=feed_dict)  # info: Trainables are actualized - train_step should represent the step in _training.py and the global_step in network.py
 
                 # Get Training performance in a similiar fashion as in do_eval
                 clsq_train_tmp = list()

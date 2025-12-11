@@ -166,8 +166,8 @@ def _compute_variance_bymodel(data_dir, model_dir, layer, data_type, networkAnal
             save_name2 = 'corr_' + mode + '_lay' + str(layer) + '_' + data_type + f'_{ruleset}'
             save_name3 = 'mean_' + mode + '_lay' + str(layer) + '_' + data_type + f'_{ruleset}'
 
-            # if random_rotation:
-            #     save_name += '_rr'
+            if random_rotation:
+                save_name += '_rr'
 
             fname = os.path.join(model_dir, save_name + '.pkl')
             fname2 = os.path.join(model_dir, save_name2 + '.pkl')

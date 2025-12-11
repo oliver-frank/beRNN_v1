@@ -19,7 +19,7 @@ import itertools
 import argparse
 import json
 
-import training
+import _training
 import tools
 
 ########################################################################################################################
@@ -181,6 +181,10 @@ trainingTimeTotal_hours = 0
 # Example iteration through the grid
 for modelNumber, params in enumerate(sampled_combinations): # info: either sampled_combinations OR sampled_repeated_combinations
 
+    # attention ********************************************************************************************************
+    params['n_rnn'] = 156
+    # attention ********************************************************************************************************
+
     # Start
     start_time = time.perf_counter()
     print(f'START TRAINING MODEL: {modelNumber}')
@@ -279,7 +283,7 @@ for modelNumber, params in enumerate(sampled_combinations): # info: either sampl
 
         try:
             # Start Training ---------------------------------------------------------------------------------------------------
-            training.train(preprocessedData_path, model_dir=model_dir, train_data=train_data, eval_data=eval_data, hp=params, load_dir=load_dir)
+            _training.train(preprocessedData_path, model_dir=model_dir, train_data=train_data, eval_data=eval_data, hp=params, load_dir=load_dir)
 
         except Exception as e:
             print("An exception occurred with model number:", modelNumber)

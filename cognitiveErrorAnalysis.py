@@ -1071,7 +1071,7 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 from network import Model, get_perf
-from training import split_files
+from _training import split_files
 import tools
 import glob
 

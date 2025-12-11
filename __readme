@@ -1,0 +1,5 @@
+0. preprocessing & dataAugmentation.py for data preperation
+1. training.py & hyperparameterTuning.py for training models
+2. hyperparameterOverview.py & hyperparameterOverview_overlays.py for performance visualization
+3. singleNetworkAnalysis.py & multipleNetworkAnalysis.py - analyzing models hidden structure and task representation
+4. cognitiveErrorAnalysis.py & cognitiveTaskAccuracy.py - analyzing individual cognitive behavior

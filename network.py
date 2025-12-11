@@ -317,20 +317,26 @@ class LeakyRNNCell(RNNCell):
             w_rec0 = (self._w_rec_start * self.rng.randn(n_hidden, n_hidden) / np.sqrt(n_hidden))
         elif self._w_rec_init == 'brainStructure':
             # Define main path
-            # attention: Currently set up for local machine analysis of remotely trained models ############################
-            print("attention @ network.py (322): Currently set up for local machine analysis of remotely trained models")
+            # attention: Currently set up for local machine _analysis of remotely trained models ############################
+            print("attention @ network.py (322): Currently set up for local machine _analysis of remotely trained models")
             if machine == 'local' or machine == 'hitkip':
                 connectomePath = fr'C:\Users\oliver.frank\Desktop\PyProjects\beRNN_v1\masks'
             elif machine == 'notAvailable':
                 connectomePath = f'/zi/home/oliver.frank/Desktop/RNN/multitask_BeRNN-main/masks'
             # elif machine == 'pandora':
             #     connectomePath = f'/pandora/home/oliver.frank/01_Projects/RNN/multitask_BeRNN-main/masks'
-            # attention: Currently set up for local machine analysis of remotely trained models ############################
-
-            structuralMask = np.load(os.path.join(connectomePath, f'{participant}_ses-03_atlas-4S256Parcels_mapping-standardized.npy'))
+            # attention: Currently set up for local machine _analysis of remotely trained models ############################
+            maskName = f'{participant}_ses-03_atlas-4S{num_units}Parcels_mapping-standardized.npy'
+            structuralMask = np.load(os.path.join(connectomePath, maskName))
 
             # maskSize = int(mask.split('_')[1]) # fix: extract size from mask name string
-            maskSize = 256
+            if num_units == 156:
+                maskSize = 156
+            elif num_units == 256:
+                maskSize = 256
+            else:
+                print('Error: Mask size not recognized. Please check the mask file.')
+
             mean_activity = np.mean(structuralMask)
             structuralMask_binary = structuralMask.copy()
             counter1 = 0

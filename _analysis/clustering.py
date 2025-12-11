@@ -12,10 +12,11 @@ from __future__ import division
 import os
 import numpy as np
 # import pickle
-import random
+# import random
 import matplotlib.pyplot as plt
 from scipy.spatial.distance import pdist, squareform
-
+from sklearn import metrics
+from sklearn.cluster import KMeans  # AgglomerativeClustering
 import tensorflow as tf
 
 # from Network_Analysis import rule_name
@@ -73,6 +74,23 @@ def all_variance_files_exist(model_dir, numberOfLayers, mode, data_dir):
                 return False
     return True
 
+def compute_rdm(task_matrix, rdm_metric, normalize=False):
+    # Incoming matrix should represent average activity over time and trials (h_mean_all)
+    # Final matrix must have form (n_tasks, n_units)
+    # Normalization over tasks (unit_activity_task_A/ all_unit_activity_task_A) - actually meaningless if cosine is calculated
+    # rdm_metric: correlation or cosine
+
+    if normalize:
+        h_normmean_all = (task_matrix.T / np.sum(task_matrix, axis=1)).T
+    else:
+        h_normmean_all = task_matrix
+
+    rdm = squareform(pdist(h_normmean_all.T, metric=rdm_metric))
+    rdm_vector = rdm[np.triu_indices_from(rdm, k=1)]
+
+    return rdm, rdm_vector
+
+
 class Analysis(object):
     def __init__(self, data_dir, model_dir, layer, rdm_metric, mode, monthsConsidered, data_type, networkAnalysis, normalization_method='sum'):
 
@@ -95,29 +113,24 @@ class Analysis(object):
 
         fname, fname2, fname3 = variance.compute_variance(data_dir, model_dir, layer, mode, monthsConsidered, data_type, networkAnalysis)
 
-        # res = tools.load_pickle(fname)
+        res = tools.load_pickle(fname)
         res3 = tools.load_pickle(fname3)
-        # h_var_all_ = res['h_var_all']
-        h_mean_all_ = res3['h_mean_all']
+        h_var_all_ = res['h_var_all']
+        h_mean_all = res3['h_mean_all']
         self.keys  = res3['keys']
 
+        # head: Clustering =========================================================================================
         # First only get active units. Total variance per unit across tasks larger than 1e-3
         # activityThreshold = 0 if hp['multiLayer'] else 1e-5 # future: multiLayer
-        activityThreshold = 1e-1 # > 1e-3 - min > 0
-        # yang legancy: task representation based on h_var_all
-        # ind_active = np.where(h_var_all_.sum(axis=1) >= activityThreshold)[0]
-        # h_var_all  = h_var_all_[ind_active, :]
+        activityThreshold = 1e-3 # > 1e-3 - min > 0
+        ind_active = np.where(h_var_all_.sum(axis=1) >= activityThreshold)[0]
+        h_var_all = h_var_all_[ind_active, :]
         # now: task representation based on h_mean_all
-        ind_active = np.where(h_mean_all_.sum(axis=1) >= activityThreshold)[0]
-        h_mean_all = h_mean_all_[ind_active, :]
 
-        # print(f"Model: {model_dir}")
         print(f"Active units after thresholding: {len(ind_active)}")
-        # print(f"Variance sum across tasks for active units: {h_var_all_.sum(axis=1)[ind_active]}")
-
 
         # attention: fallback if activity across task is too low is not possible +++++++++++++++++++++++++++++++++++++++
-        if h_mean_all.shape[0] < 2 or np.all(h_mean_all.sum(axis=1) <= 1e-2):
+        if h_var_all.shape[0] < 2 or np.all(h_var_all.sum(axis=1) <= 1e-2):
         # if h_var_all.shape[0] < 2 or np.where(h_var_all_.sum(axis=1) < activityThreshold): # legacy: Yang
             print(f"Creating dummy clustering and rdm for model {model_dir} — insufficient data or variance.")
 
@@ -125,11 +138,11 @@ class Analysis(object):
             hp = tools.load_hp(model_dir)
             rules = [key for key in hp["rule_prob_map"].keys() if hp["rule_prob_map"][key] != 0]
             n_tasks = len(rules)
-            n_units = h_mean_all_.shape[0]
+            n_units = h_var_all_.shape[0]
 
             # Create minimal but consistent dummy data
-            self.h_mean_all = h_mean_all
-            self.h_normmean_all = np.full((n_units, n_tasks), 0.1, dtype=float)
+            self.h_var_all = h_var_all
+            self.h_normvar_all = np.full((n_units, n_tasks), 0.1, dtype=float)
 
             self.labels = np.array([0, 1])
             self.ind_active = np.array([0, 1])
@@ -145,6 +158,7 @@ class Analysis(object):
             self.data_type = data_type
             self.rules = hp.get('rules', [f"task_{i}" for i in range(n_tasks)])
 
+
             # Create dummy RDM of proper size and symmetry - neutral, symmetric matrix: diagonal 0 (self-similarity), off-diagonals 0.5
             self.rdm = np.full((n_tasks, n_tasks), 0.5, dtype=float)
             np.fill_diagonal(self.rdm, 0.0)
@@ -156,35 +170,20 @@ class Analysis(object):
             # Ensure consistent attributes for downstream alignment
             self.coords_dummy = np.zeros((n_tasks, 2))  # optional: MDS-compatible placeholder
         # attention: fallback if activity across task is too low is not possible +++++++++++++++++++++++++++++++++++++++
-
-
         else:
-            # # Normalize by the total variance across tasks
-            # if normalization_method == 'sum':
-            #     h_normvar_all = (h_var_all.T/np.sum(h_var_all, axis=1)).T
-            # elif normalization_method == 'max':
-            #     h_normvar_all = (h_var_all.T/np.max(h_var_all, axis=1)).T
-            # elif normalization_method == 'none':
-            #     h_normvar_all = h_var_all
-            # else:
-            #     raise NotImplementedError()
-
-            # head: Compute Representational Dissimilarity Matrix (RSA-style) ==========================================
-            h_normmean_all = (h_mean_all.T/np.sum(h_mean_all, axis=1)).T
-            self.rdm_metric = rdm_metric # correlation - cosine - ...
-            self.rdm = squareform(pdist(h_normmean_all.T, metric=self.rdm_metric)) # shape: (n_tasks, n_units) - legacy: h_normvar_all.T
-            self.rdm_vector = self.rdm[np.triu_indices_from(self.rdm, k=1)]
-
-            # head: Clustering =========================================================================================
-            from sklearn import metrics
-            X = h_normmean_all # legacy: h_normvar_all
+            # Normalize by the total variance across tasks
+            if normalization_method == 'sum':
+                h_normvar_all = (h_var_all.T/np.sum(h_var_all, axis=1)).T
+            elif normalization_method == 'max':
+                h_normvar_all = (h_var_all.T/np.max(h_var_all, axis=1)).T
+            elif normalization_method == 'none':
+                h_normvar_all = h_var_all
+            else:
+                raise NotImplementedError()
 
             # Clustering
-            from sklearn.cluster import AgglomerativeClustering, KMeans
-
-            # if n-units after thresholding < 30
+            X = h_normvar_all
             range2 = len(X) if len(X) < 30 else 30
-
             # Choose number of clusters that maximize silhouette score
             n_clusters = range(2, range2)  # attention: 2,30
             scores = list()
@@ -216,14 +215,20 @@ class Analysis(object):
             print('Choosing {:d} clusters'.format(n_cluster))
 
             # Sort clusters by its task preference (important for consistency across nets)
-            # if labels is None or labels.shape[0] != h_normmean_all.shape[0]:
-            #     print("Warning: labels shape mismatch. Skipping preference ordering.")
-            #     ind_sort = np.arange(len(labels))
-            # else:
-            if data_type == 'rule':
-                label_prefs = [np.argmax(h_normmean_all[labels == l].sum(axis=0)) for l in set(labels)] # legacy: h_normvar_all
-            elif data_type == 'epoch':
-                label_prefs = [self.keys[np.argmax(h_normmean_all[labels == l].sum(axis=0))][0] for l in set(labels)]
+            if labels is None or labels.shape[0] != h_normvar_all.shape[0]:
+                print("Warning: labels shape mismatch. Skipping preference ordering.")
+                ind_sort = np.arange(len(labels))
+            else:
+                if data_type == 'rule':
+                    label_prefs = [np.argmax(h_normvar_all[labels == l].sum(axis=0)) for l in set(labels)] # legacy: h_normvar_all
+                elif data_type == 'epoch':
+                    label_prefs = [self.keys[np.argmax(h_normvar_all[labels == l].sum(axis=0))][0] for l in set(labels)]
+
+
+            # head: Compute Representational Dissimilarity Matrix (RSA-style) ==========================================
+            # ind_active = np.where(h_mean_all_.sum(axis=1) >= activityThreshold)[0]
+            # h_mean_all = h_mean_all_[ind_active, :]
+            rdm, rdm_vector = compute_rdm(h_mean_all, rdm_metric)
 
             ind_label_sort = np.argsort(label_prefs)
             label_prefs = np.array(label_prefs)[ind_label_sort]
@@ -236,14 +241,18 @@ class Analysis(object):
             ind_sort = np.argsort(labels)
             labels = labels[ind_sort]
 
-            self.h_normmean_all = h_normmean_all[ind_sort, :] # legacy: h_normvar_all
+            self.h_normvar_all = h_normvar_all[ind_sort, :] # legacy: h_normvar_all
             self.ind_active      = ind_active[ind_sort]
+
+            self.rdm_metric = rdm_metric
+            self.rdm = rdm
+            self.rdm_vector = rdm_vector
 
             self.n_clusters = n_clusters
             self.scores = scores
             self.n_cluster = n_cluster
 
-            self.h_mean_all = h_mean_all # legacy: h_var_all
+            self.h_var_all = h_var_all # legacy: h_var_all
             self.normalization_method = normalization_method
             self.labels = labels
             self.unique_labels = np.unique(labels)
@@ -449,7 +458,7 @@ class Analysis(object):
                         # feed_dict = tools.gen_feed_dict(model, x, y, c_mask, hp)
                         #
                         # h = sess.run(model.train_step,
-                        #              feed_dict=feed_dict)  # info: Trainables are actualized - train_step should represent the step in training.py and the global_step in network.py
+                        #              feed_dict=feed_dict)  # info: Trainables are actualized - train_step should represent the step in _training.py and the global_step in network.py
                         #
 
 

@@ -5,309 +5,18 @@ from __future__ import division
 import warnings
 warnings.simplefilter(action='ignore', category=FutureWarning)
 
-from collections import defaultdict
 from collections import OrderedDict
 import os
-import json
 import numpy as np
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 from matplotlib.lines import Line2D
 
-import tools
-# from analysis import variance
-from analysis import clustering
-from networkAnalysis import define_data_folder
-# from analysis import standard_analysis
-
-import networkx as nx
-from training import apply_density_threshold
-from networkx.algorithms.community import greedy_modularity_communities, modularity
+from _hyperparameterOverview import compute_n_cluster, get_n_clusters #, plot_vertical_hp_legend
 
 ########################################################################################################################
 # head: Create histogramms to visualize and investigate interrelations of hyperparameter, modularity and performance ###
 ########################################################################################################################
-def compute_n_cluster(model_dirs, mode):
-    successful_model_dirs = []
-    log = {}
-
-    for model_dir in model_dirs:
-        try:
-            log = tools.load_log(model_dir)
-            hp = tools.load_hp(model_dir)
-            # info: Add try, except and assert if you only want to take models into account that overcome certain performance threshold
-            dataFolder = define_data_folder(model_dir.split('_'))
-            participant = '_'.join(['beRNN', [string for string in model_dir.split('_') if '0' in string and len(string) == 2][0]]) # fix new ---
-            layer = [1 if hp['multiLayer'] == False else 3][0]
-
-            # Info: Important overwriting of incongruent information in hp between single and multiLayer architecture
-            hp['n_rnn'] = hp['n_rnn_per_layer'][0] if hp.get('multiLayer') else hp['n_rnn']
-            hp['activation'] = hp['activations_per_layer'][0] if hp.get('multiLayer') else hp['activation']
-            tools.save_hp(hp, model_dir)
-
-            # Define right data
-            data_dir = os.path.join('C:\\Users\\oliver.frank\\Desktop\\PyProjects\\Data', participant, dataFolder)
-            rdm_metric = 'cosine'
-            if mode == 'test':
-                analysis = clustering.Analysis(data_dir, model_dir, layer, rdm_metric,'test', hp['monthsConsidered'], 'rule', True) # test performance
-            elif mode == 'train':
-                analysis = clustering.Analysis(data_dir, model_dir, layer, rdm_metric,'train', hp['monthsConsidered'], 'rule', True) # train performance
-
-            # Average performance for training at the last time point
-            totalPerformanceTraining = 0
-            totalPerformanceTesting = 0
-            numberOfTasks = 0
-
-            tasksToTakeIntoAccount = [i for i in hp['rule_prob_map'] if hp['rule_prob_map'][i] > 0]
-
-            for key in log.keys():
-                if 'perf_train' in key and 'avg' not in key and any(task in key for task in tasksToTakeIntoAccount): # Only rule_prob_map > 0 are saved during training
-                    totalPerformanceTraining += log[key][-1]
-                    numberOfTasks += 1
-            averageTotalPerformanceTraining = totalPerformanceTraining / numberOfTasks
-
-            for key in log.keys():
-                if 'perf_' in key and 'avg' not in key and any(task for task in tasksToTakeIntoAccount if task == key.split('perf_')[-1]): # All tasks in rule_prob_map are saved during training
-                    totalPerformanceTesting += log[key][-1]
-            averageTotalPerformanceTesting = totalPerformanceTesting / numberOfTasks
-
-            log['avg_perf_train'] = averageTotalPerformanceTraining
-            log['avg_perf_test'] = averageTotalPerformanceTesting
-            # log['avg_perf_test'] = log['perf_avg'][-1]
-            log['n_cluster'] = analysis.n_cluster
-            log['score'] = max(analysis.scores)
-            log['model_dir'] = model_dir
-            tools.save_log(log)
-
-            # except IOError:
-                # Training never finished
-                # assert log['perf_min'][-1] <= hp['target_perf']
-
-            # analysis.plot_example_unit()
-            # analysis.plot_variance()
-            # analysis.plot_2Dvisualization()
-
-            successful_model_dirs.append(model_dir)
-            print("done")
-
-        except Exception as e:
-            print(f"An exception occurred in compute_n_cluster: {e}")
-
-            log['model_dir'] = model_dir
-            log['n_cluster'] = 0
-            log['score'] = 0
-            log['avg_perf_train'] = 0
-            log['avg_perf_test'] = 0
-
-            tools.save_log(log)
-
-            successful_model_dirs.append(model_dir)
-            print("fallback done - dummy log keys created")
-
-    return successful_model_dirs
-
-def get_n_clusters(model_dirs, density):
-    # model_dirs = tools.valid_model_dirs(root_dir)
-    hp_list = list()
-    n_clusters = list()
-    silhouette_score = list()
-    avg_perf_train_list = list()
-    avg_perf_test_list = list()
-    modularity_list_sparse = list()
-
-    for i, model_dir in enumerate(model_dirs):
-        if i % 50 == 0:
-            print('Analyzing model {:d}/{:d}'.format(i, len(model_dirs)))
-        print(model_dir)
-        hp = tools.load_hp(model_dir)
-        log = tools.load_log(model_dir)
-
-        # Handle internal matplotlib issue with None values for plotting legend
-        if hp['learning_rate_mode'] is None:
-            hp['learning_rate_mode'] = 'constant'
-
-        hp['rnn_type'] = 'MultiLayer' if hp.get('multiLayer') else hp['rnn_type']
-
-        # check if performance exceeds target
-        hp_list.append(hp)
-        n_clusters.append(log['n_cluster'])
-        silhouette_score.append(log['score'])
-        avg_perf_train_list.append(log['avg_perf_train'])
-        avg_perf_test_list.append(log['avg_perf_test'])
-
-        if hp.get('multiLayer') == False:
-
-            # info: Calculate modularity again - if density threshold should change
-            if 'fundamentals' in model_dir or 'fm' in model_dir:
-                pkl_beRNN3 = rf'{model_dir}\mean_test_lay1_rule_fundamentals.pkl'
-                pkl_beRNN2 = rf'{model_dir}\corr_test_lay1_rule_fundamentals.pkl'
-            elif 'domainTask' in model_dir:
-                pkl_beRNN3 = rf'{model_dir}\mean_test_lay1_rule_taskSubset.pkl'
-                pkl_beRNN2 = rf'{model_dir}\corr_test_lay1_rule_taskSubset.pkl'
-            elif 'multiTask' in model_dir or 'AllTask' in model_dir:
-                pkl_beRNN3 = rf'{model_dir}\mean_test_lay1_rule_all.pkl'
-                pkl_beRNN2 = rf'{model_dir}\corr_test_lay1_rule_all.pkl'
-            else:
-                print('No .pkl file found!')
-
-            # h_mean_all as basis for thresholding dead neurons as h_corr_all can result in high values for dead neurons
-            res3 = tools.load_pickle(pkl_beRNN3)
-            h_mean_all_ = res3['h_mean_all']
-            activityThreshold = 1e-1
-            ind_active = np.where(h_mean_all_.sum(axis=1) >= activityThreshold)[0]
-
-            # h_corr_all as representative for modularity analysis reflecting similar neuron behavior
-            res2 = tools.load_pickle(pkl_beRNN2)
-            h_corr_all_ = res2['h_corr_all']
-            h_corr_all_ = h_corr_all_.mean(axis=2)  # average over all tasks
-
-            numberOfHiddenUnits = hp['n_rnn']
-
-            if ind_active.shape[0] < h_corr_all_.shape[0] and ind_active.shape[0] < h_corr_all_.shape[1] and ind_active.shape[0] > 1 :
-                h_corr_all_ = h_corr_all_[ind_active, :]
-                h_corr_all = h_corr_all_[:, ind_active]
-                # Apply threshold
-                functionalCorrelation_density = apply_density_threshold(h_corr_all, density=density)
-            else:
-                functionalCorrelation_density = np.zeros((numberOfHiddenUnits, numberOfHiddenUnits)) # fix: Get individual number of hidden units # Create different dummy matrix, that leads to lower realtive count
-
-            # Compute modularity
-            np.fill_diagonal(functionalCorrelation_density, 0)  # prevent self-loops
-            G_sparse = nx.from_numpy_array(functionalCorrelation_density)
-
-            if G_sparse.number_of_edges() == 0 or G_sparse.number_of_nodes() < 2: # fix Create list of relative amount of hidden units after thresholding
-                print(f"Skipping modularity calculation for {model_dir} — graph has no edges. Setting mod_value = 0.")
-                mod_value_sparse = 0
-                modularity_list_sparse.append(mod_value_sparse)
-            else:
-                try:
-                    communities_sparse = greedy_modularity_communities(G_sparse)
-                    mod_value_sparse = modularity(G_sparse, communities_sparse)
-                    modularity_list_sparse.append(mod_value_sparse)
-                except Exception as e:
-                    print(f"Greedy modularity failed for {model_dir}. Setting mod_value = 0. ({e})")
-                    mod_value_sparse = 0
-                    modularity_list_sparse.append(mod_value_sparse)
-
-            # # info: Alternatively take already calculatded mod value w. density threshold .1
-            # try:
-            #     modularity_list_sparse.append(log['modularity_sparse'][-1])
-            # except Exception as e:
-            #     modularity_list_sparse.append(0)
-
-        else:
-            modularity_list_sparse = []
-
-    return n_clusters, hp_list, silhouette_score, avg_perf_train_list, avg_perf_test_list, modularity_list_sparse
-
-def plot_histogram():
-    initdict = defaultdict(list)
-    initdictother = defaultdict(list)
-    initdictotherother = defaultdict(list)
-
-    for model_dir in model_dirs:
-        hp = tools.load_hp(model_dir)
-        # check if performance exceeds target
-        log = tools.load_log(model_dir)
-        # if log['perf_avg'][-1] > hp['target_perf']:
-        if log['perf_min'][-1] > hp['target_perf']: # attention: define well - maybe conservative th: 0.5 & liberal th: 0.7
-            print('no. of clusters', log['n_cluster'])
-            n_clusters.append(log['n_cluster'])
-            hp_list.append(hp)
-
-            initdict[hp['w_rec_init']].append(log['n_cluster'])
-            initdict[hp['activation']].append(log['n_cluster'])
-
-            # initdict[hp['rnn_type']].append(log['n_cluster'])
-            # if hp['activation'] != 'tanh': fix: why no tanh??
-            initdict[hp['rnn_type']].append(log['n_cluster'])
-            initdictother[hp['rnn_type'] + hp['activation']].append(log['n_cluster'])
-            initdictotherother[hp['rnn_type'] + hp['activation'] + hp['w_rec_init']].append(log['n_cluster'])
-
-            if hp['l1_h'] == 0:
-                initdict['l1_h_0'].append(log['n_cluster'])
-            else:  # hp['l1_h'] == 1e-3 or 1e-4 or 1e-5:
-                keyvalstr = 'l1_h_1emin' + str(int(abs(np.log10(hp['l1_h']))))
-                initdict[keyvalstr].append(log['n_cluster'])
-
-            # fix: l1 only good?
-            if hp['l1_weight'] == 0:
-                initdict['l1_weight_0'].append(log['n_cluster'])
-            else:  # hp['l1_h'] == 1e-3 or 1e-4 or 1e-5:
-                keyvalstr = 'l1_weight_1emin' + str(int(abs(np.log10(hp['l1_weight']))))
-                initdict[keyvalstr].append(log['n_cluster'])
-
-                # initdict[hp['l1_weight']].append(log['n_cluster'])
-
-    # Check no of clusters under various conditions.
-    f, axarr = plt.subplots(7, 1, figsize=(3, 12), sharex=True)
-    u = 0
-    for key in initdict.keys():
-        if 'l1_' not in key:
-            title = (key + ' ' + str(len(initdict[key])) +
-                     ' mean: ' + str(round(np.mean(initdict[key]), 2)))
-            axarr[u].set_title(title)
-            axarr[u].hist(initdict[key])
-            u += 1
-    f.subplots_adjust(wspace=.3, hspace=0.3)
-    # plt.savefig('./figure/histforcases_96nets.png')
-    # plt.savefig('./figure/histforcases__pt9_192nets.pdf')
-    # plt.savefig('./figure/histforcases___leakygrunotanh_pt9_192nets.pdf')
-
-    f, axarr = plt.subplots(4, 1, figsize=(3, 8), sharex=True)
-    u = 0
-    for key in initdictother.keys():
-        if 'l1_' not in key:
-            axarr[u].set_title(
-                key + ' ' + str(len(initdictother[key])) + ' mean: ' + str(round(np.mean(initdictother[key]), 2)))
-            axarr[u].hist(initdictother[key])
-            u += 1
-    f.subplots_adjust(wspace=.3, hspace=0.3)
-    # plt.savefig('./figure/histforcases__leakyrnngrurelusoftplus_pt9_192nets.pdf')
-
-    f, axarr = plt.subplots(4, 1, figsize=(3, 6), sharex=True)
-    u = 0
-    for key in initdictotherother.keys():
-        if 'l1_' not in key and 'diag' not in key:
-            axarr[u].set_title(key + ' ' + str(len(initdictotherother[key])) + ' mean: ' + str(
-                round(np.mean(initdictotherother[key]), 2)))
-            axarr[u].hist(initdictotherother[key])
-            u += 1
-    f.subplots_adjust(wspace=.3, hspace=0.3)
-    # plt.savefig('./figure/histforcases_randortho_notanh_pt9_192nets.pdf')
-
-    f, axarr = plt.subplots(4, 1, figsize=(3, 6), sharex=True)
-    u = 0
-    for key in initdictotherother.keys():
-        if 'l1_' not in key and 'randortho' not in key:
-            axarr[u].set_title(key + ' ' + str(len(initdictotherother[key])) + ' mean: ' + str(
-                round(np.mean(initdictotherother[key]), 2)))
-            axarr[u].hist(initdictotherother[key])
-            u += 1
-    f.subplots_adjust(wspace=.3, hspace=0.3)
-    # plt.savefig('./figure/histforcases_diag_notanh_pt9_192nets.pdf')
-
-    # regu--
-    f, axarr = plt.subplots(4, 1, figsize=(3, 8), sharex=True)
-    u = 0
-    for key in initdict.keys():
-        if 'l1_h_' in key:
-            axarr[u].set_title(key + ' ' + str(len(initdict[key])) + ' mean: ' + str(round(np.mean(initdict[key]), 2)))
-            axarr[u].hist(initdict[key])
-            u += 1
-    f.subplots_adjust(wspace=.3, hspace=0.3)
-    # plt.savefig('./figure/noofclusters_pt9_l1_h_192nets.pdf')
-
-    f, axarr = plt.subplots(4, 1, figsize=(3, 8), sharex=True)
-    u = 0
-    for key in initdict.keys():
-        if 'l1_weight_' in key:
-            axarr[u].set_title(key + ' ' + str(len(initdict[key])) + ' mean: ' + str(round(np.mean(initdict[key]), 2)))
-            axarr[u].hist(initdict[key])
-            u += 1
-    f.subplots_adjust(wspace=.3, hspace=0.3)
-    # plt.savefig('./figure/noofclusters_pt9_l1_weight_192nets.pdf')
-
 def _get_hp_ranges():
     """Get ranges of hp."""
     hp_ranges = OrderedDict()
@@ -333,6 +42,7 @@ def general_hp_plot_overlay_multiple(meta_n_clusters_list,
                                      folder_labels,
                                      directory,
                                      density,
+                                     network_sizes,
                                      sort_variable='performance',
                                      mode='test',
                                      alpha=0.6,
@@ -440,7 +150,7 @@ def general_hp_plot_overlay_multiple(meta_n_clusters_list,
     axs[0].set_yticks([0.0, 0.5, 1.0])
     axs[0].set_yticklabels(["0.0", "0.5", "1.0"])
     axs[1].set_yticks([0, 15, 30])
-    axs[1].set_yticklabels(["0", "10", "20"])
+    axs[1].set_yticklabels(["0", "15", "30"])
     axs[2].set_yticks([0.0, 0.5, 1.0])
     axs[2].set_yticklabels(["0.0", "0.5", "1.0"])
     axs[3].set_yticks([0.0, 0.5, 1.0])
@@ -494,9 +204,6 @@ def general_hp_plot_overlay_multiple(meta_n_clusters_list,
     reg_legend = axs[4].legend(handles=legend_elements, bbox_to_anchor=(1.05, 1),
                                loc='upper left', fontsize=6, frameon=False, title="Reg. values")
 
-    # (2) Network size legend (matching top-plot colors, no box)
-    network_sizes = ['16', '32', '64', '128', '256', '512']
-
     # Use same color cycle as used in the main plots
     line_colors = colors[:len(network_sizes)]
 
@@ -540,6 +247,7 @@ def general_hp_plot_overlay_multiple_robustnessTests(meta_n_clusters_list,
                                      folder_labels,
                                      directory,
                                      density,
+                                     participants,
                                      sort_variable='performance',
                                      mode='test',
                                      alpha=0.6,
@@ -647,7 +355,7 @@ def general_hp_plot_overlay_multiple_robustnessTests(meta_n_clusters_list,
     axs[0].set_yticks([0.0, 0.5, 1.0])
     axs[0].set_yticklabels(["0.0", "0.5", "1.0"])
     axs[1].set_yticks([0, 15, 30])
-    axs[1].set_yticklabels(["0", "10", "20"])
+    axs[1].set_yticklabels(["0", "15", "30"])
     axs[2].set_yticks([0.0, 0.5, 1.0])
     axs[2].set_yticklabels(["0.0", "0.5", "1.0"])
     axs[3].set_yticks([0.0, 0.5, 1.0])
@@ -701,9 +409,6 @@ def general_hp_plot_overlay_multiple_robustnessTests(meta_n_clusters_list,
     reg_legend = axs[4].legend(handles=legend_elements, bbox_to_anchor=(1.05, 1),
                                loc='upper left', fontsize=6, frameon=False, title="Reg. values")
 
-    # (2) Network size legend (matching top-plot colors, no box)
-    participants = ['beRNN_01', 'beRNN_02', 'beRNN_03', 'beRNN_04', 'beRNN_05']
-
     # Use same color cycle as used in the main plots
     line_colors = colors[:len(participants)]
 
@@ -738,46 +443,6 @@ def general_hp_plot_overlay_multiple_robustnessTests(meta_n_clusters_list,
     plt.savefig(save_path, bbox_inches='tight', dpi=300)
     plt.show()
 
-def plot_vertical_hp_legend(hp_ranges, hp_plots, HP_NAME, directory):
-    cmap = mpl.cm.get_cmap('viridis')
-    entries_per_hp = [len(hp_ranges[hp]) + 1 for hp in hp_plots]  # +1 for title
-    total_lines = sum(entries_per_hp)
-
-    line_height_in = 0.25
-    fig_height_in = total_lines * line_height_in
-
-    fig, ax = plt.subplots(figsize=(3.2, fig_height_in))
-    ax.set_xlim(0, 1)
-    ax.set_ylim(0, total_lines)
-    ax.axis("off")
-
-    bar_width = 0.1
-    bar_height = 0.8
-    y = total_lines - 1
-
-    for hp_name in hp_plots:
-        label = HP_NAME.get(hp_name, hp_name)
-        values = hp_ranges[hp_name]
-        n = len(values)
-        # print(label, values)
-
-        ax.text(0.05, y + 0.3, f"{label}:", fontsize=9, fontweight='bold', va='top')
-        y -= 1.0
-
-        for j, val in enumerate(values):
-            color = cmap(j / (n - 1) if n > 1 else 0.5)
-            ax.add_patch(plt.Rectangle((0.05, y - bar_height / 2), bar_width, bar_height,
-                                       facecolor=color, edgecolor='black', linewidth=0.3))
-            ax.text(0.05 + bar_width + 0.05, y, val, fontsize=8, va='center')
-            y -= 0.9
-
-    # === Save figure ===
-    save_path = os.path.join(directory, 'visuals', "legend_general_hp_plot.png")
-    os.makedirs(os.path.dirname(save_path), exist_ok=True)
-    plt.savefig(save_path, bbox_inches='tight', dpi=300)
-
-    plt.show()
-
 
 # fix: Add network size here please
 HP_NAME = {'activation': 'Activation fun.',
@@ -796,13 +461,16 @@ HP_NAME = {'activation': 'Activation fun.',
 
 if __name__ == '__main__':
 
-    foldersToOverlay = ['_robustnessTest_multiTask_beRNN_01_highDimCorrects_256_hp_2', '_robustnessTest_multiTask_beRNN_02_highDimCorrects_256_hp_2', '_robustnessTest_multiTask_beRNN_03_highDimCorrects_256_hp_2',
-                        '_robustnessTest_multiTask_beRNN_04_highDimCorrects_256_hp_2', '_robustnessTest_multiTask_beRNN_05_highDimCorrects_256_hp_2']
+    foldersToOverlay = ['_robustnessTest_fundamentals_beRNN_01_data_highDim_correctOnly_156_bM_hp_2',
+                        '_robustnessTest_fundamentals_beRNN_02_data_highDim_correctOnly_156_bM_hp_2',
+                        '_robustnessTest_fundamentals_beRNN_03_data_highDim_correctOnly_156_bM_hp_2',
+                        '_robustnessTest_fundamentals_beRNN_04_data_highDim_correctOnly_156_bM_hp_2',
+                        '_robustnessTest_fundamentals_beRNN_05_data_highDim_correctOnly_156_bM_hp_2']
 
     mode = ['train', 'test'][1]
     sort_variable = ['clustering', 'performance', 'silhouette'][1]
     # batchPlot = True if participant == 'beRNN_03' else False
-    batchPlot = [True, False][0] # info: important for robustness overlay
+    batchPlot = [True, False][1] # info: important for robustness overlay
     lastMonth = '6'
     density = 0.1
 
@@ -819,9 +487,9 @@ if __name__ == '__main__':
     for folder in foldersToOverlay:
         final_model_dirs = []
 
-        # info standard overlay ***************************************************
+        # # info standard overlay ***************************************************
         # participant = ['beRNN_01', 'beRNN_02', 'beRNN_03', 'beRNN_04', 'beRNN_05'][2]
-        # info standard overlay ***************************************************
+        # # info standard overlay ***************************************************
 
         # info robustness overlay ***************************************************
         participantList = ['beRNN_01', 'beRNN_02', 'beRNN_03', 'beRNN_04', 'beRNN_05']
@@ -841,7 +509,7 @@ if __name__ == '__main__':
         if batchPlot == False:
             model_dir_batches = os.listdir(directory)
         else:
-            model_dir_batches = ['2']  # info: For creating a hp overview for one batch (e.g. in robustnessTest)
+            model_dir_batches = [folder.split('_')[-1]]
 
         # Create list of models to integrate in one hp overview plot
         model_dir_batches = [batch for batch in model_dir_batches if batch != 'visuals']
@@ -865,8 +533,7 @@ if __name__ == '__main__':
         # First compute n_clusters for each model then collect them in lists
         successful_model_dirs = compute_n_cluster(final_model_dirs, mode)
         n_clusters, hp_list, silhouette_score, avg_perf_train_list, avg_perf_test_list, modularity_list_sparse = get_n_clusters(successful_model_dirs, density)
-        # model_dirs, density = successful_model_dirs, density
-        # info: After everything was done as in hyperparameterOverview.py, catch the important lists and save them to meta lists
+        # Store lists in meta lists for consecutive final visualization
         meta_silhouette_score_list.append(silhouette_score)
         meta_modularity_list.append(modularity_list_sparse)
         meta_n_clusters_list.append(n_clusters)
@@ -875,6 +542,7 @@ if __name__ == '__main__':
         meta_hp_list.append(hp_list)
 
     # # Visualize big overlay
+    # network_sizes = ['16', '32', '64', '128', '256', '512'] # to overlay
     # general_hp_plot_overlay_multiple(meta_n_clusters_list,
     #                                  meta_silhouette_score_list,
     #                                  meta_hp_list,
@@ -884,11 +552,13 @@ if __name__ == '__main__':
     #                                  foldersToOverlay,
     #                                  directory_metaOverlayVisual,
     #                                  density,
+    #                                  network_sizes,
     #                                  sort_variable='performance',
     #                                  mode='test',
     #                                  alpha=0.6,
     #                                  cmap_name='viridis')
 
+    participants = participantList # to overlay
     general_hp_plot_overlay_multiple_robustnessTests(meta_n_clusters_list,
                                      meta_silhouette_score_list,
                                      meta_hp_list,
@@ -898,6 +568,7 @@ if __name__ == '__main__':
                                      foldersToOverlay,
                                      directory_metaOverlayVisual,
                                      density,
+                                     participants,
                                      sort_variable='performance',
                                      mode='test',
                                      alpha=0.6,

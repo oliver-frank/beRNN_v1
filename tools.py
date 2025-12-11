@@ -784,3 +784,25 @@ def gen_ortho_matrix(dim, rng=None):
         H = np.dot(H, mat)
     return H
 
+
+
+# Valuable legacy stuff ################################################################################################
+# import os
+# folderList = ['_gridSearch_domainTask-WM_beRNN_03_highDim_correctOnly_16', '_gridSearch_domainTask-WM_beRNN_03_highDim_correctOnly_32', '_gridSearch_domainTask-WM_beRNN_03_highDim_correctOnly_64',
+#                   '_gridSearch_domainTask-WM_beRNN_03_highDim_correctOnly_128', '_gridSearch_domainTask-WM_beRNN_03_highDim_correctOnly_256', '_gridSearch_domainTask-WM_beRNN_03_highDim_correctOnly_512']
+#
+# participant = ['beRNN_01', 'beRNN_02', 'beRNN_03', 'beRNN_04', 'beRNN_05'][2]
+# dataType = ['highDim', 'highDim_3stimTC', 'highDim_correctOnly'][2]
+#
+# for folder in folderList:
+#     directory = fr'C:\Users\oliver.frank\Desktop\PyProjects\beRNNmodels\{folder}\{dataType}\{participant}'
+#     counter = 0
+#     for modelBatch in os.listdir(directory):
+#         for model in os.listdir(os.path.join(directory, modelBatch)):
+#             if model == 'times.txt':
+#                 continue
+#             if len(os.listdir(os.path.join(directory, modelBatch, model, 'model_month_6'))) < 3:
+#                 counter += 1
+#     print(folder)
+#     print(counter)
+#     print('******************************')

@@ -1,5 +1,5 @@
 ########################################################################################################################
-# head: networkAnalysis ################################################################################################
+# head: singleNetworkAnalysis ##########################################################################################
 ########################################################################################################################
 
 ########################################################################################################################
@@ -23,7 +23,7 @@ from pathlib import Path
 
 plt.ioff()  # prevents windows to pop up when figs and plots are created
 
-from analysis import clustering  # , variance
+from _analysis import clustering  # , variance
 import tools
 from tools import rule_name
 
@@ -67,7 +67,6 @@ def smoothed(data, window_size):
         smoothed_data = np.concatenate((smoothed_data, [last_value] * padding_length))
     return smoothed_data
 
-# Create the legend figure
 def create_legend_image():
     """ Generate and return a properly formatted legend image. """
     legend_fig = plt.figure(figsize=(2, 0.6))  # Decrease figure size
@@ -143,6 +142,11 @@ def define_data_folder(split_parts):
         data_folder = 'data_unknown'
 
     return data_folder
+
+
+# **********************************************************************************************************************
+# attention: Complete script is outdated - especially for evaluating task representations and top. marker ##############
+# **********************************************************************************************************************
 
 
 ########################################################################################################################
@@ -818,7 +822,7 @@ if __name__ == "__main__":
 
 if comparison == True:
     # # info: ################################################################################################################
-    # # info: Comparison - Only apply after previous analysis ################################################################
+    # # info: Comparison - Only apply after previous _analysis ################################################################
     # # info: ################################################################################################################
     from scipy.stats import ttest_ind, ks_2samp
     import seaborn as sns
@@ -926,13 +930,13 @@ if comparison == True:
 
 
 # # info: ################################################################################################################
-# # info: Structural correlation for single network ######################################################################
+# # info: Valuable legacy functions ######################################################################################
 # # info: ################################################################################################################
 # import os
 # import numpy as np
 # import matplotlib.pyplot as plt
 # from pathlib import Path
-# from analysis import clustering
+# from _analysis import clustering
 #
 # model_dir = r'C:\Users\oliver.frank\Desktop\PyProjects\beRNNmodels\robustnessTest\highDim_correctOnly\beRNN_01\0\beRNN_01_AllTask_4-6_data_highDim_correctOnly_iteration1_LeakyRNN_diag_256_softplus'
 # data_dir = os.path.join(Path('C:/Users/oliver.frank/Desktop/PyProjects/Data'), 'beRNN_01', 'data_highDim_correctOnly')
@@ -944,10 +948,10 @@ if comparison == True:
 #
 # def compute_structuralCorrelation(model_dir, figurePath, monthsConsidered, mode):
 #     for month in monthsConsidered:
-#         analysis = clustering.Analysis(data_dir, os.path.join(model_dir, f'model_{month}'), layer, 'cosine', mode, monthsConsidered, 'rule', True)
-#         correlationRecurrent = analysis.easy_connectivity_plot_recurrentWeightsOnly(os.path.join(model_dir, f'model_{month}'))
-#         # correlationExcitatoryGates = analysis.easy_connectivity_plot_excitatoryGatedWeightsOnly(model_dir)
-#         # correlationInhibitoryGates = analysis.easy_connectivity_plot_inhibitoryGatedWeightsOnly(model_dir)
+#         _analysis = clustering.Analysis(data_dir, os.path.join(model_dir, f'model_{month}'), layer, 'cosine', mode, monthsConsidered, 'rule', True)
+#         correlationRecurrent = _analysis.easy_connectivity_plot_recurrentWeightsOnly(os.path.join(model_dir, f'model_{month}'))
+#         # correlationExcitatoryGates = _analysis.easy_connectivity_plot_excitatoryGatedWeightsOnly(model_dir)
+#         # correlationInhibitoryGates = _analysis.easy_connectivity_plot_inhibitoryGatedWeightsOnly(model_dir)
 #
 #         path = os.path.join(figurePath, 'structuralCorrelation_npy')
 #
@@ -1019,5 +1023,495 @@ if comparison == True:
 #             # plt.close()
 #
 # compute_structuralCorrelation(model_dir, figurePath, monthsConsidered, mode)
+
+# def plot_taskVariance_and_lesioning(directory, mode, sort_variable, rdm_metric, robustnessTest, batch, numberOfModels):
+#     # Colors used for clusters
+#     kelly_colors = \
+#         [np.array([0.94901961, 0.95294118, 0.95686275]),
+#          np.array([0.13333333, 0.13333333, 0.13333333]),
+#          np.array([0.95294118, 0.76470588, 0.]),
+#          np.array([0.52941176, 0.3372549, 0.57254902]),
+#          np.array([0.95294118, 0.51764706, 0.]),
+#          np.array([0.63137255, 0.79215686, 0.94509804]),
+#          np.array([0.74509804, 0., 0.19607843]),
+#          np.array([0.76078431, 0.69803922, 0.50196078]),
+#          np.array([0.51764706, 0.51764706, 0.50980392]),
+#          np.array([0., 0.53333333, 0.3372549]),
+#          np.array([0.90196078, 0.56078431, 0.6745098]),
+#          np.array([0., 0.40392157, 0.64705882]),
+#          np.array([0.97647059, 0.57647059, 0.4745098]),
+#          np.array([0.37647059, 0.30588235, 0.59215686]),
+#          np.array([0.96470588, 0.65098039, 0.]),
+#          np.array([0.70196078, 0.26666667, 0.42352941]),
+#          np.array([0.8627451, 0.82745098, 0.]),
+#          np.array([0.53333333, 0.17647059, 0.09019608]),
+#          np.array([0.55294118, 0.71372549, 0.]),
+#          np.array([0.39607843, 0.27058824, 0.13333333]),
+#          np.array([0.88627451, 0.34509804, 0.13333333]),
+#          np.array([0.16862745, 0.23921569, 0.14901961])]
+#
+#     if robustnessTest == False:
+#         txtFile = os.path.join(directory, 'visuals', f'{sort_variable}_{mode}', f'bestModels_{sort_variable}_{mode}.txt')
+#     else:
+#         txtFile = os.path.join(directory, 'visuals', f'{sort_variable}_{mode}', 'batchPlots', batch, f'bestModels_{sort_variable}_{mode}_{batch}.txt')
+#
+#     with open(txtFile, "r") as file:
+#         lines = file.read().splitlines()
+#     cleaned_lines = [line.strip().strip('\'",') for line in lines]
+#
+#     for model in range(1, numberOfModels + 1):
+#         best_model_dir = cleaned_lines[model]  # Choose model of interest, starting with [1]
+#
+#         dataFolder = define_data_folder(best_model_dir.split('_'))
+#
+#         participant = [i for i in best_model_dir.split('\\') if 'beRNN_' in i][0]
+#         data_dir = os.path.join('C:\\Users\\oliver.frank\\Desktop\\PyProjects\\Data', participant, dataFolder)
+#
+#         hp = tools.load_hp(best_model_dir)
+#         # tools.save_hp(hp_copy, best_model_dir) # pop out rng main reason for saving again
+#         # hp = tools.load_hp(best_model_dir)
+#         layer = [1 if hp['multiLayer'] == False else 3][0]
+#
+#         # info: Create TaskVariance Plot
+#         knowledgeBase = clustering.Analysis(data_dir, best_model_dir, layer, rdm_metric, 'test', hp['monthsConsidered'],'rule', True)
+#         figurePath = os.path.join(directory, 'visuals')
+#
+#         # Plot task variance anyway
+#         knowledgeBase.plot_variance(best_model_dir, os.path.join(directory, 'visuals'), mode_=f'{model}_{sort_variable}_{mode}')
+#         # But skip multiLayer
+#         if hp['multiLayer'] == True:
+#             continue
+#         else:
+#             knowledgeBase.plot_lesions(data_dir, best_model_dir, figurePath, mode_=f'{model}_{sort_variable}_{mode}')
+#
+# class TaskSetAnalysis(object):
+#     """Analyzing the representation of tasks."""
+#     def __init__(self, model_dir, rules=None):
+#         """Initialization.
+#
+#         Args:
+#             model_dir: str, model directory
+#             rules: None or a list of rules
+#         """
+#         # Stimulus-averaged traces
+#         h_stimavg_byrule = OrderedDict()
+#         h_stimavg_byepoch = OrderedDict()
+#         # Last time points of epochs
+#         h_lastt_byepoch = OrderedDict()
+#
+#         model = Model(model_dir)
+#         hp = model.hp
+#
+#         if rules is None:  # Default value - all tasks
+#             rules = hp['rules']
+#
+#         n_rules = len(rules)
+#
+#         # Define main path
+#         path = 'C:\\Users\\oliver.frank\\Desktop\\PyProjects'
+#
+#         # Define data path
+#         preprocessedData_path = os.path.join(path, 'Data', hp['participant'], hp['data'])  # pandora
+#
+#         with tf.Session() as sess:
+#             model.restore()
+#
+#             for rule in rules:
+#                 month = hp['monthsConsidered'][-1]
+#                 train_data, test_data = tools.createSplittedDatasets(hp, preprocessedData_path, month)
+#
+#                 x, y, y_loc, response = tools.load_trials(hp['rng'], rule, 'test', hp['batch_size'], test_data,
+#                                                           False)  # y_loc is participantResponse_perfEvalForm
+#                 c_mask = tools.create_cMask(y, response, hp, 'test')
+#                 feed_dict = tools.gen_feed_dict(model, x, y, c_mask, hp)
+#
+#                 h = sess.run(model.h, feed_dict=feed_dict)  # info: Trainables are actualized - train_step should represent the step in _training.py and the global_step in network.py
+#
+#                 # c_lsq, c_reg, y_hat_test = sess.run([model.cost_lsq, model.cost_reg, model.y_hat], feed_dict=feed_dict)
+#
+#                 # Average across trials
+#                 h_stimavg = h.mean(axis=1)
+#
+#                 # dt_new = 50
+#                 # every_t = int(dt_new/hp['dt'])
+#
+#                 t_start = int(500 / hp['dt'])  # Important: Ignore the initial transition
+#                 # Extract epoch of interest - most often response epoch
+#                 h_stimavg_byrule[rule] = h_stimavg[t_start:, :]
+#
+#                 fixation_steps, response_steps = tools.getEpochSteps(y)
+#
+#                 # Take epoch
+#                 e_time_start = fixation_steps
+#                 e_time_end = fixation_steps + response_steps
+#                 e_time = [e_time_start, e_time_end]
+#                 e_name = 'response'
+#
+#                 e_time_start = e_time[0] - 1 if e_time[0] > 0 else 0
+#                 h_stimavg_byepoch[(rule, e_name)] = h_stimavg[e_time_start:e_time[1], :]
+#                 # Take last time point from epoch
+#                 # h_all_byepoch[(rule, e_name)] = np.mean(h[e_time[0]:e_time[1],:,:][-1], axis=1)
+#                 h_lastt_byepoch[(rule, e_name)] = h[e_time[1] - 1, :, :]
+#
+#         self.rules = rules
+#         self.h_stimavg_byrule = h_stimavg_byrule
+#         self.h_stimavg_byepoch = h_stimavg_byepoch
+#         self.h_lastt_byepoch = h_lastt_byepoch
+#         self.model_dir = model_dir
+#
+#     @staticmethod  # utility function within class, no method
+#     def filter(h, rules=None, epochs=None, non_rules=None, non_epochs=None, get_lasttimepoint=True, get_timeaverage=False, **kwargs):
+#         # h should be a dictionary
+#         # get a new dictionary containing keys from the list of rules and epochs
+#         # And avoid epochs from non_rules and non_epochs
+#         # h_new = OrderedDict([(key, val) for key, val in h.items() if key[1] in epochs])
+#
+#         if get_lasttimepoint:
+#             print('Analyzing last time points of epochs')
+#         if get_timeaverage:
+#             print('Analyzing time-averaged activities of epochs')
+#
+#         h_new = OrderedDict()
+#         for key in h:
+#             rule, epoch = key
+#
+#             include_key = True
+#             if rules is not None:
+#                 include_key = include_key and (rule in rules)
+#
+#             if epochs is not None:
+#                 include_key = include_key and (epoch in epochs)
+#
+#             if non_rules is not None:
+#                 include_key = include_key and (rule not in non_rules)
+#
+#             if non_epochs is not None:
+#                 include_key = include_key and (epoch not in non_epochs)
+#
+#             if include_key:
+#                 if get_lasttimepoint:
+#                     h_new[key] = h[key][np.newaxis, -1, :]
+#                 elif get_timeaverage:
+#                     h_new[key] = np.mean(h[key], axis=0, keepdims=True)
+#                 else:
+#                     h_new[key] = h[key]
+#
+#         return h_new
+#
+#     def compute_taskspace(self, fname, dim_reduction_type, epochs, **kwargs):
+#         # Only get last time points for each epoch
+#         h = self.filter(self.h_stimavg_byepoch, epochs=epochs, rules=self.rules, **kwargs)
+#
+#         # Concatenate across rules to create dataset
+#         data = np.concatenate(list(h.values()), axis=0)
+#         data = data.astype(dtype='float64')
+#
+#         # First reduce dimension to dimension of data points
+#         from sklearn.decomposition import PCA
+#         n_comp = int(np.min([data.shape[0], data.shape[1]]) - 1)
+#         model = PCA(n_components=n_comp)
+#         data = model.fit_transform(data)
+#
+#         if dim_reduction_type == 'PCA':
+#             model = PCA(n_components=2)
+#
+#         elif dim_reduction_type == 'MDS':
+#             from sklearn.manifold import MDS
+#             model = MDS(n_components=2, metric=True, random_state=0)
+#
+#         elif dim_reduction_type == 'TSNE':
+#             from sklearn.manifold import TSNE
+#             model = TSNE(n_components=2, init='pca',
+#                          verbose=1, method='exact', learning_rate=100, perplexity=5)
+#
+#         elif dim_reduction_type == 'IsoMap':
+#             from sklearn.manifold import Isomap
+#             model = Isomap(n_components=2)
+#
+#         else:
+#             raise ValueError('Unknown dim_reduction_type')
+#
+#         # Transform data
+#         data_trans = model.fit_transform(data)
+#
+#         # Package back to dictionary
+#         h_trans = OrderedDict()
+#         i_start = 0
+#         for key, val in h.items():
+#             i_end = i_start + val.shape[0]
+#             h_trans[key] = data_trans[i_start:i_end, :]
+#             i_start = i_end
+#
+#         # save file
+#         with open(fname, "wb") as f:
+#             pickle.dump(h_trans, f)
+#
+#         return h_trans
+#
+#     def plot_taskspace(self, h_trans, directory, sort_variable, mode, fig_name, level, plot_example=False, lxy=None, plot_arrow=True, **kwargs):
+#         figsize = (5, 5)
+#         fs = 7  # fontsize
+#         dim0, dim1 = (0, 1)  # plot dimensions
+#         i_example = 0  # index of the example to plot
+#
+#         texts = list()
+#
+#         maxv0, maxv1 = -1, -1
+#
+#         fig = plt.figure(figsize=figsize)
+#         ax = fig.add_axes([0.2, 0.2, 0.65, 0.65])
+#
+#         for key, val in h_trans.items():
+#             rule, epoch = key
+#             # Default coloring by rule_color
+#             color = rule_color[rule]
+#
+#             if plot_example:
+#                 xplot, yplot = val[i_example, dim0], val[i_example, dim1]
+#             else:
+#                 xplot, yplot = val[:, dim0], val[:, dim1]
+#
+#             # ax.plot(xplot, yplot, 'o', color=color, mec=color, mew=1.0, ms=2)
+#             ax.plot(xplot, yplot, 'o', color=color, mec=color, mew=0.5, ms=5, alpha=0.4)
+#
+#             xtext = np.mean(val[:, dim0])
+#             if np.mean(val[:, dim1]) > 0:
+#                 ytext = np.max(val[:, dim1])
+#                 va = 'bottom'
+#             else:
+#                 ytext = np.min(val[:, dim1])
+#                 va = 'top'
+#
+#             texts.append(ax.text(xtext * 1.1, ytext * 1.1, tools.rule_name[rule],
+#                                  fontsize=6, color=color, alpha=0.6,
+#                                  horizontalalignment='center', verticalalignment=va))
+#
+#             maxv0 = np.max([maxv0, np.max(abs(val[:, dim0]))])
+#             maxv1 = np.max([maxv1, np.max(abs(val[:, dim1]))])
+#
+#         if lxy is None:
+#             lx = np.ceil(maxv0)
+#             ly = np.ceil(maxv1)
+#         else:
+#             lx, ly = lxy
+#
+#         ax.tick_params(axis='both', which='major', labelsize=fs)
+#         # plt.locator_params(nbins=3)
+#         ax.spines["right"].set_visible(False)
+#         ax.spines["top"].set_visible(False)
+#         # ax.set_xticks([])
+#         # ax.set_yticks([])
+#         ax.margins(0.1)
+#         # plt.axis('equal')
+#         plt.xlim([-lx, lx])
+#         plt.ylim([-ly, ly])
+#         ax.plot([0, 0], [-ly, ly], '--', color='gray')
+#         ax.plot([-lx, lx], [0, 0], '--', color='gray')
+#         ax.set_xticks([-lx, lx])
+#         ax.set_yticks([-ly, ly])
+#         ax.xaxis.set_ticks_position('bottom')
+#         ax.yaxis.set_ticks_position('left')
+#         pc_name = 'rPC'
+#         ax.set_xlabel(pc_name + ' {:d}'.format(dim0 + 1), fontsize=fs, labelpad=-5)
+#         ax.set_ylabel(pc_name + ' {:d}'.format(dim1 + 1), fontsize=fs, labelpad=-5)
+#
+#         finalDirectory = os.path.join(directory, 'visuals', f'{sort_variable}_{mode}', 'compositionalRepresentation')
+#         os.makedirs(finalDirectory, exist_ok=True)
+#         if level == 'individual':
+#             plt.savefig(os.path.join(finalDirectory, fig_name + '.png'), transparent=True, dpi=300)
+#         elif level == 'group':
+#             plt.savefig(os.path.join(finalDirectory, '2DtaskRepresentation_overview.png'), transparent=True, dpi=300)
+#         # plt.show()
+#
+#     def collect_h_trans(self, h_trans, h_trans_all, model):
+#         # Collect h_trans values
+#         h_trans_values = list(h_trans.values())
+#
+#         # rotation_matrix, clock wise
+#         get_angle = lambda vec: np.arctan2(vec[1], vec[0])
+#         theta = get_angle(h_trans_values[0][0])
+#         rot_mat = np.array([[np.cos(theta), -np.sin(theta)],
+#                             [np.sin(theta), np.cos(theta)]])
+#
+#         for key, val in h_trans.items():
+#             val_rot = np.dot(val, rot_mat)
+#             if key in h_trans_all:
+#                 h_trans_all[key] = np.concatenate((h_trans_all[key], val_rot), axis=0)
+#             else:
+#                 h_trans_all[key] = val_rot
+#
+#         h_trans_values = list(h_trans_all.values())
+#         if h_trans_values[1][0][1] < 0:
+#             for key, val in h_trans_all.items():
+#                 h_trans_all[key] = val * np.array([1, -1])
+#
+#         return h_trans_all
+#
+# def plot_group_rdm_mds(directory, mode, sort_variable, rdm_metric, numberOfModels, ruleset):
+#     def plot_rdm_heatmap(rdm, metric, task_labels=None, title='RDM Heatmap'):
+#         n_tasks = rdm.shape[0]
+#         fig_size = max(6, n_tasks * 0.5)  # auto-scale figure for more tasks
+#
+#         plt.figure(figsize=(fig_size, fig_size * 0.85))
+#         ax = sns.heatmap(rdm, annot=False, cmap='viridis', square=True,
+#                          xticklabels=task_labels, yticklabels=task_labels,
+#                          cbar_kws={'shrink': 0.7})
+#
+#         plt.title(title + ' - ' + metric, fontsize=12)
+#         plt.xlabel('Tasks', fontsize=10)
+#         plt.ylabel('Tasks', fontsize=10)
+#
+#         # Rotate x-axis labels and adjust font sizes
+#         plt.xticks(rotation=45, ha='right', fontsize=8)
+#         plt.yticks(fontsize=8)
+#
+#         plt.tight_layout()
+#         # plt.show()
+#
+#         return plt
+#
+#     def plot_rdm_mds(rdm, metric, task_keys, rule_color, title='RDM MDS'):
+#         mds = MDS(n_components=2, dissimilarity='precomputed', random_state=42)
+#         coords = mds.fit_transform(rdm)
+#
+#         plt.figure(figsize=(5.2, 4.5))
+#         ax = plt.gca()
+#
+#         for i, key in enumerate(task_keys):
+#             x, y = coords[i]
+#             color = rule_color.get(key, 'gray')
+#             label = key
+#
+#             # Dot
+#             ax.scatter(x, y, color=color, s=60, edgecolor='black', zorder=3)
+#
+#             # Label outside the dot, same color
+#             ax.text(x + 0.035, y, label, fontsize=6.5,
+#                     color=color, ha='left', va='center', zorder=4)
+#
+#         # Coordinate system (axes on, ticks small and clean)
+#         ax.tick_params(axis='both', which='major', labelsize=6, length=2)
+#         ax.set_xlabel('MDS Dimension 1', fontsize=7.5)
+#         ax.set_ylabel('MDS Dimension 2', fontsize=7.5)
+#         ax.axhline(0, color='gray', linewidth=0.5, linestyle='--')
+#         ax.axvline(0, color='gray', linewidth=0.5, linestyle='--')
+#
+#         plt.title(title + ' - ' + metric, fontsize=9)
+#         plt.tight_layout()
+#         # plt.show()
+#
+#     all_coords = []
+#     all_keys = []
+#     all_models = []
+#     # Apply non-linear dimensionality reduction that maps element-wise distance as good as possible into n-dim space
+#     mds = MDS(n_components=2, dissimilarity='precomputed', random_state=42)  # euclidean distance based by default
+#
+#     for model in range(1, numberOfModels+1):  # Best of x models - max. 256 - always start with 1
+#         best_model_dir = cleaned_lines[model]
+#
+#         if best_model_dir == '':
+#             print('No best model saved in text file.')
+#             exit()
+#
+#         dataFolder = define_data_folder(best_model_dir.split('_'))
+#
+#         participant = [i for i in best_model_dir.split('\\') if 'beRNN_' in i and len(i) == 8][0]
+#
+#         data_dir = os.path.join('C:\\Users\\oliver.frank\\Desktop\\PyProjects\\Data', participant, dataFolder)
+#
+#         hp = tools.load_hp(best_model_dir)
+#         layer = [1 if hp['multiLayer'] == False else 3][0]
+#
+#         # Create task variance matrix for current model in loop
+#         knowledgeBase = clustering.Analysis(data_dir, best_model_dir, layer, rdm_metric, 'test', hp['monthsConsidered'],'rule', True)
+#
+#         # # Skip dummy RDMs
+#         # if np.allclose(knowledgeBase.rdm, knowledgeBase.rdm[0, 0]):
+#         #     print(f"Skipping model {model} from final plot due to dummy RDM (constant dissimilarity).")
+#         #     continue
+#
+#         if model == 1:
+#             coords_ref = mds.fit_transform(knowledgeBase.rdm)
+#             coords_aligned = coords_ref
+#         else:
+#             coords_model = mds.fit_transform(knowledgeBase.rdm)
+#             R, _ = orthogonal_procrustes(coords_model, coords_ref)
+#             coords_aligned = coords_model @ R
+#
+#         all_coords.append(coords_aligned)
+#         all_keys.append(knowledgeBase.keys)
+#         all_models.append(knowledgeBase.model_dir)
+#
+#         # # info: Plot also single performance plots for each of the chosen models
+#         # rule_plot = [i for i in hp['rule_prob_map'] if hp['rule_prob_map'][i] > 0]
+#         # performanceTest_dir = os.path.join(directory, 'visuals', f'{sort_variable}_{mode}', 'performanceTest')
+#         # performanceTrain_dir = os.path.join(directory, 'visuals', f'{sort_variable}_{mode}', 'performanceTrain')
+#         if robustnessTest == True:
+#             representationalDissimilarity_dir = os.path.join(directory, 'visuals', f'{sort_variable}_{mode}', 'batchPlots', str(batch),
+#                                                              f'representationalDissimilarity_{rdm_metric}_{ruleset}')
+#         else:
+#             representationalDissimilarity_dir = os.path.join(directory, 'visuals', f'{sort_variable}_{mode}',
+#                                                              f'representationalDissimilarity_{rdm_metric}_{ruleset}')
+#
+#         # os.makedirs(performanceTest_dir, exist_ok=True)
+#         # os.makedirs(performanceTrain_dir, exist_ok=True)
+#         os.makedirs(representationalDissimilarity_dir, exist_ok=True)
+#
+#         # save rdm
+#         np.save(os.path.join(representationalDissimilarity_dir,
+#                              f'{model}_{sort_variable}_{mode}' + '_' + 'batch_' + best_model_dir.split("\\")[-5] + '_' +
+#                              best_model_dir.split("\\")[-3].split('_')[
+#                                  -4] + f'_rdmArray_{knowledgeBase.rdm_metric}_{ruleset}.npy'), knowledgeBase.rdm)
+#
+#         # info: Create RDM Heatmaps and 2D representations
+#         label_list = [tools.rule_name[key] for key in knowledgeBase.keys]
+#         fig_rdm = plot_rdm_heatmap(knowledgeBase.rdm, knowledgeBase.rdm_metric, task_labels=label_list)
+#         fig_rdm.savefig(os.path.join(representationalDissimilarity_dir,
+#                                      f'{model}_{sort_variable}_{mode}' + '_' + 'batch_' + best_model_dir.split("\\")[
+#                                          -5] + '_' + best_model_dir.split("\\")[-3].split('_')[
+#                                          -4] + f'_representationalDissimilarity_{knowledgeBase.rdm_metric}_{ruleset}.png'),
+#                         format='png', dpi=300)
+#         fig_rdm_mds = plot_rdm_mds(knowledgeBase.rdm, knowledgeBase.rdm_metric, task_keys=knowledgeBase.keys,
+#                                    rule_color=rule_color)
+#         fig_rdm.savefig(os.path.join(representationalDissimilarity_dir,
+#                                      f'{model}_{sort_variable}_{mode}' + '_' + 'batch_' + best_model_dir.split("\\")[
+#                                          -5] + '_' + best_model_dir.split("\\")[-3].split('_')[
+#                                          -4] + f'_representationalDissimilarity_{knowledgeBase.rdm_metric}_{ruleset}_2DspaceGeometry.png'),
+#                         format='png', dpi=300)
+#
+#     if numberOfModels > 1:
+#         plt.figure(figsize=(5.2, 4.5))
+#         ax = plt.gca()
+#
+#         # Track which keys have already been labeled
+#         labeled_keys = set()
+#
+#         for coords, keys in zip(all_coords, all_keys):
+#             for x, y, key in zip(coords[:, 0], coords[:, 1], keys):
+#                 color = rule_color.get(key, 'gray')
+#                 # Only set label for the first occurrence
+#                 label = key if key not in labeled_keys else None
+#
+#                 ax.scatter(x, y, color=color, s=60, edgecolor='black', zorder=3, alpha=0.6)
+#                 ax.text(x + 0.035, y, label, fontsize=6.5,
+#                         color=color, ha='left', va='center', zorder=4)
+#
+#         # Only show unique legend entries
+#         handles, labels = ax.get_legend_handles_labels()
+#         by_label = dict(zip(labels, handles))
+#         ax.legend(by_label.values(), by_label.keys(), fontsize=6.5, loc='best')
+#
+#         ax.tick_params(axis='both', which='major', labelsize=6, length=2)
+#         ax.set_xlabel('MDS Dimension 1', fontsize=7.5)
+#         ax.set_ylabel('MDS Dimension 2', fontsize=7.5)
+#         ax.axhline(0, color='gray', linewidth=0.5, linestyle='--')
+#         ax.axvline(0, color='gray', linewidth=0.5, linestyle='--')
+#         plt.title(f'RDM MDS – {knowledgeBase.rdm_metric} – Multiple Aligned Models', fontsize=9)
+#         plt.tight_layout()
+#         # plt.show()
+#
+#         plt.savefig(os.path.join(representationalDissimilarity_dir, best_model_dir.split("\\")[-3].split('_')[
+#             -4] + f'_representationalDissimilarity_{knowledgeBase.rdm_metric}_{ruleset}_2DspaceGeometry_modelAlignment_{numberOfModels}.png'), format='png', dpi=300)
+#         plt.close()
 
 
