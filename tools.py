@@ -51,6 +51,36 @@ for ruleset, rules in rules_dict.items():
     for ind, rule in enumerate(rules):
         rule_index_map[ruleset][rule] = ind
 
+def participation_coefficient(G_sparse, communities_sparse):
+    # Guimerà & Amaral (2005): Measures involvement of each node of a graph in all communities.
+    # 0 if only involved in own assigned community - converging 1 if involved in all other communities similarily
+    # info: Has to be calculated in combination with networkx modularity
+
+    # Map each node to its community ID for easy lookup
+    node_to_comm = {}
+    for i, comm in enumerate(communities_sparse):
+        for node in comm:
+            node_to_comm[node] = i
+
+    pc_dict = {}
+    for node in G_sparse.nodes():
+        degree = G_sparse.degree(node) # total number of connections for node i
+        if degree == 0:
+            pc_dict[node] = 0
+            continue
+
+        # Count edges from this node to each community
+        community_edge_counts = {}
+        for neighbor in G_sparse.neighbors(node):
+            comm_id = node_to_comm[neighbor]
+            community_edge_counts[comm_id] = community_edge_counts.get(comm_id, 0) + 1
+
+        # Apply the formula: 1 - sum((edges_to_comm / total_degree)^2)
+        sum_sq_ratios = sum((count / degree) ** 2 for count in community_edge_counts.values())
+        pc_dict[node] = 1 - sum_sq_ratios
+
+    return pc_dict
+
 def get_num_ring(ruleset):
     '''get number of stimulus rings'''
     return 2 if ruleset=='all' else 2 # leave it felxible for potential future rulesets

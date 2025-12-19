@@ -135,7 +135,9 @@ def get_n_clusters(model_dirs, density):
     silhouette_score = list()
     avg_perf_train_list = list()
     avg_perf_test_list = list()
+    avg_clustering_list = list()
     modularity_list_sparse = list()
+    participation_coefficient_list = list()
 
     for i, model_dir in enumerate(model_dirs):
         if i % 50 == 0:
@@ -200,17 +202,35 @@ def get_n_clusters(model_dirs, density):
 
             if G_sparse.number_of_edges() == 0 or G_sparse.number_of_nodes() < 2:
                 print(f"Skipping modularity calculation for {model_dir} — graph has no edges. Setting mod_value = 0.")
+                avg_clustering = 0
+                avg_clustering_list.append(avg_clustering)
                 mod_value_sparse = 0
                 modularity_list_sparse.append(mod_value_sparse)
+                avg_pc = 0
+                participation_coefficient_list.append(avg_pc)
             else:
                 try:
+                    # clustering
+                    clustering = nx.clustering(G_sparse)
+                    avg_clustering = np.mean(list(clustering.values()))
+                    avg_clustering_list.append(avg_clustering)
+                    # modularity
                     communities_sparse = greedy_modularity_communities(G_sparse)
                     mod_value_sparse = modularity(G_sparse, communities_sparse)
                     modularity_list_sparse.append(mod_value_sparse)
+                    # participation
+                    pc_dict = tools.participation_coefficient(G_sparse, communities_sparse)
+                    avg_pc = np.mean(list(pc_dict.values()))
+                    participation_coefficient_list.append(avg_pc)
+
                 except Exception as e:
                     print(f"Greedy modularity failed for {model_dir}. Setting mod_value = 0. ({e})")
+                    avg_clustering = 0
+                    avg_clustering_list.append(avg_clustering)
                     mod_value_sparse = 0
                     modularity_list_sparse.append(mod_value_sparse)
+                    avg_pc = 0
+                    participation_coefficient_list.append(avg_pc)
 
             # # info: Alternatively take already calculatded mod value w. density threshold .1
             # try:
@@ -221,7 +241,7 @@ def get_n_clusters(model_dirs, density):
         else:
             modularity_list_sparse = []
 
-    return n_clusters, hp_list, silhouette_score, avg_perf_train_list, avg_perf_test_list, modularity_list_sparse
+    return n_clusters, hp_list, silhouette_score, avg_perf_train_list, avg_perf_test_list, avg_clustering_list, modularity_list_sparse, participation_coefficient_list
 
 def plot_histogram():
     initdict = defaultdict(list)
@@ -347,7 +367,7 @@ def _get_hp_ranges():
     # hp_ranges['errorBalancingValue'] = [1., 5.]
     return hp_ranges
 
-def general_hp_plot(n_clusters, silhouette_score, hp_list, avg_perf_train_list, avg_perf_test_list, modularity_list_sparse, directory, sort_variable, mode, batchPlot, model_dir_batches):
+def general_hp_plot(n_clusters, silhouette_score, hp_list, avg_perf_train_list, avg_perf_test_list, avg_clustering_list, modularity_list_sparse, participation_coefficient_list, directory, sort_variable, mode, batchPlot, model_dir_batches):
     hp_ranges = _get_hp_ranges()
     hp_plots = list(hp_ranges.keys())
 
@@ -359,12 +379,12 @@ def general_hp_plot(n_clusters, silhouette_score, hp_list, avg_perf_train_list, 
         ind_sort = np.argsort(avg_perf_test_list)[::-1]
     elif sort_variable == 'performance' and mode == 'train':
         ind_sort = np.argsort(avg_perf_train_list)[::-1]
-    elif sort_variable == 'clustering':
-        ind_sort = np.argsort(n_clusters)[::-1]
-    elif sort_variable == 'silhouette':
-        ind_sort = np.argsort(silhouette_score)[::-1]
-    elif sort_variable == 'modularity':
-        ind_sort = np.argsort(modularity_list_sparse)[::-1]
+    # elif sort_variable == 'clustering':
+    #     ind_sort = np.argsort(n_clusters)[::-1]
+    # elif sort_variable == 'silhouette':
+    #     ind_sort = np.argsort(silhouette_score)[::-1]
+    # elif sort_variable == 'modularity':
+    #     ind_sort = np.argsort(modularity_list_sparse)[::-1]
 
     n_clusters_sorted = [n_clusters[i] for i in ind_sort]
     silhouette_score_sorted = [silhouette_score[i] for i in ind_sort]
@@ -372,7 +392,9 @@ def general_hp_plot(n_clusters, silhouette_score, hp_list, avg_perf_train_list, 
     avg_perf_train_list_sorted = [avg_perf_train_list[i] for i in ind_sort]
     avg_perf_test_list_sorted = [avg_perf_test_list[i] for i in ind_sort]
     if hp_list[0]['rnn_type'] != 'MultiLayer':
+        avg_clustering_list_sorted = [avg_clustering_list[i] for i in ind_sort]
         modularity_list_sparse_sorted = [modularity_list_sparse[i] for i in ind_sort]
+        participation_coefficient_list_sorted = [participation_coefficient_list[i] for i in ind_sort]
     successful_model_dirs_sorted = [successful_model_dirs[i] for i in ind_sort]
 
     # Prepare heatmap data
@@ -386,15 +408,28 @@ def general_hp_plot(n_clusters, silhouette_score, hp_list, avg_perf_train_list, 
             hp_visualize[i, j] = color_indices_per_hp[hp_name][val]
 
     # === MAIN PLOTS ===
-    fig, axs = plt.subplots(5, 1, figsize=(8, 6), sharex=True, gridspec_kw={'height_ratios': [1, 1, 1, 1, 1.5]})
+    fig, axs = plt.subplots(6, 1, figsize=(8, 8), sharex=True, gridspec_kw={'height_ratios': [1, 1, 1, 1, 1, 1.5]})
     plt.subplots_adjust(hspace=0.5)
 
     if hp_list[0]['rnn_type'] != 'MultiLayer': # attention: You have to add the calculation for modularity for multiRNN
-        axs[0].plot(modularity_list_sparse_sorted, '-')
-        axs[0].set_ylabel(f'Modularity score ({mode})', fontsize=7)
+        axs[0].plot(avg_clustering_list_sorted, '-')
+        axs[0].set_ylabel(f'Clustering ({mode})', fontsize=7)
         axs[0].set_yticks([0, 0.25, 0.5, 0.75, 1.0])
         axs[0].spines["top"].set_visible(False)
         axs[0].spines["right"].set_visible(False)
+
+        axs[1].plot(modularity_list_sparse_sorted, '-')
+        axs[1].set_ylabel(f'Modularity ({mode})', fontsize=7)
+        axs[1].set_yticks([0, 0.25, 0.5, 0.75, 1.0])
+        axs[1].spines["top"].set_visible(False)
+        axs[1].spines["right"].set_visible(False)
+
+        axs[2].plot(participation_coefficient_list_sorted, '-')
+        axs[2].set_ylabel(f'Participation ({mode})', fontsize=7)
+        axs[2].set_yticks([0, 0.25, 0.5, 0.75, 1.0])
+        axs[2].spines["top"].set_visible(False)
+        axs[2].spines["right"].set_visible(False)
+
         # Add light grey dashed lines at y=0.3, 0.5, 0.7
         # for y in [0.3, 0.5, 0.7]:
         #     axs[0].axhline(y=y, color='lightgrey', linestyle='--', linewidth=0.8, zorder=0)
@@ -405,33 +440,33 @@ def general_hp_plot(n_clusters, silhouette_score, hp_list, avg_perf_train_list, 
         axs[0].spines["top"].set_visible(False)
         axs[0].spines["right"].set_visible(False)
 
-    axs[1].plot(n_clusters_sorted, '-')
-    axs[1].set_ylabel(f'Num. clusters ({mode})', fontsize=7)
-    axs[1].set_yticks([0, 10, 20, 30])
-    axs[1].spines["top"].set_visible(False)
-    axs[1].spines["right"].set_visible(False)
+    # axs[1].plot(n_clusters_sorted, '-')
+    # axs[1].set_ylabel(f'Num. clusters ({mode})', fontsize=7)
+    # axs[1].set_yticks([0, 10, 20, 30])
+    # axs[1].spines["top"].set_visible(False)
+    # axs[1].spines["right"].set_visible(False)
 
-    axs[2].plot(avg_perf_train_list_sorted, '-')
-    axs[2].set_ylabel('Avg. perf. train', fontsize=7)
-    axs[2].set_yticks([0, 0.25, 0.5, 0.75, 1.0])
-    axs[2].spines["top"].set_visible(False)
-    axs[2].spines["right"].set_visible(False)
-
-    axs[3].plot(avg_perf_test_list_sorted, '-')
-    axs[3].set_ylabel('Avg. perf. test', fontsize=7)
+    axs[3].plot(avg_perf_train_list_sorted, '-')
+    axs[3].set_ylabel('Avg. perf. train', fontsize=7)
     axs[3].set_yticks([0, 0.25, 0.5, 0.75, 1.0])
     axs[3].spines["top"].set_visible(False)
     axs[3].spines["right"].set_visible(False)
 
-    im = axs[4].imshow(hp_visualize, aspect='auto', cmap='viridis')
-    axs[4].set_yticks(range(len(hp_plots)))
-    axs[4].set_yticklabels([HP_NAME[hp] for hp in hp_plots], fontsize=7)
-    axs[4].set_xlabel('Networks')
-    axs[4].tick_params(length=0)
+    axs[4].plot(avg_perf_test_list_sorted, '-')
+    axs[4].set_ylabel('Avg. perf. test', fontsize=7)
+    axs[4].set_yticks([0, 0.25, 0.5, 0.75, 1.0])
     axs[4].spines["top"].set_visible(False)
     axs[4].spines["right"].set_visible(False)
-    axs[4].set_xticks([0, len(n_clusters_sorted) - 1])
-    axs[4].set_xticklabels([1, len(n_clusters_sorted)])
+
+    im = axs[5].imshow(hp_visualize, aspect='auto', cmap='viridis')
+    axs[5].set_yticks(range(len(hp_plots)))
+    axs[5].set_yticklabels([HP_NAME[hp] for hp in hp_plots], fontsize=7)
+    axs[5].set_xlabel('Networks')
+    axs[5].tick_params(length=0)
+    axs[5].spines["top"].set_visible(False)
+    axs[5].spines["right"].set_visible(False)
+    axs[5].set_xticks([0, len(n_clusters_sorted) - 1])
+    axs[5].set_xticklabels([1, len(n_clusters_sorted)])
 
     # === Add best model_dir text ===
     best_model_dir = '||'.join(successful_model_dirs_sorted[0].split('\\')[-3:])
@@ -504,7 +539,7 @@ def plot_vertical_hp_legend(hp_ranges, hp_plots, HP_NAME, directory):
     plt.show()
     # plt.close()
 
-def _individual_hp_plot(hp_plot, sort_variable, mode, directory, batchPlot, model_dir_batches, density, n_clusters=None, silhouette_score=None, avg_perf_test_list=None, avg_perf_train_list=None, hp_list=None, modularity_list_sparse=None):
+def _individual_hp_plot(hp_plot, sort_variable, mode, directory, batchPlot, model_dir_batches, density, n_clusters=None, silhouette_score=None, avg_perf_test_list=None, avg_perf_train_list=None, hp_list=None, avg_clustering_list=None, modularity_list_sparse=None, participation_coefficient_list=None):
     """Plot histogram for number of clusters, separating by an attribute.
 
     Args:
@@ -513,7 +548,7 @@ def _individual_hp_plot(hp_plot, sort_variable, mode, directory, batchPlot, mode
         hp_list: list of hp dictionary
     """
     if hp_list is None: # attention: Maybe wrong fix here
-        n_clusters, hp_list, silhouette_score, avg_perf_train_list, avg_perf_test_list, modularity_list_sparse = get_n_clusters(successful_model_dirs, density) # fix: variable still to deliver
+        n_clusters, hp_list, silhouette_score, avg_perf_train_list, avg_perf_test_list, avg_clustering_list, modularity_list_sparse, participation_coefficient_list = get_n_clusters(successful_model_dirs, density) # fix: variable still to deliver
 
     # Compare activation, ignore tanh that can not be trained with LeakyRNN
     # hp_plot = 'activation'
@@ -533,17 +568,17 @@ def _individual_hp_plot(hp_plot, sort_variable, mode, directory, batchPlot, mode
             for hp, perf_train in zip(hp_list, avg_perf_train_list):
                 sort_variable_dict[hp[hp_plot]].append(perf_train)
 
-    elif sort_variable == 'clustering':
-        for hp, n_cluster in zip(hp_list, n_clusters):
-            sort_variable_dict[hp[hp_plot]].append(n_cluster)
-
-    elif sort_variable == 'silhouette':
-        for hp, silhouette in zip(hp_list, silhouette_score):
-            sort_variable_dict[hp[hp_plot]].append(silhouette)
-
-    elif sort_variable == 'modularity':
-        for hp, modu in zip(hp_list, modularity_list_sparse):
-            sort_variable_dict[hp[hp_plot]].append(modu)
+    # elif sort_variable == 'clustering':
+    #     for hp, n_cluster in zip(hp_list, n_clusters):
+    #         sort_variable_dict[hp[hp_plot]].append(n_cluster)
+    #
+    # elif sort_variable == 'silhouette':
+    #     for hp, silhouette in zip(hp_list, silhouette_score):
+    #         sort_variable_dict[hp[hp_plot]].append(silhouette)
+    #
+    # elif sort_variable == 'modularity':
+    #     for hp, modu in zip(hp_list, modularity_list_sparse):
+    #         sort_variable_dict[hp[hp_plot]].append(modu)
 
     label_map = {'softplus': 'Softplus',
                  'relu': 'ReLU',
@@ -612,15 +647,16 @@ def _individual_hp_plot(hp_plot, sort_variable, mode, directory, batchPlot, mode
 
         if i == 0:
             ax.set_title(HP_NAME[hp_plot], fontsize=7)
+
     # ax.legend(loc=3, bbox_to_anchor=(1, 0), title=HP_NAME[hp_plot], frameon=False)
     if sort_variable == 'performance':
         ax.set_xlabel('Performance', fontsize=7)
     elif sort_variable == 'clustering':
         ax.set_xlabel('Number of clusters', fontsize=7)
     elif sort_variable == 'silhouette':
-        ax.set_ylabel('Silhouette score', fontsize=7)
+        ax.set_xlabel('Silhouette score', fontsize=7)
     elif sort_variable == 'modularity':
-        ax.set_ylabel('Modularity score', fontsize=7)
+        ax.set_xlabel('Modularity score', fontsize=7)
 
     # plt.tight_layout()
     # plt.show()
@@ -639,7 +675,7 @@ def _individual_hp_plot(hp_plot, sort_variable, mode, directory, batchPlot, mode
 
     return sort_variable_dict
 
-def individual_hp_plot(n_clusters, silhouette_score, avg_perf_train_list, avg_perf_test_list, modularity_list_sparse, directory, hp_list, sort_variable, mode, batchPlot, model_dir_batches, density):
+def individual_hp_plot(n_clusters, silhouette_score, avg_perf_train_list, avg_perf_test_list, avg_clustering_list, modularity_list_sparse, participation_coefficient_list, directory, hp_list, sort_variable, mode, batchPlot, model_dir_batches, density):
     """Plot histogram of number of clusters.
 
     Args:
@@ -650,7 +686,7 @@ def individual_hp_plot(n_clusters, silhouette_score, avg_perf_train_list, avg_pe
     # hp_plots = ['activation', 'rnn_type', 'n_rnn', 'w_rec_init', 'l1_h', 'l1_weight', 'l2_h', 'l2_weight', 'learning_rate', 'learning_rate_mode', 'errorBalancingValue']
 
     for hp_plot in hp_plots:
-        n_cluster_dict = _individual_hp_plot(hp_plot, sort_variable, mode, directory, batchPlot, model_dir_batches, density, n_clusters, silhouette_score, avg_perf_test_list, avg_perf_train_list, hp_list, modularity_list_sparse)
+        n_cluster_dict = _individual_hp_plot(hp_plot, sort_variable, mode, directory, batchPlot, model_dir_batches, density, n_clusters, silhouette_score, avg_perf_test_list, avg_perf_train_list, hp_list, avg_clustering_list, modularity_list_sparse, participation_coefficient_list)
 
 # fix: Add network size here please
 HP_NAME = {'activation': 'Activation fun.',
@@ -668,11 +704,14 @@ HP_NAME = {'activation': 'Activation fun.',
 
 if __name__ == '__main__':
 
-    folderList = ['_robustnessTest_fundamentals_beRNN_01_data_highDim_correctOnly_156_bM_hp_2',
-                  '_robustnessTest_fundamentals_beRNN_01_data_highDim_correctOnly_156_bM_hp_2',
-                  '_robustnessTest_fundamentals_beRNN_01_data_highDim_correctOnly_156_bM_hp_2',
-                  '_robustnessTest_fundamentals_beRNN_01_data_highDim_correctOnly_156_bM_hp_2',
-                  '_robustnessTest_fundamentals_beRNN_01_data_highDim_correctOnly_156_bM_hp_2']
+    folderList = ['_gridSearch_multiTask_beRNN_03_highDim_256']
+
+    # folderList = ['_gridSearch_multiTask_beRNN_03_highDim_16',
+    #               '_gridSearch_multiTask_beRNN_03_highDim_32',
+    #               '_gridSearch_multiTask_beRNN_03_highDim_64',
+    #               '_gridSearch_multiTask_beRNN_03_highDim_128',
+    #               '_gridSearch_multiTask_beRNN_03_highDim_256',
+    #               '_gridSearch_multiTask_beRNN_03_highDim_512']
 
     for folder in folderList:
         final_model_dirs = []
@@ -683,7 +722,7 @@ if __name__ == '__main__':
 
         mode = ['train', 'test'][1]
         sort_variable = ['clustering', 'performance', 'silhouette'][1]
-        batchPlot = [True, False][0]
+        batchPlot = [True, False][1]
         lastMonth = '6'
         density = 0.1
 
@@ -714,10 +753,10 @@ if __name__ == '__main__':
 
         # First compute n_clusters for each model then collect them in lists
         successful_model_dirs = compute_n_cluster(final_model_dirs, mode) # includes _analysis.clustering (w. n_cluster and rdm)
-        n_clusters, hp_list, silhouette_score, avg_perf_train_list, avg_perf_test_list, modularity_list_sparse = get_n_clusters(successful_model_dirs, density)
+        n_clusters, hp_list, silhouette_score, avg_perf_train_list, avg_perf_test_list, avg_clustering_list, modularity_list_sparse, participation_coefficient_list = get_n_clusters(successful_model_dirs, density)
 
         # Create histogramms for each hyperparameter seperatly w.r.t. performance or clustering
-        individual_hp_plot(n_clusters, silhouette_score, avg_perf_train_list, avg_perf_test_list, modularity_list_sparse, directory, hp_list, sort_variable, mode, batchPlot, model_dir_batches, density)
+        individual_hp_plot(n_clusters, silhouette_score, avg_perf_train_list, avg_perf_test_list, avg_clustering_list, modularity_list_sparse, participation_coefficient_list, directory, hp_list, sort_variable, mode, batchPlot, model_dir_batches, density)
 
         # Create legend
         hp_ranges = _get_hp_ranges()
@@ -725,7 +764,4 @@ if __name__ == '__main__':
         plot_vertical_hp_legend(hp_ranges, hp_plots, HP_NAME, directory)
 
         # Create hp_plots sorted by performance or clustering
-        general_hp_plot(n_clusters, silhouette_score, hp_list, avg_perf_train_list, avg_perf_test_list,
-                        modularity_list_sparse, directory, sort_variable, mode, batchPlot, model_dir_batches)
-
-
+        general_hp_plot(n_clusters, silhouette_score, hp_list, avg_perf_train_list, avg_perf_test_list, avg_clustering_list, modularity_list_sparse, participation_coefficient_list, directory, sort_variable, mode, batchPlot, model_dir_batches)

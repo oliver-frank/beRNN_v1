@@ -38,7 +38,9 @@ def general_hp_plot_overlay_multiple(meta_n_clusters_list,
                                      meta_hp_list,
                                      meta_perf_train_list,
                                      meta_perf_test_list,
+                                     meta_clustering_list,
                                      meta_modularity_list,
+                                     meta_participation_coefficient_list,
                                      folder_labels,
                                      directory,
                                      density,
@@ -66,8 +68,7 @@ def general_hp_plot_overlay_multiple(meta_n_clusters_list,
     colors = [cmap_colors(0.4 + 0.6 * i / max(1, n_searches - 1)) for i in range(n_searches)]
 
     # prepare figure
-    fig, axs = plt.subplots(5, 1, figsize=(7, 6.5), sharex=True,
-                            gridspec_kw={'height_ratios': [1, 1, 1, 1, 1.2]})
+    fig, axs = plt.subplots(6, 1, figsize=(8, 8), sharex=True, gridspec_kw={'height_ratios': [1, 1, 1, 1, 1, 1.5]})
     plt.subplots_adjust(hspace=0.5)
 
     hp_visualize_list = []
@@ -79,7 +80,9 @@ def general_hp_plot_overlay_multiple(meta_n_clusters_list,
         hp_list = list(meta_hp_list[s])
         avg_perf_train_list = list(meta_perf_train_list[s])
         avg_perf_test_list = list(meta_perf_test_list[s])
+        clustering_list = list(meta_clustering_list[s]) if meta_clustering_list[s] is not None else [0] * len(n_clusters)
         modularity_list = list(meta_modularity_list[s]) if meta_modularity_list[s] is not None else [0] * len(n_clusters)
+        participation_list = list(meta_participation_coefficient_list[s]) if meta_participation_coefficient_list[s] is not None else [0] * len(n_clusters)
 
         # get negative modularity scores to 0 as they occur in ~0 cases
         modularity_list = [max(0, m) for m in modularity_list]
@@ -89,20 +92,22 @@ def general_hp_plot_overlay_multiple(meta_n_clusters_list,
             ind_sort = np.argsort(avg_perf_test_list)[::-1]
         elif sort_variable == 'performance' and mode == 'train':
             ind_sort = np.argsort(avg_perf_train_list)[::-1]
-        elif sort_variable == 'clustering':
-            ind_sort = np.argsort(n_clusters)[::-1]
-        elif sort_variable == 'silhouette':
-            ind_sort = np.argsort(silhouette_score)[::-1]
-        elif sort_variable == 'modularity':
-            ind_sort = np.argsort(modularity_list)[::-1]
-        else:
-            ind_sort = np.arange(len(n_clusters))
+        # elif sort_variable == 'clustering':
+        #     ind_sort = np.argsort(n_clusters)[::-1]
+        # elif sort_variable == 'silhouette':
+        #     ind_sort = np.argsort(silhouette_score)[::-1]
+        # elif sort_variable == 'modularity':
+        #     ind_sort = np.argsort(modularity_list)[::-1]
+        # else:
+        #     ind_sort = np.arange(len(n_clusters))
 
         n_clusters_sorted = np.array(n_clusters)[ind_sort]
         silhouette_sorted = np.array(silhouette_score)[ind_sort]
         perf_train_sorted = np.array(avg_perf_train_list)[ind_sort]
         perf_test_sorted = np.array(avg_perf_test_list)[ind_sort]
+        clustering_sorted = np.array(clustering_list)[ind_sort]
         modularity_sorted = np.array(modularity_list)[ind_sort]
+        participation_sorted = np.array(participation_list)[ind_sort]
         hp_list_sorted = [hp_list[i] for i in ind_sort]
         x = np.arange(len(n_clusters_sorted))
 
@@ -110,13 +115,15 @@ def general_hp_plot_overlay_multiple(meta_n_clusters_list,
 
         # Plot main metrics
         if hp_list_sorted and hp_list_sorted[0].get('rnn_type') != 'MultiLayer':
-            axs[0].plot(x, modularity_sorted, '-', alpha=alpha, color=colors[s], label=folder_labels[s])
+            axs[0].plot(x, clustering_sorted, '-', alpha=alpha, color=colors[s], label=folder_labels[s])
+            axs[1].plot(x, modularity_sorted, '-', alpha=alpha, color=colors[s], label=folder_labels[s])
+            axs[2].plot(x, participation_sorted, '-', alpha=alpha, color=colors[s], label=folder_labels[s])
         else:
             axs[0].plot(x, silhouette_sorted, '-', alpha=alpha, color=colors[s], label=folder_labels[s])
 
-        axs[1].plot(x, n_clusters_sorted, '-', alpha=alpha, color=colors[s])
-        axs[2].plot(x, perf_train_sorted, '-', alpha=alpha, color=colors[s])
-        axs[3].plot(x, perf_test_sorted, '-', alpha=alpha, color=colors[s])
+        # axs[3].plot(x, n_clusters_sorted, '-', alpha=alpha, color=colors[s])
+        axs[3].plot(x, perf_train_sorted, '-', alpha=alpha, color=colors[s])
+        axs[4].plot(x, perf_test_sorted, '-', alpha=alpha, color=colors[s])
 
         # Build discrete hp_visualize array (no normalization)
         hp_visualize = np.zeros((len(hp_plots), len(hp_list_sorted)))
@@ -140,21 +147,27 @@ def general_hp_plot_overlay_multiple(meta_n_clusters_list,
 
     # Format upper plots
     if meta_hp_list and meta_hp_list[0] and meta_hp_list[0][0].get('rnn_type') != 'MultiLayer':
-        axs[0].set_ylabel(f'Mod. score', fontsize=8)
+        axs[0].set_ylabel(f'Clustering', fontsize=8)
+        axs[1].set_ylabel(f'Modularity', fontsize=8)
+        axs[2].set_ylabel(f'Participation', fontsize=8)
     else:
         axs[0].set_ylabel(f'Silhouette score', fontsize=8)
-    axs[1].set_ylabel(f'Num. clusters', fontsize=8)
-    axs[2].set_ylabel('Avg. perf. train', fontsize=8)
-    axs[3].set_ylabel('Avg. perf. test', fontsize=8)
 
+    axs[3].set_ylabel('Avg. perf. train', fontsize=8)
+    axs[4].set_ylabel('Avg. perf. test', fontsize=8)
+
+    # axs[1].set_yticks([0, 15, 30])
+    # axs[1].set_yticklabels(["0", "15", "30"])
     axs[0].set_yticks([0.0, 0.5, 1.0])
     axs[0].set_yticklabels(["0.0", "0.5", "1.0"])
-    axs[1].set_yticks([0, 15, 30])
-    axs[1].set_yticklabels(["0", "15", "30"])
+    axs[1].set_yticks([0.0, 0.5, 1.0])
+    axs[1].set_yticklabels(["0.0", "0.5", "1.0"])
     axs[2].set_yticks([0.0, 0.5, 1.0])
     axs[2].set_yticklabels(["0.0", "0.5", "1.0"])
     axs[3].set_yticks([0.0, 0.5, 1.0])
     axs[3].set_yticklabels(["0.0", "0.5", "1.0"])
+    axs[4].set_yticks([0.0, 0.5, 1.0])
+    axs[4].set_yticklabels(["0.0", "0.5", "1.0"])
     axs[0].spines["top"].set_visible(False)
     axs[0].spines["right"].set_visible(False)
     axs[1].spines["top"].set_visible(False)
@@ -163,16 +176,18 @@ def general_hp_plot_overlay_multiple(meta_n_clusters_list,
     axs[2].spines["right"].set_visible(False)
     axs[3].spines["top"].set_visible(False)
     axs[3].spines["right"].set_visible(False)
+    axs[4].spines["top"].set_visible(False)
+    axs[4].spines["right"].set_visible(False)
 
     axs[0].legend(folder_labels, fontsize=8, loc='best', frameon=False)
 
     # HP overlay as dots
-    axs[4].set_yticks(range(len(hp_plots)))
-    axs[4].set_yticklabels([HP_NAME.get(hp, hp) for hp in hp_plots], fontsize=7)
-    axs[4].set_xlabel('Model rank')
-    axs[4].tick_params(length=0)
-    axs[4].spines["top"].set_visible(False)
-    axs[4].spines["right"].set_visible(False)
+    axs[5].set_yticks(range(len(hp_plots)))
+    axs[5].set_yticklabels([HP_NAME.get(hp, hp) for hp in hp_plots], fontsize=7)
+    axs[5].set_xlabel('Model rank')
+    axs[5].tick_params(length=0)
+    axs[5].spines["top"].set_visible(False)
+    axs[5].spines["right"].set_visible(False)
 
     cmap = plt.get_cmap(cmap_name)
 
@@ -182,14 +197,14 @@ def general_hp_plot_overlay_multiple(meta_n_clusters_list,
         for i_hp in range(len(hp_plots)):
             y = np.full_like(x, i_hp)
             cvals = hp_visualize[i_hp, :].astype(int)
-            axs[4].scatter(
+            axs[5].scatter(
                 x, y + np.random.uniform(-0.15, 0.15, size=len(x)),
                 c=[cmap(c / max(1, len(hp_ranges[hp_plots[i_hp]]) - 1)) for c in cvals],
                 s=12, alpha=alpha, edgecolor='none'
             )
 
-    axs[4].set_ylim(-0.5, len(hp_plots) - 0.5)
-    axs[4].invert_yaxis()
+    axs[5].set_ylim(-0.5, len(hp_plots) - 0.5)
+    axs[5].invert_yaxis()
 
     # === Legends ===
     # (1) Discrete HP legend for L1 rate
@@ -201,7 +216,7 @@ def general_hp_plot_overlay_multiple(meta_n_clusters_list,
                                       markerfacecolor=color, markersize=6,
                                       label=f"{val:.0e}"))
 
-    reg_legend = axs[4].legend(handles=legend_elements, bbox_to_anchor=(1.05, 1),
+    reg_legend = axs[5].legend(handles=legend_elements, bbox_to_anchor=(1.05, 1),
                                loc='upper left', fontsize=6, frameon=False, title="Reg. values")
 
     # Use same color cycle as used in the main plots
@@ -214,7 +229,7 @@ def general_hp_plot_overlay_multiple(meta_n_clusters_list,
     ]
 
     # Add legend in top-right corner, same font as reg. legend, no box
-    net_legend = axs[3].legend(
+    net_legend = axs[4].legend(
         handles=net_legend_handles,
         bbox_to_anchor=(1.05, 1),
         title='Network size',
@@ -224,12 +239,12 @@ def general_hp_plot_overlay_multiple(meta_n_clusters_list,
     )
 
     # Keep reg. legend visible
-    axs[4].add_artist(reg_legend)
+    axs[5].add_artist(reg_legend)
 
     # Show total number of models on x-axis
-    axs[4].set_xlim(0, total_models)
-    axs[4].set_xticks([0, total_models])
-    axs[4].set_xticklabels(['0', f'{total_models}'])
+    axs[5].set_xlim(0, total_models)
+    axs[5].set_xticks([0, total_models])
+    axs[5].set_xticklabels(['0', f'{total_models}'])
 
     # === Save ===
     save_path = os.path.join(directory, 'visuals_overlay',
@@ -237,6 +252,7 @@ def general_hp_plot_overlay_multiple(meta_n_clusters_list,
     os.makedirs(os.path.dirname(save_path), exist_ok=True)
     plt.savefig(save_path, bbox_inches='tight', dpi=300)
     plt.show()
+    # plt.close()
 
 def general_hp_plot_overlay_multiple_robustnessTests(meta_n_clusters_list,
                                      meta_silhouette_score_list,
@@ -271,8 +287,7 @@ def general_hp_plot_overlay_multiple_robustnessTests(meta_n_clusters_list,
     colors = [cmap_colors(0.4 + 0.6 * i / max(1, n_searches - 1)) for i in range(n_searches)]
 
     # prepare figure
-    fig, axs = plt.subplots(5, 1, figsize=(7, 6.5), sharex=True,
-                            gridspec_kw={'height_ratios': [1, 1, 1, 1, 1.2]})
+    fig, axs = plt.subplots(6, 1, figsize=(7, 6.5), sharex=True, gridspec_kw={'height_ratios': [1, 1, 1, 1, 1.5]})
     plt.subplots_adjust(hspace=0.5)
 
     hp_visualize_list = []
@@ -284,7 +299,9 @@ def general_hp_plot_overlay_multiple_robustnessTests(meta_n_clusters_list,
         hp_list = list(meta_hp_list[s])
         avg_perf_train_list = list(meta_perf_train_list[s])
         avg_perf_test_list = list(meta_perf_test_list[s])
+        clustering_list = list(meta_clustering_list[s]) if meta_clustering_list[s] is not None else [0] * len(n_clusters)
         modularity_list = list(meta_modularity_list[s]) if meta_modularity_list[s] is not None else [0] * len(n_clusters)
+        participation_list = list(meta_participation_coefficient_list[s]) if meta_participation_coefficient_list[s] is not None else [0] * len(n_clusters)
 
         # get negative modularity scores to 0 as they occur in ~0 cases
         modularity_list = [max(0, m) for m in modularity_list]
@@ -294,20 +311,22 @@ def general_hp_plot_overlay_multiple_robustnessTests(meta_n_clusters_list,
             ind_sort = np.argsort(avg_perf_test_list)[::-1]
         elif sort_variable == 'performance' and mode == 'train':
             ind_sort = np.argsort(avg_perf_train_list)[::-1]
-        elif sort_variable == 'clustering':
-            ind_sort = np.argsort(n_clusters)[::-1]
-        elif sort_variable == 'silhouette':
-            ind_sort = np.argsort(silhouette_score)[::-1]
-        elif sort_variable == 'modularity':
-            ind_sort = np.argsort(modularity_list)[::-1]
-        else:
-            ind_sort = np.arange(len(n_clusters))
+        # elif sort_variable == 'clustering':
+        #     ind_sort = np.argsort(n_clusters)[::-1]
+        # elif sort_variable == 'silhouette':
+        #     ind_sort = np.argsort(silhouette_score)[::-1]
+        # elif sort_variable == 'modularity':
+        #     ind_sort = np.argsort(modularity_list)[::-1]
+        # else:
+        #     ind_sort = np.arange(len(n_clusters))
 
         n_clusters_sorted = np.array(n_clusters)[ind_sort]
         silhouette_sorted = np.array(silhouette_score)[ind_sort]
         perf_train_sorted = np.array(avg_perf_train_list)[ind_sort]
         perf_test_sorted = np.array(avg_perf_test_list)[ind_sort]
+        clustering_sorted = np.array(clustering_list)[ind_sort]
         modularity_sorted = np.array(modularity_list)[ind_sort]
+        participation_sorted = np.array(participation_list)[ind_sort]
         hp_list_sorted = [hp_list[i] for i in ind_sort]
         x = np.arange(len(n_clusters_sorted))
 
@@ -345,21 +364,27 @@ def general_hp_plot_overlay_multiple_robustnessTests(meta_n_clusters_list,
 
     # Format upper plots
     if meta_hp_list and meta_hp_list[0] and meta_hp_list[0][0].get('rnn_type') != 'MultiLayer':
-        axs[0].set_ylabel(f'Mod. score ({mode})', fontsize=8)
+        axs[0].set_ylabel(f'Clustering', fontsize=8)
+        axs[1].set_ylabel(f'Modularity', fontsize=8)
+        axs[2].set_ylabel(f'Participation', fontsize=8)
     else:
-        axs[0].set_ylabel(f'Silhouette score ({mode})', fontsize=8)
-    axs[1].set_ylabel(f'Num. clusters ({mode})', fontsize=8)
-    axs[2].set_ylabel('Avg. perf. train', fontsize=8)
-    axs[3].set_ylabel('Avg. perf. test', fontsize=8)
+        axs[0].set_ylabel(f'Silhouette score', fontsize=8)
 
+    axs[3].set_ylabel('Avg. perf. train', fontsize=8)
+    axs[4].set_ylabel('Avg. perf. test', fontsize=8)
+
+    # axs[1].set_yticks([0, 15, 30])
+    # axs[1].set_yticklabels(["0", "15", "30"])
     axs[0].set_yticks([0.0, 0.5, 1.0])
     axs[0].set_yticklabels(["0.0", "0.5", "1.0"])
-    axs[1].set_yticks([0, 15, 30])
-    axs[1].set_yticklabels(["0", "15", "30"])
+    axs[1].set_yticks([0.0, 0.5, 1.0])
+    axs[1].set_yticklabels(["0.0", "0.5", "1.0"])
     axs[2].set_yticks([0.0, 0.5, 1.0])
     axs[2].set_yticklabels(["0.0", "0.5", "1.0"])
     axs[3].set_yticks([0.0, 0.5, 1.0])
     axs[3].set_yticklabels(["0.0", "0.5", "1.0"])
+    axs[4].set_yticks([0.0, 0.5, 1.0])
+    axs[4].set_yticklabels(["0.0", "0.5", "1.0"])
     axs[0].spines["top"].set_visible(False)
     axs[0].spines["right"].set_visible(False)
     axs[1].spines["top"].set_visible(False)
@@ -368,16 +393,18 @@ def general_hp_plot_overlay_multiple_robustnessTests(meta_n_clusters_list,
     axs[2].spines["right"].set_visible(False)
     axs[3].spines["top"].set_visible(False)
     axs[3].spines["right"].set_visible(False)
+    axs[4].spines["top"].set_visible(False)
+    axs[4].spines["right"].set_visible(False)
 
     axs[0].legend(folder_labels, fontsize=8, loc='best', frameon=False)
 
     # HP overlay as dots
-    axs[4].set_yticks(range(len(hp_plots)))
-    axs[4].set_yticklabels([HP_NAME.get(hp, hp) for hp in hp_plots], fontsize=7)
-    axs[4].set_xlabel('Model rank')
-    axs[4].tick_params(length=0)
-    axs[4].spines["top"].set_visible(False)
-    axs[4].spines["right"].set_visible(False)
+    axs[5].set_yticks(range(len(hp_plots)))
+    axs[5].set_yticklabels([HP_NAME.get(hp, hp) for hp in hp_plots], fontsize=7)
+    axs[5].set_xlabel('Model rank')
+    axs[5].tick_params(length=0)
+    axs[5].spines["top"].set_visible(False)
+    axs[5].spines["right"].set_visible(False)
 
     cmap = plt.get_cmap(cmap_name)
 
@@ -387,14 +414,14 @@ def general_hp_plot_overlay_multiple_robustnessTests(meta_n_clusters_list,
         for i_hp in range(len(hp_plots)):
             y = np.full_like(x, i_hp)
             cvals = hp_visualize[i_hp, :].astype(int)
-            axs[4].scatter(
+            axs[5].scatter(
                 x, y + np.random.uniform(-0.15, 0.15, size=len(x)),
                 c=[cmap(c / max(1, len(hp_ranges[hp_plots[i_hp]]) - 1)) for c in cvals],
                 s=12, alpha=alpha, edgecolor='none'
             )
 
-    axs[4].set_ylim(-0.5, len(hp_plots) - 0.5)
-    axs[4].invert_yaxis()
+    axs[5].set_ylim(-0.5, len(hp_plots) - 0.5)
+    axs[5].invert_yaxis()
 
     # === Legends ===
     # (1) Discrete HP legend for L1 rate
@@ -406,7 +433,7 @@ def general_hp_plot_overlay_multiple_robustnessTests(meta_n_clusters_list,
                                       markerfacecolor=color, markersize=6,
                                       label=f"{val:.0e}"))
 
-    reg_legend = axs[4].legend(handles=legend_elements, bbox_to_anchor=(1.05, 1),
+    reg_legend = axs[5].legend(handles=legend_elements, bbox_to_anchor=(1.05, 1),
                                loc='upper left', fontsize=6, frameon=False, title="Reg. values")
 
     # Use same color cycle as used in the main plots
@@ -419,7 +446,7 @@ def general_hp_plot_overlay_multiple_robustnessTests(meta_n_clusters_list,
     ]
 
     # Add legend in top-right corner, same font as reg. legend, no box
-    net_legend = axs[3].legend(
+    net_legend = axs[4].legend(
         handles=net_legend_handles,
         bbox_to_anchor=(1.05, 1),
         title='Network size',
@@ -429,12 +456,12 @@ def general_hp_plot_overlay_multiple_robustnessTests(meta_n_clusters_list,
     )
 
     # Keep reg. legend visible
-    axs[4].add_artist(reg_legend)
+    axs[5].add_artist(reg_legend)
 
     # Show total number of models on x-axis
-    axs[4].set_xlim(0, total_models)
-    axs[4].set_xticks([0, total_models])
-    axs[4].set_xticklabels(['0', f'{total_models}'])
+    axs[5].set_xlim(0, total_models)
+    axs[5].set_xticks([0, total_models])
+    axs[5].set_xticklabels(['0', f'{total_models}'])
 
     # === Save ===
     save_path = os.path.join(directory, 'visuals_overlay_robustness',
@@ -461,11 +488,12 @@ HP_NAME = {'activation': 'Activation fun.',
 
 if __name__ == '__main__':
 
-    foldersToOverlay = ['_robustnessTest_fundamentals_beRNN_01_data_highDim_correctOnly_156_bM_hp_2',
-                        '_robustnessTest_fundamentals_beRNN_02_data_highDim_correctOnly_156_bM_hp_2',
-                        '_robustnessTest_fundamentals_beRNN_03_data_highDim_correctOnly_156_bM_hp_2',
-                        '_robustnessTest_fundamentals_beRNN_04_data_highDim_correctOnly_156_bM_hp_2',
-                        '_robustnessTest_fundamentals_beRNN_05_data_highDim_correctOnly_156_bM_hp_2']
+    foldersToOverlay = ['_gridSearch_multiTask_beRNN_03_highDimCorrects_16',
+                        '_gridSearch_multiTask_beRNN_03_highDimCorrects_32',
+                        '_gridSearch_multiTask_beRNN_03_highDimCorrects_64',
+                        '_gridSearch_multiTask_beRNN_03_highDimCorrects_128',
+                        '_gridSearch_multiTask_beRNN_03_highDimCorrects_256',
+                        '_gridSearch_multiTask_beRNN_03_highDim_correctOnly_512']
 
     mode = ['train', 'test'][1]
     sort_variable = ['clustering', 'performance', 'silhouette'][1]
@@ -478,11 +506,13 @@ if __name__ == '__main__':
     os.makedirs(directory_metaOverlayVisual, exist_ok=True)
 
     meta_silhouette_score_list = list()
-    meta_modularity_list = list()
     meta_n_clusters_list = list()
     meta_perf_train_list = list()
     meta_perf_test_list = list()
     meta_hp_list = list()
+    meta_clustering_list = list()
+    meta_modularity_list = list()
+    meta_participation_coefficient_list = list()
 
     for folder in foldersToOverlay:
         final_model_dirs = []
@@ -532,46 +562,78 @@ if __name__ == '__main__':
 
         # First compute n_clusters for each model then collect them in lists
         successful_model_dirs = compute_n_cluster(final_model_dirs, mode)
-        n_clusters, hp_list, silhouette_score, avg_perf_train_list, avg_perf_test_list, modularity_list_sparse = get_n_clusters(successful_model_dirs, density)
+        n_clusters, hp_list, silhouette_score, avg_perf_train_list, avg_perf_test_list, avg_clustering_list, modularity_list_sparse, participation_coefficient_list = get_n_clusters(successful_model_dirs, density)
         # Store lists in meta lists for consecutive final visualization
         meta_silhouette_score_list.append(silhouette_score)
-        meta_modularity_list.append(modularity_list_sparse)
         meta_n_clusters_list.append(n_clusters)
         meta_perf_train_list.append(avg_perf_train_list)
         meta_perf_test_list.append(avg_perf_test_list)
         meta_hp_list.append(hp_list)
+        meta_clustering_list.append(avg_clustering_list)
+        meta_modularity_list.append(modularity_list_sparse)
+        meta_participation_coefficient_list.append(participation_coefficient_list)
 
-    # # Visualize big overlay
-    # network_sizes = ['16', '32', '64', '128', '256', '512'] # to overlay
-    # general_hp_plot_overlay_multiple(meta_n_clusters_list,
-    #                                  meta_silhouette_score_list,
-    #                                  meta_hp_list,
-    #                                  meta_perf_train_list,
-    #                                  meta_perf_test_list,
-    #                                  meta_modularity_list,
-    #                                  foldersToOverlay,
-    #                                  directory_metaOverlayVisual,
-    #                                  density,
-    #                                  network_sizes,
-    #                                  sort_variable='performance',
-    #                                  mode='test',
-    #                                  alpha=0.6,
-    #                                  cmap_name='viridis')
-
-    participants = participantList # to overlay
-    general_hp_plot_overlay_multiple_robustnessTests(meta_n_clusters_list,
+    # Visualize big overlay
+    network_sizes = ['16', '32', '64', '128', '256', '512'] # to overlay
+    general_hp_plot_overlay_multiple(meta_n_clusters_list,
                                      meta_silhouette_score_list,
                                      meta_hp_list,
                                      meta_perf_train_list,
                                      meta_perf_test_list,
+                                     meta_clustering_list,
                                      meta_modularity_list,
+                                     meta_participation_coefficient_list,
                                      foldersToOverlay,
                                      directory_metaOverlayVisual,
                                      density,
-                                     participants,
+                                     network_sizes,
                                      sort_variable='performance',
                                      mode='test',
                                      alpha=0.6,
                                      cmap_name='viridis')
 
+    # participants = participantList # to overlay
+    # general_hp_plot_overlay_multiple_robustnessTests(meta_n_clusters_list,
+    #                                  meta_silhouette_score_list,
+    #                                  meta_hp_list,
+    #                                  meta_perf_train_list,
+    #                                  meta_perf_test_list,
+    #                                  meta_clustering_list,
+    #                                  meta_modularity_list,
+    #                                  meta_participation_coefficient_list,
+    #                                  foldersToOverlay,
+    #                                  directory_metaOverlayVisual,
+    #                                  density,
+    #                                  participants,
+    #                                  sort_variable='performance',
+    #                                  mode='test',
+    #                                  alpha=0.6,
+    #                                  cmap_name='viridis')
 
+
+
+
+# import numpy as np
+# import matplotlib.pyplot as plt
+# from scipy.stats import pearsonr
+#
+# # Convert to numpy arrays
+# x = np.array(meta_modularity_list)
+# y = np.array(meta_n_clusters_list)
+#
+# # Compute Pearson correlation
+# r, p = pearsonr(x, y)
+#
+# # Plot
+# plt.figure(figsize=(6, 6))
+# plt.scatter(x, y)
+# plt.xlabel("List X")
+# plt.ylabel("List Y")
+# plt.title(f"Correlation plot (r = {r:.2f}, p = {p:.3g})")
+#
+# # Optional: regression line
+# m, b = np.polyfit(x, y, 1)
+# plt.plot(x, m * x + b)
+#
+# plt.tight_layout()
+# plt.show()

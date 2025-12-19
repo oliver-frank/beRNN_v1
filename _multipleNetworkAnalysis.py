@@ -22,7 +22,7 @@ import itertools
 
 from _training import apply_density_threshold # apply_threshold
 from _analysis import clustering
-from tools import load_hp, load_pickle
+from tools import load_hp, load_pickle, participation_coefficient
 
 '''
 Complete brain/beRNN comparison by correlation and/or rsa. 
@@ -54,7 +54,7 @@ setup = {
     'tasks': ['reward', 'flanker', 'faces', 'nback'],
     'preprocess_fMRI2rdm': False,
     "visualize_fMRI": False,
-    "visualize_dti": False,
+    "visualize_dti": True,
     "correlationOf_correlationMatices_fMRI": False,
     "correlationOf_correlationMatices_beRNN": False,
     "session": '03'
@@ -169,8 +169,9 @@ if setup['comparison'] == 'correlation':
         transitivity_list = []
         density_list = []
         avg_eigenvector_list = []
-        mod_value_sparse_list = []
         avg_clustering_list = []
+        mod_value_sparse_list = []
+        participation_coefficient_list = []
         avg_degree_list = []
         avg_betweenness_list = []
         avg_closeness_list = []
@@ -203,9 +204,18 @@ if setup['comparison'] == 'correlation':
             avg_eigenvector = np.mean(list(eigenvector.values()))
             avg_eigenvector_list.append(avg_eigenvector)
 
+            # clustering
+            clustering = nx.clustering(G_brain)
+            avg_clustering = np.mean(list(clustering.values()))
+            avg_clustering_list.append(avg_clustering)
+            # modularity
             communities_sparse = greedy_modularity_communities(G_brain)
             mod_value_sparse = modularity(G_brain, communities_sparse)
             mod_value_sparse_list.append(mod_value_sparse)
+            # participation
+            pc_dict = participation_coefficient(G_brain, communities_sparse)
+            avg_pc = np.mean(list(pc_dict.values()))
+            participation_coefficient_list.append(avg_pc)
 
             clustering = nx.clustering(G_brain)
             avg_clustering = np.mean(list(clustering.values()))
@@ -227,8 +237,9 @@ if setup['comparison'] == 'correlation':
         topologicalMarker_dict_brain[beRNN_brain_dict[brain]]['transitivity'] = transitivity_list
         topologicalMarker_dict_brain[beRNN_brain_dict[brain]]['density'] = density_list
         topologicalMarker_dict_brain[beRNN_brain_dict[brain]]['avg_eigenvector'] = avg_eigenvector_list
-        topologicalMarker_dict_brain[beRNN_brain_dict[brain]]['mod_value_sparse'] = mod_value_sparse_list
         topologicalMarker_dict_brain[beRNN_brain_dict[brain]]['avg_clustering'] = avg_clustering_list
+        topologicalMarker_dict_brain[beRNN_brain_dict[brain]]['mod_value_sparse'] = mod_value_sparse_list
+        topologicalMarker_dict_brain[beRNN_brain_dict[brain]]['participation_coefficient'] = participation_coefficient_list
         topologicalMarker_dict_brain[beRNN_brain_dict[brain]]['avg_degree'] = avg_degree_list
         topologicalMarker_dict_brain[beRNN_brain_dict[brain]]['avg_betweenness'] = avg_betweenness_list
         topologicalMarker_dict_brain[beRNN_brain_dict[brain]]['avg_closeness'] = avg_closeness_list
@@ -255,9 +266,10 @@ if setup['comparison'] == 'correlation':
         global_eff_list = []
         transitivity_list = []
         density_list = []
-        mod_value_sparse_list = []
         avg_eigenvector_list = []
         avg_clustering_list = []
+        mod_value_sparse_list = []
+        participation_coefficient_list = []
         avg_degree_list = []
         avg_betweenness_list = []
         avg_closeness_list = []
@@ -323,13 +335,18 @@ if setup['comparison'] == 'correlation':
             avg_eigenvector = np.mean(list(eigenvector.values()))
             avg_eigenvector_list.append(avg_eigenvector)
 
-            communities_sparse = greedy_modularity_communities(G_beRNN)
-            mod_value_sparse = modularity(G_beRNN, communities_sparse)
-            mod_value_sparse_list.append(mod_value_sparse)
-
+            # clustering
             clustering = nx.clustering(G_beRNN)
             avg_clustering = np.mean(list(clustering.values()))
             avg_clustering_list.append(avg_clustering)
+            # modularity
+            communities_sparse = greedy_modularity_communities(G_beRNN)
+            mod_value_sparse = modularity(G_beRNN, communities_sparse)
+            mod_value_sparse_list.append(mod_value_sparse)
+            # participation
+            pc_dict = participation_coefficient(G_beRNN, communities_sparse)
+            avg_pc = np.mean(list(pc_dict.values()))
+            participation_coefficient_list.append(avg_pc)
 
             degrees = nx.degree(G_beRNN)  # The degree of a node in a graph is the count of edges connected to that node.
             avg_degree = np.mean(list(dict(G_beRNN.degree()).values()))
@@ -343,15 +360,16 @@ if setup['comparison'] == 'correlation':
             avg_closeness = np.mean(list(closeness.values()))
             avg_closeness_list.append(avg_closeness)
 
-        topologicalMarker_dict_beRNN[participant]['global_eff'] = global_eff_list
-        topologicalMarker_dict_beRNN[participant]['transitivity'] = transitivity_list
-        topologicalMarker_dict_beRNN[participant]['density'] = density_list
-        topologicalMarker_dict_beRNN[participant]['avg_eigenvector'] = avg_eigenvector_list
-        topologicalMarker_dict_beRNN[participant]['mod_value_sparse'] = mod_value_sparse_list
-        topologicalMarker_dict_beRNN[participant]['avg_clustering'] = avg_clustering_list
-        topologicalMarker_dict_beRNN[participant]['avg_degree'] = avg_degree_list
-        topologicalMarker_dict_beRNN[participant]['avg_betweenness'] = avg_betweenness_list
-        topologicalMarker_dict_beRNN[participant]['avg_closeness'] = avg_closeness_list
+        topologicalMarker_dict_brain[beRNN_brain_dict[brain]]['global_eff'] = global_eff_list
+        topologicalMarker_dict_brain[beRNN_brain_dict[brain]]['transitivity'] = transitivity_list
+        topologicalMarker_dict_brain[beRNN_brain_dict[brain]]['density'] = density_list
+        topologicalMarker_dict_brain[beRNN_brain_dict[brain]]['avg_eigenvector'] = avg_eigenvector_list
+        topologicalMarker_dict_brain[beRNN_brain_dict[brain]]['avg_clustering'] = avg_clustering_list
+        topologicalMarker_dict_brain[beRNN_brain_dict[brain]]['mod_value_sparse'] = mod_value_sparse_list
+        topologicalMarker_dict_brain[beRNN_brain_dict[brain]]['participation_coefficient'] = participation_coefficient_list
+        topologicalMarker_dict_brain[beRNN_brain_dict[brain]]['avg_degree'] = avg_degree_list
+        topologicalMarker_dict_brain[beRNN_brain_dict[brain]]['avg_betweenness'] = avg_betweenness_list
+        topologicalMarker_dict_brain[beRNN_brain_dict[brain]]['avg_closeness'] = avg_closeness_list
 
     beRNN_fileDirectory = os.path.join(setup['folder_topologicalMarker_pValue_lists'])
     os.makedirs(beRNN_fileDirectory, exist_ok=True)
@@ -375,7 +393,7 @@ if setup['comparison'] == 'correlation':
     from scipy.stats import ttest_ind, ks_2samp
     # density and avg_degree not interesting as they are the same for each mmodel
     # transitivity and global_eff are redundant (avg_clustering and avg_closeness)
-    topologicalMarker_list = ['mod_value_sparse', 'avg_clustering', 'avg_eigenvector', 'avg_betweenness', 'avg_closeness']
+    topologicalMarker_list = ['avg_clustering', 'mod_value_sparse', 'participation_coefficient']
 
     if setup['modalityWithin_comparison'] == 'brain':
         topologicalMarker_dict_beRNN = topologicalMarker_dict_brain
@@ -681,6 +699,7 @@ elif setup['comparison'] == 'rsa':
     plt.savefig(os.path.join(setup['rsa_directory'], rf'RDAmatrix-{os.path.basename(setup["folder_beRNN"])}-{setup["modalityWithin_comparison"]}.png'), bbox_inches='tight', dpi=300)
 
     plt.show()
+
 
 ########################################################################################################################
 # head - Visualize networks seperated ##################################################################################
