@@ -120,7 +120,7 @@ def preprocess_DM(opened_xlsxFile, questionnare_files, list_allSessions, sequenc
          'Spreadsheet: Field 31', 'Spreadsheet: Field 32', 'DM', 'DM Anti', 'EF', 'EF Anti', 'RP', 'RP Anti',
          'RP Ctx1', 'RP Ctx2', 'WM', 'WM Anti', 'WM Ctx1', 'WM Ctx1', 'UTC Date and Time']]
 
-    # Count sequences, save particpant response and ground truth for later error analysis
+    # Count sequences, save particpant response and ground truth for later error _analysis
     incrementList = []
     responseParticipantEntries = []
     responseGroundTruthEntries = []
@@ -173,7 +173,7 @@ def preprocess_DM(opened_xlsxFile, questionnare_files, list_allSessions, sequenc
         for j in incrementList[batchOn:batchOff]:
             currentTrial = opened_xlsxFile_selection[j:j + 2].reset_index().drop(columns=['index'])
             # ----------------------------------------------------------------------------------------------------------
-            # Get the rest of the trial information for later error analysis
+            # Get the rest of the trial information for later error _analysis
             png_strings = np.array([s for s in currentTrial.loc[0] if isinstance(s, str) and s.endswith('.png')])
             unique_values, occurrence_counts = np.unique(png_strings, return_counts=True)
             unique_values, occurrence_counts = unique_values[1:], occurrence_counts[1:] # exclude 000_000.png
@@ -501,7 +501,7 @@ def preprocess_EF(opened_xlsxFile, questionnare_files, list_allSessions, sequenc
                        'Spreadsheet: Field 31', 'Spreadsheet: Field 32', 'DM', 'DM Anti', 'EF', 'EF Anti', 'RP', 'RP Anti',
                        'RP Ctx1', 'RP Ctx2', 'WM', 'WM Anti', 'WM Ctx1', 'WM Ctx1', 'UTC Date and Time']]
 
-    # Count sequences, save particpant response and ground truth for later error analysis
+    # Count sequences, save particpant response and ground truth for later error _analysis
     incrementList = []
     responseParticipantEntries = []
     responseGroundTruthEntries = []
@@ -554,7 +554,7 @@ def preprocess_EF(opened_xlsxFile, questionnare_files, list_allSessions, sequenc
         for j in incrementList[batchOn:batchOff]:
             currentTrial = opened_xlsxFile_selection[j:j + 2].reset_index().drop(columns=['index'])
             # ----------------------------------------------------------------------------------------------------------
-            # Get the rest of the trial information for later error analysis
+            # Get the rest of the trial information for later error _analysis
             png_strings = np.array([s for s in currentTrial.loc[0] if isinstance(s, str) and s.endswith('.png')])
             unique_values, occurrence_counts = np.unique(png_strings, return_counts=True)
             unique_values, occurrence_counts = unique_values[1:], occurrence_counts[1:]  # exclude 000_000.png
@@ -878,7 +878,7 @@ def preprocess_RP(opened_xlsxFile, questionnare_files, list_allSessions, sequenc
                            'Spreadsheet: Field 29', 'Spreadsheet: Field 30', 'Spreadsheet: Field 31', 'Spreadsheet: Field 32', 'DM',\
                            'DM Anti', 'EF', 'EF Anti', 'RP', 'RP Anti', 'RP Ctx1', 'RP Ctx2', 'WM', 'WM Anti', 'WM Ctx1', 'WM Ctx1', 'Spreadsheet: display', 'UTC Date and Time', 'Response']]
 
-    # Count sequences, save particpant response and ground truth for later error analysis
+    # Count sequences, save particpant response and ground truth for later error _analysis
     incrementList = []
     responseParticipantEntries = []
     responseGroundTruthEntries = []
@@ -931,7 +931,7 @@ def preprocess_RP(opened_xlsxFile, questionnare_files, list_allSessions, sequenc
         for j in incrementList[batchOn:batchOff]:
             currentTrial = opened_xlsxFile_selection[j:j + 2].reset_index().drop(columns=['index'])
             # ----------------------------------------------------------------------------------------------------------
-            # # Get the rest of the trial information for later error analysis
+            # # Get the rest of the trial information for later error _analysis
             # png_strings = np.array([s for s in currentTrial.loc[0][9:73] if isinstance(s, str) and s.endswith('.png')])
             # unique_values, occurrence_counts = np.unique(png_strings, return_counts=True)
             # unique_values, occurrence_counts = unique_values[1:], occurrence_counts[1:]  # exclude 000_000.png
@@ -1423,7 +1423,7 @@ def preprocess_WM(opened_xlsxFile, questionnare_files, list_allSessions, sequenc
                        'Spreadsheet: Field 29', 'Spreadsheet: Field 30', 'Spreadsheet: Field 31', 'Spreadsheet: Field 32', 'DM',\
                        'DM Anti', 'EF', 'EF Anti', 'RP', 'RP Anti', 'RP Ctx1', 'RP Ctx2', 'WM', 'WM Anti', 'WM Ctx1', 'WM Ctx1', 'Spreadsheet: display', 'UTC Date and Time', 'Response']]
 
-    # Count sequences, save particpant response and ground truth for later error analysis
+    # Count sequences, save particpant response and ground truth for later error _analysis
     incrementList = []
     responseParticipantEntries = []
     responseGroundTruthEntries = []
@@ -1475,7 +1475,7 @@ def preprocess_WM(opened_xlsxFile, questionnare_files, list_allSessions, sequenc
         for j in incrementList[batchOn:batchOff]:
             currentTrial = opened_xlsxFile_selection[j:j + 2].reset_index().drop(columns=['index'])
             # ----------------------------------------------------------------------------------------------------------
-            # Get the rest of the trial information for later error analysis
+            # Get the rest of the trial information for later error _analysis
             png_strings = np.array([s for s in currentTrial.loc[0][10:74] if isinstance(s, str) and s.endswith('.png')])
             unique_values, occurrence_counts = np.unique(png_strings, return_counts=True)
             unique_values, occurrence_counts = unique_values[1:], occurrence_counts[1:]  # exclude 000_000.png

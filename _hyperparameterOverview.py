@@ -491,7 +491,7 @@ def general_hp_plot(n_clusters, silhouette_score, hp_list, avg_perf_train_list, 
     if batchPlot == True:
         save_path = os.path.join(directory, 'visuals', f'{sort_variable}_{mode}', 'batchPlots', model_dir_batches[0], f"{model_dir_batches[0]}_{sort_variable}_{mode}_hp_plot.png")
     else:
-        save_path = os.path.join(directory, 'visuals', f'{sort_variable}_{mode}', f"_general_{sort_variable}_{mode}_hp_plot.png")
+        save_path = os.path.join(directory, 'visuals', f'{sort_variable}_{mode}', f"general_{sort_variable}_{mode}_hp_plot.png")
 
     os.makedirs(os.path.dirname(save_path), exist_ok=True)
     plt.savefig(save_path, bbox_inches='tight', dpi=300)

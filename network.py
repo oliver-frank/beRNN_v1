@@ -1039,10 +1039,16 @@ class Model(object):
                 # Combine
                 self.cost_lsq = tf.reduce_mean(fixation_loss + angular_loss_masked)
         else:
+            # sum to 1 is an important preprocessing step for probability optimization
             y_hat = tf.nn.softmax(y_hat_)
+            # info: short cut for y_shaped one hot encoding
+            # Find the index of the maximum value for each row
+            indices = tf.argmax(y_shaped, axis=1)
+            # Create an identity matrix and index into it to create the one-hot array
+            y_shaped_one_hot = tf.one_hot(indices, depth=n_output)
+
             # Cross-entropy loss
-            self.cost_lsq = tf.reduce_mean(
-                self.c_mask * tf.nn.softmax_cross_entropy_with_logits(labels=y_shaped, logits=y_hat_))
+            self.cost_lsq = tf.reduce_mean(self.c_mask * tf.nn.softmax_cross_entropy_with_logits(labels=y_shaped_one_hot, logits=y_hat_))
 
         self.y_hat = tf.reshape(y_hat, (-1, tf.shape(self.h)[1], n_output))
         y_hat_fix, y_hat_ring = tf.split(self.y_hat, [1, n_output - 1], axis=-1)

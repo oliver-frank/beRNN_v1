@@ -43,15 +43,58 @@ def create_repeated_param_combinations(param_grid, sample_size):
 
     return repeated_combinations
 
+def extract_hpSets_4robustnessTest(model_directory):
+    # --- Settings ---
+    output_base_dir = r'C:\Users\oliver.frank\Desktop\PyProjects\beRNN_v1'
+    output_folder_name = 'hpSets' # legacy: 'test'
+    numberOfModelsToTest = 10
 
-# attention: hitkip cluster ##########################################################################################
-parser = argparse.ArgumentParser()
-parser.add_argument("--adjParams", type=str, required=True)
-args = parser.parse_args()
+    # Create output folder if it doesn't exist
+    output_folder = os.path.join(output_base_dir, output_folder_name)
+    os.makedirs(output_folder, exist_ok=True)
 
-# Convert the JSON string to a Python dictionary
-sampled_combinations = json.loads(args.adjParams)
-# attention: hitkip cluster ##########################################################################################
+    # Read first 10 directories from the text file
+    txt_path = os.path.join(model_directory, 'bestModels_performance_test.txt')
+    with open(txt_path, 'r', encoding='utf-8') as f:
+        listOfModelsToTest_ = []
+        for line in f:
+            clean_line = line.strip()          # remove whitespace and newlines
+            clean_line = clean_line.strip(',') # remove trailing commas
+            clean_line = clean_line.strip('"') # remove double quotes at both ends
+            clean_line = clean_line.strip("'") # remove single quotes if any
+            listOfModelsToTest_.append(clean_line)
+
+    listOfModelsToTest = listOfModelsToTest_[1:numberOfModelsToTest+1]
+
+    # Loop over directories
+    for idx, model_dir in enumerate(listOfModelsToTest, start=1):
+        hp_file = os.path.join(model_dir, "hp.json")
+
+        if os.path.exists(hp_file):
+            # Load JSON
+            with open(hp_file, 'r') as f:
+                hp_data = json.load(f)
+
+            # Prepare new filename with index
+            new_hp_filename = f'hp_{idx}.json'
+            new_hp_path = os.path.join(output_folder, new_hp_filename)
+
+            # Save JSON to new location
+            with open(new_hp_path, 'w') as f:
+                json.dump(hp_data, f, indent=4)
+
+            print(f"Saved: {new_hp_filename}")
+        else:
+            print(f"WARNING: hp.json not found in {model_dir}")
+
+# # attention: hitkip cluster ##########################################################################################
+# parser = argparse.ArgumentParser()
+# parser.add_argument("--adjParams", type=str, required=True)
+# args = parser.parse_args()
+#
+# # Convert the JSON string to a Python dictionary
+# sampled_combinations = json.loads(args.adjParams)
+# # attention: hitkip cluster ##########################################################################################
 
 
 # # attention: hitkip local ############################################################################################
@@ -61,74 +104,74 @@ sampled_combinations = json.loads(args.adjParams)
 # # attention: hitkip local ############################################################################################
 
 
-# # # attention: all other setups ########################################################################################
-# # Get input and output dimension for network, depending on higDim and lowDim data and ruleset (standard: 'all')
-# num_ring = tools.get_num_ring('all')
-# n_rule = tools.get_num_rule('all')
-# # Choose right dataset
-# # data = None # 'data_highDim' , data_highDim_correctOnly , data_highDim_lowCognition , data_lowDim , data_lowDim_correctOnly , data_lowDim_lowCognition
-#
-# # if 'highDim' in data[0]:
-# n_eachring = 32
-# n_outputring = n_eachring
-# n_input, n_output = 1 + num_ring * n_eachring + n_rule, n_outputring + 1
-# # else:
-# #     n_eachring = 10
-# #     n_outputring = 2
-# #     n_input, n_output = 1 + num_ring * n_eachring + n_rule, n_outputring + 1
-#
-# adjParams = {
-#     'batch_size': [80],
-#     'in_type': ['normal'],
-#     'rnn_type': ['LeakyRNN'], # 'LeakyGRU'
-#     'n_input': [n_input], # number of input units
-#     'n_output': [n_output], # number of output units
-#     'use_separate_input': [False],
-#     'loss_type': ['lsq'],
-#     'optimizer': ['adam'], # 'sgd'
-#     'activation': ['relu', 'softplus', 'tanh'], # 'elu', 'tanh', 'softplus'
-#     'tau': [100], # Decides how fast previous information decays to calculate current state activity
-#     'dt': [20],
-#     # 'alpha': 0.2,
-#     'sigma_rec': [0, 0.01],
-#     'sigma_x': [0, 0.01],
-#     'w_rec_init': ['randortho', 'randgauss', 'diag'], # , 'brainStructure'
-#     # 'w_rec_init': ['randortho', 'randgauss', 'diag', 'brainStructure'],
-#     'l1_h': [0, 0.00001, 0.0001, 0.001],
-#     'l2_h': [0, 0.00001, 0.0001, 0.001],
-#     'l1_weight': [0, 0.00001, 0.0001, 0.001],
-#     'l2_weight': [0, 0.00001, 0.0001, 0.001],
-#     'l2_weight_init': [0],
-#     'p_weight_train': [None],
-#     'w_mask_value': [0.1], # default .1 - value that will be multiplied with L2 regularization (combined with p_weight_train), <1 will decrease it
-#     'learning_rate': [0.0015, 0.001, 0.0005, 0.0001],
-#     'learning_rate_mode': [None, None, 'exp_range', 'triangular2'], # Will overwrite learning_rate if it is not None - 'triangular', 'triangular2', 'exp_range'
-#     'base_lr': [0.0005],
-#     'max_lr': [0.0015],
-#     'n_rnn': [512],
-#     'multiLayer': [False],
-#     'n_rnn_per_layer': [[32, 32, 32]],
-#     'activations_per_layer': [['relu', 'relu', 'relu'], ['softplus', 'softplus', 'softplus'], ['tanh', 'tanh', 'tanh']],
-#     'errorBalancingValue': [1.],
-#     'c_mask_responseValue': [5.],
-#     's_mask': [None], # 'brain_256', None
-#     'monthsConsidered': [['month_4', 'month_5', 'month_6']], # list of lists
-#     'monthsString': ['4-6'],
-#     'rule_prob_map': [{"DM": 1,"DM_Anti": 1,"EF": 1,"EF_Anti": 1,"RP": 1,"RP_Anti": 1,"RP_Ctx1": 1,"RP_Ctx2": 1,"WM": 1,"WM_Anti": 1,"WM_Ctx1": 1,"WM_Ctx2": 1}],
-#     # 'rule_prob_map': [{"DM": 0,"DM_Anti": 0,"EF": 1,"EF_Anti": 1,"RP": 0,"RP_Anti": 0,"RP_Ctx1": 0,"RP_Ctx2": 0,"WM": 0,"WM_Anti": 0,"WM_Ctx1": 0,"WM_Ctx2": 0}], # fraction of tasks represented in training data
-#     'participant': ['beRNN_03'], # Participant to take
-#     'data': ['data_highDim'],
-#     'machine': ['local'], # 'local' 'pandora' 'hitkip'
-#     'tasksString': ['AllTask'], # tasksTaken
-#     'sequenceMode': [True], # Decide if models are trained sequentially month-wise
-#     'trainingBatch': ['1'],
-#     'trainingYear_Month': ['test']
-# }
-#
-# # attention: all other setups ##########################################################################################
-#
-# # Randomly sample combinations
-# sampled_combinations = sample_param_combinations(adjParams, 20)
+# # attention: all other setups ########################################################################################
+# Get input and output dimension for network, depending on higDim and lowDim data and ruleset (standard: 'all')
+num_ring = tools.get_num_ring('all')
+n_rule = tools.get_num_rule('all')
+# Choose right dataset
+data = ['data_highDim', 'data_highDim_correctOnly', 'data_highDim_lowCognition', 'data_lowDim', 'data_lowDim_correctOnly', 'data_lowDim_lowCognition']
+
+if 'highDim' in data[0]:
+    n_eachring = 32
+    n_outputring = n_eachring
+    n_input, n_output = 1 + num_ring * n_eachring + n_rule, n_outputring + 1
+else:
+    n_eachring = 10
+    n_outputring = 2
+    n_input, n_output = 1 + num_ring * n_eachring + n_rule, n_outputring + 1
+
+adjParams = {
+    'batch_size': [80],
+    'in_type': ['normal'],
+    'rnn_type': ['LeakyRNN'], # 'LeakyGRU'
+    'n_input': [n_input], # number of input units
+    'n_output': [n_output], # number of output units
+    'use_separate_input': [False],
+    'loss_type': ['lsq'],
+    'optimizer': ['adam'], # 'sgd'
+    'activation': ['relu', 'softplus', 'tanh'], # 'elu', 'tanh', 'softplus'
+    'tau': [100], # Decides how fast previous information decays to calculate current state activity
+    'dt': [20],
+    # 'alpha': 0.2,
+    'sigma_rec': [0, 0.01],
+    'sigma_x': [0, 0.01],
+    'w_rec_init': ['randortho', 'randgauss', 'diag'], # , 'brainStructure'
+    # 'w_rec_init': ['randortho', 'randgauss', 'diag', 'brainStructure'],
+    'l1_h': [0, 0.00001, 0.0001, 0.001],
+    'l2_h': [0, 0.00001, 0.0001, 0.001],
+    'l1_weight': [0, 0.00001, 0.0001, 0.001],
+    'l2_weight': [0, 0.00001, 0.0001, 0.001],
+    'l2_weight_init': [0],
+    'p_weight_train': [None],
+    'w_mask_value': [0.1], # default .1 - value that will be multiplied with L2 regularization (combined with p_weight_train), <1 will decrease it
+    'learning_rate': [0.0015, 0.001, 0.0005, 0.0001],
+    'learning_rate_mode': [None, None, 'exp_range', 'triangular2'], # Will overwrite learning_rate if it is not None - 'triangular', 'triangular2', 'exp_range'
+    'base_lr': [0.0005],
+    'max_lr': [0.0015],
+    'n_rnn': [512],
+    'multiLayer': [False],
+    'n_rnn_per_layer': [[32, 32, 32]],
+    'activations_per_layer': [['relu', 'relu', 'relu'], ['softplus', 'softplus', 'softplus'], ['tanh', 'tanh', 'tanh']],
+    'errorBalancingValue': [1.],
+    'c_mask_responseValue': [5.],
+    's_mask': [None], # 'brain_256', None
+    'monthsConsidered': [['month_4', 'month_5', 'month_6']], # list of lists
+    'monthsString': ['4-6'],
+    'rule_prob_map': [{"DM": 1,"DM_Anti": 1,"EF": 1,"EF_Anti": 1,"RP": 1,"RP_Anti": 1,"RP_Ctx1": 1,"RP_Ctx2": 1,"WM": 1,"WM_Anti": 1,"WM_Ctx1": 1,"WM_Ctx2": 1}],
+    # 'rule_prob_map': [{"DM": 0,"DM_Anti": 0,"EF": 1,"EF_Anti": 1,"RP": 0,"RP_Anti": 0,"RP_Ctx1": 0,"RP_Ctx2": 0,"WM": 0,"WM_Anti": 0,"WM_Ctx1": 0,"WM_Ctx2": 0}], # fraction of tasks represented in training data
+    'participant': ['beRNN_03'], # Participant to take
+    'data': ['data_highDim'],
+    'machine': ['local'], # 'local' 'pandora' 'hitkip'
+    'tasksString': ['AllTask'], # tasksTaken
+    'sequenceMode': [True], # Decide if models are trained sequentially month-wise
+    'trainingBatch': ['1'],
+    'trainingYear_Month': ['test']
+}
+
+# attention: all other setups ##########################################################################################
+
+# Randomly sample combinations
+sampled_combinations = sample_param_combinations(adjParams, 20)
 
 # # Create one combination and repeat it according to sample_size
 # sampled_repeated_combinations = create_repeated_param_combinations(best_params, 5)
@@ -153,6 +196,7 @@ sampled_combinations = json.loads(args.adjParams)
 #     #     json.dump(sampled_combinations, f, indent=4)
 #     # with open(f'sampled_combinations_beRNN_05_{paramBatch}.json', 'w') as f:
 #     #     json.dump(sampled_combinations, f, indent=4)
+#
 #
 # # info: Adjust values for already created json files ###################################################################
 # # participantList = ['beRNN_01', 'beRNN_02', 'beRNN_03', 'beRNN_04', 'beRNN_05']
@@ -181,9 +225,9 @@ trainingTimeTotal_hours = 0
 # Example iteration through the grid
 for modelNumber, params in enumerate(sampled_combinations): # info: either sampled_combinations OR sampled_repeated_combinations
 
-    # attention ********************************************************************************************************
-    params['n_rnn'] = 156
-    # attention ********************************************************************************************************
+    # # attention ********************************************************************************************************
+    # params['n_rnn'] = 156 # insert hp changes you want to apply
+    # # attention ********************************************************************************************************
 
     # Start
     start_time = time.perf_counter()
@@ -320,54 +364,7 @@ print(f"Training times saved to {file_path}")
 
 
 
-# # head: Create folder with hp's for robustnessTests on hitkip cluster ##################################################
-# import os
-# import os
-# import json
-# import shutil
-#
-# # --- Settings ---
-# bestModel_txtFile_directory = r'C:\Users\oliver.frank\Desktop\PyProjects\beRNNmodels\_gridSearch_multiTask_beRNN_03_highDimCorrects_256\highDim_correctOnly\beRNN_03\visuals\performance_test'
-# output_base_dir = r'C:\Users\oliver.frank\Desktop\PyProjects\beRNN_v1'
-# output_folder_name = 'test'
-# numberOfModelsToTest = 10
-#
-# # Create output folder if it doesn't exist
-# output_folder = os.path.join(output_base_dir, output_folder_name)
-# os.makedirs(output_folder, exist_ok=True)
-#
-# # Read first 10 directories from the text file
-# txt_path = os.path.join(bestModel_txtFile_directory, 'bestModels_performance_test.txt')
-# with open(txt_path, 'r', encoding='utf-8') as f:
-#     listOfModelsToTest_ = []
-#     for line in f:
-#         clean_line = line.strip()          # remove whitespace and newlines
-#         clean_line = clean_line.strip(',') # remove trailing commas
-#         clean_line = clean_line.strip('"') # remove double quotes at both ends
-#         clean_line = clean_line.strip("'") # remove single quotes if any
-#         listOfModelsToTest_.append(clean_line)
-#
-# listOfModelsToTest = listOfModelsToTest_[1:numberOfModelsToTest+1]
-#
-# # Loop over directories
-# for idx, model_dir in enumerate(listOfModelsToTest, start=1):
-#     hp_file = os.path.join(model_dir, "hp.json")
-#
-#     if os.path.exists(hp_file):
-#         # Load JSON
-#         with open(hp_file, 'r') as f:
-#             hp_data = json.load(f)
-#
-#         # Prepare new filename with index
-#         new_hp_filename = f'hp_{idx}.json'
-#         new_hp_path = os.path.join(output_folder, new_hp_filename)
-#
-#         # Save JSON to new location
-#         with open(new_hp_path, 'w') as f:
-#             json.dump(hp_data, f, indent=4)
-#
-#         print(f"Saved: {new_hp_filename}")
-#     else:
-#         print(f"WARNING: hp.json not found in {model_dir}")
+# info: optional extraction and saving of hp sets for robustness testing
+# extract_hpSets_4robustnessTest(r'C:\Users\oliver.frank\Desktop\PyProjects\beRNNmodels\_gridSearch_multiTask_beRNN_03_highDimCorrects_256\highDim_correctOnly\beRNN_03\visuals\performance_test')
 
 

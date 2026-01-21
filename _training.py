@@ -111,7 +111,7 @@ def get_default_hp(ruleset):
     machine = 'local'  # 'local' 'pandora' 'hitkip'
     data = 'data_highDim_correctOnly'  # 'data_highDim' , data_highDim_correctOnly , data_highDim_lowCognition , data_lowDim , data_lowDim_correctOnly , data_lowDim_lowCognition, 'data_highDim_correctOnly_3stimTC'
     trainingBatch = '01'
-    trainingYear_Month = 'testtest' # as short as possible to avoid too long paths for avoiding linux2windows transfer issues
+    trainingYear_Month = 'test' # as short as possible to avoid too long paths for avoiding linux2windows transfer issues
 
     if 'highDim' in data:  # fix: lowDim_timeCompressed needs to be skipped here
         n_eachring = 32
@@ -133,7 +133,7 @@ def get_default_hp(ruleset):
         'activation': 'softplus',  # Type of activation runctions, relu, softplus, tanh, elu, linear
         'n_rnn_per_layer': [256, 128, 64],
         'activations_per_layer': ['relu', 'tanh', 'linear'],
-        'loss_type': 'lsq',  # # Type of loss functions - Cross-entropy loss
+        'loss_type': 'cross-entropy',  # lsq / cross-entropy
         'optimizer': 'adam',  # 'adam', 'sgd'
         'tau': 100,  # # Time constant (ms)- default 100
         'dt': 20,  # discretization time step (ms) .
@@ -141,7 +141,7 @@ def get_default_hp(ruleset):
         'sigma_rec': 0.01,  # recurrent noise - directly influencing the noise added to the network
         'sigma_x': 0,  # input noise
         'w_rec_init': 'diag', # randortho, brainStructure
-        's_mask': 'brain_256',  # 'brain_256', None - info: only accesible on local machine
+        's_mask': 'None',  # 'brain_256', None - info: only accesible on local machine
         # 'mask_threshold': .999,  # .999 or .975
         # leaky_rec weight initialization, diag, randortho, randgauss, brainStructure (only accessible with LeakyRNN : 32-256)
         'l1_h': 1e-05,
@@ -240,8 +240,7 @@ def do_eval(sess, model, log, rule_train, eval_data):
                 if c_mask.any() == None:
                     continue
 
-                feed_dict = tools.gen_feed_dict(model, x, y, c_mask,
-                                                hp)  # y: participnt response, that gives the lable for what the network is trained for
+                feed_dict = tools.gen_feed_dict(model, x, y, c_mask, hp)  # y: participnt response, that gives the lable for what the network is trained for
                 # print('passed feed_dict Evaluation')
                 # print(feed_dict)
                 # print('x',type(x),x.shape)
@@ -711,11 +710,8 @@ if __name__ == '__main__':
                 # Create train and eval data
                 train_data, eval_data = tools.createSplittedDatasets(hp, preprocessedData_path, month)
 
-            # info: If you want to initialize the new model with an old one
-            # load_dir = 'C:\\Users\\oliver.frank\\Desktop\\PyProjects\\beRNNmodels\\2025_03\\sc_mask_final\\beRNN_03_All_3-5_data_highDim_correctOnly_iteration1_LeakyRNN_1000_relu\\model_month_3'
             # Start Training ---------------------------------------------------------------------------------------------------
-            train(preprocessedData_path, model_dir=model_dir, train_data=train_data, eval_data=eval_data, hp=hp,
-                  load_dir=load_dir)
+            train(preprocessedData_path, model_dir=model_dir, train_data=train_data, eval_data=eval_data, hp=hp, load_dir=load_dir)
 
             # info: If True previous model parameters will be taken to initialize consecutive model, creating sequential training
             if hp['sequenceMode'] == True:

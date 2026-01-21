@@ -1,5 +1,5 @@
 ########################################################################################################################
-# info: tools
+# head: tools
 ########################################################################################################################
 # Different functions used on the whole project.
 ########################################################################################################################
@@ -582,7 +582,8 @@ def create_cMask(y, response, hp, mode):
                 c_mask[fixation_steps:, i, :] = hp['c_mask_responseValue'] * errorBalancingVector[i]  # info: 1 or 5
 
             # self.c_mask[:, :, 0] *= self.n_eachring # Fixation is important
-            # c_mask[:, :, 0] *= 2.  # Fixation is important # info: with or without
+            c_mask[:, :, 0] *= 2.  # Fixation is important
+
             c_mask = c_mask.reshape((y.shape[0] * y.shape[1], y.shape[2]))
             c_mask /= c_mask.mean()
 
@@ -592,9 +593,9 @@ def create_cMask(y, response, hp, mode):
         c_mask = np.zeros((y.shape[0], y.shape[1]), dtype='float32')
         for i in range(y.shape[1]):
             # Fixation epoch
-            c_mask[:fixation_steps, i, :] = 1.
+            c_mask[:fixation_steps, i] = 1.
             # Response epoch
-            c_mask[fixation_steps:, i, :] = hp['c_mask_responseValue']  # info: 1 or 5
+            c_mask[fixation_steps:, i] = hp['c_mask_responseValue']  # info: 1 or 5
 
         c_mask = c_mask.reshape((y.shape[0] * y.shape[1],))
         c_mask /= c_mask.mean()

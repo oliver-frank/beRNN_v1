@@ -1,26 +1,25 @@
-import numpy as np
-from pathlib import Path
-from scipy.spatial.distance import pdist, squareform
-from scipy.stats import ttest_rel
-from scipy.stats import spearmanr, pearsonr
-from scipy.spatial.distance import cosine
+import os
 import re
-from matplotlib import pyplot as plt
-import matplotlib.patches as patches
+import json
+import numpy as np
 import networkx as nx
 import seaborn as sns
 import pandas as pd
-from numpy import arctanh
-from collections import OrderedDict
-from networkx.algorithms.community import greedy_modularity_communities, modularity
-# from sklearn._preprocessing import normalize
-import scipy.stats
-import pickle
-import os
-import json
 import itertools
 
-from _training import apply_density_threshold # apply_threshold
+from pathlib import Path
+import scipy.stats
+from scipy.stats import ttest_rel
+from scipy.stats import spearmanr, pearsonr
+from scipy.spatial.distance import cosine
+# from scipy.spatial.distance import pdist, squareform
+
+from matplotlib import pyplot as plt
+import matplotlib.patches as patches
+
+from networkx.algorithms.community import greedy_modularity_communities, modularity
+
+from _training import apply_density_threshold
 from _analysis import clustering
 from tools import load_hp, load_pickle, participation_coefficient
 
@@ -32,18 +31,20 @@ Both data modalities have to be preprocessed with:
 - brain: 'preprocess_fRMI2rdm' below
 '''
 
+
 ########################################################################################################################
 # head - Variables and functions #######################################################################################
 ########################################################################################################################
 setup = {
-    'comparison': ['correlation', 'rsa', None][1],
-    'modalityWithin_comparison': ['brain', 'beRNN', 'standard'][2],
-    'numberOfModels': [5, 3], # second value represents beRNN_04 - only defined for beRNNs - should be 3 if compared to brain in 'standard'
-    'threshold': 0.1,
-    'participants_beRNN': ['beRNN_01', 'beRNN_02', 'beRNN_03', 'beRNN_04', 'beRNN_05'],
+    'comparison': ['correlation', 'rsa', None][0],
+    'modalityWithin_comparison': ['brain', 'beRNN', 'standard'][2], # standard is beRNN brain comparison
+    'numberOfModels': [20, 20], # second value represents beRNN_04 - only defined for beRNNs - should be 3 if compared to brain in 'standard' - [5, 3] or [20, 20]
+    'threshold': 1.0,
+    'participants_beRNN': ['beRNN_03', 'beRNN_04', 'beRNN_01', 'beRNN_02', 'beRNN_05'], # order for paper - only applied for RDA
+    'paper_nomenclatur': ['HC1', 'HC2', 'MDD', 'ASD', 'SCZ'], # nomenclatur for paper plots - only applied for RDA
     'participants': ['sub-KPB84', 'sub-YL4AS', 'sub-6IECX', 'sub-DKHPB', 'sub-96WID'],
     'participants_snip': ['sub-SNIPKPB84', 'sub-SNIPYL4AS', 'sub-SNIP6IECX', 'sub-SNIPDKHPB', 'sub-SNIP96WID'],
-    'folder_beRNN': fr'C:\Users\oliver.frank\Desktop\PyProjects\beRNNmodels\_robustnessTest_fundamentals_beRNN_01_data_highDim_156_hp_2', # info placeholders: particpant for beRNN_XX
+    'folder_beRNN': fr'C:\Users\oliver.frank\Desktop\PyProjects\beRNNmodels\_robustnessTest_multiTask_beRNN_01_highDimCorrects_256_hp_2',
     'folder_brain': r'W:\group_csp\analyses\oliver.frank\share',
     'folder_topologicalMarker_pValue_lists': r'C:\Users\oliver.frank\Desktop\PyProjects\beRNNmodels\__topologicalMarker_pValue_lists',
     # 'folder_brain_meanVecs': r'W:\group_csp\in_house_datasets\bernn\mri\derivatives\xcpd_0.11.1\sub-SNIP6IECX01\func',
@@ -54,7 +55,7 @@ setup = {
     'tasks': ['reward', 'flanker', 'faces', 'nback'],
     'preprocess_fMRI2rdm': False,
     "visualize_fMRI": False,
-    "visualize_dti": True,
+    "visualize_dti": False,
     "correlationOf_correlationMatices_fMRI": False,
     "correlationOf_correlationMatices_beRNN": False,
     "session": '03'
@@ -122,7 +123,6 @@ def node_strength_vectors(fc_mats, absolute=False):
 ########################################################################################################################
 # head - Preprocessing brain rdm #######################################################################################
 ########################################################################################################################
-
 if setup['preprocess_fMRI2rdm'] == True:
     for participant in setup['participants_snip']:
         if participant == 'sub-SNIPDKHPB': recordings = ['01', '02', '03']
@@ -153,7 +153,6 @@ if setup['preprocess_fMRI2rdm'] == True:
 # while the other is more modular and efficient locally).
 
 if setup['comparison'] == 'correlation':
-
 
     # info: brain ######################################################################################################
     topologicalMarker_dict_brain = {
@@ -274,15 +273,15 @@ if setup['comparison'] == 'correlation':
         avg_betweenness_list = []
         avg_closeness_list = []
 
-        if participant == 'beRNN_04':
-            numberOfModels = 3
-        else:
-            numberOfModels = 5
+        # if participant == 'beRNN_04':
+        #     numberOfModels = 3
+        # else:
+        #     numberOfModels = 5
 
-        # numberofModels = 20
+        numberOfModels = 20
 
-        # for model in os.listdir(model_folder)[:numberOfModels]:
-        for model in os.listdir(model_folder):
+        for model in os.listdir(model_folder)[:numberOfModels]:
+        # for model in os.listdir(model_folder):
             if model == 'times.txt':
                 continue
             if 'fundamentals' in model_folder or 'fm' in model_folder:
@@ -315,7 +314,7 @@ if setup['comparison'] == 'correlation':
                 # Apply threshold
                 functionalCorrelation_density = apply_density_threshold(h_corr_all, density=density)
             else:
-                functionalCorrelation_density = np.zeros((numberOfHiddenUnits,numberOfHiddenUnits))  # fix: Get individual number of hidden units # Create different dummy matrix, that leads to lower realtive count
+                functionalCorrelation_density = np.zeros((numberOfHiddenUnits, numberOfHiddenUnits))  # fix: Get individual number of hidden units # Create different dummy matrix, that leads to lower realtive count
 
             # Compute modularity
             np.fill_diagonal(functionalCorrelation_density, 0)  # prevent self-loops
@@ -360,73 +359,22 @@ if setup['comparison'] == 'correlation':
             avg_closeness = np.mean(list(closeness.values()))
             avg_closeness_list.append(avg_closeness)
 
-        topologicalMarker_dict_brain[beRNN_brain_dict[brain]]['global_eff'] = global_eff_list
-        topologicalMarker_dict_brain[beRNN_brain_dict[brain]]['transitivity'] = transitivity_list
-        topologicalMarker_dict_brain[beRNN_brain_dict[brain]]['density'] = density_list
-        topologicalMarker_dict_brain[beRNN_brain_dict[brain]]['avg_eigenvector'] = avg_eigenvector_list
-        topologicalMarker_dict_brain[beRNN_brain_dict[brain]]['avg_clustering'] = avg_clustering_list
-        topologicalMarker_dict_brain[beRNN_brain_dict[brain]]['mod_value_sparse'] = mod_value_sparse_list
-        topologicalMarker_dict_brain[beRNN_brain_dict[brain]]['participation_coefficient'] = participation_coefficient_list
-        topologicalMarker_dict_brain[beRNN_brain_dict[brain]]['avg_degree'] = avg_degree_list
-        topologicalMarker_dict_brain[beRNN_brain_dict[brain]]['avg_betweenness'] = avg_betweenness_list
-        topologicalMarker_dict_brain[beRNN_brain_dict[brain]]['avg_closeness'] = avg_closeness_list
+        topologicalMarker_dict_beRNN[participant]['global_eff'] = global_eff_list
+        topologicalMarker_dict_beRNN[participant]['transitivity'] = transitivity_list
+        topologicalMarker_dict_beRNN[participant]['density'] = density_list
+        topologicalMarker_dict_beRNN[participant]['avg_eigenvector'] = avg_eigenvector_list
+        topologicalMarker_dict_beRNN[participant]['avg_clustering'] = avg_clustering_list
+        topologicalMarker_dict_beRNN[participant]['mod_value_sparse'] = mod_value_sparse_list
+        topologicalMarker_dict_beRNN[participant]['participation_coefficient'] = participation_coefficient_list
+        topologicalMarker_dict_beRNN[participant]['avg_degree'] = avg_degree_list
+        topologicalMarker_dict_beRNN[participant]['avg_betweenness'] = avg_betweenness_list
+        topologicalMarker_dict_beRNN[participant]['avg_closeness'] = avg_closeness_list
 
-    beRNN_fileDirectory = os.path.join(setup['folder_topologicalMarker_pValue_lists'])
+    beRNN_fileDirectory = os.path.join(setup['folder_topologicalMarker_pValue_lists'], 'allModels')
     os.makedirs(beRNN_fileDirectory, exist_ok=True)
     current_folder_beRNN = setup["folder_beRNN"].split('\\')[-1]
     with open(os.path.join(beRNN_fileDirectory, f'topologicalMarker_dict_beRNN_{current_folder_beRNN}_{setup["threshold"]}.json'), 'w') as fp:
         json.dump(topologicalMarker_dict_beRNN, fp)
-
-    # info: variance comparison between the different hp sets
-    # listOfGroups = []
-    # for participant in setup['participants_beRNN']:
-    #     group = topologicalMarker_dict_beRNN[participant]['avg_clustering']
-    #     listOfGroups.append(group)
-    #
-    # from scipy.stats import levene, bartlett
-    # # Levene (robust against non-normal data)
-    # stat, p = levene(*listOfGroups)
-    # print(stat, p)
-
-
-    # Comparison correlation ###########################################################################################
-    from scipy.stats import ttest_ind, ks_2samp
-    # density and avg_degree not interesting as they are the same for each mmodel
-    # transitivity and global_eff are redundant (avg_clustering and avg_closeness)
-    topologicalMarker_list = ['avg_clustering', 'mod_value_sparse', 'participation_coefficient']
-
-    if setup['modalityWithin_comparison'] == 'brain':
-        topologicalMarker_dict_beRNN = topologicalMarker_dict_brain
-    elif setup['modalityWithin_comparison'] == 'beRNN':
-        topologicalMarker_dict_brain = topologicalMarker_dict_beRNN
-
-    for participant in setup['participants_beRNN']:
-        print(participant, '***************************************************************************************')
-
-        pValue_list = {}
-
-        for topologicalMarker in topologicalMarker_list:
-            print(topologicalMarker)
-
-            t_stat, p_value = ttest_ind(topologicalMarker_dict_brain[participant][topologicalMarker], topologicalMarker_dict_beRNN[participant][topologicalMarker])
-            if p_value < 0.05:
-                print('ttest p-value: ', p_value, 'significant')
-            else:
-                print('ttest p-value: ', p_value, 'NOT SIGNIFICANT')
-
-
-            res = ks_2samp(topologicalMarker_dict_brain[participant][topologicalMarker], topologicalMarker_dict_beRNN[participant][topologicalMarker])
-            if res[1] < 0.05:
-                print('kolmogorovtest p-value: ', res[1], 'significant')
-            else:
-                print('kolmogorovtest p-value: ', res[1], 'NOT SIGNIFICANT')
-
-            pValue_list[topologicalMarker] = res[1]
-
-        # fileDirectory = os.path.join(setup['folder_topologicalMarker_pValue_lists'], 'kolmogorov', setup["folder_beRNN"].split('\\')[-1])
-        # os.makedirs(fileDirectory, exist_ok=True)
-        # with open(os.path.join(fileDirectory, f'{participant}_{setup["threshold"]}.json'), 'w') as fp:
-        #     json.dump(pValue_list, fp)
 
 
 ########################################################################################################################
@@ -560,8 +508,8 @@ elif setup['comparison'] == 'rsa':
     within_mean = np.array([np.mean(within_rsa[s]) for s in subjects_beRNN])  # shape (5,)
     between_mean = np.array([np.mean(between_rsa[s]) for s in subjects_beRNN])  # shape (5,)
 
-    z_within = arctanh(within_mean)  # Fisher z
-    z_between = arctanh(between_mean)
+    z_within = np.arctanh(within_mean)  # Fisher z
+    z_between = np.arctanh(between_mean)
 
     t, p = ttest_rel(z_within, z_between)  # H₀: means equal
     print(f'Within  mean ρ = {within_mean.mean():.3f}')
@@ -677,8 +625,11 @@ elif setup['comparison'] == 'rsa':
     cbar.ax.tick_params(labelsize=12)
     cbar.set_label('RDA (1 - Spearman ρ)', fontsize=12)
 
-    ax.set_xticklabels(subjects_beRNN, rotation=0, fontsize=12)
-    ax.set_yticklabels(subjects_brain, rotation=90, fontsize=12)
+    # ax.set_xticklabels(subjects_beRNN, rotation=0, fontsize=12)
+    # ax.set_yticklabels(subjects_brain, rotation=90, fontsize=12)
+
+    ax.set_xticklabels(setup['paper_nomenclatur'], rotation=0, fontsize=12)
+    ax.set_yticklabels(setup['paper_nomenclatur'], rotation=90, fontsize=12)
 
     plt.title("RDA matrix", fontsize=20, fontweight='bold')
     plt.xlabel("Participant", fontsize=16)
@@ -899,3 +850,5 @@ if setup["visualize_dti"] == True:
     sns.heatmap(cosine_sim, vmin=0, vmax=1, cmap="viridis")
     plt.title("Cosine Disimilarity")
     plt.show()
+
+
