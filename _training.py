@@ -21,6 +21,7 @@ import os
 import numpy as np
 # import matplotlib.pyplot as plt
 import tensorflow as tf
+import json
 # import random
 
 import networkx as nx
@@ -35,6 +36,7 @@ import tools
 # Predefine functions
 ########################################################################################################################
 def apply_threshold(matrix, threshold):
+    # info: added function second time from networkAnalysis for training on server with only training.py
     # Set all values below the threshold to zero
     matrix_thresholded = np.where(np.abs(matrix) > threshold, matrix, 0)
     return matrix_thresholded
@@ -49,11 +51,97 @@ def apply_density_threshold(matrix, density=0.1):
     thresholded = np.where(matrix >= cutoff, matrix, 0)
     return thresholded
 
+    fname, fname2, fname3 = variance.compute_variance(data_dir, model_dir, layer=1, mode='test',
+                                                      monthsConsidered=hp['monthsConsidered'], data_type='rule',
+                                                      networkAnalysis=False,
+                                                      model=model, sess=sess)
+
+    res2 = tools.load_pickle(fname2)
+    h_corr_all_ = res2['h_corr_all']
+    h_corr_all = h_corr_all_.mean(axis=2)  # average over all tasks
+
+    # Compute modularity
+    functionalCorrelation_density = apply_density_threshold(h_corr_all, density=0.1)
+    np.fill_diagonal(functionalCorrelation_density, 0)  # prevent self-loops
+    G_sparse = nx.from_numpy_array(functionalCorrelation_density)
+
+    if G_sparse.number_of_edges() == 0 or G_sparse.number_of_nodes() < 2:
+        print(f"Skipping modularity calculation for {model_dir} — graph has no edges.")
+        mod_value_sparse = 0
+    else:
+        try:
+            communities_sparse = greedy_modularity_communities(G_sparse)
+            mod_value_sparse = modularity(G_sparse, communities_sparse)
+        except Exception as e:
+            print(f"Greedy modularity failed for {model_dir}. Setting mod_value=0. ({e})")
+            mod_value_sparse = 0
+
+    # log['modularity_weighted'].append(mod_value_weighted)
+    log['modularity_sparse'].append(mod_value_sparse)
+    tools.save_log(log)
+
+    fname, fname2, fname3 = variance.compute_variance(data_dir, model_dir, layer=1, mode='test',
+                                                      monthsConsidered=hp['monthsConsidered'], data_type='rule',
+                                                      networkAnalysis=False,
+                                                      model=model, sess=sess)
+    # (data_dir, model_dir, layer, mode, monthsConsidered, data_type, networkAnalysis, rules=None, random_rotation=False)
+
+    res = tools.load_pickle(fname)
+    h_var_all_ = res['h_var_all']
+
+    res2 = tools.load_pickle(fname2)
+    h_corr_all_ = res2['h_corr_all']
+    h_corr_all = h_corr_all_.mean(axis=2)  # average over all tasks
+
+    activityThreshold = 1e-5
+    ind_active = np.where(h_var_all_.sum(axis=1) >= activityThreshold)[0]  # info: > 1e-3 - min > 0
+    h_var_all = h_var_all_[ind_active, :]
+
+    # info: fallback if clustering is not possible - keep h_var_all as criterium but witch to h_corr_all for evaluation of modularity
+    if h_var_all.shape[0] < 2 or np.all(h_var_all.sum(axis=1) <= 1e-2):
+        # if h_var_all.shape[0] < 2 or np.where(h_var_all_.sum(axis=1) < activityThreshold):
+        print(f"Skipping clustering for model {model_dir} — insufficient data or variance.")
+
+        # Create meaningless dummy matrix for further calculation and to prevent code crashing
+        h_normvar_all = np.ones((12, 128)) * 0.5
+
+    else:
+        # Normalize by the total variance across tasks
+        h_normvar_all = (h_var_all.T / np.sum(h_var_all, axis=1)).T
+
+    # info: legacy - Center and normalize the data
+    # data_centered = h_normvar_all - h_normvar_all.mean(axis=1, keepdims=True)
+    # norm = np.linalg.norm(data_centered, axis=1, keepdims=True)
+    # norm[norm == 0] = 1e-8  # Prevent division by zero
+    # data_normalized = data_centered / norm
+    # correlation = np.dot(data_normalized, data_normalized.T)
+
+    # Compute modularity
+    functionalCorrelation_density = apply_density_threshold(h_corr_all, density=0.1)
+    np.fill_diagonal(functionalCorrelation_density, 0)  # prevent self-loops
+    G_sparse = nx.from_numpy_array(functionalCorrelation_density)
+
+    if G_sparse.number_of_edges() == 0 or G_sparse.number_of_nodes() < 2:
+        print(f"Skipping modularity calculation for {model_dir} — graph has no edges.")
+        mod_value_sparse = 0
+    else:
+        try:
+            communities_sparse = greedy_modularity_communities(G_sparse)
+            mod_value_sparse = modularity(G_sparse, communities_sparse)
+        except Exception as e:
+            print(f"Greedy modularity failed for {model_dir}. Setting mod_value=0. ({e})")
+            mod_value_sparse = 0
+
+    # log['modularity_weighted'].append(mod_value_weighted)
+    log['modularity_sparse'].append(mod_value_sparse)
+    tools.save_log(log)
+
 
 def getAndSafeModValue(data_dir, model_dir, hp, model, sess, log):
     fname, fname2, fname3 = variance.compute_variance(data_dir, model_dir, layer=1, mode='test',
-                                      monthsConsidered=hp['monthsConsidered'], data_type='rule', networkAnalysis=False,
-                                      model=model, sess=sess)
+                                                      monthsConsidered=hp['monthsConsidered'], data_type='rule',
+                                                      networkAnalysis=False,
+                                                      model=model, sess=sess)
 
     # h_mean_all as basis for thresholding dead neurons as h_corr_all can result in high values for dead neurons
     res3 = tools.load_pickle(fname3)
@@ -61,20 +149,22 @@ def getAndSafeModValue(data_dir, model_dir, hp, model, sess, log):
     activityThreshold = 1e-1
     ind_active = np.where(h_mean_all_.sum(axis=1) >= activityThreshold)[0]
 
-    # h_corr_all as representative for modularity _analysis reflecting similar neuron behavior
+    # h_corr_all as representative for modularity analysis reflecting similar neuron behavior
     res2 = tools.load_pickle(fname2)
     h_corr_all_ = res2['h_corr_all']
     h_corr_all_ = h_corr_all_.mean(axis=2)  # average over all tasks
 
     numberOfHiddenUnits = hp['n_rnn']
 
-    if ind_active.shape[0] < h_corr_all_.shape[0] and ind_active.shape[0] < h_corr_all_.shape[1] and ind_active.shape[0] > 1:
+    if ind_active.shape[0] < h_corr_all_.shape[0] and ind_active.shape[0] < h_corr_all_.shape[1] and ind_active.shape[
+        0] > 1:
         h_corr_all_ = h_corr_all_[ind_active, :]
         h_corr_all = h_corr_all_[:, ind_active]
         # Apply threshold
         functionalCorrelation_density = apply_density_threshold(h_corr_all, density=0.1)
     else:
-        functionalCorrelation_density = np.zeros((numberOfHiddenUnits, numberOfHiddenUnits))  # fix: Get individual number of hidden units # Create different dummy matrix, that leads to lower realtive count
+        functionalCorrelation_density = np.zeros((numberOfHiddenUnits,
+                                                  numberOfHiddenUnits))  # fix: Get individual number of hidden units # Create different dummy matrix, that leads to lower realtive count
 
     # Compute modularity
     np.fill_diagonal(functionalCorrelation_density, 0)  # prevent self-loops
@@ -111,7 +201,7 @@ def get_default_hp(ruleset):
     machine = 'local'  # 'local' 'pandora' 'hitkip'
     data = 'data_highDim_correctOnly'  # 'data_highDim' , data_highDim_correctOnly , data_highDim_lowCognition , data_lowDim , data_lowDim_correctOnly , data_lowDim_lowCognition, 'data_highDim_correctOnly_3stimTC'
     trainingBatch = '01'
-    trainingYear_Month = 'test' # as short as possible to avoid too long paths for avoiding linux2windows transfer issues
+    trainingYear_Month = 'test'  # as short as possible to avoid too long paths for avoiding linux2windows transfer issues
 
     if 'highDim' in data:  # fix: lowDim_timeCompressed needs to be skipped here
         n_eachring = 32
@@ -133,15 +223,15 @@ def get_default_hp(ruleset):
         'activation': 'softplus',  # Type of activation runctions, relu, softplus, tanh, elu, linear
         'n_rnn_per_layer': [256, 128, 64],
         'activations_per_layer': ['relu', 'tanh', 'linear'],
-        'loss_type': 'cross-entropy',  # lsq / cross-entropy
+        'loss_type': 'lsq',  # # Type of loss functions - Cross-entropy loss
         'optimizer': 'adam',  # 'adam', 'sgd'
         'tau': 100,  # # Time constant (ms)- default 100
         'dt': 20,  # discretization time step (ms) .
         # 'alpha': 0.2, # (redundant) discretization time step/time constant - dt/tau = alpha - ratio decides on how much previous states are taken into account for current state - low alpha more memory, high alpha more forgetting - alpha * h(t-1)
         'sigma_rec': 0.01,  # recurrent noise - directly influencing the noise added to the network
         'sigma_x': 0,  # input noise
-        'w_rec_init': 'diag', # randortho, brainStructure
-        's_mask': 'None',  # 'brain_256', None - info: only accesible on local machine
+        'w_rec_init': 'diag',
+        's_mask': 'brain_256',  # 'brain_256', None - info: only accesible on local machine
         # 'mask_threshold': .999,  # .999 or .975
         # leaky_rec weight initialization, diag, randortho, randgauss, brainStructure (only accessible with LeakyRNN : 32-256)
         'l1_h': 1e-05,
@@ -240,7 +330,8 @@ def do_eval(sess, model, log, rule_train, eval_data):
                 if c_mask.any() == None:
                     continue
 
-                feed_dict = tools.gen_feed_dict(model, x, y, c_mask, hp)  # y: participnt response, that gives the lable for what the network is trained for
+                feed_dict = tools.gen_feed_dict(model, x, y, c_mask,
+                                                hp)  # y: participnt response, that gives the lable for what the network is trained for
                 # print('passed feed_dict Evaluation')
                 # print(feed_dict)
                 # print('x',type(x),x.shape)
@@ -269,9 +360,9 @@ def do_eval(sess, model, log, rule_train, eval_data):
                                 # Get number of correct responses
                                 correctResponseDirection = np.where(pref == y_loc[-1][trial])[0][0]
                                 correctIndicesArray_color = \
-                                np.where(x[-1, trial, 1:33] == x[-1, trial, correctResponseDirection + 1])[0]
+                                    np.where(x[-1, trial, 1:33] == x[-1, trial, correctResponseDirection + 1])[0]
                                 correctIndicesArray_form = \
-                                np.where(x[-1, trial, 33:65] == x[-1, trial, correctResponseDirection + 33])[0]
+                                    np.where(x[-1, trial, 33:65] == x[-1, trial, correctResponseDirection + 33])[0]
                                 # Compare both lists and keep only overlaps
                                 correctIndicesArray_ = [x for x in correctIndicesArray_color if
                                                         x in correctIndicesArray_form]
@@ -311,7 +402,7 @@ def do_eval(sess, model, log, rule_train, eval_data):
                                 correctResponseDirection = np.where(pref == y_loc[-1][trial])[0][0]
                                 # correctIndicesArray_color = np.where(x[-1, trial, 1:33] == x[-1, trial, correctResponseDirection + 1])[0]
                                 correctIndicesArray_form = \
-                                np.where(x[-1, trial, 33:65] == x[-1, trial, correctResponseDirection + 33])[0]
+                                    np.where(x[-1, trial, 33:65] == x[-1, trial, correctResponseDirection + 33])[0]
                                 # Compare both lists and keep only overlaps
                                 # correctIndicesArray_ = [x for x in correctIndicesArray_color if x in correctIndicesArray_form]
 
@@ -415,11 +506,8 @@ def train(data_dir, model_dir, train_data, eval_data, hp=None, max_steps=1e6, di
     default_hp = get_default_hp(ruleset)
     # default_hp = get_default_hp('all')
     if hp is not None:
-        default_hp.update(hp) # fix: Where does this update function come from?
-    hp = default_hp
-    # attention: standard hp ##########################################################################################
-
-    hp['seed'] = seed
+        default_hp.update(hp)
+        # attention: standard hp ##########################################################################################
 
     # Rules to train and test. Rules in a set are trained together
     if rule_trains is None:
@@ -440,10 +528,11 @@ def train(data_dir, model_dir, train_data, eval_data, hp=None, max_steps=1e6, di
         rule_prob = np.array([hp['rule_prob_map'].get(r, 1.) for r in hp['rule_trains']])
         hp['rule_probs'] = list(rule_prob / np.sum(rule_prob))
     # if robustnessTest != True:
+    hp['seed'] = seed  # Plug in seed into rng creation for reproducability - default: 0
     tools.save_hp(hp, model_dir)
 
     # head: Add 'rng' here after it was pop out
-    hp['rng'] = np.random.default_rng()
+    hp['rng'] = np.random.default_rng()  # set rng_seed here for reproducability - default: not set
 
     # Build the model
     model = Model(model_dir, hp=hp)
@@ -520,10 +609,12 @@ def train(data_dir, model_dir, train_data, eval_data, hp=None, max_steps=1e6, di
                     log['trials'].append(step * hp['batch_size'])
                     log['times'].append(time.time() - t_start)
                     log = do_eval(sess, model, log, hp['rule_trains'], eval_data)
-                    # training time
+                    elapsed_time = time.time() - t_start  # Calculate elapsed time
+                    print(f"Elapsed time after batch number {trialsLoaded}: {elapsed_time:.2f} seconds")
+                    # After training
                     total_time = time.time() - t_start
                     print(f"Total training time: {total_time:.2f} seconds")
-
+                    # if log['perf_avg'][-1] > model.hp['target_perf']:
                     # check if minimum performance is above target
                     if log['perf_min'][-1] > model.hp['target_perf']:
                         print('Perf reached the target: {:0.2f}'.format(
@@ -546,9 +637,10 @@ def train(data_dir, model_dir, train_data, eval_data, hp=None, max_steps=1e6, di
                 # Create cMask
                 c_mask = tools.create_cMask(y, response, hp, mode)
 
-                # fix: for inconcruence between y and response on dimension 1 - probably _preprocessing related
-                # fix: for inconcruence between y and response on dimension 1 - probably _preprocessing related
-                if (c_mask is None or (isinstance(c_mask, np.ndarray) and (c_mask.size == 0 or np.all(c_mask == None) or np.any(c_mask == None)))):
+                # fix: for inconcruence between y and response on dimension 1 - probably preprocessing related
+                # fix: for inconcruence between y and response on dimension 1 - probably preprocessing related
+                if (c_mask is None or (isinstance(c_mask, np.ndarray) and (
+                        c_mask.size == 0 or np.all(c_mask == None) or np.any(c_mask == None)))):
                     continue
 
                 trialsLoaded += 1
@@ -559,7 +651,7 @@ def train(data_dir, model_dir, train_data, eval_data, hp=None, max_steps=1e6, di
                 # print(feed_dict)
 
                 sess.run(model.train_step,
-                         feed_dict=feed_dict)  # info: Trainables are actualized - train_step should represent the step in _training.py and the global_step in network.py
+                         feed_dict=feed_dict)  # info: Trainables are actualized - train_step should represent the step in training.py and the global_step in network.py
 
                 # Get Training performance in a similiar fashion as in do_eval
                 clsq_train_tmp = list()
@@ -603,7 +695,8 @@ def train(data_dir, model_dir, train_data, eval_data, hp=None, max_steps=1e6, di
 if __name__ == '__main__':
     # Initialize list for all training times for each model
     trainingTimeList = []
-    for modelNumber in range(1, 21):  # Define number of iterations and models to be created for every month, respectively
+    for modelNumber in range(1,
+                             21):  # Define number of iterations and models to be created for every month, respectively
 
         # Measure time for every model, respectively
         trainingTimeTotal_hours = 0
@@ -633,17 +726,27 @@ if __name__ == '__main__':
         # # attention: hitkip cluster ##########################################################################################
 
         # # attention: hitkip robustness ############################################################################################
-        # import json
         # # Convert the JSON string to a Python dictionary
-        # robustnessTest_model = 'hp_7'
+        # robustnessTest_model = 'hp_2'
         # with open(
         #         f"/zi/home/oliver.frank/Desktop/RNN/multitask_BeRNN-main/_bestModels_scripts/best10_gridSearch_multiTask_beRNN_03_highDimCorrects_256/{robustnessTest_model}.json",
         #         "r") as f:
         #     hp = json.load(f)
         #
-        # hp['participant'] = 'beRNN_01'
+        # hp['participant'] = 'beRNN_05'
         # participant = hp['participant']
-        # hp['trainingYear_Month'] = f'_robustnessTest_multiTask_{participant}_highDimCorrects_256_{robustnessTest_model}'
+        #
+        # dataType = 'data_highDim'
+        # hp['data'] = dataType
+        # # hp['rng'] = np.random.default_rng(42) # for reproducibility - only applied on splitting of data
+        # # hp['errorBalancingValue'] = 5.
+        # # hp['w_rec_init'] = 'brainStructure'
+        # # hp['rule_prob_map'] = {"DM": 1, "DM_Anti": 0, "EF": 1, "EF_Anti": 0, "RP": 1, "RP_Anti": 0, "RP_Ctx1": 0,
+        # #                  "RP_Ctx2": 0, "WM": 1, "WM_Anti": 0, "WM_Ctx1": 0, "WM_Ctx2": 0}
+        # # hp['tasksString'] = 'fundamentals'
+        # # n_rnn = 64
+        # # hp['n_rnn'] = n_rnn
+        # # hp['trainingYear_Month'] = f'_eR_multiTask_{participant}_{dataType}_{robustnessTest_model}' # as short as possible to avoid too long paths for avoiding linux2windows transfer issues
         # # attention: hitkip robustness #############################################################################################
 
         load_dir = None
@@ -710,8 +813,11 @@ if __name__ == '__main__':
                 # Create train and eval data
                 train_data, eval_data = tools.createSplittedDatasets(hp, preprocessedData_path, month)
 
+            # info: If you want to initialize the new model with an old one
+            # load_dir = 'C:\\Users\\oliver.frank\\Desktop\\PyProjects\\beRNNmodels\\2025_03\\sc_mask_final\\beRNN_03_All_3-5_data_highDim_correctOnly_iteration1_LeakyRNN_1000_relu\\model_month_3'
             # Start Training ---------------------------------------------------------------------------------------------------
-            train(preprocessedData_path, model_dir=model_dir, train_data=train_data, eval_data=eval_data, hp=hp, load_dir=load_dir)
+            train(preprocessedData_path, model_dir=model_dir, train_data=train_data, eval_data=eval_data, hp=hp,
+                  load_dir=load_dir)
 
             # info: If True previous model parameters will be taken to initialize consecutive model, creating sequential training
             if hp['sequenceMode'] == True:

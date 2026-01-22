@@ -704,7 +704,7 @@ HP_NAME = {'activation': 'Activation fun.',
 
 if __name__ == '__main__':
 
-    folderList = ['_gridSearch_multiTask_beRNN_03_highDim_256']
+    folderList = ['2026/_gridSearch_multiTask_beRNN_03_highDimCorrects_256_onehot']
 
     # folderList = ['_gridSearch_multiTask_beRNN_03_highDim_16',
     #               '_gridSearch_multiTask_beRNN_03_highDim_32',

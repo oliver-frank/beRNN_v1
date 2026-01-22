@@ -623,12 +623,7 @@ HP_NAME = {'activation': 'Activation fun.',
 if __name__ == '__main__':
 
     # Definition of important variables
-    foldersToOverlay = ['_gridSearch_multiTask_beRNN_03_highDimCorrects_16',
-                        '_gridSearch_multiTask_beRNN_03_highDimCorrects_32',
-                        '_gridSearch_multiTask_beRNN_03_highDimCorrects_64',
-                        '_gridSearch_multiTask_beRNN_03_highDimCorrects_128',
-                        '_gridSearch_multiTask_beRNN_03_highDimCorrects_256',
-                        '_gridSearch_multiTask_beRNN_03_highDim_correctOnly_512']
+    foldersToOverlay = ['2026\_gridSearch_multiTask_beRNN_03_highDim_256']
 
     paper_nomenclatur_dict = ['HC1', 'HC2', 'MDD', 'ASD', 'SCZ']
     participantList = ['beRNN_01', 'beRNN_02', 'beRNN_03', 'beRNN_04', 'beRNN_05']

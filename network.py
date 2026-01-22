@@ -779,7 +779,8 @@ class Model(object):
                 raise ValueError(
                     'No hp found for model_dir {:s}'.format(model_dir))
 
-        tf.set_random_seed(hp['seed'])
+        # Safe retrieval with a fallback to 0
+        hp['seed'] = hp['seed'] if 'seed' in hp else 0
         self.rng = np.random.RandomState(hp['seed'])
 
         if sigma_rec is not None:
@@ -1041,7 +1042,7 @@ class Model(object):
         else:
             # sum to 1 is an important preprocessing step for probability optimization
             y_hat = tf.nn.softmax(y_hat_)
-            # info: short cut for y_shaped one hot encoding
+            # info: short cut for y_shaped one hot encoding - fundamental for cross entropy
             # Find the index of the maximum value for each row
             indices = tf.argmax(y_shaped, axis=1)
             # Create an identity matrix and index into it to create the one-hot array
