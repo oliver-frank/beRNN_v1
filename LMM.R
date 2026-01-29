@@ -115,18 +115,18 @@ p_plot_q1 <- ggplot(p_value_results, aes(x = Density, y = P_Value)) +
 ggsave(file.path(folder, "Q1_Participant_Effect_highDimCorrects.png"), p_plot_q1, width = 6, height = 3.5, dpi = 300)
 
 
-# Results storage
-q2_results <- data.frame()
-
 # ======================================================================================
 # Main Loop over Densities
 # ======================================================================================
+# Results storage
+q2_results <- data.frame()
+
 for (d_idx in seq_along(densities)) {
   density <- densities[d_idx]
   
   # File paths for comparison (Set 1 vs Set 3)
-  path_1 <- file.path(folder, paste0(modelsets[2], density, ".json"))
-  path_3 <- file.path(folder, paste0(modelsets[3], density, ".json"))
+  path_1 <- file.path(folder, paste0(modelsets[1], density, ".json"))
+  path_3 <- file.path(folder, paste0(modelsets[2], density, ".json"))
   
   if (!file.exists(path_1) || !file.exists(path_3)) {
     message(paste("Skipping density", density, "- files missing."))
@@ -158,8 +158,8 @@ for (d_idx in seq_along(densities)) {
   }
   
   # Load both sets
-  df_set1 <- parse_json_to_df(path_1, "beRNN", "S1")
-  df_set3 <- parse_json_to_df(path_3, "Brain", "S3")
+  df_set1 <- parse_json_to_df(path_1, "beRNN_highDimCorrects", "S1")
+  df_set3 <- parse_json_to_df(path_3, "Brain_highDim", "S3")
   
   # Merge into combined dataframe
   df_all <- bind_rows(df_set1, df_set3) %>%
@@ -243,7 +243,7 @@ print(p_q2_plot)
 # ======================================================================================
 # save Q2 plots
 # ======================================================================================
-output_filename_q2 <- paste0("Q2_Comparison_highDim.png")
+output_filename_q2 <- paste0("Q2_Comparison_highDim_highDimCorrects.png")
 output_path_q2 <- file.path(folder, output_filename_q2)
 
 ggsave(

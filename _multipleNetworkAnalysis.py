@@ -31,7 +31,6 @@ Both data modalities have to be preprocessed with:
 - brain: 'preprocess_fRMI2rdm' below
 '''
 
-
 ########################################################################################################################
 # head - Variables and functions #######################################################################################
 ########################################################################################################################
@@ -58,6 +57,7 @@ setup = {
     "visualize_dti": False,
     "correlationOf_correlationMatices_fMRI": False,
     "correlationOf_correlationMatices_beRNN": False,
+    "plotTopMarkerOverDensities": True,
     "session": '03'
 }
 
@@ -412,7 +412,7 @@ elif setup['comparison'] == 'rsa':
         else:
             numberOfModels = 5
 
-        for rdm in range(0,numberOfModels):
+        for rdm in range(0, numberOfModels):
             rdm_dict_brain[brain][rdm] = np.load(Path(directory_brain, rdm_dict_brain[brain][rdm]))
 
     # Due to feasibility rdm vector creation was outsourced from compute_rdm() - function vec() does the exact same
@@ -850,5 +850,107 @@ if setup["visualize_dti"] == True:
     sns.heatmap(cosine_sim, vmin=0, vmax=1, cmap="viridis")
     plt.title("Cosine Disimilarity")
     plt.show()
+
+
+if setup["plotTopMarkerOverDensities"] == True:
+    # Visualize topological marker for different desnitites and data sets/modalities
+    participant_to_paper = dict(zip(setup['participants_beRNN'], setup['paper_nomenclatur']))
+
+    densities = ['0.1', '0.2', '0.3', '0.4', '0.5', '0.6', '0.7', '0.8', '0.9', '1.0']
+    for density in densities:
+        plot_folder = 'densityPlots_multiTask_beRNN_highDimCorrects_20Models'
+        directory = r'C:\Users\oliver.frank\Desktop\PyProjects\beRNNmodels\__topologicalMarker_pValue_lists\allModels'
+        file_path = os.path.join(directory, f'topologicalMarker_dict_beRNN__robustnessTest_multiTask_beRNN_01_highDimCorrects_256_hp_2_{density}.json')
+
+        with open(file_path, 'r') as f:
+            data = json.load(f)
+
+        metrics = {
+            "mod_value_sparse": "Modularity",
+            "participation_coefficient": "Participation",
+            "avg_clustering": "Clustering"
+        }
+
+        plot_data = []
+
+        for participant, values in data.items():
+            for json_key, clean_name in metrics.items():
+                subset = values[json_key]
+                for val in subset:
+                    plot_data.append({
+                        "Participant": participant,
+                        "Metric": clean_name,
+                        "Value": val
+                    })
+
+        df = pd.DataFrame(plot_data)
+
+        df["Participant"] = pd.Categorical(df["Participant"],categories=setup['participants_beRNN'],ordered=True)
+
+        # Definition der Farben
+        custom_colors = {
+            "beRNN_03": "#1f77b4",  # Deep Blue
+            "beRNN_04": "#a1c9ed",  # Light Blue
+            "beRNN_01": "#ff7f0e",  # Orange
+            "beRNN_02": "#2ca02c",  # Green
+            "beRNN_05": "#9467bd"  # Purple
+        }
+
+        plt.figure(figsize=(5,7))
+        sns.set_style("whitegrid")
+
+        # 1. Boxplot - Ohne 'width' für bessere Zentrierung
+        sns.boxplot(
+            data=df,
+            x="Metric",
+            y="Value",
+            hue="Participant",
+            palette=custom_colors,
+            showfliers=False,
+            zorder=1,
+            boxprops=dict(linewidth=0),
+            whiskerprops=dict(linewidth=0),
+            capprops=dict(linewidth=0),
+            medianprops=dict(linewidth=0)
+        )
+
+        # 2. Stripplot - Jitter=False zwingt die Punkte auf die Mittelachse
+        sns.stripplot(
+            data=df,
+            x="Metric",
+            y="Value",
+            hue="Participant",
+            palette=custom_colors,
+            dodge=True,
+            jitter=False,
+            size=6,
+            alpha=0.5,
+            linewidth=0,  # ← no outline
+            edgecolor="none",  # ← no outline
+            zorder=2
+        )
+
+        ax = plt.gca()
+        ax.yaxis.grid(True, linestyle='--', linewidth=0.8, alpha=0.6)
+        ax.xaxis.grid(False)
+
+        # Legende bereinigen
+        handles, labels = plt.gca().get_legend_handles_labels()
+        n_participants = df['Participant'].nunique()
+        new_labels = [participant_to_paper[l] for l in labels[:n_participants]]
+
+        plt.legend(handles[0:n_participants], new_labels,
+                   bbox_to_anchor=(1.05, 1), loc='upper left', title="Participants")
+
+        plt.ylabel("Marker Value")
+        plt.ylim(-0.2, 1.1)
+        plt.yticks(np.arange(-0.2, 1.1, 0.1))
+        plt.tight_layout()
+
+        saveDirectory = os.path.join(directory, plot_folder)
+        os.makedirs(saveDirectory, exist_ok=True)
+        plt.savefig(os.path.join(saveDirectory, f'topologicalMarker_density_{density}.png'))
+
+        plt.show()
 
 

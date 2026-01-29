@@ -218,10 +218,10 @@ def get_default_hp(ruleset):
         # 'batch_size_test': 640, # batch_size for testing
         'in_type': 'normal',  # input type: normal, multi
         'rnn_type': 'LeakyRNN',  # Type of RNNs: NonRecurrent, LeakyRNN, LeakyGRU, EILeakyGRU | GRU, LSTM
-        'multiLayer': False,  # only applicaple with LeakyRNN
+        'multiLayer': True,  # only applicaple with LeakyRNN
         'n_rnn': 256,  # number of recurrent units for one hidden layer architecture
         'activation': 'softplus',  # Type of activation runctions, relu, softplus, tanh, elu, linear
-        'n_rnn_per_layer': [256, 128, 64],
+        'n_rnn_per_layer': [16, 16, 16],
         'activations_per_layer': ['relu', 'tanh', 'linear'],
         'loss_type': 'lsq',  # # Type of loss functions - Cross-entropy loss
         'optimizer': 'adam',  # 'adam', 'sgd'
@@ -695,8 +695,7 @@ def train(data_dir, model_dir, train_data, eval_data, hp=None, max_steps=1e6, di
 if __name__ == '__main__':
     # Initialize list for all training times for each model
     trainingTimeList = []
-    for modelNumber in range(1,
-                             21):  # Define number of iterations and models to be created for every month, respectively
+    for modelNumber in range(1, 21):  # Define number of iterations and models to be created for every month, respectively
 
         # Measure time for every model, respectively
         trainingTimeTotal_hours = 0

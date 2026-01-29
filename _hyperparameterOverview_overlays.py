@@ -463,7 +463,7 @@ def visualize_topMarker_testPerf_corrlation(meta_perf_test_list, meta_topMarker_
             avg_perf_test_list_all_,
             topMarker_list_all_):
 
-        if avg_perf >= 0.22 and topMarker != 0:
+        if avg_perf >= 0.2 and topMarker != 0: # lowest random value among all task
             avg_perf_test_list_all.append(avg_perf)
             topMarker_list_all.append(topMarker)
 

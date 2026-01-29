@@ -225,9 +225,12 @@ trainingTimeTotal_hours = 0
 # Example iteration through the grid
 for modelNumber, params in enumerate(sampled_combinations): # info: either sampled_combinations OR sampled_repeated_combinations
 
-    # # attention ********************************************************************************************************
-    # params['n_rnn'] = 156 # insert hp changes you want to apply
-    # # attention ********************************************************************************************************
+    # attention ********************************************************************************************************
+    # # params['errorBalancingValue'] = 5.
+    # params['trainingYear_Month'] = '_gridSearch_multiTask_beRNN_03_highDimCorrects_16_multi'
+    # params['n_rnn_per_layer'] = [16, 16, 16]
+    # params['multiLayer'] = True
+    # attention ********************************************************************************************************
 
     # Start
     start_time = time.perf_counter()

@@ -144,6 +144,7 @@ def _compute_variance_bymodel(data_dir, model_dir, layer, data_type, networkAnal
                 h_mean_all = np.zeros((n_hidden, len(h_all.keys())))
                 h_var_all = np.zeros((n_hidden, len(h_all.keys())))
                 h_corr_all = np.zeros((n_hidden, n_hidden, len(h_all.keys())))
+                # info: default shape: (timesteps, trials, units)
                 for i, val in enumerate(h_all.values()):
                     # val is Time, Batch, Units for each task in h_all dict
                     # Variance across time and stimulus
