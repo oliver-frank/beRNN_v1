@@ -1,6 +1,7 @@
 import os
 import pandas as pd
 import numpy as np
+import pickle
 import matplotlib.pyplot as plt
 from scipy.stats import mannwhitneyu
 import matplotlib.colors as mcolors
@@ -8,9 +9,11 @@ import matplotlib.colors as mcolors
 
 # Configuration
 participant_dir = r'C:\Users\oliver.frank\Desktop\PyProjects\Data'
-months = ['4', '5', '6']
+months = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12']
+# months = ['4', '5', '6']
 strToSave = months[0] + '-' + months[-1]
 newParticpantList = ['beRNN_01', 'beRNN_02', 'beRNN_03', 'beRNN_04', 'beRNN_05']
+reactionTime_comparison, plot_radars = True, False
 
 paper_nomenclatur_dict = {
     'beRNN_03': 'HC1',
@@ -42,407 +45,536 @@ filename_color_dict = {
 # info: ################################################################################################################
 # info: Create reaction time box plots for seperated errors and corrects or all trials
 # info: ################################################################################################################
-for participant in newParticpantList:
+if reactionTime_comparison == True:
+    for participant in newParticpantList:
 
-    fig_correct, ax_correct = plt.subplots(figsize=(10, 5))
-    fig_error, ax_error = plt.subplots(figsize=(10, 5))
-    fig_all, ax_all = plt.subplots(figsize=(10, 5))
+        fig_correct, ax_correct = plt.subplots(figsize=(10, 5))
+        fig_error, ax_error = plt.subplots(figsize=(10, 5))
+        fig_all, ax_all = plt.subplots(figsize=(10, 5))
 
-    month_centers = np.arange(1, len(months) + 1)
-    task_keys = list(filename_color_dict.keys())
-    offsets = np.linspace(-0.4, 0.4, len(task_keys))
-    box_width = 0.06
+        month_centers = np.arange(1, len(months) + 1)
+        task_keys = list(filename_color_dict.keys())
+        offsets = np.linspace(-0.4, 0.4, len(task_keys))
+        box_width = 0.06
 
-    legend_handles_correct = []
-    legend_handles_error = []
-    legend_handles_all = []
-    seen_correct_tasks = set()
-    seen_error_tasks = set()
-    seen_all_tasks = set()
+        legend_handles_correct = []
+        legend_handles_error = []
+        legend_handles_all = []
+        seen_correct_tasks = set()
+        seen_error_tasks = set()
+        seen_all_tasks = set()
 
-    stats_data = {task: {"correct": [], "error": [], "all": []} for task in task_keys}
+        stats_data = {task: {"correct": [], "error": [], "all": []} for task in task_keys}
 
-    for m_idx, month_str in enumerate(months):
-        month_center = month_centers[m_idx]
-        folder = os.path.join(participant_dir, participant, month_str)
+        for m_idx, month_str in enumerate(months):
 
-        month_files = []
-        if os.path.exists(folder):
-            for root, _, files in os.walk(folder):
-                month_files.extend(
-                    os.path.join(root, f) for f in files if f.endswith(".xlsx")
-                )
+            # initialization of empirical average response epoch lengths with heuristic value
+            averageResponseEpoch_corrects_dict = {
+                'DM': 35,
+                'DM_Anti': 35,
+                'EF': 35,
+                'EF_Anti': 35,
+                'RP': 35,
+                'RP_Anti': 35,
+                'RP_Ctx1': 35,
+                'RP_Ctx2': 35,
+                'WM': 35,
+                'WM_Anti': 35,
+                'WM_Ctx1': 35,
+                'WM_Ctx2': 35
+            }
 
-        for t_idx, task in enumerate(task_keys):
-            color = filename_color_dict[task]
-            task_data_correct = []
-            task_data_error = []
-            task_data_all = []
+            month_center = month_centers[m_idx]
+            folder = os.path.join(participant_dir, participant, month_str)
 
-            for filename in month_files:
-                try:
-                    df = pd.read_excel(filename, engine='openpyxl')
-
-                    if (
-                        isinstance(df.iloc[0, 28], str)
-                        and df.iloc[0, 28].split('_trials_')[0] == task
-                    ):
-                        corr = (
-                            df.loc[
-                                (df['Component Name'] == 'Click Response') &
-                                (df['Correct'] == 1),
-                                'Reaction Time'
-                            ]
-                            .dropna()
-                            .tolist()
-                        )
-
-                        err = (
-                            df.loc[
-                                (df['Component Name'] == 'Click Response') &
-                                (df['Correct'] == 0),
-                                'Reaction Time'
-                            ]
-                            .dropna()
-                            .tolist()
-                        )
-
-                        all = (
-                            df.loc[
-                                (df['Component Name'] == 'Click Response'),
-                                'Reaction Time'
-                            ]
-                            .dropna()
-                            .tolist()
-                        )
-
-                        # Clean by min and max thresholds for defined reaction times - gorilla df saving errors added single values outside of range
-                        if task == 'DM' or task == 'DM_Anti':
-                            corr = [rt for rt in corr if rt <= 1700 and rt >= 300]
-                            err = [rt for rt in err if rt <= 1700 and rt >= 300]
-                            all = [rt for rt in all if rt <= 1700 and rt >= 300]
-                        if task == 'EF' or task == 'EF_Anti':
-                            corr = [rt for rt in corr if rt <= 900 and rt >= 300]
-                            err = [rt for rt in err if rt <= 900 and rt >= 300]
-                            all = [rt for rt in all if rt <= 900 and rt >= 300]
-                        if task == 'RP' or task == 'RP_Anti' or task == 'RP_Ctx1' or task == 'RP_Ctx2':
-                            corr = [rt for rt in corr if rt <= 1500 and rt >= 300]
-                            err = [rt for rt in err if rt <= 1500 and rt >= 300]
-                            all = [rt for rt in all if rt <= 1500 and rt >= 300]
-                        if task == 'WM' or task == 'WM_Anti' or task == 'WM_Ctx1' or task == 'WM_Ctx2':
-                            corr = [rt for rt in corr if rt <= 1500 and rt >= 300]
-                            err = [rt for rt in err if rt <= 1500 and rt >= 300]
-                            all = [rt for rt in all if rt <= 1500 and rt >= 300]
-
-                        task_data_correct.extend(corr)
-                        task_data_error.extend(err)
-                        task_data_all.extend(all)
-
-                        stats_data[task]["correct"].extend(corr)
-                        stats_data[task]["error"].extend(err)
-                        stats_data[task]["all"].extend(all)
-
-                except Exception as e:
-                    print(f"Error in {filename}: {e}")
-
-
-            # ---- Correct plots ----
-            if task_data_correct:
-                x_pos = month_center + offsets[t_idx]
-
-                ax_correct.boxplot(
-                    task_data_correct,
-                    positions=[x_pos],
-                    widths=box_width,
-                    patch_artist=True,
-                    showmeans=True,
-                    showfliers=False,
-                    meanprops=dict(marker="D", markerfacecolor="white",
-                                   markeredgecolor=color, markersize=4),
-                    boxprops=dict(facecolor=color, color=color, alpha=0.5),
-                    medianprops=dict(color="white")
-                )
-
-                jitter = np.random.uniform(-box_width / 4, box_width / 4,
-                                           size=len(task_data_correct))
-                ax_correct.scatter(
-                    np.full(len(task_data_correct), x_pos) + jitter,
-                    task_data_correct,
-                    color=color, alpha=0.3, s=8
-                )
-
-                if task not in seen_correct_tasks:
-                    legend_handles_correct.append(
-                        plt.Line2D([0], [0], color=color, lw=4, label=task)
+            month_files = []
+            if os.path.exists(folder):
+                for root, _, files in os.walk(folder):
+                    month_files.extend(
+                        os.path.join(root, f) for f in files if f.endswith(".xlsx")
                     )
-                    seen_correct_tasks.add(task)
+
+            for t_idx, task in enumerate(task_keys):
+                color = filename_color_dict[task]
+                task_data_correct = []
+                task_data_error = []
+                task_data_all = []
+
+                for filename in month_files:
+                    try:
+                        df = pd.read_excel(filename, engine='openpyxl')
+
+                        if (
+                            isinstance(df.iloc[0, 28], str)
+                            and df.iloc[0, 28].split('_trials_')[0] == task
+                        ):
+                            corr = (
+                                df.loc[
+                                    (df['Component Name'] == 'Click Response') &
+                                    (df['Correct'] == 1),
+                                    'Reaction Time'
+                                ]
+                                .dropna()
+                                .tolist()
+                            )
+
+                            err = (
+                                df.loc[
+                                    (df['Component Name'] == 'Click Response') &
+                                    (df['Correct'] == 0),
+                                    'Reaction Time'
+                                ]
+                                .dropna()
+                                .tolist()
+                            )
+
+                            all = (
+                                df.loc[
+                                    (df['Component Name'] == 'Click Response'),
+                                    'Reaction Time'
+                                ]
+                                .dropna()
+                                .tolist()
+                            )
+
+                            # Clean by min and max thresholds for defined reaction times - gorilla df saving errors added single values outside of range
+                            if task == 'DM' or task == 'DM_Anti':
+                                corr = [rt for rt in corr if rt <= 1700 and rt >= 300]
+                                err = [rt for rt in err if rt <= 1700 and rt >= 300]
+                                all = [rt for rt in all if rt <= 1700 and rt >= 300]
+                            if task == 'EF' or task == 'EF_Anti':
+                                corr = [rt for rt in corr if rt <= 900 and rt >= 300]
+                                err = [rt for rt in err if rt <= 900 and rt >= 300]
+                                all = [rt for rt in all if rt <= 900 and rt >= 300]
+                            if task == 'RP' or task == 'RP_Anti' or task == 'RP_Ctx1' or task == 'RP_Ctx2':
+                                corr = [rt for rt in corr if rt <= 1500 and rt >= 300]
+                                err = [rt for rt in err if rt <= 1500 and rt >= 300]
+                                all = [rt for rt in all if rt <= 1500 and rt >= 300]
+                            if task == 'WM' or task == 'WM_Anti' or task == 'WM_Ctx1' or task == 'WM_Ctx2':
+                                corr = [rt for rt in corr if rt <= 1500 and rt >= 300]
+                                err = [rt for rt in err if rt <= 1500 and rt >= 300]
+                                all = [rt for rt in all if rt <= 1500 and rt >= 300]
+
+                            task_data_correct.extend(corr)
+                            task_data_error.extend(err)
+                            task_data_all.extend(all)
+
+                            stats_data[task]["correct"].extend(corr)
+                            stats_data[task]["error"].extend(err)
+                            stats_data[task]["all"].extend(all)
+
+                    except Exception as e:
+                        print(f"Error in {filename}: {e}")
 
 
-            # ---- Error plots ----
-            if task_data_error:
-                x_pos = month_center + offsets[t_idx]
-
-                ax_error.boxplot(
-                    task_data_error,
-                    positions=[x_pos],
-                    widths=box_width,
-                    patch_artist=True,
-                    showmeans=True,
-                    showfliers=False,
-                    meanprops=dict(marker="D", markerfacecolor="white",
-                                   markeredgecolor=color, markersize=4),
-                    boxprops=dict(facecolor=color, color=color, alpha=0.5),
-                    medianprops=dict(color="white")
-                )
-
-                jitter = np.random.uniform(-box_width / 4, box_width / 4,
-                                           size=len(task_data_error))
-                ax_error.scatter(
-                    np.full(len(task_data_error), x_pos) + jitter,
-                    task_data_error,
-                    color=color, alpha=0.3, s=8
-                )
-
-                # ---- All plots ----
-                if task not in seen_error_tasks:
-                    legend_handles_error.append(
-                        plt.Line2D([0], [0], color=color, lw=4, label=task)
-                    )
-                    seen_error_tasks.add(task)
-
-
-            # ---- Error plots ----
-            if task_data_all:
-                x_pos = month_center + offsets[t_idx]
-
-                ax_all.boxplot(
-                    task_data_all,
-                    positions=[x_pos],
-                    widths=box_width,
-                    patch_artist=True,
-                    showmeans=True,
-                    showfliers=False,
-                    meanprops=dict(marker="D", markerfacecolor="white",
-                                   markeredgecolor=color, markersize=4),
-                    boxprops=dict(facecolor=color, color=color, alpha=0.5),
-                    medianprops=dict(color="white")
-                )
-
-                jitter = np.random.uniform(-box_width / 4, box_width / 4,
-                                           size=len(task_data_all))
-                ax_all.scatter(
-                    np.full(len(task_data_all), x_pos) + jitter,
-                    task_data_all,
-                    color=color, alpha=0.3, s=8
-                )
-
-                if task not in seen_all_tasks:
-                    legend_handles_all.append(
-                        plt.Line2D([0], [0], color=color, lw=4, label=task)
-                    )
-                    seen_all_tasks.add(task)
-
-
-    # ---------- Formatting ----------
-    for ax in (ax_correct, ax_error, ax_all):
-        ax.set_ylim(0, 1500)
-        ax.set_yticks(range(0, 1501, 500))
-        ax.grid(axis='y', linestyle='--', alpha=0.7)
-        ax.set_xticks(month_centers)
-        ax.set_xticklabels([f"Month {m}" for m in months])
-        ax.set_xlim(month_centers[0] - 0.5, month_centers[-1] + 0.5)
-        ax.set_ylabel("Reaction Time (ms)")
-
-    ax_correct.set_title(f"Reaction Time – Correct ({participant})")
-    ax_error.set_title(f"Reaction Time – Errors ({participant})")
-    ax_all.set_title(f"Reaction Time – All ({participant})")
-
-    ax_correct.legend(handles=legend_handles_correct,
-                      loc='upper left', bbox_to_anchor=(1.02, 1))
-    ax_error.legend(handles=legend_handles_error,
-                    loc='upper left', bbox_to_anchor=(1.02, 1))
-    ax_all.legend(handles=legend_handles_all,
-                    loc='upper left', bbox_to_anchor=(1.02, 1))
-
-    fig_correct.subplots_adjust(right=0.80)
-    fig_error.subplots_adjust(right=0.80)
-    fig_all.subplots_adjust(right=0.80)
-
-    fig_correct.savefig(
-        os.path.join(participant_dir, participant,
-                     f"{participant}_{strToSave}_reactionTime_Corrects.png"),
-        dpi=300
-    )
-    fig_error.savefig(
-        os.path.join(participant_dir, participant,
-                     f"{participant}_{strToSave}_reactionTime_Errors.png"),
-        dpi=300
-    )
-    fig_all.savefig(
-        os.path.join(participant_dir, participant,
-                     f"{participant}_{strToSave}_reactionTime_All.png"),
-        dpi=300
-    )
-
-    plt.close(fig_correct)
-    plt.close(fig_error)
-    plt.close(fig_all)
+                # # ---- Correct plots ----
+                # if task_data_correct:
+                #     x_pos = month_center + offsets[t_idx]
+                #
+                #     ax_correct.boxplot(
+                #         task_data_correct,
+                #         positions=[x_pos],
+                #         widths=box_width,
+                #         patch_artist=True,
+                #         showmeans=True,
+                #         showfliers=False,
+                #         meanprops=dict(marker="D", markerfacecolor="white",
+                #                        markeredgecolor=color, markersize=4),
+                #         boxprops=dict(facecolor=color, color=color, alpha=0.5),
+                #         medianprops=dict(color="white")
+                #     )
+                #
+                #     jitter = np.random.uniform(-box_width / 4, box_width / 4,
+                #                                size=len(task_data_correct))
+                #     ax_correct.scatter(
+                #         np.full(len(task_data_correct), x_pos) + jitter,
+                #         task_data_correct,
+                #         color=color, alpha=0.3, s=8
+                #     )
+                #
+                #     if task not in seen_correct_tasks:
+                #         legend_handles_correct.append(
+                #             plt.Line2D([0], [0], color=color, lw=4, label=task)
+                #         )
+                #         seen_correct_tasks.add(task)
+                #
+                #
+                # # ---- Error plots ----
+                # if task_data_error:
+                #     x_pos = month_center + offsets[t_idx]
+                #
+                #     ax_error.boxplot(
+                #         task_data_error,
+                #         positions=[x_pos],
+                #         widths=box_width,
+                #         patch_artist=True,
+                #         showmeans=True,
+                #         showfliers=False,
+                #         meanprops=dict(marker="D", markerfacecolor="white",
+                #                        markeredgecolor=color, markersize=4),
+                #         boxprops=dict(facecolor=color, color=color, alpha=0.5),
+                #         medianprops=dict(color="white")
+                #     )
+                #
+                #     jitter = np.random.uniform(-box_width / 4, box_width / 4,
+                #                                size=len(task_data_error))
+                #     ax_error.scatter(
+                #         np.full(len(task_data_error), x_pos) + jitter,
+                #         task_data_error,
+                #         color=color, alpha=0.3, s=8
+                #     )
+                #
+                #     # ---- All plots ----
+                #     if task not in seen_error_tasks:
+                #         legend_handles_error.append(
+                #             plt.Line2D([0], [0], color=color, lw=4, label=task)
+                #         )
+                #         seen_error_tasks.add(task)
+                #
+                #
+                # # ---- Correct + Error plots ----
+                # if task_data_all:
+                #     x_pos = month_center + offsets[t_idx]
+                #
+                #     ax_all.boxplot(
+                #         task_data_all,
+                #         positions=[x_pos],
+                #         widths=box_width,
+                #         patch_artist=True,
+                #         showmeans=True,
+                #         showfliers=False,
+                #         meanprops=dict(marker="D", markerfacecolor="white",
+                #                        markeredgecolor=color, markersize=4),
+                #         boxprops=dict(facecolor=color, color=color, alpha=0.5),
+                #         medianprops=dict(color="white")
+                #     )
+                #
+                #     jitter = np.random.uniform(-box_width / 4, box_width / 4,
+                #                                size=len(task_data_all))
+                #     ax_all.scatter(
+                #         np.full(len(task_data_all), x_pos) + jitter,
+                #         task_data_all,
+                #         color=color, alpha=0.3, s=8
+                #     )
+                #
+                #     if task not in seen_all_tasks:
+                #         legend_handles_all.append(
+                #             plt.Line2D([0], [0], color=color, lw=4, label=task)
+                #         )
+                #         seen_all_tasks.add(task)
 
 
-    # ---------- Statistics ----------
-    print(f"\n{'=' * 95}")
-    print(f"STATISTICAL ANALYSIS: Correct vs. Error Reaction Times ({participant})")
-    print(f"{'=' * 95}")
-
-    # Define thresholds
-    alpha_standard = 0.05
-    n_tests = len([t for t in stats_data if len(stats_data[t]["correct"]) >= 10 and len(stats_data[t]["error"]) >= 10])
-    # Protect against division by zero if no tasks have enough data
-    alpha_bonf = alpha_standard / max(n_tests, 1)
-
-    print(
-        f"Significance Thresholds: Standard Alpha = {alpha_standard:.2f} | Bonferroni Alpha (n={n_tests}) = {alpha_bonf:.4f}")
-    print(f"{'-' * 95}")
-    print(
-        f"{'Task':<10} | {'n_corr':<7} | {'n_err':<7} | {'p-value':<10} | {'Effect (r)':<10} | {'Sig (0.05)':<10} | {'Sig (Bonf)':<10}")
-    print(f"{'-' * 95}")
-
-    for task in task_keys:
-        d_corr = stats_data[task]["correct"]
-        d_err = stats_data[task]["error"]
-        n1, n2 = len(d_corr), len(d_err)
-
-        if n1 >= 10 and n2 >= 10:
-            # Perform Mann-Whitney U
-            u_stat, p = mannwhitneyu(d_corr, d_err, alternative="two-sided")
-
-            # Calculate Effect Size r = |Z| / sqrt(N)
-            # Standardizing U to Z
-            mu_u = (n1 * n2) / 2
-            sigma_u = np.sqrt(n1 * n2 * (n1 + n2 + 1) / 12)
-            # Avoid division by zero in edge cases
-            z = (u_stat - mu_u) / sigma_u if sigma_u != 0 else 0
-            effect_size_r = abs(z) / np.sqrt(n1 + n2)
-
-            # Determine significance strings
-            sig_std = "YES" if p < alpha_standard else "no"
-            sig_bonf = "YES" if p < alpha_bonf else "no"
-
-            print(
-                f"{task:<10} | {n1:<7} | {n2:<7} | {p:<10.2e} | {effect_size_r:<10.3f} | {sig_std:<10} | {sig_bonf:<10}")
-        else:
-            # Handle cases with insufficient data
-            reason = f"n={n1}/{n2}"
-            print(f"{task:<10} | {reason:<30} | Insufficient data for reliable test")
-
-    print(f"{'=' * 95}\n")
+                # Log the current average reaction time of all correct trials for one particular month and participant
+                if task_data_correct:
+                    averageResponseEpoch_corrects_dict[task] = np.round(np.average(task_data_correct)/20) # neuronal time constant 20ms
+            # Save the dict for each month and participant, respectively
+            dir_correct_dicts = os.path.join(participant_dir, participant, 'averageResponseEpoch_corrects_dicts')
+            os.makedirs(dir_correct_dicts, exist_ok=True)
+            with open(os.path.join(dir_correct_dicts, f'averageResponseEpoch_corrects_dict_{participant}_{month_str}.pkl'), 'wb') as f:
+                pickle.dump(averageResponseEpoch_corrects_dict, f)
 
 
+#         # ---------- Formatting ----------
+#         for ax in (ax_correct, ax_error, ax_all):
+#             ax.set_ylim(0, 1500)
+#             ax.set_yticks(range(0, 1501, 500))
+#             ax.grid(axis='y', linestyle='--', alpha=0.7)
+#             ax.set_xticks(month_centers)
+#             ax.set_xticklabels([f"Month {m}" for m in months])
+#             ax.set_xlim(month_centers[0] - 0.5, month_centers[-1] + 0.5)
+#             ax.set_ylabel("Reaction Time (ms)")
+#
+#         ax_correct.set_title(f"Reaction Time – Correct ({participant})")
+#         ax_error.set_title(f"Reaction Time – Errors ({participant})")
+#         ax_all.set_title(f"Reaction Time – All ({participant})")
+#
+#         ax_correct.legend(handles=legend_handles_correct,
+#                           loc='upper left', bbox_to_anchor=(1.02, 1))
+#         ax_error.legend(handles=legend_handles_error,
+#                         loc='upper left', bbox_to_anchor=(1.02, 1))
+#         ax_all.legend(handles=legend_handles_all,
+#                         loc='upper left', bbox_to_anchor=(1.02, 1))
+#
+#         fig_correct.subplots_adjust(right=0.80)
+#         fig_error.subplots_adjust(right=0.80)
+#         fig_all.subplots_adjust(right=0.80)
+#
+#         fig_correct.savefig(
+#             os.path.join(participant_dir, participant,
+#                          f"{participant}_{strToSave}_reactionTime_Corrects.png"),
+#             dpi=300
+#         )
+#         fig_error.savefig(
+#             os.path.join(participant_dir, participant,
+#                          f"{participant}_{strToSave}_reactionTime_Errors.png"),
+#             dpi=300
+#         )
+#         fig_all.savefig(
+#             os.path.join(participant_dir, participant,
+#                          f"{participant}_{strToSave}_reactionTime_All.png"),
+#             dpi=300
+#         )
+#
+#         plt.close(fig_correct)
+#         plt.close(fig_error)
+#         plt.close(fig_all)
+#
+#
+#         # ---------- Statistics ----------
+#         print(f"\n{'=' * 95}")
+#         print(f"STATISTICAL ANALYSIS: Correct vs. Error Reaction Times ({participant})")
+#         print(f"{'=' * 95}")
+#
+#         # Define thresholds
+#         alpha_standard = 0.05
+#         n_tests = len([t for t in stats_data if len(stats_data[t]["correct"]) >= 10 and len(stats_data[t]["error"]) >= 10])
+#         # Protect against division by zero if no tasks have enough data
+#         alpha_bonf = alpha_standard / max(n_tests, 1)
+#
+#         print(
+#             f"Significance Thresholds: Standard Alpha = {alpha_standard:.2f} | Bonferroni Alpha (n={n_tests}) = {alpha_bonf:.4f}")
+#         print(f"{'-' * 95}")
+#         print(
+#             f"{'Task':<10} | {'n_corr':<7} | {'n_err':<7} | {'p-value':<10} | {'Effect (r)':<10} | {'Sig (0.05)':<10} | {'Sig (Bonf)':<10}")
+#         print(f"{'-' * 95}")
+#
+#         for task in task_keys:
+#             d_corr = stats_data[task]["correct"]
+#             d_err = stats_data[task]["error"]
+#             n1, n2 = len(d_corr), len(d_err)
+#
+#             if n1 >= 10 and n2 >= 10:
+#                 # Perform Mann-Whitney U
+#                 u_stat, p = mannwhitneyu(d_corr, d_err, alternative="two-sided")
+#
+#                 # Calculate Effect Size r = |Z| / sqrt(N)
+#                 # Standardizing U to Z
+#                 mu_u = (n1 * n2) / 2
+#                 sigma_u = np.sqrt(n1 * n2 * (n1 + n2 + 1) / 12)
+#                 # Avoid division by zero in edge cases
+#                 z = (u_stat - mu_u) / sigma_u if sigma_u != 0 else 0
+#                 effect_size_r = abs(z) / np.sqrt(n1 + n2)
+#
+#                 # Determine significance strings
+#                 sig_std = "YES" if p < alpha_standard else "no"
+#                 sig_bonf = "YES" if p < alpha_bonf else "no"
+#
+#                 print(
+#                     f"{task:<10} | {n1:<7} | {n2:<7} | {p:<10.2e} | {effect_size_r:<10.3f} | {sig_std:<10} | {sig_bonf:<10}")
+#             else:
+#                 # Handle cases with insufficient data
+#                 reason = f"n={n1}/{n2}"
+#                 print(f"{task:<10} | {reason:<30} | Insufficient data for reliable test")
+#
+#         print(f"{'=' * 95}\n")
+#
+#
+#         # ---------- Statistics Visualization ----------
+#         import matplotlib.pyplot as plt
+#
+#         stats_rows = []
+#
+#         for task in task_keys:
+#             d_corr = stats_data[task]["correct"]
+#             d_err = stats_data[task]["error"]
+#             n1, n2 = len(d_corr), len(d_err)
+#
+#             if n1 >= 10 and n2 >= 10:
+#                 u_stat, p = mannwhitneyu(d_corr, d_err, alternative="two-sided")
+#
+#                 mu_u = (n1 * n2) / 2
+#                 sigma_u = np.sqrt(n1 * n2 * (n1 + n2 + 1) / 12)
+#                 z = (u_stat - mu_u) / sigma_u if sigma_u != 0 else 0
+#                 effect_r = abs(z) / np.sqrt(n1 + n2)
+#
+#                 sig_std = "YES" if p < alpha_standard else "no"
+#                 sig_bonf = "YES" if p < alpha_bonf else "no"
+#
+#                 stats_rows.append([
+#                     task,
+#                     n1,
+#                     n2,
+#                     f"{p:.2e}",
+#                     f"{effect_r:.3f}",
+#                     sig_std,
+#                     sig_bonf
+#                 ])
+#             else:
+#                 stats_rows.append([
+#                     task,
+#                     n1,
+#                     n2,
+#                     "n/a",
+#                     "n/a",
+#                     "n/a",
+#                     "n/a"
+#                 ])
+#
+#         # Create figure
+#         fig_stats, ax_stats = plt.subplots(figsize=(12, 0.6 * len(stats_rows) + 2))
+#         ax_stats.axis("off")
+#
+#         column_labels = [
+#             "Task",
+#             "n Correct",
+#             "n Error",
+#             "p-value",
+#             "Effect size (r)",
+#             "Sig (0.05)",
+#             "Sig (Bonf)"
+#         ]
+#
+#         table = ax_stats.table(
+#             cellText=stats_rows,
+#             colLabels=column_labels,
+#             loc="center",
+#             cellLoc="center"
+#         )
+#
+#         table.auto_set_font_size(False)
+#         table.set_fontsize(9)
+#         table.scale(1, 1.5)
+#
+#         # Color significant cells
+#         for row_idx, row in enumerate(stats_rows, start=1):
+#             if row[5] == "YES":
+#                 table[row_idx, 5].set_facecolor("#c7e9c0")  # green
+#             if row[6] == "YES":
+#                 table[row_idx, 6].set_facecolor("#a1d99b")  # darker green
+#
+#         ax_stats.set_title(
+#             f"Reaction Time Statistics: Correct vs Error ({participant})\n"
+#             f"α = {alpha_standard} | Bonferroni α = {alpha_bonf:.4f}",
+#             fontsize=12,
+#             pad=20
+#         )
+#
+#         # Save alongside other PNGs
+#         fig_stats.savefig(
+#             os.path.join(
+#                 participant_dir,
+#                 participant,
+#                 f"{participant}_{strToSave}_reactionTime_Statistics.png"
+#             ),
+#             dpi=300,
+#             bbox_inches="tight"
+#         )
+#
+#         plt.close(fig_stats)
+#
+#         # Create & Save dict
+#         averageResponseEpoch_corrects_dict['DM'] = np.round(np.average(stats_data['DM']['correct'])/20)
+#         averageResponseEpoch_corrects_dict['DM'] = np.round(np.average(stats_data['DM']['correct'])/20)
+#
+#
+#
+# # info: ################################################################################################################
+# # info: Create task complexity radar plots
+# # info: ################################################################################################################
+# def plot_beRNN_radar_months(beRNN_name, data, filename_color_dict, months):
+#     tasks = list(filename_color_dict.keys())
+#     n_tasks = len(tasks)
+#
+#     # Compute angles for radar
+#     angles = np.linspace(0, 2 * np.pi, n_tasks, endpoint=False)
+#     angles = np.concatenate([angles, [angles[0]]])  # close the polygon
+#
+#     fig, axes = plt.subplots(
+#         1, 3, figsize=(15, 5),
+#         subplot_kw=dict(polar=True)
+#     )
+#
+#     for ax, month in zip(axes, months):
+#         values = np.array(data[month])
+#         values = np.concatenate([values, [values[0]]])  # close polygon
+#
+#         # Plot polygon
+#         ax.plot(
+#             angles, values, linewidth=2, color="black"
+#         )
+#         ax.fill(
+#             angles, values, color="gray", alpha=0.2
+#         )
+#
+#         # Plot individual task points in viridis colors
+#         for angle, val, task in zip(angles[:-1], values[:-1], tasks):
+#             ax.plot([angle, angle], [0, val], color=filename_color_dict[task], linewidth=4)
+#
+#         # Formatting
+#         ax.set_theta_offset(np.pi / 2)
+#         ax.set_theta_direction(-1)
+#         ax.set_thetagrids(angles[:-1] * 180 / np.pi, tasks, fontsize=9)
+#         ax.set_ylim(0, 6)
+#         # ax.set_yticks(range(1, 7))
+#         ax.set_yticklabels([])  # remove y-ticks
+#         # ax.set_yticklabels([str(i) for i in range(1, 7)], fontsize=8)
+#         ax.set_title(f"Month {month}")
+#
+#     fig.suptitle(paper_nomenclatur_dict[beRNN_name], fontsize=16)
+#     plt.tight_layout()
+#     # plt.show()
+#     plt.savefig(os.path.join(r'C:\Users\oliver.frank\Desktop\PyProjects\beRNNmodels\__taskComplexities', f"{beRNN_name}_taskComplexity_month_4-6.png"),dpi=300)
+#
+# if plot_radars == True:
+#     # Manually standardized task complexity level for 12 tasks each month - fix: entry all months
+#     beRNN_01_month_4 = [4,1,2,2,4,5,1,4,5,5,5,1]
+#     beRNN_01_month_5 = [4,1,4,4,4,5,1,4,5,5,5,1]
+#     beRNN_01_month_6 = [4,1,4,4,4,5,1,4,5,5,5,1]
+#
+#     beRNN_02_month_4 = [4,4,2,2,1,2,1,1,5,5,5,2]
+#     beRNN_02_month_5 = [4,4,4,4,2,2,1,1,5,5,5,2]
+#     beRNN_02_month_6 = [4,4,4,4,4,4,1,1,5,5,5,2]
+#
+#     beRNN_03_month_4 = [4,1,2,2,4,5,1,2,5,5,5,5]
+#     beRNN_03_month_5 = [4,1,4,4,4,5,1,2,5,5,5,5]
+#     beRNN_03_month_6 = [4,1,4,4,4,5,1,2,5,5,5,5]
+#
+#     beRNN_04_month_4 = [4,1,5,2,4,5,1,2,5,5,5,5]
+#     beRNN_04_month_5 = [4,1,5,2,4,5,1,2,5,5,5,5]
+#     beRNN_04_month_6 = [4,1,5,5,4,5,1,2,5,5,5,5]
+#
+#     beRNN_05_month_4 = [4,1,2,2,4,4,1,4,6,5,2,2]
+#     beRNN_05_month_5 = [4,2,4,4,4,4,1,4,5,5,2,2]
+#     beRNN_05_month_6 = [4,2,4,4,4,4,1,4,5,5,2,4]
+#
+#     beRNN_06_month_4 = [1,1,1,1,1,1,1,1,1,1,1,1]
+#     beRNN_06_month_5 = [6,6,6,6,6,6,6,6,6,6,6,6]
+#     beRNN_06_month_6 = [4,2,4,4,4,4,1,4,5,5,2,4]
+#
+#
+#     beRNN_data = {
+#         "beRNN_01": {
+#             "4": beRNN_01_month_4,
+#             "5": beRNN_01_month_5,
+#             "6": beRNN_01_month_6,
+#         },
+#         "beRNN_02": {
+#             "4": beRNN_02_month_4,
+#             "5": beRNN_02_month_5,
+#             "6": beRNN_02_month_6,
+#         },
+#         "beRNN_03": {
+#             "4": beRNN_03_month_4,
+#             "5": beRNN_03_month_5,
+#             "6": beRNN_03_month_6,
+#         },
+#         "beRNN_04": {
+#             "4": beRNN_04_month_4,
+#             "5": beRNN_04_month_5,
+#             "6": beRNN_04_month_6,
+#         },
+#         "beRNN_05": {
+#             "4": beRNN_05_month_4,
+#             "5": beRNN_05_month_5,
+#             "6": beRNN_05_month_6,
+#         },
+#         "beRNN_06": {
+#             "4": beRNN_06_month_4,
+#             "5": beRNN_06_month_5,
+#             "6": beRNN_06_month_6,
+#         },
+#     }
+#
+#     plot_beRNN_radar_months("beRNN_05", beRNN_data["beRNN_05"], filename_color_dict, months)
 
-# info: ################################################################################################################
-# info: Create task complexity radar plots
-# info: ################################################################################################################
-def plot_beRNN_radar_months(beRNN_name, data, filename_color_dict):
-    tasks = list(filename_color_dict.keys())
-    n_tasks = len(tasks)
-    months = ["4", "5", "6"]
 
-    # Compute angles for radar
-    angles = np.linspace(0, 2 * np.pi, n_tasks, endpoint=False)
-    angles = np.concatenate([angles, [angles[0]]])  # close the polygon
-
-    fig, axes = plt.subplots(
-        1, 3, figsize=(15, 5),
-        subplot_kw=dict(polar=True)
-    )
-
-    for ax, month in zip(axes, months):
-        values = np.array(data[month])
-        values = np.concatenate([values, [values[0]]])  # close polygon
-
-        # Plot polygon
-        ax.plot(
-            angles, values, linewidth=2, color="black"
-        )
-        ax.fill(
-            angles, values, color="gray", alpha=0.2
-        )
-
-        # Plot individual task points in viridis colors
-        for angle, val, task in zip(angles[:-1], values[:-1], tasks):
-            ax.plot([angle, angle], [0, val], color=filename_color_dict[task], linewidth=4)
-
-        # Formatting
-        ax.set_theta_offset(np.pi / 2)
-        ax.set_theta_direction(-1)
-        ax.set_thetagrids(angles[:-1] * 180 / np.pi, tasks, fontsize=9)
-        ax.set_ylim(0, 6)
-        # ax.set_yticks(range(1, 7))
-        ax.set_yticklabels([])  # remove y-ticks
-        # ax.set_yticklabels([str(i) for i in range(1, 7)], fontsize=8)
-        ax.set_title(f"Month {month}")
-
-    fig.suptitle(paper_nomenclatur_dict[beRNN_name], fontsize=16)
-    plt.tight_layout()
-    # plt.show()
-    plt.savefig(os.path.join(r'C:\Users\oliver.frank\Desktop\PyProjects\beRNNmodels\__taskComplexities', f"{beRNN_name}_taskComplexity_month_4-6.png"),dpi=300)
-
-beRNN_01_month_4 = [4,1,2,2,4,5,1,4,5,5,5,1]
-beRNN_01_month_5 = [4,1,4,4,4,5,1,4,5,5,5,1]
-beRNN_01_month_6 = [4,1,4,4,4,5,1,4,5,5,5,1]
-
-beRNN_02_month_4 = [4,4,2,2,1,2,1,1,5,5,5,2]
-beRNN_02_month_5 = [4,4,4,4,2,2,1,1,5,5,5,2]
-beRNN_02_month_6 = [4,4,4,4,4,4,1,1,5,5,5,2]
-
-beRNN_03_month_4 = [4,1,2,2,4,5,1,2,5,5,5,5]
-beRNN_03_month_5 = [4,1,4,4,4,5,1,2,5,5,5,5]
-beRNN_03_month_6 = [4,1,4,4,4,5,1,2,5,5,5,5]
-
-beRNN_04_month_4 = [4,1,5,2,4,5,1,2,5,5,5,5]
-beRNN_04_month_5 = [4,1,5,2,4,5,1,2,5,5,5,5]
-beRNN_04_month_6 = [4,1,5,5,4,5,1,2,5,5,5,5]
-
-beRNN_05_month_4 = [4,1,2,2,4,4,1,4,6,5,2,2]
-beRNN_05_month_5 = [4,2,4,4,4,4,1,4,5,5,2,2]
-beRNN_05_month_6 = [4,2,4,4,4,4,1,4,5,5,2,4]
-
-beRNN_06_month_4 = [1,1,1,1,1,1,1,1,1,1,1,1]
-beRNN_06_month_5 = [6,6,6,6,6,6,6,6,6,6,6,6]
-beRNN_06_month_6 = [4,2,4,4,4,4,1,4,5,5,2,4]
-
-
-beRNN_data = {
-    "beRNN_01": {
-        "4": beRNN_01_month_4,
-        "5": beRNN_01_month_5,
-        "6": beRNN_01_month_6,
-    },
-    "beRNN_02": {
-        "4": beRNN_02_month_4,
-        "5": beRNN_02_month_5,
-        "6": beRNN_02_month_6,
-    },
-    "beRNN_03": {
-        "4": beRNN_03_month_4,
-        "5": beRNN_03_month_5,
-        "6": beRNN_03_month_6,
-    },
-    "beRNN_04": {
-        "4": beRNN_04_month_4,
-        "5": beRNN_04_month_5,
-        "6": beRNN_04_month_6,
-    },
-    "beRNN_05": {
-        "4": beRNN_05_month_4,
-        "5": beRNN_05_month_5,
-        "6": beRNN_05_month_6,
-    },
-    "beRNN_06": {
-        "4": beRNN_06_month_4,
-        "5": beRNN_06_month_5,
-        "6": beRNN_06_month_6,
-    },
-}
-
-plot_beRNN_radar_months("beRNN_05", beRNN_data["beRNN_05"], filename_color_dict)

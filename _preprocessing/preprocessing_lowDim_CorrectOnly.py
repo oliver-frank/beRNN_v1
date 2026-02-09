@@ -4,11 +4,14 @@
 # Preprocess the cogntive-behavioral data collected from Gorilla Experimenter into the form that can be used to train the
 # models.
 
+# fix: Average reaction times for error to correct trials - see preprocessing_highDim_correctOnly.py
+
 ########################################################################################################################
 # Import necessary libraries and modules
 ########################################################################################################################
 import numpy as np
 import pandas as pd
+import pickle
 import tools
 import glob
 import json
@@ -147,14 +150,26 @@ def preprocess_DM(opened_xlsxFile, questionnare_files, list_allSessions, sequenc
             currentTrial = opened_xlsxFile_selection[j:j + 2].reset_index().drop(columns=['index'])
 
             if np.isnan(currentTrial['Onset Time'][0]):
-                numFixSteps = 35 # info: just an average empirical value
+                numFixSteps = 35  # info: just an average heuristic value - legacy solution
             else:
                 numFixSteps = round(currentTrial['Onset Time'][0] / 20)
 
-            if np.isnan(currentTrial['Onset Time'][1]):
-                numRespSteps = numFixSteps  # fix: occures very rarely, through batchLength averagging not very influential
-            else:
-                numRespSteps = round(currentTrial['Onset Time'][1] / 20)
+            if currentTrial['Correct'][0] == 1:  # if correct trial precede
+                if np.isnan(currentTrial['Onset Time'][1]):
+                    numRespSteps = numFixSteps  # fix: occures very rarely, through batchLength averaging not very influential
+                else:
+                    numRespSteps = round(currentTrial['Onset Time'][1] / 20)
+            elif currentTrial['Correct'][
+                0] == 0:  # if error trial load average number of response steps for this month and participant
+                # Load the dict
+                dir_dic = os.path.join(
+                    rf'C:\Users\oliver.frank\Desktop\PyProjects\Data\{participant}\averageResponseEpoch_corrects_dicts\averageResponseEpoch_corrects_dict_{participant}_{month}.pkl')
+                with open(dir_dic, 'rb') as f:
+                    averageResponseEpoch_corrects_dict = pickle.load(f)
+                if 'DM_Anti' in currentTrial['Spreadsheet'][0]:
+                    numRespSteps = averageResponseEpoch_corrects_dict['DM_Anti']
+                else:
+                    numRespSteps = averageResponseEpoch_corrects_dict['DM']
 
             numFixStepsTotal += numFixSteps
             numRespStepsTotal += numRespSteps
@@ -557,14 +572,25 @@ def preprocess_EF(opened_xlsxFile, questionnare_files, list_allSessions, sequenc
             currentTrial = opened_xlsxFile_selection[j:j + 2].reset_index().drop(columns=['index'])
 
             if np.isnan(currentTrial['Onset Time'][0]):
-                numFixSteps = 35 # info: just an average empirical value
+                numFixSteps = 35  # info: just an average empirical value
             else:
                 numFixSteps = round(currentTrial['Onset Time'][0] / 20)
 
-            if np.isnan(currentTrial['Onset Time'][1]):
-                numRespSteps = numFixSteps  # fix: occures very rarely, through batchLength averagging not very influential
-            else:
-                numRespSteps = round(currentTrial['Onset Time'][1] / 20)
+            if currentTrial['Correct'][0] == 1:  # if correct trial precede
+                if np.isnan(currentTrial['Onset Time'][1]):
+                    numRespSteps = numFixSteps  # fix: occures very rarely, through batchLength averaging not very influential
+                else:
+                    numRespSteps = round(currentTrial['Onset Time'][1] / 20)
+            elif currentTrial['Correct'][0] == 0:  # if error load avg response steps for this month and participant
+                # Load the dict
+                dir_dic = os.path.join(
+                    rf'C:\Users\oliver.frank\Desktop\PyProjects\Data\{participant}\averageResponseEpoch_corrects_dicts\averageResponseEpoch_corrects_dict_{participant}_{month}.pkl')
+                with open(dir_dic, 'rb') as f:
+                    averageResponseEpoch_corrects_dict = pickle.load(f)
+                if 'EF_Anti' in currentTrial['Spreadsheet'][0]:
+                    numRespSteps = averageResponseEpoch_corrects_dict['EF_Anti']
+                else:
+                    numRespSteps = averageResponseEpoch_corrects_dict['EF']
 
             numFixStepsTotal += numFixSteps
             numRespStepsTotal += numRespSteps
@@ -964,14 +990,29 @@ def preprocess_RP(opened_xlsxFile, questionnare_files, list_allSessions, sequenc
             currentTrial = opened_xlsxFile_selection[j:j + 2].reset_index().drop(columns=['index'])
 
             if np.isnan(currentTrial['Onset Time'][0]):
-                numFixSteps = 35 # info: just an average empirical value
+                numFixSteps = 35  # info: just an average empirical value
             else:
                 numFixSteps = round(currentTrial['Onset Time'][0] / 20)
 
-            if np.isnan(currentTrial['Onset Time'][1]):
-                numRespSteps = numFixSteps  # fix: occures very rarely, through batchLength averagging not very influential
-            else:
-                numRespSteps = round(currentTrial['Onset Time'][1] / 20)
+            if currentTrial['Correct'][0] == 1:  # if correct trial precede
+                if np.isnan(currentTrial['Onset Time'][1]):
+                    numRespSteps = numFixSteps  # fix: occures very rarely, through batchLength averaging not very influential
+                else:
+                    numRespSteps = round(currentTrial['Onset Time'][1] / 20)
+            elif currentTrial['Correct'][0] == 0:  # if error load avg response steps for this month and participant
+                # Load the dict
+                dir_dic = os.path.join(
+                    rf'C:\Users\oliver.frank\Desktop\PyProjects\Data\{participant}\averageResponseEpoch_corrects_dicts\averageResponseEpoch_corrects_dict_{participant}_{month}.pkl')
+                with open(dir_dic, 'rb') as f:
+                    averageResponseEpoch_corrects_dict = pickle.load(f)
+                if 'RP_Anti' in currentTrial['Spreadsheet'][0]:
+                    numRespSteps = averageResponseEpoch_corrects_dict['RP_Anti']
+                elif 'RP_Ctx1' in currentTrial['Spreadsheet'][0]:
+                    numRespSteps = averageResponseEpoch_corrects_dict['RP_Ctx1']
+                elif 'RP_Ctx2' in currentTrial['Spreadsheet'][0]:
+                    numRespSteps = averageResponseEpoch_corrects_dict['RP_Ctx2']
+                else:
+                    numRespSteps = averageResponseEpoch_corrects_dict['RP']
 
             numFixStepsTotal += numFixSteps
             numRespStepsTotal += numRespSteps
@@ -1382,14 +1423,29 @@ def preprocess_WM(opened_xlsxFile, questionnare_files, list_allSessions, sequenc
             currentTrial = opened_xlsxFile_selection[j:j + 2].reset_index().drop(columns=['index'])
 
             if np.isnan(currentTrial['Onset Time'][0]):
-                numFixSteps = 35 # info: just an average empirical value
+                numFixSteps = 35  # info: just an average empirical value
             else:
                 numFixSteps = round(currentTrial['Onset Time'][0] / 20)
 
-            if np.isnan(currentTrial['Onset Time'][1]):
-                numRespSteps = numFixSteps  # fix: occures very rarely, through batchLength averagging not very influential
-            else:
-                numRespSteps = round(currentTrial['Onset Time'][1] / 20)
+            if currentTrial['Correct'][0] == 1:  # if correct trial precede
+                if np.isnan(currentTrial['Onset Time'][1]):
+                    numRespSteps = numFixSteps  # fix: occures very rarely, through batchLength averaging not very influential
+                else:
+                    numRespSteps = round(currentTrial['Onset Time'][1] / 20)
+            elif currentTrial['Correct'][0] == 0:  # if error load avg response steps for this month and participant
+                # Load the dict
+                dir_dic = os.path.join(
+                    rf'C:\Users\oliver.frank\Desktop\PyProjects\Data\{participant}\averageResponseEpoch_corrects_dicts\averageResponseEpoch_corrects_dict_{participant}_{month}.pkl')
+                with open(dir_dic, 'rb') as f:
+                    averageResponseEpoch_corrects_dict = pickle.load(f)
+                if 'WM_Anti' in currentTrial['Spreadsheet'][0]:
+                    numRespSteps = averageResponseEpoch_corrects_dict['WM_Anti']
+                elif 'WM_Ctx1' in currentTrial['Spreadsheet'][0]:
+                    numRespSteps = averageResponseEpoch_corrects_dict['WM_Ctx1']
+                elif 'WM_Ctx2' in currentTrial['Spreadsheet'][0]:
+                    numRespSteps = averageResponseEpoch_corrects_dict['WM_Ctx2']
+                else:
+                    numRespSteps = averageResponseEpoch_corrects_dict['WM']
 
             numFixStepsTotal += numFixSteps
             numRespStepsTotal += numRespSteps

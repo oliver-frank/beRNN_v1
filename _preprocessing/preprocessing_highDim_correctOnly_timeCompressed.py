@@ -4,6 +4,8 @@
 # Preprocess the cogntive-behavioral data collected from Gorilla Experimenter into the form that can be used to train the
 # models.
 
+# fix: Average reaction times for error to correct trials - see preprocessing_highDim_correctOnly.py
+
 ########################################################################################################################
 # Import necessary libraries and modules
 ########################################################################################################################
