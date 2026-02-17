@@ -35,16 +35,17 @@ Both data modalities have to be preprocessed with:
 # head - Variables and functions #######################################################################################
 ########################################################################################################################
 setup = {
-    'comparison': ['correlation', 'rsa', None][0],
-    'modalityWithin_comparison': ['brain', 'beRNN', 'standard'][2], # standard is beRNN brain comparison
+    'comparison': ['correlation', 'rsa', None][1],
+    'modalityWithin_comparison': ['brain', 'beRNN', 'standard'][1], # standard is beRNN brain comparison - 'brain': brain/brain - 'beRNN': beRNN/beRNN
     'numberOfModels': [20, 20], # second value represents beRNN_04 - only defined for beRNNs - should be 3 if compared to brain in 'standard' - [5, 3] or [20, 20]
-    'threshold': 1.0,
-    'participants_beRNN': ['beRNN_03', 'beRNN_04', 'beRNN_01', 'beRNN_02', 'beRNN_05'], # order for paper - only applied for RDA
+    'threshold': 0.1,
+    'participants_beRNN': ['beRNN_05'], # order for paper - only applied for RDA
+    # 'participants_beRNN': ['beRNN_03', 'beRNN_04', 'beRNN_01', 'beRNN_02', 'beRNN_05'], # order for paper - only applied for RDA
     'paper_nomenclatur': ['HC1', 'HC2', 'MDD', 'ASD', 'SCZ'], # nomenclatur for paper plots - only applied for RDA
     'participants': ['sub-KPB84', 'sub-YL4AS', 'sub-6IECX', 'sub-DKHPB', 'sub-96WID'],
     'participants_snip': ['sub-SNIPKPB84', 'sub-SNIPYL4AS', 'sub-SNIP6IECX', 'sub-SNIPDKHPB', 'sub-SNIP96WID'],
-    'folder_beRNN': fr'C:\Users\oliver.frank\Desktop\PyProjects\beRNNmodels\_robustnessTest_multiTask_beRNN_01_highDimCorrects_256_hp_2',
-    'folder_brain': r'W:\group_csp\analyses\oliver.frank\share',
+    'folder_beRNN': fr'C:\Users\oliver.frank\Desktop\PyProjects\beRNNmodels\_robustness_multiTask_beRNN_05_highDimCorrects_256_hp_9',
+    'folder_brain': r'W:\group_csp\analyses\oliver.frank\_brainModels',
     'folder_topologicalMarker_pValue_lists': r'C:\Users\oliver.frank\Desktop\PyProjects\beRNNmodels\__topologicalMarker_pValue_lists',
     # 'folder_brain_meanVecs': r'W:\group_csp\in_house_datasets\bernn\mri\derivatives\xcpd_0.11.1\sub-SNIP6IECX01\func',
     'dataType': None, # will be defined below
@@ -57,7 +58,7 @@ setup = {
     "visualize_dti": False,
     "correlationOf_correlationMatices_fMRI": False,
     "correlationOf_correlationMatices_beRNN": False,
-    "plotTopMarkerOverDensities": True,
+    "plotTopMarkerOverDensities": False,
     "session": '03'
 }
 
@@ -184,7 +185,6 @@ if setup['comparison'] == 'correlation':
             brain_directory = fr'{setup["folder_brain"]}\functional_matrices\{brain}_ses-0{model}-avg.npy'
             matrix_brain = np.load(brain_directory)
 
-            # averaged_correlation_matrix_thresholded = apply_threshold(matrix_brain, threshold)
             averaged_correlation_matrix_thresholded = apply_density_threshold(matrix_brain, setup['threshold'])
             np.fill_diagonal(averaged_correlation_matrix_thresholded, 0)  # prevent self-loops
 
@@ -428,7 +428,8 @@ elif setup['comparison'] == 'rsa':
     for participant in setup['participants_beRNN']:
 
         folder_beRNN = setup["folder_beRNN"].replace("beRNN_01", participant, 1)
-        model_folder = rf'{folder_beRNN}\{setup["dataType"]}\{participant}\{folder_beRNN.split("_")[-1]}'
+        batchNumber = os.listdir(rf'{folder_beRNN}\{setup["dataType"]}\{participant}')[0]
+        model_folder = rf'{folder_beRNN}\{setup["dataType"]}\{participant}\{batchNumber}'
 
         rdmList = []
 

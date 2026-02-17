@@ -704,14 +704,21 @@ HP_NAME = {'activation': 'Activation fun.',
 
 if __name__ == '__main__':
 
-    folderList = ['_robustnessTest_multiTask_beRNN_03_highDim_256_hp_2_eB']
+    # folderList = ['_gridSearch_multiTask_beRNN_03_highDimCorrects_256_hp_7']
 
-    # folderList = ['_gridSearch_multiTask_beRNN_03_highDim_16',
-    #               '_gridSearch_multiTask_beRNN_03_highDim_32',
-    #               '_gridSearch_multiTask_beRNN_03_highDim_64',
-    #               '_gridSearch_multiTask_beRNN_03_highDim_128',
-    #               '_gridSearch_multiTask_beRNN_03_highDim_256',
-    #               '_gridSearch_multiTask_beRNN_03_highDim_512']
+    folderList = ['_robustness_multiTask_beRNN_04_highDimCorrects_256_hp_2',
+                  '_robustness_multiTask_beRNN_04_highDimCorrects_256_hp_3',
+                  '_robustness_multiTask_beRNN_04_highDimCorrects_256_hp_6',
+                  '_robustness_multiTask_beRNN_04_highDimCorrects_256_hp_7',
+                  '_robustness_multiTask_beRNN_04_highDimCorrects_256_hp_9']
+
+    mean_clustering_list = []
+    mean_modularity_list = []
+    mean_participation_list = []
+
+    std_clustering_list = []
+    std_modularity_list = []
+    std_participation_list = []
 
     for folder in folderList:
         final_model_dirs = []
@@ -722,16 +729,13 @@ if __name__ == '__main__':
 
         mode = ['train', 'test'][1]
         sort_variable = ['clustering', 'performance', 'silhouette'][1]
-        batchPlot = [True, False][1]
+        batchPlot = [True, False][0] # many batches of models or only one like in robustness tests
         lastMonth = '6'
         density = 0.1
 
         directory = fr'C:\Users\oliver.frank\Desktop\PyProjects\beRNNmodels\{folder}\{dataType}\{participant}'
 
-        if batchPlot == False:
-            model_dir_batches = os.listdir(directory)
-        else:
-            model_dir_batches = [folder.split('_')[-1]] # info: For creating a hp overview for one batch (e.g. in robustnessTest)
+        model_dir_batches = os.listdir(directory)
 
         # Create list of models to integrate in one hp overview plot
         model_dir_batches = [batch for batch in model_dir_batches if batch != 'visuals']
@@ -765,3 +769,27 @@ if __name__ == '__main__':
 
         # Create hp_plots sorted by performance or clustering
         general_hp_plot(n_clusters, silhouette_score, hp_list, avg_perf_train_list, avg_perf_test_list, avg_clustering_list, modularity_list_sparse, participation_coefficient_list, directory, sort_variable, mode, batchPlot, model_dir_batches)
+
+
+        # evaluate metrics for finding best hp for paper
+        mean_clustering = np.mean(avg_clustering_list)
+        mean_clustering_list.append(mean_clustering)
+        print(np.round(mean_clustering, 3))
+        mean_modularity = np.mean(modularity_list_sparse)
+        mean_modularity_list.append(mean_modularity)
+        print(np.round(mean_modularity, 3))
+        mean_participation = np.mean(participation_coefficient_list)
+        mean_participation_list.append(mean_participation)
+        print(np.round(mean_participation, 3))
+
+        std_clustering = np.std(avg_clustering_list)
+        std_clustering_list.append(std_clustering)
+        print(np.round(std_clustering, 3))
+        std_modularity = np.std(modularity_list_sparse)
+        std_modularity_list.append(std_modularity)
+        print(np.round(std_modularity, 3))
+        std_participation = np.std(participation_coefficient_list)
+        std_participation_list.append(std_participation)
+        print(np.round(std_participation, 3))
+
+

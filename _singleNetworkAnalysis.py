@@ -11,10 +11,12 @@ warnings.simplefilter(action='ignore', category=FutureWarning)
 import os
 import numpy as np
 import pandas as pd
+import json
 import glob
 import pickle
 
 import matplotlib.pyplot as plt
+import scipy
 from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
 from scipy.stats import ttest_ind
 from sklearn.manifold import MDS
@@ -25,9 +27,10 @@ import tensorflow as tf
 from collections import OrderedDict
 from pathlib import Path
 
-plt.ioff()  # prevents windows to pop up when figs and plots are created
+plt.ioff() # prevents windows to pop up when figs and plots are created
 
 from _analysis import clustering  # , variance
+from _training import apply_density_threshold
 from network import Model
 import tools
 from tools import rule_name, load_pickle
@@ -123,11 +126,6 @@ def fig_to_array(figure):
     img = np.array(canvas.renderer.buffer_rgba())
     # plt.close(fig)
     return img
-
-def apply_threshold(matrix, threshold):
-    # Set all values below the threshold to zero
-    matrix_thresholded = np.where(np.abs(matrix) > threshold, matrix,0)
-    return matrix_thresholded
 
 def define_data_folder(split_parts):
     # Predefined categories or flags to look for
@@ -439,8 +437,8 @@ def plot_cost_train_BeRNN(model_dir, figurePath_overview, model, figurePath, rul
 ########################################################################################################################
 # Functional & Structural Correlation  - Individual networks
 ########################################################################################################################
-def compute_functionalCorrelation(model_dir, monthsConsidered, mode, figurePath, analysis):
-    correlation = analysis.get_dotProductCorrelation()
+def compute_functionalCorrelation(model_dir, threshold, monthsConsidered, mode, figurePath, analysis):
+    correlation = analysis.get_dotProductCorrelation() # different correlation function used in all published results - see analysis/variance.py line 156/157
     # path = os.path.join(figurePath,'functionalCorrelation_npy')
 
     # if not os.path.exists(path):
@@ -483,34 +481,42 @@ def compute_functionalCorrelation(model_dir, monthsConsidered, mode, figurePath,
     cb.set_label('Correlation', fontsize=24, labelpad=0)
 
     # Compute topological marker
-    threshold = 0.5  # info: can be adjusted!
-    functionalCorrelation_thresholded = apply_threshold(correlation, threshold)
+    functionalCorrelation_thresholded = apply_density_threshold(correlation, threshold)
 
     # Function to apply a threshold to the matrix
-    G = nx.from_numpy_array(functionalCorrelation_thresholded)
+    G_sparse = nx.from_numpy_array(functionalCorrelation_thresholded)
 
-    # Modularity: Modularity measures the strength of division of a graph into communities (clusters/modules). A higher modularity means
-    # many within-cluster edges and few between-cluster edges.
-    communities = greedy_modularity_communities(G)
-    mod_value = modularity(G, communities)
+    if G_sparse.number_of_edges() == 0 or G_sparse.number_of_nodes() < 2:
+        print(f"Skipping modularity calculation for {model_dir} — graph has no edges. Setting mod_value = 0.")
+        avg_clustering = 0
+        mod_value_sparse = 0
+        avg_pc = 0
+    else:
+        try:
+            # clustering
+            clustering = nx.clustering(G_sparse)
+            avg_clustering = np.mean(list(clustering.values()))
+            # modularity
+            communities_sparse = greedy_modularity_communities(G_sparse)
+            mod_value_sparse = modularity(G_sparse, communities_sparse)
+            # participation
+            pc_dict = tools.participation_coefficient(G_sparse, communities_sparse)
+            avg_pc = np.mean(list(pc_dict.values()))
 
-    # Betweenness centrality quantifies the importance of a node based on its position within the shortest paths between other nodes.
-    betweenness = nx.betweenness_centrality(G)  # For betweenness centrality.
-    # Optionally calculate averages of node-based metrics
-    avg_betweenness = np.mean(list(betweenness.values()))
-
-    # Assortativity: Measures the tendency of nodes to connect to other nodes with similar degrees.
-    # A positive value means that high-degree nodes tend to connect to other high-degree nodes. Around 0 no relevant correlation
-    assortativity = nx.degree_assortativity_coefficient(G)
+        except Exception as e:
+            print(f"Greedy modularity failed for {model_dir}. Setting mod_value = 0. ({e})")
+            avg_clustering = 0
+            mod_value_sparse = 0
+            avg_pc = 0
 
     # Show the top Markers within the func Correlation
-    ax_matrix.text(0.5, 0.6, f'Modularity: {mod_value:.3f}', fontsize=22, color='white', fontweight='bold',
+    ax_matrix.text(0.5, 0.6, f'Modularity: {mod_value_sparse:.3f}', fontsize=22, color='white', fontweight='bold',
                    ha='center', va='center', transform=ax_matrix.transAxes)
-    ax_matrix.text(0.5, 0.5, f'Betweenness: {avg_betweenness:.3f}', fontsize=22, color='white', fontweight='bold',
+    ax_matrix.text(0.5, 0.5, f'Clustering: {avg_clustering:.3f}', fontsize=22, color='white', fontweight='bold',
                    ha='center', va='center', transform=ax_matrix.transAxes)
-    ax_matrix.text(0.5, 0.4, f'Assortativity: {assortativity:.3f}', fontsize=22, color='white', fontweight='bold',
+    ax_matrix.text(0.5, 0.4, f'Participation: {avg_pc:.3f}', fontsize=22, color='white', fontweight='bold',
                    ha='center', va='center', transform=ax_matrix.transAxes)
-    return corr_fig, mod_value, avg_betweenness, assortativity
+    return corr_fig, mod_value_sparse, avg_clustering, avg_pc
     # plt.show()
     # plt.close()
 
@@ -713,6 +719,7 @@ def plot_taskVariance_and_lesioning(directory, mode, sort_variable, rdm_metric, 
             continue
         else:
             knowledgeBase.plot_lesions(data_dir, best_model_dir, figurePath, mode_=f'{model}_{sort_variable}_{mode}')
+
 class TaskSetAnalysis(object):
     """Analyzing the representation of tasks."""
     def __init__(self, model_dir, rules=None):
@@ -975,6 +982,7 @@ class TaskSetAnalysis(object):
                 h_trans_all[key] = val * np.array([1, -1])
 
         return h_trans_all
+
 def plot_group_rdm_mds(directory, mode, sort_variable, rdm_metric, numberOfModels, ruleset):
     def plot_rdm_heatmap(rdm, metric, task_labels=None, title='RDM Heatmap'):
         n_tasks = rdm.shape[0]
@@ -1190,9 +1198,12 @@ if __name__ == "__main__":
 
         return fig, axs
 
-    folder, dataType, participant, batch, months = 'brainInitialization_brainMasking_test', 'highDim_correctOnly', 'beRNN_03', '01', ['month_4', 'month_5', 'month_6']
+    # fix: sort all model_month_XX into one folder for each participant x dataset
+    folder, dataType, participant, batch, months = '_comparison_multiTask_beRNN_02_highDim_256_hp_9_month__1-12', 'highDim', 'beRNN_02', '1', ['month_1', 'month_3', 'month_6', 'month_9', 'month_10']
     _finalPath = Path('C:/Users/oliver.frank/Desktop/PyProjects/beRNNmodels', f'{folder}/{dataType}/{participant}/{batch}')
     _data_dir = Path('C:/Users/oliver.frank/Desktop/PyProjects/Data')
+    topMarker_saving = True
+    threshold = 0.1
 
     # Define paths
     participant_id = participant  # Change this for each participant
@@ -1204,6 +1215,11 @@ if __name__ == "__main__":
     # Create model list for every iteration
     _model_list = os.listdir(_finalPath)
     _model_list = [i for i in _model_list if 'beRNN' in i]
+
+    # fix: Add list of top Marker lists here
+    modList_list = []
+    clusteringList_list = []
+    participationList_list = []
 
     for _model in _model_list:
         try:
@@ -1257,19 +1273,24 @@ if __name__ == "__main__":
                         analysis_train = clustering.Analysis(data_dir, currentModelDirectory, layer,  'cosine', 'train', currentHP['monthsConsidered'], 'rule', True)
                         analysis_test = clustering.Analysis(data_dir, currentModelDirectory, layer, 'cosine','test', currentHP['monthsConsidered'], 'rule', True)
 
-                        func_train, *_ = compute_functionalCorrelation(currentModelDirectory, currentHP['monthsConsidered'], 'train', None, analysis_train)
-                        func_test, avg_mod_test, avg_betweenness_test, assortativity_test = compute_functionalCorrelation(currentModelDirectory, currentHP['monthsConsidered'], 'test', None, analysis_test)
+                        func_train, *_ = compute_functionalCorrelation(currentModelDirectory, threshold, currentHP['monthsConsidered'], 'train', None, analysis_train)
+                        func_test, avg_mod_test, clustering_test, participation_test = compute_functionalCorrelation(currentModelDirectory, threshold, currentHP['monthsConsidered'], 'test', None, analysis_test)
 
                         # info: Append test top. Markers into a list and save them in folder #######################################
                         modList = []
-                        betweennessList = []
-                        assortativityList = []
-                        modList.append(avg_mod_test)  # fix: exchange with modularity
-                        betweennessList.append(avg_betweenness_test)
-                        assortativityList.append(assortativity_test)
+                        clusteringList = []
+                        participationList = []
+                        modList.append(avg_mod_test)
+                        clusteringList.append(clustering_test)
+                        participationList.append(participation_test)
 
-                        topMarkerList = [modList, betweennessList, assortativityList]
-                        topMarkerNamesList = ['modList', 'betweennessList', 'assortativityList']
+                        # info: meta lists
+                        modList_list.append(avg_mod_test)
+                        clusteringList_list.append(clustering_test)
+                        participationList_list.append(participation_test)
+
+                        topMarkerList = [clusteringList, modList, participationList]
+                        topMarkerNamesList = ['clusteringList', 'modList', 'participationList']
                         for i in range(0, len(topMarkerNamesList)):
                             mean_value = np.mean(topMarkerList[i])
                             variance_value = np.var(topMarkerList[i])
@@ -1311,9 +1332,9 @@ if __name__ == "__main__":
                 col_start += model_column_widths[model_idx]
 
                 # Add legend
-                legend_img = create_legend_image()
-                axs[4][0].imshow(legend_img)
-                axs[4][0].axis("off")
+                # legend_img = create_legend_image()
+                # axs[4][0].imshow(legend_img)
+                # axs[4][0].axis("off")
 
                 # Add hyperparameter box
                 hp_lines = [f"{key}: {currentHP[key]}" for key in selected_hp_keys if key in currentHP]
@@ -1333,7 +1354,7 @@ if __name__ == "__main__":
             print(f"Overview saved to: {overview_path}")
 
         except Exception as e:
-            print("An exception occurred with model number: ", model_dir)
+            print("An exception occurred with model number: ", model_dir, model)
             print("Error: ", e)
 
 
@@ -1349,7 +1370,7 @@ if __name__ == "__main__":
 
     npy_files = glob.glob(os.path.join(topMarker_path, "*.npy"))
     # Extract markers and months from filenames
-    topMarkers = ['assortativityList', 'betweennessList', 'modList']
+    topMarkers = ['modList', 'clusteringList', 'participationList']
 
     num_rows = len(topMarkers)
     num_columns = len(months)
@@ -1464,122 +1485,151 @@ if __name__ == "__main__":
     print(f"Distributions saved for participant {participant_id} in {distribution_dir}")
 
 
-if comparison == True:
-    # # info: ################################################################################################################
-    # # info: Comparison - Only apply after previous _analysis ################################################################
-    # # info: ################################################################################################################
-    from scipy.stats import ttest_ind, ks_2samp
-    import seaborn as sns
+    if comparison == True:
+        # # info: ################################################################################################################
+        # # info: Comparison - Only apply after previous _analysis ################################################################
+        # # info: ################################################################################################################
+        from scipy.stats import ttest_ind, ks_2samp
+        import seaborn as sns
 
-    # Define variables for topological marker distribution comparison
-    participant1, batch1 = 'beRNN_01', '32'
-    participant2, batch2 = 'beRNN_03', '32'
+        # Define variables for topological marker distribution comparison
+        participant1, batch1 = 'beRNN_01', '32'
+        participant2, batch2 = 'beRNN_03', '32'
 
-    def load_distributions(distribution_dir,topMarkers,months):
-        """
-        Load saved distributions for a given participant.
-        """
-        distributions = {}
+        def load_distributions(distribution_dir,topMarkers,months):
+            """
+            Load saved distributions for a given participant.
+            """
+            distributions = {}
 
-        if not os.path.exists(distribution_dir):
-            print(f"No distributions found for {distribution_dir}")
-            return None
+            if not os.path.exists(distribution_dir):
+                print(f"No distributions found for {distribution_dir}")
+                return None
 
-        for file in os.listdir(distribution_dir):
-            if file.endswith(".npy"):
-                for marker in topMarkers:
-                    for month in months:
-                        # Safely initialize nested dict
-                        if marker not in distributions:
-                            distributions[marker] = {}
-                        distributions[marker][month] = np.load(os.path.join(distribution_dir, file))
+            for file in os.listdir(distribution_dir):
+                if file.endswith(".npy"):
+                    for marker in topMarkers:
+                        for month in months:
+                            # Safely initialize nested dict
+                            if marker not in distributions:
+                                distributions[marker] = {}
+                            distributions[marker][month] = np.load(os.path.join(distribution_dir, file))
 
-        return distributions
+            return distributions
 
-    def compare_participants(dist_1, dist_2, participant_1, participant_2, destination_dir):
-        """
-        Compare the distributions of two participants and display significance.
-        """
-        p_values = {}  # Store p-values for visualization
+        def compare_participants(dist_1, dist_2, participant_1, participant_2, destination_dir):
+            """
+            Compare the distributions of two participants and display significance.
+            """
+            p_values = {}  # Store p-values for visualization
 
-        for marker in dist_1.keys():
-            p_values[marker] = {}
+            for marker in dist_1.keys():
+                p_values[marker] = {}
 
-            for month in dist_1[marker].keys():
-                if marker in dist_2 and month in dist_2[marker]:  # Ensure both have data
-                    data_1 = dist_1[marker][month]
-                    data_2 = dist_2[marker][month]
+                for month in dist_1[marker].keys():
+                    if marker in dist_2 and month in dist_2[marker]:  # Ensure both have data
+                        data_1 = dist_1[marker][month]
+                        data_2 = dist_2[marker][month]
 
-                    if len(data_1) > 1 and len(data_2) > 1:
-                        # Perform statistical tests
-                        t_stat, p_ttest = ttest_ind(data_1, data_2, equal_var=False)
-                        ks_stat, p_ks = ks_2samp(data_1, data_2)
+                        if len(data_1) > 1 and len(data_2) > 1:
+                            # Perform statistical tests
+                            t_stat, p_ttest = ttest_ind(data_1, data_2, equal_var=False)
+                            ks_stat, p_ks = ks_2samp(data_1, data_2)
 
-                        p_values[marker][month] = min(p_ttest, p_ks)  # Store min p-value
-                    else:
-                        p_values[marker][month] = 1.0  # No valid comparison
+                            p_values[marker][month] = min(p_ttest, p_ks)  # Store min p-value
+                        else:
+                            p_values[marker][month] = 1.0  # No valid comparison
 
-        # Convert to DataFrame for visualization
-        p_df = pd.DataFrame(p_values).T  # Transpose so markers are rows, months are columns
+            # Convert to DataFrame for visualization
+            p_df = pd.DataFrame(p_values).T  # Transpose so markers are rows, months are columns
 
-        # Prepare text annotations with significance levels
-        def format_p_value(p):
-            if p < 0.001:
-                return f"$\\bf{{{p:.3f}}}$***"  # Bold + ***
-            elif p < 0.01:
-                return f"$\\bf{{{p:.3f}}}$**"  # Bold + **
-            elif p < 0.05:
-                return f"$\\bf{{{p:.3f}}}$*"  # Bold + *
-            else:
-                return f"{p:.3f}"  # No bold
+            # Prepare text annotations with significance levels
+            def format_p_value(p):
+                if p < 0.001:
+                    return f"$\\bf{{{p:.3f}}}$***"  # Bold + ***
+                elif p < 0.01:
+                    return f"$\\bf{{{p:.3f}}}$**"  # Bold + **
+                elif p < 0.05:
+                    return f"$\\bf{{{p:.3f}}}$*"  # Bold + *
+                else:
+                    return f"{p:.3f}"  # No bold
 
-        annotations = p_df.applymap(format_p_value)
+            annotations = p_df.applymap(format_p_value)
 
-        # Plot heatmap of p-values
-        plt.figure(figsize=(10, 6))
-        ax = sns.heatmap(
-            p_df.astype(float),
-            annot=annotations,
-            fmt="",
-            cmap="magma",  # Reverse "magma" so low p-values are lighter
-            vmin=0.001,
-            vmax=1.0,
-            center=0.05,
-            cbar_kws={"shrink": 1.0},  # Fix legend error
-            annot_kws={"fontsize": 10, "color": "white"},  # Ensure all text is white
-        )
+            # Plot heatmap of p-values
+            plt.figure(figsize=(10, 6))
+            ax = sns.heatmap(
+                p_df.astype(float),
+                annot=annotations,
+                fmt="",
+                cmap="magma",  # Reverse "magma" so low p-values are lighter
+                vmin=0.001,
+                vmax=1.0,
+                center=0.05,
+                cbar_kws={"shrink": 1.0},  # Fix legend error
+                annot_kws={"fontsize": 10, "color": "white"},  # Ensure all text is white
+            )
 
-        plt.title(f"Statistical Comparison: {participant_1} vs {participant_2}")
-        plt.xlabel("Months")
-        plt.ylabel("Topological Markers")
+            plt.title(f"Statistical Comparison: {participant_1} vs {participant_2}")
+            plt.xlabel("Months")
+            plt.ylabel("Topological Markers")
 
-        # Save and show the plot
-        plot_path = os.path.join(destination_dir, '_topologicalMarkerComparison')
-        os.makedirs(plot_path, exist_ok=True)
-        plt.savefig(os.path.join(plot_path, f"topMarkerComparison_{participant_1}_{participant_2}.png"), dpi=300, bbox_inches='tight')
-        plt.show()
+            # Save and show the plot
+            plot_path = os.path.join(destination_dir, '_topologicalMarkerComparison')
+            os.makedirs(plot_path, exist_ok=True)
+            plt.savefig(os.path.join(plot_path, f"topMarkerComparison_{participant_1}_{participant_2}.png"), dpi=300, bbox_inches='tight')
+            plt.show()
 
 
-    destination_dir = Path('C:/Users/oliver.frank/Desktop/PyProjects/beRNNmodels', f'{folder}/{dataType}')
-    os.makedirs(destination_dir, exist_ok=True)
+        destination_dir = Path('C:/Users/oliver.frank/Desktop/PyProjects/beRNNmodels', f'{folder}/{dataType}')
+        os.makedirs(destination_dir, exist_ok=True)
 
-    distributions_dir_participant_01 = f"{destination_dir}\\{participant1}\\{batch1}\\overviews\\topologicalMarker_lists"
-    distributions_dir_participant_02 = f"{destination_dir}\\{participant2}\\{batch2}\\overviews\\topologicalMarker_lists"
+        distributions_dir_participant_01 = f"{destination_dir}\\{participant1}\\{batch1}\\overviews\\topologicalMarker_lists"
+        distributions_dir_participant_02 = f"{destination_dir}\\{participant2}\\{batch2}\\overviews\\topologicalMarker_lists"
 
-    dist_1 = load_distributions(distributions_dir_participant_01,topMarkers,months)
-    dist_2 = load_distributions(distributions_dir_participant_02,topMarkers,months)
+        dist_1 = load_distributions(distributions_dir_participant_01,topMarkers,months)
+        dist_2 = load_distributions(distributions_dir_participant_02,topMarkers,months)
 
-    compare_participants(dist_1, dist_2, participant1, participant2, destination_dir)
+        compare_participants(dist_1, dist_2, participant1, participant2, destination_dir)
 
-    # optional
-    # visualize_meanMatrix_singleModel(r'C:\Users\oliver.frank\Desktop\PyProjects\beRNNmodels\_robustnessTest_multiTask_beRNN_03_highDimCorrects_256_hp_2\highDim_correctOnly\beRNN_03\2\beRNN_03_AllTask_4-6_highDim_correctOnly_iter1_LeakyRNN_diag_256_relu\model_month_6\mean_test_lay1_rule_all.pkl')
-    # optional
-    # visualize_rdMatrix_singleModel(r'C:\Users\oliver.frank\Desktop\PyProjects\beRNNmodels\_robustnessTest_multiTask_beRNN_05_highDimCorrects_256_hp_2\highDim_correctOnly\beRNN_05\2\beRNN_05_AllTask_4-6_highDim_correctOnly_iter1_LeakyRNN_diag_256_relu\model_month_6\mean_test_lay1_rule_all.pkl')
-    # optional
-    # compute_structuralCorrelation(
-    #     r'C:\Users\oliver.frank\Desktop\PyProjects\beRNNmodels\robustnessTest\highDim_correctOnly\beRNN_01\0\beRNN_01_AllTask_4-6_data_highDim_correctOnly_iteration1_LeakyRNN_diag_256_softplus',
-    #     r'C:\Users\oliver.frank\Desktop\PyProjects\beRNNmodels\robustnessTest\highDim_correctOnly\beRNN_01\visuals\performance_test\structuralCorrelation',
-    #     ['month_4', 'month_5', 'month_6'], 'test')
-    # optional: adapted Yang functions
+        # optional
+        # visualize_meanMatrix_singleModel(r'C:\Users\oliver.frank\Desktop\PyProjects\beRNNmodels\_robustnessTest_multiTask_beRNN_03_highDimCorrects_256_hp_2\highDim_correctOnly\beRNN_03\2\beRNN_03_AllTask_4-6_highDim_correctOnly_iter1_LeakyRNN_diag_256_relu\model_month_6\mean_test_lay1_rule_all.pkl')
+        # optional
+        # visualize_rdMatrix_singleModel(r'C:\Users\oliver.frank\Desktop\PyProjects\beRNNmodels\_robustnessTest_multiTask_beRNN_05_highDimCorrects_256_hp_2\highDim_correctOnly\beRNN_05\2\beRNN_05_AllTask_4-6_highDim_correctOnly_iter1_LeakyRNN_diag_256_relu\model_month_6\mean_test_lay1_rule_all.pkl')
+        # optional
+        # compute_structuralCorrelation(
+        #     r'C:\Users\oliver.frank\Desktop\PyProjects\beRNNmodels\robustnessTest\highDim_correctOnly\beRNN_01\0\beRNN_01_AllTask_4-6_data_highDim_correctOnly_iteration1_LeakyRNN_diag_256_softplus',
+        #     r'C:\Users\oliver.frank\Desktop\PyProjects\beRNNmodels\robustnessTest\highDim_correctOnly\beRNN_01\visuals\performance_test\structuralCorrelation',
+        #     ['month_4', 'month_5', 'month_6'], 'test')
+        # optional: adapted Yang functions
+
+
+
+# # info: Specific saving of topological marker values for beRNN-brain comparison ****************************************
+# if topMarker_saving == True:
+#     print(np.round(modList_list, 3))
+#     print(np.round(clusteringList_list, 3))
+#     print(np.round(participationList_list, 3))
+#
+#     topologicalMarker_dict_beRNN = {
+#         "modularity": modList_list,
+#         "clustering": clusteringList_list,
+#         "participation": participationList_list
+#     }
+#
+#     with open(os.path.join(r"C:\Users\oliver.frank\Desktop\PyProjects\beRNNmodels\__topologicalMarker_pValue_lists", f'topologicalMarker_dict_{participant}_{dataType}_{threshold}.json'), 'w') as fp:
+#         json.dump(topologicalMarker_dict_beRNN, fp)
+#
+# # info: Specific creation of meta topologicalMarker_dict_beRNN *********************************************************
+# meta_topologicalMarker_dict_beRNN = {}
+# participantList = ['beRNN_01', 'beRNN_02', 'beRNN_03', 'beRNN_04', 'beRNN_05']
+# threshold = 1.0
+# for participant in participantList:
+#     with open(os.path.join(r"C:\Users\oliver.frank\Desktop\PyProjects\beRNNmodels\__topologicalMarker_pValue_lists", f'topologicalMarker_dict_{participant}_highDim_correctOnly_{threshold}.json'), 'r') as fp:
+#         topologicalMarker_dict_beRNN = json.load(fp)
+#     meta_topologicalMarker_dict_beRNN[participant] = topologicalMarker_dict_beRNN
+#
+# with open(os.path.join(r"C:\Users\oliver.frank\Desktop\PyProjects\beRNNmodels\__topologicalMarker_pValue_lists", f'topologicalMarker_dict_beRNN_highDim_correctOnly_{threshold}.json'), 'w') as fp:
+#     json.dump(meta_topologicalMarker_dict_beRNN, fp)
 
 

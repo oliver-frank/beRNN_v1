@@ -1,28 +1,24 @@
 # ======================================================================================
-# Linear Mixed Model to compare topological markers of different networks on several nested structures
+# Linear Mixed Model to compare topological markers of different networks types 
 # ======================================================================================
 # Load necessary libraries
 if (!require("pacman")) install.packages("pacman")
 pacman::p_load(jsonlite, dplyr, tidyr, lme4, lmerTest, multcomp, emmeans, ggplot2)
 
 # Define global variables, dicts, etc. 
-topMarker_dict <- list(
-  'avg_clustering' = 'clustering',
-  'mod_value_sparse' = 'modularity',
-  'participation_coefficient' = 'participation'
-)
+topMarker_list <- list('clustering', 'modularity', 'participation')
 
 densities <- c('0.1', '0.2', '0.3', '0.4', '0.5', '0.6', '0.7', '0.8', '0.9', '1.0')
 
-folder <- "C:/Users/oliver.frank/Desktop/PyProjects/beRNNmodels/__topologicalMarker_pValue_lists/allModels"
+folder <- "C:/Users/oliver.frank/Desktop/PyProjects/beRNNmodels/__topologicalMarker_pValue_lists"
 
-modelsets <- c('topologicalMarker_dict_beRNN__robustnessTest_multiTask_beRNN_01_highDimCorrects_256_hp_2_', 
-               'topologicalMarker_dict_beRNN__robustnessTest_multiTask_beRNN_01_highDim_256_hp_2_',
+modelsets <- c('topologicalMarker_dict_beRNN_highDim_', 
+               'topologicalMarker_dict_beRNN_highDim_correctOnly_',
                'topologicalMarker_dict_brain_')
-  
 
 # Create a container to store p-values for plotting
 p_value_results <- data.frame()
+
 
 # ======================================================================================
 # Q1: Main Loop
@@ -40,13 +36,13 @@ for (d_idx in seq_along(densities)) {
   for (p_id in names(data_dict)) {
     markers <- data_dict[[p_id]]
     for (marker_raw in names(markers)) {
-      if (marker_raw %in% names(topMarker_dict)) {
-        values <- markers[[marker_raw]][1:20]
+      if (marker_raw %in% topMarker_list) {
+        values <- markers[[marker_raw]][1:5]
         for (m_idx in seq_along(values)) {
           rows[[length(rows) + 1]] <- data.frame(
             Participant = p_id,
             Model_ID = paste0(p_id, "_", m_idx),
-            Marker_Type = topMarker_dict[[marker_raw]],
+            Marker_Type = marker_raw,
             Marker_Value = values[m_idx]
           )
         }
@@ -56,10 +52,10 @@ for (d_idx in seq_along(densities)) {
   df_set <- bind_rows(rows)
   
   # Modeling
-  reduced_fullModel1 <- lmer(Marker_Value ~ Marker_Type + (1 | Participant), data = df_set)
+  fullModel <- lmer(Marker_Value ~ Marker_Type + (1 | Participant), data = df_set)
   
   # Extract p-value
-  random_effects_test <- ranova(reduced_fullModel1)
+  random_effects_test <- ranova(fullModel)
   p_val <- random_effects_test["(1 | Participant)", "Pr(>Chisq)"]
   
   # 3. Store result for plotting
@@ -76,7 +72,7 @@ for (d_idx in seq_along(densities)) {
 # Plotting the p-values across Densities (Consistent with Q2)
 # ======================================================================================
 # Define shared deterministic scale parameters
-deterministic_ylim   <- c(1e-30, 1)
+deterministic_ylim   <- c(1e-10, 1)
 deterministic_breaks <- c(1, 0.05, 1e-4, 1e-6, 1e-8, 1e-10, 1e-12, 1e-14, 1e-16, 1e-18, 1e-20, 1e-22, 1e-24, 1e-26, 1e-28, 1e-30)
 deterministic_labels <- c("1", "0.05", "1e-4", "1e-6", "1e-8", "1e-10", "1e-12", "1e-14", "1e-16", "1e-18", "1e-20", "1e-22", "1e-24", "1e-26", "1e-28", "1e-30")
   
@@ -112,7 +108,7 @@ p_plot_q1 <- ggplot(p_value_results, aes(x = Density, y = P_Value)) +
   annotate("text", x = 0.1, y = 0.58, label = "p = 0.05", 
            color = "red", hjust = 0, fontface = "italic")
 
-ggsave(file.path(folder, "Q1_Participant_Effect_highDimCorrects.png"), p_plot_q1, width = 6, height = 3.5, dpi = 300)
+ggsave(file.path(folder, "Q1_Participant_Effect_highDim.png"), p_plot_q1, width = 6, height = 3.5, dpi = 300)
 
 
 # ======================================================================================
@@ -125,8 +121,8 @@ for (d_idx in seq_along(densities)) {
   density <- densities[d_idx]
   
   # File paths for comparison (Set 1 vs Set 3)
-  path_1 <- file.path(folder, paste0(modelsets[1], density, ".json"))
-  path_3 <- file.path(folder, paste0(modelsets[2], density, ".json"))
+  path_1 <- file.path(folder, paste0(modelsets[2], density, ".json")) # beRNN
+  path_3 <- file.path(folder, paste0(modelsets[2], density, ".json")) # beRNN or brain
   
   if (!file.exists(path_1) || !file.exists(path_3)) {
     message(paste("Skipping density", density, "- files missing."))
@@ -139,7 +135,7 @@ for (d_idx in seq_along(densities)) {
     rows <- list()
     for (p_id in names(data)) {
       for (marker_raw in names(data[[p_id]])) {
-        if (marker_raw %in% names(topMarker_dict)) {
+        if (marker_raw %in% topMarker_list) {
           values <- data[[p_id]][[marker_raw]][1:5]
           for (m_idx in seq_along(values)) {
             rows[[length(rows) + 1]] <- data.frame(
@@ -147,7 +143,7 @@ for (d_idx in seq_along(densities)) {
               Group = group_label,
               # Unique encoding for Model_ID is critical for repeated measures logic
               Model_ID = paste0(p_id, "_", set_id, "_", m_idx),
-              Marker_Type = topMarker_dict[[marker_raw]],
+              Marker_Type = marker_raw,
               Marker_Value = values[m_idx]
             )
           }
@@ -158,8 +154,8 @@ for (d_idx in seq_along(densities)) {
   }
   
   # Load both sets
-  df_set1 <- parse_json_to_df(path_1, "beRNN_highDimCorrects", "S1")
-  df_set3 <- parse_json_to_df(path_3, "Brain_highDim", "S3")
+  df_set1 <- parse_json_to_df(path_1, "beRNN", "S1")
+  df_set3 <- parse_json_to_df(path_3, "Brain", "S3")
   
   # Merge into combined dataframe
   df_all <- bind_rows(df_set1, df_set3) %>%
@@ -243,7 +239,7 @@ print(p_q2_plot)
 # ======================================================================================
 # save Q2 plots
 # ======================================================================================
-output_filename_q2 <- paste0("Q2_Comparison_highDim_highDimCorrects.png")
+output_filename_q2 <- paste0("Q2_Comparison_beRNN_highDimCorrects_beRNN_highDimCorrects.png")
 output_path_q2 <- file.path(folder, output_filename_q2)
 
 ggsave(
@@ -254,5 +250,11 @@ ggsave(
   dpi = 300,        
   bg = "white"      
 )
+
+
+
+
+
+
 
 

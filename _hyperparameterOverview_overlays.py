@@ -623,7 +623,7 @@ HP_NAME = {'activation': 'Activation fun.',
 if __name__ == '__main__':
 
     # Definition of important variables
-    foldersToOverlay = ['2026\_gridSearch_multiTask_beRNN_03_highDim_256']
+    foldersToOverlay = ['_gridSearch_multiTask_beRNN_03_highDimCorrects_256_hp_1']
 
     paper_nomenclatur_dict = ['HC1', 'HC2', 'MDD', 'ASD', 'SCZ']
     participantList = ['beRNN_01', 'beRNN_02', 'beRNN_03', 'beRNN_04', 'beRNN_05']
@@ -631,7 +631,7 @@ if __name__ == '__main__':
     network_sizes = ['16', '32', '64', '128', '256', '512']  # for standard visualization
 
     mode = ['train', 'test'][1]
-    sort_variable = ['clustering', 'performance', 'silhouette'][1]
+    sort_variable = ['clustering', 'performance', 'silhouette'][1] # other stat. characteristics can be added
 
     overlay = ['standard', 'robustness'][0] # standard for one participant w. different network sizes - robustness for several participants w- one network size
     # batchPlot = True if participant == 'beRNN_03' else False

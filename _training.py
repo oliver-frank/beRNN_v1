@@ -201,7 +201,7 @@ def get_default_hp(ruleset):
     machine = 'local'  # 'local' 'pandora' 'hitkip'
     data = 'data_highDim_correctOnly'  # 'data_highDim' , data_highDim_correctOnly , data_highDim_lowCognition , data_lowDim , data_lowDim_correctOnly , data_lowDim_lowCognition, 'data_highDim_correctOnly_3stimTC'
     trainingBatch = '01'
-    trainingYear_Month = 'test'  # as short as possible to avoid too long paths for avoiding linux2windows transfer issues
+    trainingYear_Month = 'test12'  # as short as possible to avoid too long paths for avoiding linux2windows transfer issues
 
     if 'highDim' in data:  # fix: lowDim_timeCompressed needs to be skipped here
         n_eachring = 32
@@ -218,9 +218,9 @@ def get_default_hp(ruleset):
         # 'batch_size_test': 640, # batch_size for testing
         'in_type': 'normal',  # input type: normal, multi
         'rnn_type': 'LeakyRNN',  # Type of RNNs: NonRecurrent, LeakyRNN, LeakyGRU, EILeakyGRU | GRU, LSTM
-        'multiLayer': True,  # only applicaple with LeakyRNN
+        'multiLayer': False,  # only applicaple with LeakyRNN
         'n_rnn': 256,  # number of recurrent units for one hidden layer architecture
-        'activation': 'softplus',  # Type of activation runctions, relu, softplus, tanh, elu, linear
+        'activation': 'relu',  # Type of activation runctions, relu, softplus, tanh, elu, linear
         'n_rnn_per_layer': [16, 16, 16],
         'activations_per_layer': ['relu', 'tanh', 'linear'],
         'loss_type': 'lsq',  # # Type of loss functions - Cross-entropy loss
@@ -230,15 +230,15 @@ def get_default_hp(ruleset):
         # 'alpha': 0.2, # (redundant) discretization time step/time constant - dt/tau = alpha - ratio decides on how much previous states are taken into account for current state - low alpha more memory, high alpha more forgetting - alpha * h(t-1)
         'sigma_rec': 0.01,  # recurrent noise - directly influencing the noise added to the network
         'sigma_x': 0,  # input noise
-        'w_rec_init': 'diag',
-        's_mask': 'brain_256',  # 'brain_256', None - info: only accesible on local machine
+        'w_rec_init': 'randgauss',
+        's_mask': None,  # 'brain_256', None - info: only accesible on local machine
         # 'mask_threshold': .999,  # .999 or .975
         # leaky_rec weight initialization, diag, randortho, randgauss, brainStructure (only accessible with LeakyRNN : 32-256)
-        'l1_h': 1e-05,
+        'l1_h': 1e-04,
         # l1 lambda (regularizing with absolute value of magnitude of coefficients, leading to sparse features)
         'l2_h': 0,
         # l2 lambda (regularizing with squared value of magnitude of coefficients, decreasing influence of features)
-        'l1_weight': 0.001,  # l2 regularization on weight
+        'l1_weight': 0,  # l2 regularization on weight
         'l2_weight': 0,  # l2 regularization on weight
         'l2_weight_init': 0,  # l2 regularization on deviation from initialization
         'p_weight_train': None,
@@ -256,7 +256,7 @@ def get_default_hp(ruleset):
         'ruleset': ruleset,  # number of input units
         'save_name': 'test',  # name to save
         'learning_rate': 0.0005,  # learning rate
-        'learning_rate_mode': 'triangular2',
+        'learning_rate_mode': 'exp_range',
         # Will overwrite learning_rate if it is not None - 'triangular', 'triangular2', 'exp_range', 'decay'
         'base_lr': [5e-4],
         'max_lr': [15e-4],
@@ -271,8 +271,8 @@ def get_default_hp(ruleset):
         # 'c_intsyn': 0, # intelligent synapses parameters, tuple (c, ksi) -> Yang et al. only apply these in sequential training
         # 'ksi_intsyn': 0,
         # 'monthsConsidered': ['month_4', 'month_5', 'month_6'],  # months to train and test
-        'monthsConsidered': ['month_4', 'month_5', 'month_6'],  # months to train and test
-        'monthsString': '4-6',  # monthsTaken
+        'monthsConsidered': ['month_12'],  # months to train and test
+        'monthsString': '12',  # monthsTaken
         'generalizationTest': False,  # Should their be a month-wise distance applied between train and eval data
         'distanceOfEvaluationData': 0,
         # distance between test and evaluation data month-wise to check generalization performance
@@ -479,7 +479,7 @@ def do_eval(sess, model, log, rule_train, eval_data):
     return log
 
 
-def train(data_dir, model_dir, train_data, eval_data, hp=None, max_steps=1e6, display_step=500, ruleset='all',
+def train(data_dir, model_dir, train_data, eval_data, hp=None, max_steps=3e6, display_step=500, ruleset='all',
           rule_trains=None, rule_prob_map=None, seed=0,
           load_dir=None, trainables=None, robustnessTest=True):
     """Train the network.
@@ -695,7 +695,7 @@ def train(data_dir, model_dir, train_data, eval_data, hp=None, max_steps=1e6, di
 if __name__ == '__main__':
     # Initialize list for all training times for each model
     trainingTimeList = []
-    for modelNumber in range(1, 21):  # Define number of iterations and models to be created for every month, respectively
+    for modelNumber in range(1, 2):  # Define number of iterations and models to be created for every month, respectively
 
         # Measure time for every model, respectively
         trainingTimeTotal_hours = 0
