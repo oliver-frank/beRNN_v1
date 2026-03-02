@@ -51,91 +51,6 @@ def apply_density_threshold(matrix, density=0.1):
     thresholded = np.where(matrix >= cutoff, matrix, 0)
     return thresholded
 
-    fname, fname2, fname3 = variance.compute_variance(data_dir, model_dir, layer=1, mode='test',
-                                                      monthsConsidered=hp['monthsConsidered'], data_type='rule',
-                                                      networkAnalysis=False,
-                                                      model=model, sess=sess)
-
-    res2 = tools.load_pickle(fname2)
-    h_corr_all_ = res2['h_corr_all']
-    h_corr_all = h_corr_all_.mean(axis=2)  # average over all tasks
-
-    # Compute modularity
-    functionalCorrelation_density = apply_density_threshold(h_corr_all, density=0.1)
-    np.fill_diagonal(functionalCorrelation_density, 0)  # prevent self-loops
-    G_sparse = nx.from_numpy_array(functionalCorrelation_density)
-
-    if G_sparse.number_of_edges() == 0 or G_sparse.number_of_nodes() < 2:
-        print(f"Skipping modularity calculation for {model_dir} — graph has no edges.")
-        mod_value_sparse = 0
-    else:
-        try:
-            communities_sparse = greedy_modularity_communities(G_sparse)
-            mod_value_sparse = modularity(G_sparse, communities_sparse)
-        except Exception as e:
-            print(f"Greedy modularity failed for {model_dir}. Setting mod_value=0. ({e})")
-            mod_value_sparse = 0
-
-    # log['modularity_weighted'].append(mod_value_weighted)
-    log['modularity_sparse'].append(mod_value_sparse)
-    tools.save_log(log)
-
-    fname, fname2, fname3 = variance.compute_variance(data_dir, model_dir, layer=1, mode='test',
-                                                      monthsConsidered=hp['monthsConsidered'], data_type='rule',
-                                                      networkAnalysis=False,
-                                                      model=model, sess=sess)
-    # (data_dir, model_dir, layer, mode, monthsConsidered, data_type, networkAnalysis, rules=None, random_rotation=False)
-
-    res = tools.load_pickle(fname)
-    h_var_all_ = res['h_var_all']
-
-    res2 = tools.load_pickle(fname2)
-    h_corr_all_ = res2['h_corr_all']
-    h_corr_all = h_corr_all_.mean(axis=2)  # average over all tasks
-
-    activityThreshold = 1e-5
-    ind_active = np.where(h_var_all_.sum(axis=1) >= activityThreshold)[0]  # info: > 1e-3 - min > 0
-    h_var_all = h_var_all_[ind_active, :]
-
-    # info: fallback if clustering is not possible - keep h_var_all as criterium but witch to h_corr_all for evaluation of modularity
-    if h_var_all.shape[0] < 2 or np.all(h_var_all.sum(axis=1) <= 1e-2):
-        # if h_var_all.shape[0] < 2 or np.where(h_var_all_.sum(axis=1) < activityThreshold):
-        print(f"Skipping clustering for model {model_dir} — insufficient data or variance.")
-
-        # Create meaningless dummy matrix for further calculation and to prevent code crashing
-        h_normvar_all = np.ones((12, 128)) * 0.5
-
-    else:
-        # Normalize by the total variance across tasks
-        h_normvar_all = (h_var_all.T / np.sum(h_var_all, axis=1)).T
-
-    # info: legacy - Center and normalize the data
-    # data_centered = h_normvar_all - h_normvar_all.mean(axis=1, keepdims=True)
-    # norm = np.linalg.norm(data_centered, axis=1, keepdims=True)
-    # norm[norm == 0] = 1e-8  # Prevent division by zero
-    # data_normalized = data_centered / norm
-    # correlation = np.dot(data_normalized, data_normalized.T)
-
-    # Compute modularity
-    functionalCorrelation_density = apply_density_threshold(h_corr_all, density=0.1)
-    np.fill_diagonal(functionalCorrelation_density, 0)  # prevent self-loops
-    G_sparse = nx.from_numpy_array(functionalCorrelation_density)
-
-    if G_sparse.number_of_edges() == 0 or G_sparse.number_of_nodes() < 2:
-        print(f"Skipping modularity calculation for {model_dir} — graph has no edges.")
-        mod_value_sparse = 0
-    else:
-        try:
-            communities_sparse = greedy_modularity_communities(G_sparse)
-            mod_value_sparse = modularity(G_sparse, communities_sparse)
-        except Exception as e:
-            print(f"Greedy modularity failed for {model_dir}. Setting mod_value=0. ({e})")
-            mod_value_sparse = 0
-
-    # log['modularity_weighted'].append(mod_value_weighted)
-    log['modularity_sparse'].append(mod_value_sparse)
-    tools.save_log(log)
-
 
 def getAndSafeModValue(data_dir, model_dir, hp, model, sess, log):
     fname, fname2, fname3 = variance.compute_variance(data_dir, model_dir, layer=1, mode='test',
@@ -143,11 +58,12 @@ def getAndSafeModValue(data_dir, model_dir, hp, model, sess, log):
                                                       networkAnalysis=False,
                                                       model=model, sess=sess)
 
+    # info. Keep variance filtering here to ensure stability of marker calculation during training
     # h_mean_all as basis for thresholding dead neurons as h_corr_all can result in high values for dead neurons
-    res3 = tools.load_pickle(fname3)
-    h_mean_all_ = res3['h_mean_all']
-    activityThreshold = 1e-1
-    ind_active = np.where(h_mean_all_.sum(axis=1) >= activityThreshold)[0]
+    res = tools.load_pickle(fname)
+    h_var_all_ = res['h_var_all']
+    activityThreshold = 1e-3
+    ind_active = np.where(h_var_all_.sum(axis=1) >= activityThreshold)[0]
 
     # h_corr_all as representative for modularity analysis reflecting similar neuron behavior
     res2 = tools.load_pickle(fname2)
@@ -161,7 +77,7 @@ def getAndSafeModValue(data_dir, model_dir, hp, model, sess, log):
         h_corr_all_ = h_corr_all_[ind_active, :]
         h_corr_all = h_corr_all_[:, ind_active]
         # Apply threshold
-        functionalCorrelation_density = apply_density_threshold(h_corr_all, density=0.1)
+        functionalCorrelation_density = apply_density_threshold(h_corr_all, density=hp['threshold'])
     else:
         functionalCorrelation_density = np.zeros((numberOfHiddenUnits,
                                                   numberOfHiddenUnits))  # fix: Get individual number of hidden units # Create different dummy matrix, that leads to lower realtive count
@@ -201,7 +117,7 @@ def get_default_hp(ruleset):
     machine = 'local'  # 'local' 'pandora' 'hitkip'
     data = 'data_highDim_correctOnly'  # 'data_highDim' , data_highDim_correctOnly , data_highDim_lowCognition , data_lowDim , data_lowDim_correctOnly , data_lowDim_lowCognition, 'data_highDim_correctOnly_3stimTC'
     trainingBatch = '01'
-    trainingYear_Month = 'test12'  # as short as possible to avoid too long paths for avoiding linux2windows transfer issues
+    trainingYear_Month = 'test'  # as short as possible to avoid too long paths for avoiding linux2windows transfer issues
 
     if 'highDim' in data:  # fix: lowDim_timeCompressed needs to be skipped here
         n_eachring = 32
@@ -246,6 +162,7 @@ def get_default_hp(ruleset):
         'w_mask_value': 0.1,
         # default .1 - value that will be multiplied with L2 regularization (combined with p_weight_train), <1 will decrease it
         'target_perf': 1.0,  # Stopping performance
+        'threshold': 0.1, # threshold applied to correlation matrix for adjacency matrix creation
         'n_eachring': n_eachring,  # number of units each ring
         'num_ring': num_ring,  # number of rings
         'n_rule': n_rule,  # number of rules
@@ -531,7 +448,7 @@ def train(data_dir, model_dir, train_data, eval_data, hp=None, max_steps=3e6, di
     hp['seed'] = seed  # Plug in seed into rng creation for reproducability - default: 0
     tools.save_hp(hp, model_dir)
 
-    # head: Add 'rng' here after it was pop out
+    # info: Add 'rng' here after it was pop out
     hp['rng'] = np.random.default_rng()  # set rng_seed here for reproducability - default: not set
 
     # Build the model
@@ -726,17 +643,30 @@ if __name__ == '__main__':
 
         # # attention: hitkip robustness ############################################################################################
         # # Convert the JSON string to a Python dictionary
-        # robustnessTest_model = 'hp_2'
+        # robustnessTest_model = 'hp_9'
         # with open(
         #         f"/zi/home/oliver.frank/Desktop/RNN/multitask_BeRNN-main/_bestModels_scripts/best10_gridSearch_multiTask_beRNN_03_highDimCorrects_256/{robustnessTest_model}.json",
         #         "r") as f:
         #     hp = json.load(f)
         #
-        # hp['participant'] = 'beRNN_05'
+        # hp['participant'] = 'beRNN_03'
         # participant = hp['participant']
         #
-        # dataType = 'data_highDim'
+        # # hp['trainingBatch'] = '12'
+        #
+        # # month = ['month_12']
+        # # hp['monthsConsidered'] = month
+        #
+        # # monthstring = '12'
+        # # hp['monthsString'] = monthstring
+        #
+        # dataType = 'data_highDim_lowCognition'
         # hp['data'] = dataType
+        #
+        # # hp['n_eachring'] = 10
+        # # hp['n_outputring'] = 2
+        # # hp['n_input'], hp['n_output'] = 1 + hp['num_ring'] * hp['n_eachring'] + hp['n_rule'], hp['n_outputring'] + 1
+        #
         # # hp['rng'] = np.random.default_rng(42) # for reproducibility - only applied on splitting of data
         # # hp['errorBalancingValue'] = 5.
         # # hp['w_rec_init'] = 'brainStructure'
@@ -745,7 +675,10 @@ if __name__ == '__main__':
         # # hp['tasksString'] = 'fundamentals'
         # # n_rnn = 64
         # # hp['n_rnn'] = n_rnn
-        # # hp['trainingYear_Month'] = f'_eR_multiTask_{participant}_{dataType}_{robustnessTest_model}' # as short as possible to avoid too long paths for avoiding linux2windows transfer issues
+        # hp['trainingYear_Month'] = f'_all_beRNNs_multiTask_{participant}_highDim_lowCognition_256'
+        # folderName = hp['trainingYear_Month']
+        # hp[
+        #     'trainingYear_Month'] = f'{folderName}_{robustnessTest_model}_month_4-6'  # as short as possible to avoid linux2windows transfer issues
         # # attention: hitkip robustness #############################################################################################
 
         load_dir = None

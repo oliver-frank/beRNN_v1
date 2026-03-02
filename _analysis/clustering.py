@@ -123,17 +123,31 @@ class Analysis(object):
         # res3 = tools.load_pickle(fname3) # only necessary for rdm
         h_var_all_ = res['h_var_all']
         # h_mean_all = res3['h_mean_all']
+
         self.keys  = res['keys']
 
+        # h_corr_all as representative for modularity analysis reflecting similar neuron behavior
+        res2 = tools.load_pickle(fname2)
+        h_corr_all_ = res2['h_corr_all']
+        h_corr_all = h_corr_all_.mean(axis=2)  # average over all tasks
+
         # head: Clustering =========================================================================================
-        # First only get active units. Total variance per unit across tasks larger than 1e-3
-        # activityThreshold = 0 if hp['multiLayer'] else 1e-5 # future: multiLayer
+        # info. legacy variance filtering
         activityThreshold = 1e-3 # > 1e-3 - min > 0
         ind_active = np.where(h_var_all_.sum(axis=1) >= activityThreshold)[0]
-        h_var_all = h_var_all_[ind_active, :]
-        # now: task representation based on h_mean_all
 
-        print(f"Active units after thresholding: {len(ind_active)}")
+        if ind_active.shape[0] < h_corr_all_.shape[0] and ind_active.shape[0] < h_corr_all_.shape[1] and ind_active.shape[0] > 1:
+        #     h_corr_all_ = h_corr_all_[ind_active, :]
+        #     h_corr_all = h_corr_all_[:, ind_active]
+        #
+            h_var_all = h_var_all_[ind_active, :]
+        else:
+        #     # Fallback
+        #     h_corr_all = np.zeros_like(h_corr_all_)
+        #
+            h_var_all = np.zeros_like(h_var_all_)
+
+        # print(f"Active units after thresholding: {len(ind_active)}")
 
         # fallback if total activity is too low
         if h_var_all.shape[0] <= 2 or np.all(h_var_all.sum(axis=1) <= 1e-2):
@@ -144,17 +158,18 @@ class Analysis(object):
             hp = tools.load_hp(model_dir)
             rules = [key for key in hp["rule_prob_map"].keys() if hp["rule_prob_map"][key] != 0]
             n_tasks = len(rules)
-            n_units = h_var_all_.shape[0]
+            n_units = h_var_all.shape[0]
 
             # Create minimal but consistent dummy data
+            self.h_corr_all = h_corr_all
             self.h_var_all = h_var_all
             self.h_normvar_all = np.full((n_units, n_tasks), 0.1, dtype=float)
 
             self.labels = np.array([0, 1])
             self.ind_active = np.array([0, 1])
-            self.n_clusters = [2]
-            self.scores = [0.0]
-            self.n_cluster = 2
+            # self.n_clusters = [2] # Yang legacy
+            # self.scores = [0.0] # Yang legacy
+            # self.n_cluster = 2 # Yang legacy
             self.unique_labels = np.array([0, 1])
 
             # Metadata
@@ -187,72 +202,73 @@ class Analysis(object):
             else:
                 raise NotImplementedError()
 
-            # Clustering
-            X = h_normvar_all
-            range2 = len(X) if len(X) < 30 else 30
-            # Choose number of clusters that maximize silhouette score
-            n_clusters = range(2, range2)  # attention: 2,30
-            scores = list()
-            labels_list = list()
-            for n_cluster in n_clusters:
-                # clustering = AgglomerativeClustering(n_cluster, affinity='cosine', linkage='average')
-                clustering = KMeans(n_cluster, algorithm='full', n_init=20, random_state=0)
-                clustering.fit(X)  # n_samples, n_features = n_units, n_rules/n_epochs
-                labels = clustering.labels_  # cluster labels
-                score = metrics.silhouette_score(X, labels)
+            # info. Yang legacy clustering - needs variance filtering, will crash otherwise
+            # X = h_normvar_all
+            # range2 = len(X) if len(X) < 30 else 30
+            # # Choose number of clusters that maximize silhouette score
+            # n_clusters = range(2, range2)  # attention: 2,30
+            # scores = list()
+            # labels_list = list()
+            # for n_cluster in n_clusters:
+            #     # clustering = AgglomerativeClustering(n_cluster, affinity='cosine', linkage='average')
+            #     clustering = KMeans(n_cluster, algorithm='full', n_init=20, random_state=0)
+            #     clustering.fit(X)  # n_samples, n_features = n_units, n_rules/n_epochs
+            #     labels = clustering.labels_  # cluster labels
+            #     score = metrics.silhouette_score(X, labels)
+            #
+            #     scores.append(score)
+            #     labels_list.append(labels)
+            #
+            # scores = np.array(scores)
 
-                scores.append(score)
-                labels_list.append(labels)
+            # # Heuristic elbow method
+            # # Choose the number of cluster when Silhouette score first falls
+            # if data_type == 'rule':
+            #     # fallback = False
+            #     if len(scores) != 0:
+            #         i = np.argmax(scores)
+            #         labels = labels_list[i]
+            #     else:
+            #         # another fallback
+            #         i = 0
+            #         scores = [0.0]
+            #         labels = np.array([0, 1])
+            # else:
+            #     i = n_clusters.index(10)
 
-            scores = np.array(scores)
-
-            # Heuristic elbow method
-            # Choose the number of cluster when Silhouette score first falls
-            if data_type == 'rule':
-                # fallback = False
-                if len(scores) != 0:
-                    i = np.argmax(scores)
-                    labels = labels_list[i]
-                else:
-                    # another fallback
-                    i = 0
-                    scores = [0.0]
-                    labels = np.array([0, 1])
-            else:
-                i = n_clusters.index(10)
-
-            # if fallback == False:
-            # labels = labels_list[i]
-            n_cluster = n_clusters[i]
-            print('Choosing {:d} clusters'.format(n_cluster))
+            # # if fallback == False:
+            # # labels = labels_list[i]
+            # n_cluster = n_clusters[i]
+            # print('Choosing {:d} clusters'.format(n_cluster))
 
             # Sort clusters by its task preference (important for consistency across nets)
             # Task preference is the task vector with highest sum of activity over all its units (for that cluster assigned by kmeans)
             # The labeled clusters have no intrinsic meaning
             # By assining the most dominant predefined task vectors to the clusters we can derive meaning
-            if labels is None or labels.shape[0] != h_normvar_all.shape[0]:
-                print("Warning: labels/taskVector shape mismatch. Skipping preference ordering.")
-                ind_sort = np.arange(len(labels))
-            else:
-                if data_type == 'rule':
-                    label_prefs = [np.argmax(h_normvar_all[labels == l].sum(axis=0)) for l in set(labels)]
-                elif data_type == 'epoch':
-                    label_prefs = [self.keys[np.argmax(h_normvar_all[labels == l].sum(axis=0))][0] for l in set(labels)]
+            # if labels is None or labels.shape[0] != h_normvar_all.shape[0]:
+            #     print("Warning: labels/taskVector shape mismatch. Skipping preference ordering.")
+            #     # ind_sort = np.arange(len(labels))
+            # else:
+            #     if data_type == 'rule':
+            #         label_prefs = [np.argmax(h_normvar_all[labels == l].sum(axis=0)) for l in set(labels)]
+            #     elif data_type == 'epoch':
+            #         label_prefs = [self.keys[np.argmax(h_normvar_all[labels == l].sum(axis=0))][0] for l in set(labels)]
+            #
+            #     ind_label_sort = np.argsort(label_prefs)
+            #     # label_prefs = np.array(label_prefs)[ind_label_sort]
+            #     # Relabel
+            #     labels2 = np.zeros_like(labels)
+            #     for i, ind in enumerate(ind_label_sort):
+            #         labels2[labels == ind] = i
+            #     labels = labels2
+            #
+            #     ind_sort = np.argsort(labels)
+            #     labels = labels[ind_sort]
 
-                ind_label_sort = np.argsort(label_prefs)
-                # label_prefs = np.array(label_prefs)[ind_label_sort]
-                # Relabel
-                labels2 = np.zeros_like(labels)
-                for i, ind in enumerate(ind_label_sort):
-                    labels2[labels == ind] = i
-                labels = labels2
-
-                ind_sort = np.argsort(labels)
-                labels = labels[ind_sort]
-
-
-            self.h_normvar_all = h_normvar_all[ind_sort, :]  # legacy: h_normvar_all
-            self.ind_active = ind_active[ind_sort]
+            # info. legacy variance filtering
+            # self.h_normvar_all = h_normvar_all[ind_sort, :]
+            self.h_normvar_all = h_normvar_all
+            # self.ind_active = ind_active[ind_sort]
 
             # head: Compute Representational Dissimilarity Matrix (RSA-style) ==========================================
             # ind_active = np.where(h_mean_all_.sum(axis=1) >= activityThreshold)[0]
@@ -263,14 +279,15 @@ class Analysis(object):
             # self.rdm = rdm.tolist() # not ideal for saving as json
             # self.rdm_vector = rdm_vector # not ideal for saving as json
 
-            self.n_clusters = n_clusters
-            self.scores = scores
-            self.n_cluster = n_cluster
+            # info. Yang legacy clustering
+            # self.n_clusters = n_clusters
+            # self.scores = scores
+            # self.labels = labels
+            # self.unique_labels = np.unique(labels)
 
+            self.h_corr_all = h_corr_all
             self.h_var_all = h_var_all # legacy: h_var_all
             self.normalization_method = normalization_method
-            self.labels = labels
-            self.unique_labels = np.unique(labels)
 
             self.model_dir = model_dir
             self.hp = hp
@@ -613,7 +630,7 @@ class Analysis(object):
 
         return plt
 
-    def get_dotProductCorrelation(self):
+    def get_dotProductCorrelation(self): # legacy: task variance matrices only used for activity threshold - not topological analysis
         # Center and normalize the data
         data_centered = self.h_normvar_all - self.h_normvar_all.mean(axis=1, keepdims=True)
 

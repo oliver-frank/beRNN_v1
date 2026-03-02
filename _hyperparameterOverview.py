@@ -75,9 +75,9 @@ def compute_n_cluster(model_dirs, mode):
             log['avg_perf_train'] = averageTotalPerformanceTraining
             log['avg_perf_test'] = averageTotalPerformanceTesting
             # log['avg_perf_test'] = log['perf_avg'][-1]
-            log['n_cluster'] = analysis.n_cluster
+            log['n_cluster'] = 0  # Yang legacy - dummy value
+            log['score'] = 0  # Yang legacy - dummy value
             # log['rdm'] = analysis.rdm.tolist() # not ideal for saving as json
-            log['score'] = max(analysis.scores)
             log['model_dir'] = model_dir
             tools.save_log(log)
 
@@ -114,8 +114,8 @@ def compute_n_cluster(model_dirs, mode):
             # log['rdm'] = rdm.tolist() # not ideal for saving as json
 
             # Create other fallback variables
-            log['n_cluster'] = 0
-            log['score'] = 0
+            log['n_cluster'] = 0 # Yang legacy
+            log['score'] = 0 # Yang legacy
             # log['avg_perf_train'] = 0
             # log['avg_perf_test'] = 0
 
@@ -174,27 +174,31 @@ def get_n_clusters(model_dirs, density):
             else:
                 print('No .pkl file found!')
 
-            # h_mean_all as basis for thresholding dead neurons as h_corr_all can result in high values for dead neurons
-            # leading to surpassing the threshold
-            res3 = tools.load_pickle(pkl_beRNN3)
-            h_var_all_ = res3['h_var_all']
-            activityThreshold = 1e-3
-            ind_active = np.where(h_var_all_.sum(axis=1) >= activityThreshold)[0]
+            # info. legacy variance filtering
+            # # h_mean_all as basis for thresholding dead neurons as h_corr_all can result in high values for dead neurons
+            # # leading to surpassing the threshold
+            # res3 = tools.load_pickle(pkl_beRNN3)
+            # h_var_all_ = res3['h_var_all']
+            # activityThreshold = 1e-3
+            # ind_active = np.where(h_var_all_.sum(axis=1) >= activityThreshold)[0]
 
             # h_corr_all as representative for modularity _analysis reflecting similar neuronal behavior over time and trials
             res2 = tools.load_pickle(pkl_beRNN2)
             h_corr_all_ = res2['h_corr_all']
-            h_corr_all_ = h_corr_all_.mean(axis=2)  # average over all tasks
+            h_corr_all = h_corr_all_.mean(axis=2)  # average over all tasks
 
-            numberOfHiddenUnits = hp['n_rnn']
+            # info. legacy variance filtering
+            # numberOfHiddenUnits = hp['n_rnn']
 
-            if ind_active.shape[0] < h_corr_all_.shape[0] and ind_active.shape[0] < h_corr_all_.shape[1] and ind_active.shape[0] > 1:
-                h_corr_all_ = h_corr_all_[ind_active, :]
-                h_corr_all = h_corr_all_[:, ind_active]
-                # Apply threshold
-                functionalCorrelation_density = apply_density_threshold(h_corr_all, density=density)
-            else:
-                functionalCorrelation_density = np.zeros((numberOfHiddenUnits, numberOfHiddenUnits))
+            # if ind_active.shape[0] < h_corr_all_.shape[0] and ind_active.shape[0] < h_corr_all_.shape[1] and ind_active.shape[0] > 1:
+            #     h_corr_all_ = h_corr_all_[ind_active, :]
+            #     h_corr_all = h_corr_all_[:, ind_active]
+            #     # Apply threshold
+            #     functionalCorrelation_density = apply_density_threshold(h_corr_all, density=density)
+            # else:
+            #     functionalCorrelation_density = np.zeros((numberOfHiddenUnits, numberOfHiddenUnits))
+
+            functionalCorrelation_density = apply_density_threshold(h_corr_all, density=density)
 
             # Compute modularity
             np.fill_diagonal(functionalCorrelation_density, 0)  # prevent self-loops
@@ -704,28 +708,30 @@ HP_NAME = {'activation': 'Activation fun.',
 
 if __name__ == '__main__':
 
-    # folderList = ['_gridSearch_multiTask_beRNN_03_highDimCorrects_256_hp_7']
+    # folderList = ['_all_beRNNs_multiTask_beRNN_03_highDim_256_hp_9']
 
-    folderList = ['_robustness_multiTask_beRNN_04_highDimCorrects_256_hp_2',
-                  '_robustness_multiTask_beRNN_04_highDimCorrects_256_hp_3',
-                  '_robustness_multiTask_beRNN_04_highDimCorrects_256_hp_6',
-                  '_robustness_multiTask_beRNN_04_highDimCorrects_256_hp_7',
-                  '_robustness_multiTask_beRNN_04_highDimCorrects_256_hp_9']
+    folderList = ['_robustness_multiTask_beRNN_01_highDim_256_hp_9',
+                  '_robustness_multiTask_beRNN_02_highDim_256_hp_9',
+                  '_robustness_multiTask_beRNN_03_highDim_256_hp_9',
+                  '_robustness_multiTask_beRNN_04_highDim_256_hp_9',
+                  '_robustness_multiTask_beRNN_05_highDim_256_hp_9']
 
-    mean_clustering_list = []
-    mean_modularity_list = []
-    mean_participation_list = []
-
-    std_clustering_list = []
-    std_modularity_list = []
-    std_participation_list = []
+    # # evaluate metrics for finding best hp for paper
+    # mean_clustering_list = []
+    # mean_modularity_list = []
+    # mean_participation_list = []
+    #
+    # std_clustering_list = []
+    # std_modularity_list = []
+    # std_participation_list = []
 
     for folder in folderList:
         final_model_dirs = []
 
         participantList = ['beRNN_01', 'beRNN_02', 'beRNN_03', 'beRNN_04', 'beRNN_05']
         participant = [participant for participant in participantList if participant in folder][0]
-        dataType = 'highDim_correctOnly' if 'highDim_correctOnly' in folder or 'highDimCorrects' in folder else 'highDim'
+        # dataType = 'highDim_correctOnly' if 'highDim_correctOnly' in folder or 'highDimCorrects' in folder else 'highDim'
+        dataType = 'highDim'
 
         mode = ['train', 'test'][1]
         sort_variable = ['clustering', 'performance', 'silhouette'][1]
@@ -771,25 +777,25 @@ if __name__ == '__main__':
         general_hp_plot(n_clusters, silhouette_score, hp_list, avg_perf_train_list, avg_perf_test_list, avg_clustering_list, modularity_list_sparse, participation_coefficient_list, directory, sort_variable, mode, batchPlot, model_dir_batches)
 
 
-        # evaluate metrics for finding best hp for paper
-        mean_clustering = np.mean(avg_clustering_list)
-        mean_clustering_list.append(mean_clustering)
-        print(np.round(mean_clustering, 3))
-        mean_modularity = np.mean(modularity_list_sparse)
-        mean_modularity_list.append(mean_modularity)
-        print(np.round(mean_modularity, 3))
-        mean_participation = np.mean(participation_coefficient_list)
-        mean_participation_list.append(mean_participation)
-        print(np.round(mean_participation, 3))
-
-        std_clustering = np.std(avg_clustering_list)
-        std_clustering_list.append(std_clustering)
-        print(np.round(std_clustering, 3))
-        std_modularity = np.std(modularity_list_sparse)
-        std_modularity_list.append(std_modularity)
-        print(np.round(std_modularity, 3))
-        std_participation = np.std(participation_coefficient_list)
-        std_participation_list.append(std_participation)
-        print(np.round(std_participation, 3))
+        # # evaluate metrics for finding best hp for paper
+        # mean_clustering = np.mean(avg_clustering_list)
+        # mean_clustering_list.append(mean_clustering)
+        # print(np.round(mean_clustering, 3))
+        # mean_modularity = np.mean(modularity_list_sparse)
+        # mean_modularity_list.append(mean_modularity)
+        # print(np.round(mean_modularity, 3))
+        # mean_participation = np.mean(participation_coefficient_list)
+        # mean_participation_list.append(mean_participation)
+        # print(np.round(mean_participation, 3))
+        #
+        # std_clustering = np.std(avg_clustering_list)
+        # std_clustering_list.append(std_clustering)
+        # print(np.round(std_clustering, 3))
+        # std_modularity = np.std(modularity_list_sparse)
+        # std_modularity_list.append(std_modularity)
+        # print(np.round(std_modularity, 3))
+        # std_participation = np.std(participation_coefficient_list)
+        # std_participation_list.append(std_participation)
+        # print(np.round(std_participation, 3))
 
 

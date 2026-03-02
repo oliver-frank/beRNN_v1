@@ -28,7 +28,7 @@ Complete brain/beRNN comparison by correlation and/or rsa.
 Both data modalities have to be preprocessed with:
 
 - beRNN: beRNN_v1/_hyperparameterOverview.py and beRNN_v1/taskRepresentation.py
-- brain: 'preprocess_fRMI2rdm' below
+- brain: 'preprocess_fMRI2rdm' below
 '''
 
 ########################################################################################################################
@@ -36,22 +36,21 @@ Both data modalities have to be preprocessed with:
 ########################################################################################################################
 setup = {
     'comparison': ['correlation', 'rsa', None][1],
-    'modalityWithin_comparison': ['brain', 'beRNN', 'standard'][1], # standard is beRNN brain comparison - 'brain': brain/brain - 'beRNN': beRNN/beRNN
-    'numberOfModels': [20, 20], # second value represents beRNN_04 - only defined for beRNNs - should be 3 if compared to brain in 'standard' - [5, 3] or [20, 20]
+    'modalityWithin_comparison': ['brain', 'beRNN', 'standard'][2], # standard is beRNN brain comparison - 'brain': brain/brain - 'beRNN': beRNN/beRNN
+    'numberOfModels': [5, 3], # second value represents beRNN_04 - only defined for beRNNs - should be 3 if compared to brain in 'standard' - [5, 3] or [20, 20]
     'threshold': 0.1,
-    'participants_beRNN': ['beRNN_05'], # order for paper - only applied for RDA
-    # 'participants_beRNN': ['beRNN_03', 'beRNN_04', 'beRNN_01', 'beRNN_02', 'beRNN_05'], # order for paper - only applied for RDA
+    'participants_beRNN': ['beRNN_03', 'beRNN_04', 'beRNN_01', 'beRNN_02', 'beRNN_05'], # order for paper
     'paper_nomenclatur': ['HC1', 'HC2', 'MDD', 'ASD', 'SCZ'], # nomenclatur for paper plots - only applied for RDA
-    'participants': ['sub-KPB84', 'sub-YL4AS', 'sub-6IECX', 'sub-DKHPB', 'sub-96WID'],
-    'participants_snip': ['sub-SNIPKPB84', 'sub-SNIPYL4AS', 'sub-SNIP6IECX', 'sub-SNIPDKHPB', 'sub-SNIP96WID'],
-    'folder_beRNN': fr'C:\Users\oliver.frank\Desktop\PyProjects\beRNNmodels\_robustness_multiTask_beRNN_05_highDimCorrects_256_hp_9',
+    'participants': ['sub-6IECX', 'sub-DKHPB', 'sub-KPB84', 'sub-YL4AS', 'sub-96WID'], # nomenclatur for paper plots - only applied for RDA
+    'participants_snip': ['sub-SNIP6IECX', 'sub-SNIPDKHPB', 'sub-SNIPKPB84', 'sub-SNIPYL4AS', 'sub-SNIP96WID'], # nomenclatur for paper plots - only applied for RDA
+    'folder_beRNN': fr'C:\Users\oliver.frank\Desktop\PyProjects\beRNNmodels\_fundamentals_multiTask_beRNN_01_highDim_256_hp_9',
     'folder_brain': r'W:\group_csp\analyses\oliver.frank\_brainModels',
     'folder_topologicalMarker_pValue_lists': r'C:\Users\oliver.frank\Desktop\PyProjects\beRNNmodels\__topologicalMarker_pValue_lists',
     # 'folder_brain_meanVecs': r'W:\group_csp\in_house_datasets\bernn\mri\derivatives\xcpd_0.11.1\sub-SNIP6IECX01\func',
     'dataType': None, # will be defined below
     # 'rdm_taskset': 'representationalDissimilarity_cosine_fundamentals',
     'rsa_directory': r'C:\Users\oliver.frank\Desktop\PyProjects\beRNNmodels\__rsaVisuals',
-    'directory_rdm': r'W:\group_csp\analyses\oliver.frank\share\functional_matrices_rdm',
+    'directory_rdm': r'W:\group_csp\analyses\oliver.frank\_brainModels\functional_matrices_rdm',
     'tasks': ['reward', 'flanker', 'faces', 'nback'],
     'preprocess_fMRI2rdm': False,
     "visualize_fMRI": False,
@@ -153,6 +152,7 @@ if setup['preprocess_fMRI2rdm'] == True:
 # fundamentally different architectural rules and structural biases (e.g., one might be more random and efficient globally,
 # while the other is more modular and efficient locally).
 
+# info. statistical comparison is done in LMM.R - only markers are prepared at this point
 if setup['comparison'] == 'correlation':
 
     # info: brain ######################################################################################################
@@ -194,10 +194,10 @@ if setup['comparison'] == 'correlation':
             # Optionally calculate averages of node-based metrics
             global_eff = nx.global_efficiency(G_brain)
             transitivity = nx.transitivity(G_brain)
-            density = nx.density(G_brain)
+            density_marker = nx.density(G_brain)
             global_eff_list.append(global_eff)
             transitivity_list.append(transitivity)
-            density_list.append(density)
+            density_list.append(density_marker)
 
             eigenvector = nx.eigenvector_centrality_numpy(G_brain)
             avg_eigenvector = np.mean(list(eigenvector.values()))
@@ -273,12 +273,12 @@ if setup['comparison'] == 'correlation':
         avg_betweenness_list = []
         avg_closeness_list = []
 
-        # if participant == 'beRNN_04':
-        #     numberOfModels = 3
-        # else:
-        #     numberOfModels = 5
+        if participant == 'beRNN_04':
+            numberOfModels = 3
+        else:
+            numberOfModels = 5
 
-        numberOfModels = 20
+        # numberOfModels = 20
 
         for model in os.listdir(model_folder)[:numberOfModels]:
         # for model in os.listdir(model_folder):
@@ -294,30 +294,38 @@ if setup['comparison'] == 'correlation':
                 pkl_beRNN3 = rf'{model_folder}\{model}\model_month_6\var_test_lay1_rule_taskSubset.pkl'
                 pkl_beRNN2 = rf'{model_folder}\{model}\model_month_6\corr_test_lay1_rule_taskSubset.pkl'
 
-            # h_var_all as basis for thresholding dead neurons as h_corr_all can result in high values for dead neurons
-            res3 = load_pickle(pkl_beRNN3)
-            h_var_all_ = res3['h_var_all']
-            ind_active = np.where(h_var_all_.sum(axis=1) >= setup['threshold'])[0]
+            # info. legacy variance filtering
+            # # h_var_all as basis for thresholding dead neurons as h_corr_all can result in high values for dead neurons
+            # res3 = load_pickle(pkl_beRNN3)
+            # h_var_all_ = res3['h_var_all']
+            # activityThreshold = 1e-3  # > 1e-3 - min > 0
+            # ind_active = np.where(h_var_all_.sum(axis=1) >= activityThreshold)[0]
 
             # h_corr_all as representative for modularity _analysis reflecting similar neuron behavior
             res2 = load_pickle(pkl_beRNN2)
             h_corr_all_ = res2['h_corr_all']
-            h_corr_all_ = h_corr_all_.mean(axis=2)  # average over all tasks
+            h_corr_all = h_corr_all_.mean(axis=2)  # average over all tasks
 
-            hp = load_hp(rf'{model_folder}\{model}\model_month_6')
-            numberOfHiddenUnits = hp['n_rnn']
+            # info. legacy variance filtering
+            # hp = load_hp(rf'{model_folder}\{model}\model_month_6')
+            # numberOfHiddenUnits = hp['n_rnn']
 
-            if ind_active.shape[0] < h_corr_all_.shape[0] and ind_active.shape[0] < h_corr_all_.shape[1] and ind_active.shape[0] > 1:
-                h_corr_all_ = h_corr_all_[ind_active, :]
-                h_corr_all = h_corr_all_[:, ind_active]
+            # if ind_active.shape[0] < h_corr_all_.shape[0] and ind_active.shape[0] < h_corr_all_.shape[1] and ind_active.shape[0] > 1:
+            #     h_corr_all_ = h_corr_all_[ind_active, :]
+            #     h_corr_all = h_corr_all_[:, ind_active]
+            #
+            #     # Apply threshold
+            #     functionalCorrelation_density = apply_density_threshold(h_corr_all, density=setup['threshold'])
+            # else:
+            #     functionalCorrelation_density = np.zeros((numberOfHiddenUnits, numberOfHiddenUnits))  # fix: Get individual number of hidden units # Create different dummy matrix, that leads to lower realtive count
 
-                # Apply threshold
-                functionalCorrelation_density = apply_density_threshold(h_corr_all, density=density)
-            else:
-                functionalCorrelation_density = np.zeros((numberOfHiddenUnits, numberOfHiddenUnits))  # fix: Get individual number of hidden units # Create different dummy matrix, that leads to lower realtive count
+            # info. No variance filtering anymore as we cannot apply the same on the BBNs due to missing information
+            # info. density thresholding handles the problem generally good
+            # Apply threshold
+            functionalCorrelation_density = apply_density_threshold(h_corr_all, density=setup['threshold'])
 
-            # Compute modularity
-            np.fill_diagonal(functionalCorrelation_density, 0)  # prevent self-loops
+            # prevent self-loops
+            np.fill_diagonal(functionalCorrelation_density, 0)
 
             # Function to apply a threshold to the matrix
             G_beRNN = nx.from_numpy_array(functionalCorrelation_density)
@@ -325,10 +333,10 @@ if setup['comparison'] == 'correlation':
             # Optionally calculate averages of node-based metrics
             global_eff = nx.global_efficiency(G_beRNN)
             transitivity = nx.transitivity(G_beRNN)
-            density = nx.density(G_beRNN)
+            density_marker = nx.density(G_beRNN)
             global_eff_list.append(global_eff)
             transitivity_list.append(transitivity)
-            density_list.append(density)
+            density_list.append(density_marker)
 
             eigenvector = nx.eigenvector_centrality_numpy(G_beRNN)
             avg_eigenvector = np.mean(list(eigenvector.values()))
@@ -573,9 +581,9 @@ elif setup['comparison'] == 'rsa':
             'shrink': 0.5,
             'aspect': 10,
             'label': 'RSA',
-            'ticks': np.linspace(0, 0.5, 6)
+            'ticks': np.linspace(0, 1.0, 6)
         },
-        vmin=0, vmax=0.5
+        vmin=0, vmax=1.0
     )
 
     # ----- SET CUSTOM TICKS -----
@@ -589,16 +597,17 @@ elif setup['comparison'] == 'rsa':
 
         if subject == 'beRNN_04' and setup['modalityWithin_comparison'] != 'beRNN':
             group_size = setup['numberOfModels'][1]
-            tick_positions.append((g * group_size + group_size // 2) + 6.5)
-            start = (g * group_size)+6
-        elif subject == 'beRNN_05' and setup['modalityWithin_comparison'] != 'beRNN':
-            group_size = setup['numberOfModels'][0]
-            tick_positions.append((g * group_size + group_size // 2) - 1.5)
-            start = (g * group_size)-2
-        else:
+            tick_positions.append((g * group_size + group_size // 2) + 2.5)
+            start = (g * group_size)+2
+        elif subject == 'beRNN_03' and setup['modalityWithin_comparison'] != 'beRNN':
             group_size = setup['numberOfModels'][0]
             tick_positions.append((g * group_size + group_size // 2) + 0.5)
             start = g * group_size
+        else:
+            group_size = setup['numberOfModels'][0]
+            tick_positions.append((g * group_size + group_size // 2) - 1.5)
+            start = (g * group_size)-2
+
 
 
         rect = patches.Rectangle(
@@ -859,24 +868,20 @@ if setup["plotTopMarkerOverDensities"] == True:
 
     densities = ['0.1', '0.2', '0.3', '0.4', '0.5', '0.6', '0.7', '0.8', '0.9', '1.0']
     for density in densities:
-        plot_folder = 'densityPlots_multiTask_beRNN_highDimCorrects_20Models'
-        directory = r'C:\Users\oliver.frank\Desktop\PyProjects\beRNNmodels\__topologicalMarker_pValue_lists\allModels'
-        file_path = os.path.join(directory, f'topologicalMarker_dict_beRNN__robustnessTest_multiTask_beRNN_01_highDimCorrects_256_hp_2_{density}.json')
+        plot_folder = 'densityPlots_multiTask_beRNN_highDimCorrects_5Models'
+        directory = r'C:\Users\oliver.frank\Desktop\PyProjects\beRNNmodels\__topologicalMarker_pValue_lists'
+        file_path = os.path.join(directory, f'topologicalMarker_dict_beRNN_highDim_correctOnly_{density}.json')
 
         with open(file_path, 'r') as f:
             data = json.load(f)
 
-        metrics = {
-            "mod_value_sparse": "Modularity",
-            "participation_coefficient": "Participation",
-            "avg_clustering": "Clustering"
-        }
+        metrics = ["clustering","modularity","participation"]
 
         plot_data = []
 
         for participant, values in data.items():
-            for json_key, clean_name in metrics.items():
-                subset = values[json_key]
+            for json_key, clean_name in enumerate(metrics):
+                subset = values[metrics[json_key]]
                 for val in subset:
                     plot_data.append({
                         "Participant": participant,
