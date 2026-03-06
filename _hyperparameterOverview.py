@@ -710,11 +710,11 @@ if __name__ == '__main__':
 
     # folderList = ['_all_beRNNs_multiTask_beRNN_03_highDim_256_hp_9']
 
-    folderList = ['_robustness_multiTask_beRNN_01_highDim_256_hp_9',
-                  '_robustness_multiTask_beRNN_02_highDim_256_hp_9',
-                  '_robustness_multiTask_beRNN_03_highDim_256_hp_9',
-                  '_robustness_multiTask_beRNN_04_highDim_256_hp_9',
-                  '_robustness_multiTask_beRNN_05_highDim_256_hp_9']
+    folderList = ['_fs_mT_beRNN_01_highDim_256_hp_9',
+                  '_fs_mT_beRNN_02_highDim_256_hp_9',
+                  '_fs_mT_beRNN_03_highDim_256_hp_9',
+                  '_fs_mT_beRNN_04_highDim_256_hp_9',
+                  '_fs_mT_beRNN_05_highDim_256_hp_9']
 
     # # evaluate metrics for finding best hp for paper
     # mean_clustering_list = []

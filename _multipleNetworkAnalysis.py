@@ -27,7 +27,7 @@ from tools import load_hp, load_pickle, participation_coefficient
 Complete brain/beRNN comparison by correlation and/or rsa. 
 Both data modalities have to be preprocessed with:
 
-- beRNN: beRNN_v1/_hyperparameterOverview.py and beRNN_v1/taskRepresentation.py
+- beRNN: beRNN_v1/_hyperparameterOverview.py or beRNN_v1/singleNetworkAnaylsis.py
 - brain: 'preprocess_fMRI2rdm' below
 '''
 
@@ -43,7 +43,7 @@ setup = {
     'paper_nomenclatur': ['HC1', 'HC2', 'MDD', 'ASD', 'SCZ'], # nomenclatur for paper plots - only applied for RDA
     'participants': ['sub-6IECX', 'sub-DKHPB', 'sub-KPB84', 'sub-YL4AS', 'sub-96WID'], # nomenclatur for paper plots - only applied for RDA
     'participants_snip': ['sub-SNIP6IECX', 'sub-SNIPDKHPB', 'sub-SNIPKPB84', 'sub-SNIPYL4AS', 'sub-SNIP96WID'], # nomenclatur for paper plots - only applied for RDA
-    'folder_beRNN': fr'C:\Users\oliver.frank\Desktop\PyProjects\beRNNmodels\_fundamentals_multiTask_beRNN_01_highDim_256_hp_9',
+    'folder_beRNN': fr'C:\Users\oliver.frank\Desktop\PyProjects\beRNNmodels\_fs_mT_beRNN_01_highDimCorrects_256_hp_9__1-12',
     'folder_brain': r'W:\group_csp\analyses\oliver.frank\_brainModels',
     'folder_topologicalMarker_pValue_lists': r'C:\Users\oliver.frank\Desktop\PyProjects\beRNNmodels\__topologicalMarker_pValue_lists',
     # 'folder_brain_meanVecs': r'W:\group_csp\in_house_datasets\bernn\mri\derivatives\xcpd_0.11.1\sub-SNIP6IECX01\func',
@@ -55,8 +55,8 @@ setup = {
     'preprocess_fMRI2rdm': False,
     "visualize_fMRI": False,
     "visualize_dti": False,
-    "correlationOf_correlationMatices_fMRI": False,
-    "correlationOf_correlationMatices_beRNN": False,
+    "correlationOf_correlationMatices_fMRI": False, # outsourced to fingerprints.py
+    "correlationOf_correlationMatices_beRNN": False, # outsourced to fingerprints.py
     "plotTopMarkerOverDensities": False,
     "session": '03'
 }
@@ -284,9 +284,9 @@ if setup['comparison'] == 'correlation':
         # for model in os.listdir(model_folder):
             if model == 'times.txt':
                 continue
-            if 'fundamentals' in model_folder or 'fm' in model_folder:
-                pkl_beRNN3 = rf'{model_folder}\{model}\model_month_6\var_test_lay1_rule_fundamentals.pkl'
-                pkl_beRNN2 = rf'{model_folder}\{model}\model_month_6\corr_test_lay1_rule_fundamentals.pkl'
+            if 'fundamentals' in model_folder or 'fs' in model_folder:
+                pkl_beRNN3 = rf'{model_folder}\{model}\var_test_lay1_rule_fundamentals.pkl'
+                pkl_beRNN2 = rf'{model_folder}\{model}\corr_test_lay1_rule_fundamentals.pkl'
             elif 'multiTask' in model_folder or 'AllTask' in model_folder:
                 pkl_beRNN3 = rf'{model_folder}\{model}\model_month_6\var_test_lay1_rule_all.pkl'
                 pkl_beRNN2 = rf'{model_folder}\{model}\model_month_6\corr_test_lay1_rule_all.pkl'
@@ -452,8 +452,8 @@ elif setup['comparison'] == 'rsa':
             if model == 'times.txt':
                 continue
 
-            if 'fundamentals' in model_folder or 'fm' in model_folder:
-                pkl_beRNN = rf'{model_folder}\{model}\model_month_6\mean_test_lay1_rule_fundamentals.pkl'
+            if 'fundamentals' in model_folder or 'fs' in model_folder:
+                pkl_beRNN = rf'{model_folder}\{model}\mean_test_lay1_rule_fundamentals.pkl'
             elif 'domainTask' in model_folder:
                 pkl_beRNN = rf'{model_folder}\{model}\model_month_6\mean_test_lay1_rule_taskSubset.pkl'
             elif 'multiTask' in model_folder or 'AllTask' in model_folder:
@@ -478,7 +478,7 @@ elif setup['comparison'] == 'rsa':
         # rdmFiles.sort(key=ascendingNumbers)  # Sort list according to information chunk given in key function
         # rdm_dict[participant] = rdmFiles
 
-    # RSA comparison ###################################################################################################
+    # info. RSA comparison #############################################################################################
 
     # First part of comparison variable definition
     if setup['modalityWithin_comparison'] == 'brain':
@@ -573,8 +573,8 @@ elif setup['comparison'] == 'rsa':
     ax = sns.heatmap(
         rsa_dissim,
         cmap="viridis",
-        xticklabels=labels_beRNN,
-        yticklabels=labels_brain,
+        xticklabels=labels_brain,
+        yticklabels=labels_beRNN,
         square=True,
         linewidths=0,
         cbar_kws={
@@ -594,6 +594,9 @@ elif setup['comparison'] == 'rsa':
 
     # Draw rectangles around diagonal blocks
     for g, subject in enumerate(subjects_beRNN):
+
+        if setup['modalityWithin_comparison'] == 'brain':
+            subject = beRNN_brain_snip_dict[subject]
 
         if subject == 'beRNN_04' and setup['modalityWithin_comparison'] != 'beRNN':
             group_size = setup['numberOfModels'][1]

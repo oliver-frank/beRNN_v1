@@ -1202,7 +1202,7 @@ if __name__ == "__main__":
         return fig, axs
 
     # fix: sort all model_month_XX into one folder for each participant x dataset
-    folder, dataType, participant, batch, months = '_comparison_multiTask_beRNN_04_highDimCorrects_256_hp_9_month__1-12', 'highDim_correctOnly', 'beRNN_04', '1', ['month_1', 'month_2', 'month_6']
+    folder, dataType, participant, batch, months = '_fs_mT_beRNN_04_highDimCorrects_256_hp_9__1-12', 'highDim_correctOnly', 'beRNN_04', '1', ['month_1', 'month_2', 'month_6']
     _finalPath = Path('C:/Users/oliver.frank/Desktop/PyProjects/beRNNmodels', f'{folder}/{dataType}/{participant}/{batch}')
     _data_dir = Path('C:/Users/oliver.frank/Desktop/PyProjects/Data')
     topMarker_saving = True
@@ -1625,19 +1625,19 @@ if __name__ == "__main__":
 
 
 
-# info: Specific creation of meta topologicalMarker_dict_beRNN *********************************************************
-participantList = ['beRNN_01', 'beRNN_02', 'beRNN_03', 'beRNN_04', 'beRNN_05']
-# threshold = 1.0
-
-for threshold in [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0]:
-    meta_topologicalMarker_dict_beRNN = {}
-
-    for participant in participantList:
-        with open(os.path.join(r"C:\Users\oliver.frank\Desktop\PyProjects\beRNNmodels\__topologicalMarker_pValue_lists", f'topologicalMarker_dict_{participant}_highDim_correctOnly_{threshold}.json'), 'r') as fp:
-            topologicalMarker_dict_beRNN = json.load(fp)
-        meta_topologicalMarker_dict_beRNN[participant] = topologicalMarker_dict_beRNN
-
-    with open(os.path.join(r"C:\Users\oliver.frank\Desktop\PyProjects\beRNNmodels\__topologicalMarker_pValue_lists", f'topologicalMarker_dict_beRNN_highDim_correctOnly_{threshold}.json'), 'w') as fp:
-        json.dump(meta_topologicalMarker_dict_beRNN, fp)
+# # info: Specific creation of meta topologicalMarker_dict_beRNN *********************************************************
+# participantList = ['beRNN_01', 'beRNN_02', 'beRNN_03', 'beRNN_04', 'beRNN_05']
+# # threshold = 1.0
+#
+# for threshold in [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0]:
+#     meta_topologicalMarker_dict_beRNN = {}
+#
+#     for participant in participantList:
+#         with open(os.path.join(r"C:\Users\oliver.frank\Desktop\PyProjects\beRNNmodels\__topologicalMarker_pValue_lists", f'topologicalMarker_dict_{participant}_highDim_correctOnly_{threshold}.json'), 'r') as fp:
+#             topologicalMarker_dict_beRNN = json.load(fp)
+#         meta_topologicalMarker_dict_beRNN[participant] = topologicalMarker_dict_beRNN
+#
+#     with open(os.path.join(r"C:\Users\oliver.frank\Desktop\PyProjects\beRNNmodels\__topologicalMarker_pValue_lists", f'topologicalMarker_dict_beRNN_highDim_correctOnly_{threshold}.json'), 'w') as fp:
+#         json.dump(meta_topologicalMarker_dict_beRNN, fp)
 
 
