@@ -36,14 +36,14 @@ Both data modalities have to be preprocessed with:
 ########################################################################################################################
 setup = {
     'comparison': ['correlation', 'rsa', None][1],
-    'modalityWithin_comparison': ['brain', 'beRNN', 'standard'][2], # standard is beRNN brain comparison - 'brain': brain/brain - 'beRNN': beRNN/beRNN
+    'modalityWithin_comparison': ['brain', 'beRNN', 'standard'][1], # standard is beRNN brain comparison - 'brain': brain/brain - 'beRNN': beRNN/beRNN
     'numberOfModels': [5, 3], # second value represents beRNN_04 - only defined for beRNNs - should be 3 if compared to brain in 'standard' - [5, 3] or [20, 20]
     'threshold': 0.1,
     'participants_beRNN': ['beRNN_03', 'beRNN_04', 'beRNN_01', 'beRNN_02', 'beRNN_05'], # order for paper
     'paper_nomenclatur': ['HC1', 'HC2', 'MDD', 'ASD', 'SCZ'], # nomenclatur for paper plots - only applied for RDA
     'participants': ['sub-6IECX', 'sub-DKHPB', 'sub-KPB84', 'sub-YL4AS', 'sub-96WID'], # nomenclatur for paper plots - only applied for RDA
     'participants_snip': ['sub-SNIP6IECX', 'sub-SNIPDKHPB', 'sub-SNIPKPB84', 'sub-SNIPYL4AS', 'sub-SNIP96WID'], # nomenclatur for paper plots - only applied for RDA
-    'folder_beRNN': fr'C:\Users\oliver.frank\Desktop\PyProjects\beRNNmodels\_fs_mT_beRNN_01_highDimCorrects_256_hp_9__1-12',
+    'folder_beRNN': fr'C:\Users\oliver.frank\Desktop\PyProjects\beRNNmodels\_fs_mT_beRNN_01_highDim_256_hp_9__1-12',
     'folder_brain': r'W:\group_csp\analyses\oliver.frank\_brainModels',
     'folder_topologicalMarker_pValue_lists': r'C:\Users\oliver.frank\Desktop\PyProjects\beRNNmodels\__topologicalMarker_pValue_lists',
     # 'folder_brain_meanVecs': r'W:\group_csp\in_house_datasets\bernn\mri\derivatives\xcpd_0.11.1\sub-SNIP6IECX01\func',
@@ -598,11 +598,11 @@ elif setup['comparison'] == 'rsa':
         if setup['modalityWithin_comparison'] == 'brain':
             subject = beRNN_brain_snip_dict[subject]
 
-        if subject == 'beRNN_04' and setup['modalityWithin_comparison'] != 'beRNN':
+        if subject == 'beRNN_04' and (setup['modalityWithin_comparison'] != 'beRNN' or 'fs' in model_folder):
             group_size = setup['numberOfModels'][1]
             tick_positions.append((g * group_size + group_size // 2) + 2.5)
             start = (g * group_size)+2
-        elif subject == 'beRNN_03' and setup['modalityWithin_comparison'] != 'beRNN':
+        elif subject == 'beRNN_03' and (setup['modalityWithin_comparison'] != 'beRNN' or 'fs' in model_folder):
             group_size = setup['numberOfModels'][0]
             tick_positions.append((g * group_size + group_size // 2) + 0.5)
             start = g * group_size
