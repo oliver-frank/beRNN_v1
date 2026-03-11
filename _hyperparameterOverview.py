@@ -174,31 +174,31 @@ def get_n_clusters(model_dirs, density):
             else:
                 print('No .pkl file found!')
 
-            # info. legacy variance filtering
-            # # h_mean_all as basis for thresholding dead neurons as h_corr_all can result in high values for dead neurons
-            # # leading to surpassing the threshold
-            # res3 = tools.load_pickle(pkl_beRNN3)
-            # h_var_all_ = res3['h_var_all']
-            # activityThreshold = 1e-3
-            # ind_active = np.where(h_var_all_.sum(axis=1) >= activityThreshold)[0]
+            # info. variance filtering
+            # h_mean_all as basis for thresholding dead neurons as h_corr_all can result in high values for dead neurons
+            # leading to surpassing the threshold
+            res3 = tools.load_pickle(pkl_beRNN3)
+            h_var_all_ = res3['h_var_all']
+            activityThreshold = 1e-3
+            ind_active = np.where(h_var_all_.sum(axis=1) >= activityThreshold)[0]
 
             # h_corr_all as representative for modularity _analysis reflecting similar neuronal behavior over time and trials
             res2 = tools.load_pickle(pkl_beRNN2)
-            h_corr_all_ = res2['h_corr_all']
-            h_corr_all = h_corr_all_.mean(axis=2)  # average over all tasks
+            h_corr_all = res2['h_corr_all']
+            h_corr_all_ = h_corr_all.mean(axis=2)  # average over all tasks
 
-            # info. legacy variance filtering
-            # numberOfHiddenUnits = hp['n_rnn']
+            # info. variance filtering
+            numberOfHiddenUnits = hp['n_rnn']
 
-            # if ind_active.shape[0] < h_corr_all_.shape[0] and ind_active.shape[0] < h_corr_all_.shape[1] and ind_active.shape[0] > 1:
-            #     h_corr_all_ = h_corr_all_[ind_active, :]
-            #     h_corr_all = h_corr_all_[:, ind_active]
-            #     # Apply threshold
-            #     functionalCorrelation_density = apply_density_threshold(h_corr_all, density=density)
-            # else:
-            #     functionalCorrelation_density = np.zeros((numberOfHiddenUnits, numberOfHiddenUnits))
+            if ind_active.shape[0] < h_corr_all_.shape[0] and ind_active.shape[0] < h_corr_all_.shape[1] and ind_active.shape[0] > 1:
+                h_corr_all_ = h_corr_all_[ind_active, :]
+                h_corr_all = h_corr_all_[:, ind_active]
+                # Apply threshold
+                functionalCorrelation_density = apply_density_threshold(h_corr_all, density=density)
+            else:
+                functionalCorrelation_density = np.zeros((numberOfHiddenUnits, numberOfHiddenUnits))
 
-            functionalCorrelation_density = apply_density_threshold(h_corr_all, density=density)
+            # functionalCorrelation_density = apply_density_threshold(h_corr_all, density=density)
 
             # Compute modularity
             np.fill_diagonal(functionalCorrelation_density, 0)  # prevent self-loops

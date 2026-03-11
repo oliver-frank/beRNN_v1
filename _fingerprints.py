@@ -17,13 +17,13 @@ setup = {
     'folder_brain': r'W:\group_csp\analyses\oliver.frank\_brainModels',
 
     'participants_beRNN': ['beRNN_03', 'beRNN_04', 'beRNN_01', 'beRNN_02', 'beRNN_05'], # order for paper
-    # 'folder_beRNN': fr'C:\Users\oliver.frank\Desktop\PyProjects\beRNNmodels\_comparison_multiTask_beRNN_01_highDim_256_hp_9_month__1-12',
     'folder_beRNN': fr'C:\Users\oliver.frank\Desktop\PyProjects\beRNNmodels\_comparison_multiTask_beRNN_01_highDim_256_hp_9_month__1-12',
+    # 'folder_beRNN': fr'C:\Users\oliver.frank\Desktop\PyProjects\beRNNmodels\_comparison_multiTask_beRNN_01_highDimCorrects_256_hp_9_month__1-12',
 
     'subjects': ['HC1', 'HC2', 'MDD', 'ASS', 'SCZ'],
     'block_sizes': [5, 3, 5, 5, 5],
-    # 'dataType': 'highDim',
     'dataType': 'highDim',
+    # 'dataType': 'highDim_correctOnly',
     # 'threshold': 1.0,
     # 'thresholds': [1.0]
     'thresholds': [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0]
@@ -110,7 +110,8 @@ for participant in setup['participants_beRNN']:
 
         beRNN_correlationMatrix_list.append(h_corr_all)
 
-
+brain_correlationMatrix_list = beRNN_correlationMatrix_list
+# beRNN_correlationMatrix_list = brain_correlationMatrix_list
 
 # info. Apply permutation on ANNs **********************************************************************************
 import numpy as np
@@ -134,7 +135,10 @@ def get_permutation_template(all_ann_matrices, all_bnn_matrices):
     # Kostenmatrix berechnen:
     # Wie unähnlich ist das Konnektivitätsprofil von ANN-Unit i
     # zum Profil von BNN-Parcel j?
-    cost_matrix = cdist(ann_avg, bnn_avg, metric='euclidean')
+    cost_matrix = cdist(ann_avg, bnn_avg, metric='correlation')
+
+    # import hashlib
+    # print(f"Cost Matrix Hash: {hashlib.sha256(cost_matrix.tobytes()).hexdigest()}")
 
     # Optimales Assignment (Ungarischer Algorithmus)
     # ann_idx wird einfach [0, 1, 2... 255] sein
@@ -190,6 +194,7 @@ for t_idx, threshold in enumerate(setup['thresholds']):
 
             # Korrelieren (Pearson)
             correlation, p_value = pearsonr(vec1, vec2)
+
             return correlation
 
         num_subjects = len(beRNN_correlationMatrix_list_thresholded)
@@ -198,7 +203,7 @@ for t_idx, threshold in enumerate(setup['thresholds']):
         for i in range(num_subjects):
             for j in range(num_subjects):
                 ident_matrix[i, j] = apply_original_fingerprinting(
-                    averaged_brain_matrix_thresholded[i],
+                    brain_correlationMatrix_list_thresholded[i],
                     beRNN_correlationMatrix_list_thresholded[j]
                 )
 
@@ -206,11 +211,11 @@ for t_idx, threshold in enumerate(setup['thresholds']):
         ax = sns.heatmap(ident_matrix,
                          annot=False,       # correlation within cells
                          fmt=".2f",
-                         cmap="coolwarm",
+                         cmap="Greys",
                          xticklabels=False,
                          yticklabels=False,
                          vmin=0,
-                         vmax=1.0)
+                         vmax=0.75)
 
         current_idx = 0
 
@@ -218,16 +223,16 @@ for t_idx, threshold in enumerate(setup['thresholds']):
             # Rectangle around subject specific models
             ax.add_patch(plt.Rectangle((current_idx, current_idx), size, size,
                                        fill=False,
-                                       edgecolor='white',
+                                       edgecolor='black',
                                        lw=4,
                                        ls='-'))
 
             plt.text(current_idx + size / 2, current_idx + size / 2, setup['subjects'][i],
-                     color='white', ha='center', va='center', weight='bold', fontsize=12)
+                     color='black', ha='center', va='center', weight='bold', fontsize=12)
 
             current_idx += size
 
-        plt.title("Fingerprinting Original", fontsize=15)
+        plt.title(f"Fingerprinting Original ({threshold})", fontsize=15)
         plt.xlabel("Biological brain", fontsize=12)
         plt.ylabel("Artificial Neural Network", fontsize=12)
 
@@ -282,6 +287,7 @@ for t_idx, threshold in enumerate(setup['thresholds']):
         plt.show()
 
 
+
     if procrusting == True:
         # info: analysis Procrustes ************************************************************************************
         def apply_procrustes_fingerprinting(m1, m2):
@@ -300,7 +306,7 @@ for t_idx, threshold in enumerate(setup['thresholds']):
         for i in range(num_subjects_total):
             for j in range(num_subjects_total):
                 ident_matrix_proc[i, j] = apply_procrustes_fingerprinting(
-                    averaged_brain_matrix_thresholded[i],
+                    brain_correlationMatrix_list_thresholded[i],
                     beRNN_correlationMatrix_list_thresholded[j]
                 )
 
@@ -309,21 +315,21 @@ for t_idx, threshold in enumerate(setup['thresholds']):
         ax = sns.heatmap(ident_matrix_proc,
                          annot=False,
                          fmt=".2f",
-                         cmap="magma",
+                         cmap="Greys",
                          xticklabels=False,
                          yticklabels=False,
                          vmin=0,
-                         vmax=1.0)
+                         vmax=0.75)
 
         current_idx = 0
         for i, size in enumerate(setup['block_sizes']):
             ax.add_patch(plt.Rectangle((current_idx, current_idx), size, size,
                                        fill=False,
-                                       edgecolor='white',
+                                       edgecolor='black',
                                        lw=4,
                                        ls='-'))
             plt.text(current_idx + size / 2, current_idx + size / 2, setup['subjects'][i],
-                     color='white', ha='center', va='center', weight='bold', fontsize=12)
+                     color='black', ha='center', va='center', weight='bold', fontsize=12)
             current_idx += size
 
 
@@ -372,7 +378,9 @@ for t_idx, threshold in enumerate(setup['thresholds']):
                  verticalalignment='top', weight='bold',
                  bbox=dict(boxstyle='round', facecolor='white', alpha=0.9))
 
-        plt.title(f"Fingerprinting Procrustes {sig_status} ($p$={p_val_perm:.4f})", fontsize=15, pad=20)
+        plt.title(f"Fingerprinting Procrustes ({threshold})", fontsize=15)
+        plt.xlabel("Biological brain", fontsize=12)
+        plt.ylabel("Artificial Neural Network", fontsize=12)
 
         p_values_results[t_idx, 1] = p_val_perm
         plt.show()
@@ -399,7 +407,7 @@ plt.ylabel("Density Threshold")
 
 plt.savefig(os.path.join(setup['folder_brain'], 'ANN_BNN_comparisons', f'ANN_BNN_comparisons_{network}_{setup["dataType"]}.png'))
 
-# plt.show()
+plt.show()
 
 
 
@@ -470,3 +478,42 @@ plt.savefig(os.path.join(setup['folder_brain'], 'ANN_BNN_comparisons', f'ANN_BNN
 #         np.save(os.path.join(directory, f'{subject}_ses-{session}_avg_sub256_{subnetwork}.npy'), brain_correlation_256)
 
 
+
+# # info. Plot first figure for presentation
+# import matplotlib.pyplot as plt
+# import numpy as np
+#
+# # Set up the figure and 3D axis
+# fig = plt.figure(figsize=(10, 8))
+# ax = fig.add_subplot(111, projection='3d')
+#
+# # Helper to create clusters
+# def create_cluster(center, n_points=50, spread=2.5):
+#     return center + np.random.normal(0, spread, (n_points, 3))
+#
+# # Define Clusters
+# HC = create_cluster([13, 13, 13], 500)       # Isolated Working Memory (Blue)
+# MDD = create_cluster([9, 3, 3], 500)        # Relational Processing (Red)
+# ASD = create_cluster([8, 7, 7], 500)     # Isolated Decision Making (Green)
+# SCZ = create_cluster([2, 5, 1], 500)     # Isolated Decision Making (Green)
+#
+#
+# # Plotting
+# ax.scatter(HC[:,0], HC[:,1], HC[:,2], c='royalblue', label='Healthy Control', alpha=0.5)
+# ax.scatter(MDD[:,0], MDD[:,1], MDD[:,2], c='crimson', label='Major Depressive Disorder', alpha=0.5)
+# ax.scatter(ASD[:,0], ASD[:,1], ASD[:,2], c='forestgreen', label='Autism Spectrum Disorder', alpha=0.5)
+# ax.scatter(SCZ[:,0], SCZ[:,1], SCZ[:,2], c='gold', label='Schizophrenia', alpha=0.5)
+#
+# # Labels and Styling
+# ax.set_xlabel('Data Modality I')
+# ax.set_ylabel('Data Modality II')
+# ax.set_zlabel('Data Modality III')
+#
+# ax.set_xticks([])
+# ax.set_yticks([])
+# ax.set_zticks([])
+#
+# plt.legend(loc='upper center', bbox_to_anchor=(0.5, -0.05),
+#            ncol=4, frameon=False, fontsize=10, handletextpad=0.1)
+#
+# plt.show()
