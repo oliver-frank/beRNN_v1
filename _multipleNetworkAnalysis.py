@@ -36,7 +36,7 @@ Both data modalities have to be preprocessed with:
 ########################################################################################################################
 setup = {
     'comparison': ['correlation', 'rsa', None][1],
-    'modalityWithin_comparison': ['brain', 'beRNN', 'standard'][1], # standard is beRNN brain comparison - 'brain': brain/brain - 'beRNN': beRNN/beRNN
+    'modalityWithin_comparison': ['brain', 'beRNN', 'standard'][2], # standard is beRNN brain comparison - 'brain': brain/brain - 'beRNN': beRNN/beRNN
     'numberOfModels': [5, 3], # second value represents beRNN_04 - only defined for beRNNs - should be 3 if compared to brain in 'standard' - [5, 3] or [20, 20]
     'threshold': 0.1,
     'participants_beRNN': ['beRNN_03', 'beRNN_04', 'beRNN_01', 'beRNN_02', 'beRNN_05'], # order for paper
@@ -495,10 +495,10 @@ elif setup['comparison'] == 'rsa':
     between_rsa = {s: [] for s in subjects_beRNN}
 
     # Loop over all combinations and assign results to the right dict (within/between)
-    for i, s1 in enumerate(subjects_beRNN):
-        for j, s2 in enumerate(subjects_brain):
-            for v1 in rdm_vec_dict_beRNN[s1]:
-                for v2 in rdm_vec_dict_brain[s2]:
+    for s1 in subjects_beRNN:
+        for s2 in subjects_brain:
+            for i, v1 in enumerate(rdm_vec_dict_beRNN[s1]):
+                for j, v2 in enumerate(rdm_vec_dict_brain[s2]):
 
                     rho = scipy.stats.spearmanr(v1, v2).correlation
                     # Second part of comparison variable definition
@@ -509,7 +509,10 @@ elif setup['comparison'] == 'rsa':
                             between_rsa[s1].append(rho)
                     else:
                         if s1 == s2:
-                            within_rsa[s1].append(rho)
+                            if i == j:
+                                continue
+                            else:
+                                within_rsa[s1].append(rho)
                         else:
                             between_rsa[s1].append(rho)
 
@@ -581,9 +584,9 @@ elif setup['comparison'] == 'rsa':
             'shrink': 0.5,
             'aspect': 10,
             'label': 'RSA',
-            'ticks': np.linspace(0, 1.0, 6)
+            'ticks': np.linspace(0, 0.6, 4)
         },
-        vmin=0, vmax=1.0
+        vmin=0, vmax=0.6
     )
 
     # ----- SET CUSTOM TICKS -----
@@ -606,10 +609,14 @@ elif setup['comparison'] == 'rsa':
             group_size = setup['numberOfModels'][0]
             tick_positions.append((g * group_size + group_size // 2) + 0.5)
             start = g * group_size
-        else:
+        elif setup['modalityWithin_comparison'] != 'beRNN' or 'fs' in model_folder:
             group_size = setup['numberOfModels'][0]
             tick_positions.append((g * group_size + group_size // 2) - 1.5)
             start = (g * group_size)-2
+        else:
+            group_size = setup['numberOfModels'][0]
+            tick_positions.append((g * group_size + group_size // 2) + 0.5)
+            start = g * group_size
 
 
 

@@ -17,13 +17,13 @@ setup = {
     'folder_brain': r'W:\group_csp\analyses\oliver.frank\_brainModels',
 
     'participants_beRNN': ['beRNN_03', 'beRNN_04', 'beRNN_01', 'beRNN_02', 'beRNN_05'], # order for paper
-    'folder_beRNN': fr'C:\Users\oliver.frank\Desktop\PyProjects\beRNNmodels\_comparison_multiTask_beRNN_01_highDim_256_hp_9_month__1-12',
-    # 'folder_beRNN': fr'C:\Users\oliver.frank\Desktop\PyProjects\beRNNmodels\_comparison_multiTask_beRNN_01_highDimCorrects_256_hp_9_month__1-12',
+    # 'folder_beRNN': fr'C:\Users\oliver.frank\Desktop\PyProjects\beRNNmodels\_comparison_multiTask_beRNN_01_highDim_256_hp_9_month__1-12',
+    'folder_beRNN': fr'C:\Users\oliver.frank\Desktop\PyProjects\beRNNmodels\_comparison_multiTask_beRNN_01_highDimCorrects_256_hp_9_month__1-12',
 
     'subjects': ['HC1', 'HC2', 'MDD', 'ASS', 'SCZ'],
     'block_sizes': [5, 3, 5, 5, 5],
-    'dataType': 'highDim',
-    # 'dataType': 'highDim_correctOnly',
+    # 'dataType': 'highDim',
+    'dataType': 'highDim_correctOnly',
     # 'threshold': 1.0,
     # 'thresholds': [1.0]
     'thresholds': [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0]
@@ -110,8 +110,10 @@ for participant in setup['participants_beRNN']:
 
         beRNN_correlationMatrix_list.append(h_corr_all)
 
-brain_correlationMatrix_list = beRNN_correlationMatrix_list
-# beRNN_correlationMatrix_list = brain_correlationMatrix_list
+
+diagonal_off = True
+# brain_correlationMatrix_list = beRNN_correlationMatrix_list
+beRNN_correlationMatrix_list = brain_correlationMatrix_list
 
 # info. Apply permutation on ANNs **********************************************************************************
 import numpy as np
@@ -185,7 +187,6 @@ for t_idx, threshold in enumerate(setup['thresholds']):
         # info: analysis Fingerprinting ********************************************************************************
         corr_score_list = []
         def apply_original_fingerprinting(m1, m2):
-            # Extrahiere Indizes der oberen Dreiecksmatrix (k=1 schließt Diagonale aus)
             triu_indices = np.triu_indices(m1.shape[0], k=1)
 
             # Vektorisieren
@@ -238,29 +239,27 @@ for t_idx, threshold in enumerate(setup['thresholds']):
 
 
         within_mask = np.zeros((num_subjects, num_subjects), dtype=bool)
+        diag_mask = np.eye(num_subjects, dtype=bool)
         start_idx = 0
 
         for size in setup['block_sizes']:
             end_idx = start_idx + size
-            # Erstelle einen Block von (size x size) auf der Diagonale
             within_mask[start_idx:end_idx, start_idx:end_idx] = True
             start_idx = end_idx
 
-        # --- 3. I_diff Berechnung ---
-        # Mittelwert aller Vergleiche INNERHALB der Probanden-Blöcke
+        if diagonal_off:
+            within_mask = within_mask & ~diag_mask
         within_mean = np.mean(ident_matrix[within_mask])
 
-        # Mittelwert aller Vergleiche ZWISCHEN verschiedenen Probanden
         between_mean = np.mean(ident_matrix[~within_mask])
 
         i_diff = (within_mean - between_mean) * 100
 
-        # --- 4. Permutationstest ---
+        # permutationtest
         n_permutations = 1000
         perm_i_diffs = []
 
         for _ in range(n_permutations):
-            # Wir permutieren die Spalten (die Gehirne)
             perm_indices = np.random.permutation(num_subjects)
             perm_matrix = ident_matrix[:, perm_indices]
 
@@ -273,12 +272,10 @@ for t_idx, threshold in enumerate(setup['thresholds']):
 
         sig_status = "SIGNIFIKANT" if p_val_perm < 0.05 else "NICHT SIGNIFIKANT"
 
-        # Text-Annotation im Plot
         text_str = (f"$I_{{diff}}$: {i_diff:.2f}%\n"
                     f"$p$-Wert: {p_val_perm:.4f}\n"
                     f"{sig_status}")
 
-        # In die obere linke Ecke schreiben
         plt.text(0.4, -0.05, text_str, transform=ax.transAxes, fontsize=12,
                  verticalalignment='top', weight='bold',
                  bbox=dict(boxstyle='round', facecolor='white', alpha=0.9))
@@ -334,29 +331,27 @@ for t_idx, threshold in enumerate(setup['thresholds']):
 
 
         within_mask = np.zeros((num_subjects_total, num_subjects_total), dtype=bool)
+        diag_mask = np.eye(num_subjects, dtype=bool)
         start_idx = 0
 
         for size in setup['block_sizes']:
             end_idx = start_idx + size
-            # Erstelle einen Block von (size x size) auf der Diagonale
             within_mask[start_idx:end_idx, start_idx:end_idx] = True
             start_idx = end_idx
 
-        # --- 3. I_diff Berechnung ---
-        # Mittelwert aller Vergleiche INNERHALB der Probanden-Blöcke
+        if diagonal_off:
+            within_mask = within_mask & ~diag_mask
         within_mean = np.mean(ident_matrix_proc[within_mask])
 
-        # Mittelwert aller Vergleiche ZWISCHEN verschiedenen Probanden
         between_mean = np.mean(ident_matrix_proc[~within_mask])
 
         i_diff = (within_mean - between_mean) * 100
 
-        # --- 4. Permutationstest ---
+        # permutation test
         n_permutations = 1000
         perm_i_diffs = []
 
         for _ in range(n_permutations):
-            # Wir permutieren die Spalten (die Gehirne)
             perm_indices = np.random.permutation(num_subjects_total)
             perm_matrix = ident_matrix_proc[:, perm_indices]
 
@@ -369,7 +364,6 @@ for t_idx, threshold in enumerate(setup['thresholds']):
 
         sig_status = "SIGNIFIKANT" if p_val_perm < 0.05 else "NICHT SIGNIFIKANT"
 
-        # Text-Annotation im Plot
         text_str = (f"$I_{{diff}}$: {i_diff:.2f}%\n"
                     f"$p$-Wert: {p_val_perm:.4f}\n"
                     f"{sig_status}")
@@ -389,19 +383,18 @@ for t_idx, threshold in enumerate(setup['thresholds']):
 
 # info. Plot der P-Wert Übersicht **************************************************************************************
 plt.figure(figsize=(8, 6))
-# Maske für signifikante Werte (p < 0.05)
+# (p < 0.05)
 sns.heatmap(p_values_results, annot=True, fmt=".4f",
             xticklabels=methods, yticklabels=setup['thresholds'],
             vmin=0, vmax=1,
             cmap="viridis_r", cbar_kws={'label': 'p-value'})
 
-# Highlight signifikante Zellen
+# highlight significant cells
 for y in range(p_values_results.shape[0]):
     for x in range(p_values_results.shape[1]):
         if p_values_results[y, x] < 0.05:
             plt.gca().add_patch(plt.Rectangle((x, y), 1, 1, fill=False, edgecolor='red', lw=2))
 
-# plt.title("Signifikanz-Check über alle Thresholds")
 plt.xlabel("Fingerprint Method")
 plt.ylabel("Density Threshold")
 
