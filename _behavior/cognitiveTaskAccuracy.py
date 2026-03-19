@@ -9,6 +9,8 @@
 # # Import necessary libraries and modules
 # ########################################################################################################################
 import os
+import json
+import pickle
 import pandas as pd
 import warnings
 with warnings.catch_warnings():
@@ -331,12 +333,11 @@ from tools import rule_name
 # info: ###############################################################################################################
 # info: Plot performance over defined period as boxplots
 # info: ###############################################################################################################
-participant_dir = r'C:\Users\oliver.frank\Desktop\PyProjects\Data'
-months = ['4', '5', '6']
+participant_dir = r'W:\group_csp\analyses\oliver.frank\Data'
+# months = ['7', '8', '9', '10', '11', '12']
+months = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12']
 strToSave = months[0] + '-' + months[-1]
 newParticpantList = ['beRNN_01', 'beRNN_02', 'beRNN_03', 'beRNN_04', 'beRNN_05']
-
-# Task color dictionary
 task_keys = [
     'DM', 'DM_Anti',
     'EF', 'EF_Anti',
@@ -345,6 +346,13 @@ task_keys = [
     'WM', 'WM_Anti',
     'WM_Ctx1', 'WM_Ctx2'
 ]
+
+participants_dict = {
+    participant: {month: {task: {} for task in task_keys} for month in months}
+    for participant in newParticpantList
+}
+# with open(r'W:\group_csp\analyses\oliver.frank\Data\participants_dict_accuracy.pkl', 'rb') as f:
+#     participants_dict = pickle.load(f)
 
 cmap = plt.cm.viridis
 colors = cmap(np.linspace(0, 1, len(task_keys)))
@@ -387,12 +395,18 @@ for participant in newParticpantList:
             for filename in month_files:
                 try:
                     df = pd.read_excel(filename, engine='openpyxl')
+                    # info. Adjustments made: Check this next week for months 7-12 *************************************
+                    # info. Upload the already existing dicts for month 1-6 before *************************************
                     # Using provided validation logic
-                    if not isinstance(df.iloc[0, 28], float) and df.iloc[0, 28].split('_trials_')[0] == task:
+                    # if not isinstance(df.iloc[0, 28], float) and df['Spreadsheet'][0].split('_trials_')[0] == task:
+                    if not isinstance(df.loc[0, 'Spreadsheet'], float) and df.loc[0, 'Spreadsheet'].split('_trials_')[0] == task:
                         filtered = df[df['Event Index'] == 125]
                         task_data.extend(filtered[ycolumn].dropna().tolist())
                 except:
                     continue
+
+            # info. Save the accuracies for each participant, month and task, respectively
+            participants_dict[participant][month_str][task] = task_data
 
             if task_data:
                 x_pos = month_center + offsets[t_idx]
@@ -435,5 +449,38 @@ for participant in newParticpantList:
     figure_path = os.path.join(participant_dir, participant, f"{participant}_{strToSave}_SideBySide.png")
     plt.savefig(figure_path, bbox_inches='tight', dpi=300)
     plt.show()
+
+
+
+# # info. Save dict for python
+# # Speichern
+# with open(r'W:\group_csp\analyses\oliver.frank\Data\participants_dict_accuracy.pkl', 'wb') as f:
+#     pickle.dump(participants_dict, f)
+#
+# # info. Save dict for python
+# # # Laden
+# with open(r'W:\group_csp\analyses\oliver.frank\Data\participants_dict_accuracy.pkl', 'rb') as f:
+#     loaded_dict = pickle.load(f)
+#
+#
+# # info. Save dict for python
+# # Hilfsfunktion, um NumPy-Typen JSON-konform zu machen
+# def default_converter(obj):
+#     if isinstance(obj, np.ndarray):
+#         return obj.tolist()
+#     if isinstance(obj, np.integer):
+#         return int(obj)
+#     if isinstance(obj, np.floating):
+#         return float(obj)
+#     raise TypeError
+#
+# with open(r'W:\group_csp\analyses\oliver.frank\Data\participants_dict_accuracy.json', 'w') as f:
+#     json.dump(participants_dict, f, default=default_converter)
+#
+#
+# from scipy.io import savemat
+#
+# # Speichert das gesamte participants_dict in eine Datei
+# savemat(r'W:\group_csp\analyses\oliver.frank\Data\participants_dict_accuracy.mat', {"data": participants_dict})
 
 
