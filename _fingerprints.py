@@ -17,16 +17,17 @@ setup = {
     'folder_brain': r'W:\group_csp\analyses\oliver.frank\_brainModels',
 
     'participants_beRNN': ['beRNN_03', 'beRNN_04', 'beRNN_01', 'beRNN_02', 'beRNN_05'], # order for paper
-    # 'folder_beRNN': fr'C:\Users\oliver.frank\Desktop\PyProjects\beRNNmodels\_comparison_multiTask_beRNN_01_highDim_256_hp_9_month__1-12',
-    'folder_beRNN': fr'C:\Users\oliver.frank\Desktop\PyProjects\beRNNmodels\_comparison_multiTask_beRNN_01_highDimCorrects_256_hp_9_month__1-12',
+    'folder_beRNN': fr'C:\Users\oliver.frank\Desktop\PyProjects\beRNNmodels\_comparison_multiTask_beRNN_01_highDim_256_hp_9_month__1-12',
+    # 'folder_beRNN': fr'C:\Users\oliver.frank\Desktop\PyProjects\beRNNmodels\_comparison_multiTask_beRNN_01_highDimCorrects_256_hp_9_month__1-12',
 
     'subjects': ['HC1', 'HC2', 'MDD', 'ASS', 'SCZ'],
     'block_sizes': [5, 3, 5, 5, 5],
-    # 'dataType': 'highDim',
-    'dataType': 'highDim_correctOnly',
+    'dataType': 'highDim',
+    # 'dataType': 'highDim_correctOnly',
     # 'threshold': 1.0,
     # 'thresholds': [1.0]
-    'thresholds': [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0]
+    'thresholds': [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0],
+    'significanceThreshold': 0.005
 }
 
 beRNN_brain_dict = {
@@ -112,6 +113,7 @@ for participant in setup['participants_beRNN']:
 
 
 diagonal_off = True
+# info. comparing same network class to itself
 # brain_correlationMatrix_list = beRNN_correlationMatrix_list
 beRNN_correlationMatrix_list = brain_correlationMatrix_list
 
@@ -270,7 +272,7 @@ for t_idx, threshold in enumerate(setup['thresholds']):
         p_val_perm = np.sum(np.array(perm_i_diffs) >= i_diff) / n_permutations
 
 
-        sig_status = "SIGNIFIKANT" if p_val_perm < 0.05 else "NICHT SIGNIFIKANT"
+        sig_status = "SIGNIFIKANT" if p_val_perm < setup['significanceThreshold'] else "NICHT SIGNIFIKANT" # info. bonferroni corrected: 0.05/10 = 0.005 - alternatively holm
 
         text_str = (f"$I_{{diff}}$: {i_diff:.2f}%\n"
                     f"$p$-Wert: {p_val_perm:.4f}\n"
@@ -362,7 +364,7 @@ for t_idx, threshold in enumerate(setup['thresholds']):
         p_val_perm = np.sum(np.array(perm_i_diffs) >= i_diff) / n_permutations
 
 
-        sig_status = "SIGNIFIKANT" if p_val_perm < 0.05 else "NICHT SIGNIFIKANT"
+        sig_status = "SIGNIFIKANT" if p_val_perm < setup['significanceThreshold'] else "NICHT SIGNIFIKANT" # info. bonferroni corrected: 0.05/10 = 0.005 - alternatively holm
 
         text_str = (f"$I_{{diff}}$: {i_diff:.2f}%\n"
                     f"$p$-Wert: {p_val_perm:.4f}\n"
@@ -392,7 +394,7 @@ sns.heatmap(p_values_results, annot=True, fmt=".4f",
 # highlight significant cells
 for y in range(p_values_results.shape[0]):
     for x in range(p_values_results.shape[1]):
-        if p_values_results[y, x] < 0.05:
+        if p_values_results[y, x] < setup['significanceThreshold']:
             plt.gca().add_patch(plt.Rectangle((x, y), 1, 1, fill=False, edgecolor='red', lw=2))
 
 plt.xlabel("Fingerprint Method")

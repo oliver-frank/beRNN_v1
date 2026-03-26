@@ -104,12 +104,13 @@ def extract_hpSets_4robustnessTest(model_directory):
 # # attention: hitkip local ############################################################################################
 
 
-# # attention: all other setups ########################################################################################
+# attention: all other setups ########################################################################################
 # Get input and output dimension for network, depending on higDim and lowDim data and ruleset (standard: 'all')
 num_ring = tools.get_num_ring('all')
 n_rule = tools.get_num_rule('all')
 # Choose right dataset
-data = ['data_highDim', 'data_highDim_correctOnly', 'data_highDim_lowCognition', 'data_lowDim', 'data_lowDim_correctOnly', 'data_lowDim_lowCognition']
+data = ['data_highDim_correctOnly']
+# data = ['data_highDim', 'data_highDim_correctOnly', 'data_highDim_lowCognition', 'data_lowDim', 'data_lowDim_correctOnly', 'data_lowDim_lowCognition']
 
 if 'highDim' in data[0]:
     n_eachring = 32
@@ -121,53 +122,63 @@ else:
     n_input, n_output = 1 + num_ring * n_eachring + n_rule, n_outputring + 1
 
 adjParams = {
-    'batch_size': [80],
-    'in_type': ['normal'],
-    'rnn_type': ['LeakyRNN'], # 'LeakyGRU'
-    'n_input': [n_input], # number of input units
-    'n_output': [n_output], # number of output units
-    'use_separate_input': [False],
-    'loss_type': ['lsq'],
-    'optimizer': ['adam'], # 'sgd'
     'activation': ['relu', 'softplus', 'tanh'], # 'elu', 'tanh', 'softplus'
-    'tau': [100], # Decides how fast previous information decays to calculate current state activity
+    'activations_per_layer': [['relu', 'relu', 'relu'], ['softplus', 'softplus', 'softplus'], ['tanh', 'tanh', 'tanh']],
+    'base_lr': [0.0005],
+    'batch_size': [80],
+    'benchmark': [True],
+    'c_mask_responseValue': [5.],
+    'data': data,
     'dt': [20],
-    # 'alpha': 0.2,
-    'sigma_rec': [0, 0.01],
-    'sigma_x': [0, 0.01],
-    'w_rec_init': ['randortho', 'randgauss', 'diag'], # , 'brainStructure'
-    # 'w_rec_init': ['randortho', 'randgauss', 'diag', 'brainStructure'],
+    'errorBalancingValue': [1.],
+    'in_type': ['normal'],
     'l1_h': [0, 0.00001, 0.0001, 0.001],
-    'l2_h': [0, 0.00001, 0.0001, 0.001],
     'l1_weight': [0, 0.00001, 0.0001, 0.001],
+    'l2_h': [0, 0.00001, 0.0001, 0.001],
     'l2_weight': [0, 0.00001, 0.0001, 0.001],
     'l2_weight_init': [0],
-    'p_weight_train': [None],
-    'w_mask_value': [0.1], # default .1 - value that will be multiplied with L2 regularization (combined with p_weight_train), <1 will decrease it
     'learning_rate': [0.0015, 0.001, 0.0005, 0.0001],
     'learning_rate_mode': [None, None, 'exp_range', 'triangular2'], # Will overwrite learning_rate if it is not None - 'triangular', 'triangular2', 'exp_range'
-    'base_lr': [0.0005],
+    'loss_type': ['lsq'],
+    'machine': ['local'], # 'local' 'pandora' 'hitkip'
     'max_lr': [0.0015],
-    'n_rnn': [512],
-    'multiLayer': [False],
-    'n_rnn_per_layer': [[32, 32, 32]],
-    'activations_per_layer': [['relu', 'relu', 'relu'], ['softplus', 'softplus', 'softplus'], ['tanh', 'tanh', 'tanh']],
-    'errorBalancingValue': [1.],
-    'c_mask_responseValue': [5.],
-    's_mask': [None], # 'brain_256', None
     'monthsConsidered': [['month_4', 'month_5', 'month_6']], # list of lists
     'monthsString': ['4-6'],
-    'rule_prob_map': [{"DM": 1,"DM_Anti": 1,"EF": 1,"EF_Anti": 1,"RP": 1,"RP_Anti": 1,"RP_Ctx1": 1,"RP_Ctx2": 1,"WM": 1,"WM_Anti": 1,"WM_Ctx1": 1,"WM_Ctx2": 1}],
-    # 'rule_prob_map': [{"DM": 0,"DM_Anti": 0,"EF": 1,"EF_Anti": 1,"RP": 0,"RP_Anti": 0,"RP_Ctx1": 0,"RP_Ctx2": 0,"WM": 0,"WM_Anti": 0,"WM_Ctx1": 0,"WM_Ctx2": 0}], # fraction of tasks represented in training data
+    'multiLayer': [False],
+    'n_input': [n_input], # number of input units
+    'n_eachring': [n_eachring],
+    'n_output': [n_output], # number of output units
+    'n_rnn': [512],
+    'n_rnn_per_layer': [[32, 32, 32]],
+    'optimizer': ['adam'], # 'sgd'
+    'p_weight_train': [None],
     'participant': ['beRNN_03'], # Participant to take
-    'data': ['data_highDim'],
-    'machine': ['local'], # 'local' 'pandora' 'hitkip'
-    'tasksString': ['AllTask'], # tasksTaken
+    'rnn_type': ['LeakyRNN'], # 'LeakyGRU'
+    'ruleset': ['all_benchmark'],  # all_benchmark
+    'rule_start': [1 + num_ring * n_eachring],  # first input index for rule units
+    's_mask': [None], # 'brain_256', None
     'sequenceMode': [True], # Decide if models are trained sequentially month-wise
+    'sigma_rec': [0, 0.01],
+    'sigma_x': [0, 0.01],
+    'target_perf' : [1.0],
+    'tasksString': ['AllTask'], # tasksTaken
+    'tau': [100], # Decides how fast previous information decays to calculate current state activity
+    'threshold': [0.1],  # threshold applied to correlation matrix for adjacency matrix creation
     'trainingBatch': ['1'],
-    'trainingYear_Month': ['test']
+    'trainingYear_Month': ['testHP'],
+    'use_separate_input': [False],
+    'w_mask_value': [0.1], # default .1 - value that will be multiplied with L2 regularization (combined with p_weight_train), <1 will decrease it
+    'w_rec_init': ['randortho', 'randgauss', 'diag'], # , 'brainStructure'
 }
 
+if adjParams['ruleset'][0] == 'all':
+    adjParams['rule_prob_map'] = [dict({"DM": 1, "DM_Anti": 1, "EF": 1, "EF_Anti": 1, "RP": 1, "RP_Anti": 1, "RP_Ctx1": 1,
+                        "RP_Ctx2": 1, "WM": 1, "WM_Anti": 1, "WM_Ctx1": 1, "WM_Ctx2": 1})]
+elif adjParams['ruleset'][0] == 'all_benchmark':
+    adjParams['rule_prob_map'] = [dict({"contextdm1": 1, "contextdm2": 1, "reactgo": 1, "reactanti": 1, "dmsgo": 1, "dmsnogo": 1,
+                    "dmcgo": 1, "dmcnogo": 1, "delaygo": 1, "delayanti": 1, "delaydm1": 1, "delaydm2": 1})]
+else:
+    raise ValueError('defined ruleset not recognized. Stopping process.')
 # attention: all other setups ##########################################################################################
 
 # Randomly sample combinations
@@ -230,6 +241,8 @@ for modelNumber, params in enumerate(sampled_combinations): # info: either sampl
     # params['trainingYear_Month'] = '_gridSearch_multiTask_beRNN_03_highDimCorrects_16_multi'
     # params['n_rnn_per_layer'] = [16, 16, 16]
     # params['multiLayer'] = True
+    # params['threshold'] = 0.1  # info. was added to default_hp after 26.02.26
+    # params['benchmark'] = True # info. was added to default_hp after 25.03.26
     # attention ********************************************************************************************************
 
     # Start

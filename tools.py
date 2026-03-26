@@ -22,27 +22,51 @@ rules_dict = {'all' : ['DM', 'DM_Anti', 'EF', 'EF_Anti', 'RP', 'RP_Anti', 'RP_Ct
               'WM', 'WM_Anti', 'WM_Ctx1', 'WM_Ctx2'], # All tasks
               'DMtasks' : ['DM', 'DM_Anti'], # DM tasks isolated
               'EFtasks' : ['EF', 'EF_Anti'], # EF tasks isolated
-              'DM&EFtasks' : ['DM', 'DM_Anti', 'EF', 'EF_Anti'], # cog. complexity level 1
+              'DM&EFtasks' : ['DM', 'DM_Anti', 'EF', 'EF_Anti'],
               'RPtasks' : ['RP', 'RP_Anti', 'RP_Ctx1', 'RP_Ctx2'], # RP tasks isolated
               'WMtasks' : ['WM', 'WM_Anti', 'WM_Ctx1', 'WM_Ctx2'], # WM tasks isolated
-              'RP&WMCTXtasks' : ['RP', 'RP_Anti', 'RP_Ctx1', 'RP_Ctx2', 'WM_Ctx1', 'WM_Ctx2'], # cog. complexity level 2
-              'WM&WMANTItasks' : ['WM', 'WM_Anti'], # cog. complexity level 3
-              'fundamentals' : ['DM', 'EF', 'RP', 'WM']}
+              'RP&WMCTXtasks' : ['RP', 'RP_Anti', 'RP_Ctx1', 'RP_Ctx2', 'WM_Ctx1', 'WM_Ctx2'],
+              'WM&WMANTItasks' : ['WM', 'WM_Anti'],
+              'fundamentals' : ['DM', 'EF', 'RP', 'WM'],
+              'all_benchmark': [
+                  'contextdm1', 'contextdm2',  # s_DM_Ctx1, s_DM_Ctx2
+                  'reactgo', 'reactanti',  # s_EF_Pro, s_EF_Anti
+                  'dmsgo', 'dmsnogo',  # s_RP_Pro1, s_RP_Anti1
+                  'dmcgo', 'dmcnogo',  # s_RP_Pro2, s_RP_Anti2
+                  'delaygo', 'delayanti',  # s_WM_Pro, s_WM_Anti
+                  'delaydm1', 'delaydm2']  # s_WM_Ctx1, s_WM_Ctx2
+              }
+
 
 rule_name = {
-            'DM': 'Decison Making (DM)',
+            'DM': 'Decison Making Pro (DM Pro)',
             'DM_Anti': 'Decision Making Anti (DM Anti)',
-            'EF': 'Executive Function (EF)',
-            'EF_Anti': 'Executive Function Anti (EF Anti)',
-            'RP': 'Relational Processing (RP)',
+            'EF': 'Executive Functioning Pro (EF Pro)',
+            'EF_Anti': 'Executive Functioning Anti (EF Anti)',
+            'RP': 'Relational Processing Pro (RP Pro)',
             'RP_Anti': 'Relational Processing Anti (RP Anti)',
             'RP_Ctx1': 'Relational Processing Context 1 (RP Ctx1)',
             'RP_Ctx2': 'Relational Processing Context 2 (RP Ctx2)',
-            'WM': 'Working Memory (WM)',
+            'WM': 'Working Memory Pro (WM Pro)',
             'WM_Anti': 'Working Memory Anti (WM Anti)',
             'WM_Ctx1': 'Working Memory Context 1 (WM Ctx1)',
             'WM_Ctx2': 'Working Memory Context 2 (WM Ctx2)'
             }
+
+rule_name_benchmark = {
+                'contextdm1': 'Simple Decison Making Context 1 (s_DM_Ctx1)',
+                'contextdm2': 'Simple Decison Making Context 2 (s_DM_Ctx2)',
+                'reactgo': 'Simple Executive Functioning Pro (s_EF_Pro)',
+                'reactanti': 'Simple Executive Functioning Anti (s_EF_Anti)',
+                'dmsgo': 'Simple Relational Processing Pro 1 (s_RP_Pro1)',
+                'dmsnogo': 'Simple Relational processing Anti 1 (s_RP_Anti1)',
+                'dmcgo': 'Simple Relational Processing Pro 2 (s_RP_Pro2)',
+                'dmcnogo': 'Simple Relational Processing Anti 2 (s_RP_Anti2)',
+                'delaygo': 'Simple Working Memory Pro (s_WM_Pro)',
+                'delayanti': 'Simple Working Memory Anti (s_WM_Anti)',
+                'delaydm1': 'Simple Working Memory Context 1 (s_WM_Ctx1)',
+                'delaydm2': 'Simple Working Memory Context 2 (s_WM_Ctx2)'
+                }
 
 # Store indices of rules
 rule_index_map = dict()

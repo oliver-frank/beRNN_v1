@@ -29,6 +29,7 @@ from networkx.algorithms.community import greedy_modularity_communities, modular
 from _analysis import variance
 
 from network import Model, get_perf, get_perf_lowDIM
+from _benchmark import generate_trials
 import tools
 
 
@@ -115,7 +116,7 @@ def get_default_hp(ruleset):
     n_rule = tools.get_num_rule(ruleset)
 
     machine = 'local'  # 'local' 'pandora' 'hitkip'
-    data = 'data_highDim_correctOnly'  # 'data_highDim' , data_highDim_correctOnly , data_highDim_lowCognition , data_lowDim , data_lowDim_correctOnly , data_lowDim_lowCognition, 'data_highDim_correctOnly_3stimTC'
+    data = 'data_highDim_correctOnly'
     trainingBatch = '01'
     trainingYear_Month = 'test'  # as short as possible to avoid too long paths for avoiding linux2windows transfer issues
 
@@ -129,82 +130,77 @@ def get_default_hp(ruleset):
         n_input, n_output = 1 + num_ring * n_eachring + n_rule, n_outputring + 1
 
     hp = {
-        # batch size for training and evaluations
+        'activation': 'relu',  # Type of activation runctions, relu, softplus, tanh, elu, linear
+        'activations_per_layer': ['relu', 'tanh', 'linear'],
+        # 'alpha': 0.2, # (redundant) discretization time step/time constant - dt/tau = alpha - ratio decides on how much previous states are taken into account for current state - low alpha more memory, high alpha more forgetting - alpha * h(t-1)
         'batch_size': 80,  # 20/40/80/120/160
         # 'batch_size_test': 640, # batch_size for testing
-        'in_type': 'normal',  # input type: normal, multi
-        'rnn_type': 'LeakyRNN',  # Type of RNNs: NonRecurrent, LeakyRNN, LeakyGRU, EILeakyGRU | GRU, LSTM
-        'multiLayer': False,  # only applicaple with LeakyRNN
-        'n_rnn': 256,  # number of recurrent units for one hidden layer architecture
-        'activation': 'relu',  # Type of activation runctions, relu, softplus, tanh, elu, linear
-        'n_rnn_per_layer': [16, 16, 16],
-        'activations_per_layer': ['relu', 'tanh', 'linear'],
-        'loss_type': 'lsq',  # # Type of loss functions - Cross-entropy loss
-        'optimizer': 'adam',  # 'adam', 'sgd'
-        'tau': 100,  # # Time constant (ms)- default 100
-        'dt': 20,  # discretization time step (ms) .
-        # 'alpha': 0.2, # (redundant) discretization time step/time constant - dt/tau = alpha - ratio decides on how much previous states are taken into account for current state - low alpha more memory, high alpha more forgetting - alpha * h(t-1)
-        'sigma_rec': 0.01,  # recurrent noise - directly influencing the noise added to the network
-        'sigma_x': 0,  # input noise
-        'w_rec_init': 'randgauss',
-        's_mask': None,  # 'brain_256', None - info: only accesible on local machine
-        # 'mask_threshold': .999,  # .999 or .975
-        # leaky_rec weight initialization, diag, randortho, randgauss, brainStructure (only accessible with LeakyRNN : 32-256)
-        'l1_h': 1e-04,
-        # l1 lambda (regularizing with absolute value of magnitude of coefficients, leading to sparse features)
-        'l2_h': 0,
-        # l2 lambda (regularizing with squared value of magnitude of coefficients, decreasing influence of features)
-        'l1_weight': 0,  # l2 regularization on weight
-        'l2_weight': 0,  # l2 regularization on weight
-        'l2_weight_init': 0,  # l2 regularization on deviation from initialization
-        'p_weight_train': None,
-        # proportion of weights not to be regularized, None or float between (0, 1) - 1-p_weight_train will be multiplied by w_mask_value
-        'w_mask_value': 0.1,
-        # default .1 - value that will be multiplied with L2 regularization (combined with p_weight_train), <1 will decrease it
-        'target_perf': 1.0,  # Stopping performance
-        'threshold': 0.1, # threshold applied to correlation matrix for adjacency matrix creation
-        'n_eachring': n_eachring,  # number of units each ring
-        'num_ring': num_ring,  # number of rings
-        'n_rule': n_rule,  # number of rules
-        'rule_start': 1 + num_ring * n_eachring,  # first input index for rule units
-        'n_input': n_input,  # number of input units
-        'n_output': n_output,  # number of output units
-        'rng': np.random.default_rng(),  # add seed here if you want to make it reproducible e.g. (42)
-        'ruleset': ruleset,  # number of input units
-        'save_name': 'test',  # name to save
-        'learning_rate': 0.0005,  # learning rate
-        'learning_rate_mode': 'exp_range',
-        # Will overwrite learning_rate if it is not None - 'triangular', 'triangular2', 'exp_range', 'decay'
         'base_lr': [5e-4],
-        'max_lr': [15e-4],
-        'errorBalancingValue': 1.,
-        # will be multiplied with c_mask_responseValue for objective error trials - 1. means no difference between errors and corrects are made
+        'benchmark': True,
+        # 'c_intsyn': 0, # intelligent synapses parameters, tuple (c, ksi) -> Yang et al. only apply these in sequential training
         'c_mask_responseValue': 5.,
-        # c_mask response epoch value - strenght response epoch is taken into account for error calculation
+        'data': data,
+        'distanceOfEvaluationData': 0,
+        'dt': 20,  # discretization time step (ms)
+        'errorBalancingValue': 1., # multiplier of error costs and influence on backprop contribution
+        'generalizationTest': False,  # month-wise distance between train and eval data for generalization testing
         'grad_clip': None,  # set None to disable
         'grad_clip_by': 'global_norm',  # or 'value'
-        'rule_probs': None,  # Rule probabilities to be drawn
-        'use_separate_input': False,  # whether rule and stimulus inputs are represented separately
-        # 'c_intsyn': 0, # intelligent synapses parameters, tuple (c, ksi) -> Yang et al. only apply these in sequential training
+        'in_type': 'normal',  # input type: normal, multi
+        'l1_h': 1e-04,  # l1 lambda
+        'l1_weight': 0,  # l1 regularization on weight
+        'l2_h': 0,  # l2 lambda
+        'l2_weight': 0,  # l2 regularization on weight
+        'l2_weight_init': 0,  # l2 regularization on deviation from initialization
+        'learning_rate': 0.0005,  # learning rate
+        'learning_rate_mode': 'exp_range', # None - 'triangular', 'triangular2', 'exp_range', 'decay'
+        'loss_type': 'lsq',  # # Type of loss functions - Cross-entropy loss
         # 'ksi_intsyn': 0,
-        # 'monthsConsidered': ['month_4', 'month_5', 'month_6'],  # months to train and test
-        'monthsConsidered': ['month_12'],  # months to train and test
-        'monthsString': '12',  # monthsTaken
-        'generalizationTest': False,  # Should their be a month-wise distance applied between train and eval data
-        'distanceOfEvaluationData': 0,
-        # distance between test and evaluation data month-wise to check generalization performance
-        'rule_prob_map': {"DM": 1, "DM_Anti": 1, "EF": 1, "EF_Anti": 1, "RP": 1, "RP_Anti": 1, "RP_Ctx1": 1,
-                          "RP_Ctx2": 1, "WM": 1, "WM_Anti": 1, "WM_Ctx1": 1, "WM_Ctx2": 1},
-        # 'rule_prob_map': {"DM": 0,"DM_Anti": 0,"EF": 0,"EF_Anti": 0,"RP": 0,"RP_Anti": 1,"RP_Ctx1": 0,"RP_Ctx2": 0,"WM": 0,"WM_Anti": 0,"WM_Ctx1": 0,"WM_Ctx2": 0}, # fraction of tasks represented in training data
-        'tasksString': 'Alltask',  # tasks taken
-        'sequenceMode': True,  # Decide if models are trained sequentially month-wise
-        'participant': 'beRNN_03',  # Participant to take
-        'data': data,
-        # 'data_highDim' , data_highDim_correctOnly , data_highDim_lowCognition , data_lowDim , data_lowDim_correctOnly , data_lowDim_lowCognition, data_timeCompressed, data_lowDim_timeCompressed
         'machine': machine,
+        # 'mask_threshold': .999,  # .999 or .975
+        'max_lr': [15e-4],
+        'monthsConsidered': ['month_4', 'month_5', 'month_6'],
+        'monthsString': '4-6',  # monthsTaken
+        'multiLayer': False,  # only applicaple with LeakyRNN
+        'n_eachring': n_eachring,  # number of units each ring
+        'n_input': n_input,  # number of input units
+        'n_output': n_output,  # number of output units
+        'num_ring': num_ring,  # number of rings
+        'n_rule': n_rule,  # number of rules
+        'n_rnn': 256,  # number of recurrent units for one hidden layer architecture
+        'n_rnn_per_layer': [16, 16, 16],
+        'optimizer': 'adam',  # 'adam', 'sgd'
+        'participant': 'beRNN_03',  # Participant to take
+        'p_weight_train': None,
+        'rnn_type': 'LeakyRNN',  # Type of RNNs: NonRecurrent, LeakyRNN, LeakyGRU, EILeakyGRU | GRU, LSTM
+        'rng': np.random.default_rng(),  # add seed here if you want to make it reproducible e.g. (42)
+        'ruleset': 'all_benchmark',  # all_benchmark
+        'rule_probs': None,  # Rule probabilities to be drawn
+        'rule_start': 1 + num_ring * n_eachring,  # first input index for rule units
+        'save_name': 'test',  # name to save
+        'sequenceMode': True,  # Decide if models are trained sequentially month-wise
+        'sigma_rec': 0.01,  # recurrent noise - directly influencing the noise added to the network
+        'sigma_x': 0,  # input noise
+        's_mask': None,  # 'brain_256', None - info: only accesible on local machine
+        'target_perf': 1.0,  # Stopping performance
+        'tasksString': 'Alltask',  # tasks taken
+        'tau': 100,  # # Time constant (ms)- default 100
+        'threshold': 0.1,  # threshold applied to correlation matrix for adjacency matrix creation
         'trainingBatch': trainingBatch,
-        'trainingYear_Month': trainingYear_Month
+        'trainingYear_Month': trainingYear_Month,
+        'use_separate_input': False,  # whether rule and stimulus inputs are represented separately
+        'w_mask_value': 0.1,  # proportion of weights not to be regularized
+        'w_rec_init': 'randgauss', # diag, randortho, randgauss, brainStructure (only accessible with LeakyRNN : 32-256)
     }
+
+    if hp['ruleset'] == 'all':
+        hp['rule_prob_map'] = dict({"DM": 1, "DM_Anti": 1, "EF": 1, "EF_Anti": 1, "RP": 1, "RP_Anti": 1, "RP_Ctx1": 1,
+                          "RP_Ctx2": 1, "WM": 1, "WM_Anti": 1, "WM_Ctx1": 1, "WM_Ctx2": 1})
+    elif hp['ruleset'] == 'all_benchmark':
+        hp['rule_prob_map'] = dict({"contextdm1": 1, "contextdm2": 1, "reactgo": 1, "reactanti": 1, "dmsgo": 1, "dmsnogo": 1,
+                      "dmcgo": 1, "dmcnogo": 1, "delaygo": 1, "delayanti": 1, "delaydm1": 1, "delaydm2": 1})
+    else:
+        raise ValueError('defined ruleset not recognized. Stopping process.')
 
     return hp
 
@@ -238,14 +234,26 @@ def do_eval(sess, model, log, rule_train, eval_data):
 
         for i_rep in range(n_rep):
             try:
-                x, y, y_loc, response = tools.load_trials(hp['rng'], task, mode, hp['batch_size'], eval_data,
-                                                          False)  # y_loc is participantResponse_perfEvalForm
 
-                c_mask = tools.create_cMask(y, response, hp, mode)
+                if hp['benchmark'] != True:
+                    x, y, y_loc, response = tools.load_trials(hp['rng'], task, mode, hp['batch_size'], eval_data,False)  # y_loc is participantResponse_perfEvalForm
 
-                # fix: for inconcruence between y and response dimension 1
-                if c_mask.any() == None:
-                    continue
+                    c_mask = tools.create_cMask(y, response, hp, mode)
+
+                    # fix: for inconcruence between y and response dimension 1
+                    if c_mask.any() == None:
+                        continue
+
+                else:
+                    # benchmark training with simplified tasks (like Yang, Driscoll, Brenner)
+                    rule_train_now = task
+                    # Generate a random batch of trials
+                    # Each batch has the same trial length
+                    trial = generate_trials(
+                        rule_train_now, hp, 'random',
+                        batch_size=hp['batch_size'])
+
+                    x, y, y_loc, c_mask = trial.x, trial.y, trial.y_loc, trial.c_mask
 
                 feed_dict = tools.gen_feed_dict(model, x, y, c_mask,
                                                 hp)  # y: participnt response, that gives the lable for what the network is trained for
@@ -260,10 +268,10 @@ def do_eval(sess, model, log, rule_train, eval_data):
                 # and averaged across batch and units
                 # We did the averaging over time through c_mask
 
-                if 'lowDim' in hp['data']:
+                if 'lowDim' in hp['data'] and hp['benchmark'] != True:
                     perf_test = np.mean(get_perf_lowDIM(y_hat_test, y_loc))
 
-                elif 'RP_Anti' in task:
+                elif 'RP_Anti' in task and hp['benchmark'] != True:
                     performanceList = []
                     perf_test = np.mean(
                         get_perf(y_hat_test, y_loc))  # info: y_loc is participant response as groundTruth
@@ -304,7 +312,7 @@ def do_eval(sess, model, log, rule_train, eval_data):
                     # Compare both perf_test and take the most sucessful (giving the network the possibility to correctly respond to several correct directions)
                     perf_test = np.max(performanceList)
 
-                elif 'RP_Ctx2' in task:
+                elif 'RP_Ctx2' in task and hp['benchmark'] != True:
                     performanceList = []
                     perf_test = np.mean(
                         get_perf(y_hat_test, y_loc))  # info: y_loc is participant response as groundTruth
@@ -396,7 +404,7 @@ def do_eval(sess, model, log, rule_train, eval_data):
     return log
 
 
-def train(data_dir, model_dir, train_data, eval_data, hp=None, max_steps=3e6, display_step=500, ruleset='all',
+def train(data_dir, model_dir, train_data, eval_data, hp=None, max_steps=3e6, display_step=500,
           rule_trains=None, rule_prob_map=None, seed=0,
           load_dir=None, trainables=None, robustnessTest=True):
     """Train the network.
@@ -420,11 +428,12 @@ def train(data_dir, model_dir, train_data, eval_data, hp=None, max_steps=3e6, di
 
     # attention: standard hp ##########################################################################################
     # Network parameters
+    ruleset = hp['ruleset']
     default_hp = get_default_hp(ruleset)
     # default_hp = get_default_hp('all')
     if hp is not None:
         default_hp.update(hp)
-        # attention: standard hp ##########################################################################################
+    # attention: standard hp ##########################################################################################
 
     # Rules to train and test. Rules in a set are trained together
     if rule_trains is None:
@@ -549,10 +558,29 @@ def train(data_dir, model_dir, train_data, eval_data, hp=None, max_steps=3e6, di
                 task = hp['rng'].choice(hp['rule_trains'], p=hp['rule_probs'])
                 # Generate a random batch of trials; each batch has the same trial length
                 mode = 'train'
-                x, y, y_loc, response = tools.load_trials(hp['rng'], task, mode, hp['batch_size'], train_data,
-                                                          False)  # y_loc is participantResponse_perfEvalForm
-                # Create cMask
-                c_mask = tools.create_cMask(y, response, hp, mode)
+
+
+                if hp['benchmark'] != True:
+                    x, y, y_loc, response = tools.load_trials(hp['rng'], task, mode, hp['batch_size'], eval_data,
+                                                              False)  # y_loc is participantResponse_perfEvalForm
+
+                    c_mask = tools.create_cMask(y, response, hp, mode)
+
+                    # fix: for inconcruence between y and response dimension 1
+                    if c_mask.any() == None:
+                        continue
+
+                else:
+                    # benchmark training with simplified tasks (like Yang, Driscoll, Brenner)
+                    rule_train_now = task
+
+                    # Generate a random batch of trials
+                    # Each batch has the same trial length
+                    trial = generate_trials(
+                        rule_train_now, hp, 'random',
+                        batch_size=hp['batch_size'])
+
+                    x, y, y_loc, c_mask = trial.x, trial.y, trial.y_loc, trial.c_mask
 
                 # fix: for inconcruence between y and response on dimension 1 - probably preprocessing related
                 # fix: for inconcruence between y and response on dimension 1 - probably preprocessing related
@@ -622,7 +650,7 @@ if __name__ == '__main__':
 
         # attention: standard hp #############################################################################################
         # info: if used, comment out standard hp in train()
-        hp = get_default_hp('all')
+        hp = get_default_hp('all') # 'all_benchmark' - not important at this point as both sets have 12 tasks
         # attention: standard hp #############################################################################################
 
         # # attention: hitkip cluster ##########################################################################################
@@ -649,18 +677,20 @@ if __name__ == '__main__':
         #         "r") as f:
         #     hp = json.load(f)
         #
-        # hp['participant'] = 'beRNN_03'
+        # hp['participant'] = 'beRNN_04'
         # participant = hp['participant']
         #
-        # # hp['trainingBatch'] = '12'
+        # monthstring = '6'
+        # hp['monthsString'] = monthstring
         #
-        # # month = ['month_12']
-        # # hp['monthsConsidered'] = month
+        # hp['trainingBatch'] = monthstring
         #
-        # # monthstring = '12'
-        # # hp['monthsString'] = monthstring
+        # month = [f'month_{monthstring}']
+        # hp['monthsConsidered'] = month
         #
-        # dataType = 'data_highDim_lowCognition'
+        # hp['threshold'] = 0.1  # was added to default_hp after 26.02.26
+        #
+        # dataType = 'data_highDim_correctOnly'
         # hp['data'] = dataType
         #
         # # hp['n_eachring'] = 10
@@ -670,16 +700,16 @@ if __name__ == '__main__':
         # # hp['rng'] = np.random.default_rng(42) # for reproducibility - only applied on splitting of data
         # # hp['errorBalancingValue'] = 5.
         # # hp['w_rec_init'] = 'brainStructure'
-        # # hp['rule_prob_map'] = {"DM": 1, "DM_Anti": 0, "EF": 1, "EF_Anti": 0, "RP": 1, "RP_Anti": 0, "RP_Ctx1": 0,
-        # #                  "RP_Ctx2": 0, "WM": 1, "WM_Anti": 0, "WM_Ctx1": 0, "WM_Ctx2": 0}
-        # # hp['tasksString'] = 'fundamentals'
+        # hp['rule_prob_map'] = {"DM": 1, "DM_Anti": 0, "EF": 1, "EF_Anti": 0, "RP": 1, "RP_Anti": 0, "RP_Ctx1": 0,
+        #                        "RP_Ctx2": 0, "WM": 1, "WM_Anti": 0, "WM_Ctx1": 0, "WM_Ctx2": 0}
+        # hp['tasksString'] = 'fundamentals'
         # # n_rnn = 64
         # # hp['n_rnn'] = n_rnn
-        # hp['trainingYear_Month'] = f'_all_beRNNs_multiTask_{participant}_highDim_lowCognition_256'
+        # hp['trainingYear_Month'] = f'_fs_mT_{participant}_highDimCorrects_256'
         # folderName = hp['trainingYear_Month']
         # hp[
-        #     'trainingYear_Month'] = f'{folderName}_{robustnessTest_model}_month_4-6'  # as short as possible to avoid linux2windows transfer issues
-        # # attention: hitkip robustness #############################################################################################
+        #     'trainingYear_Month'] = f'{folderName}_{robustnessTest_model}'  # as short as possible to avoid linux2windows transfer issues
+        # attention: hitkip robustness #############################################################################################
 
         load_dir = None
 

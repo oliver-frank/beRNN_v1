@@ -3,3 +3,5 @@
 2. hyperparameterOverview.py & hyperparameterOverview_overlays.py for performance visualization
 3. singleNetworkAnalysis.py & multipleNetworkAnalysis.py - analyzing models hidden structure and task representation + saving representational network metrics
 4. cognitiveErrorAnalysis.py & cognitiveTaskAccuracy.py - analyzing individual cognitive behavior
+
+

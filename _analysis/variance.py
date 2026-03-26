@@ -19,6 +19,7 @@ import tensorflow as tf
 import errno
 
 # from task import *
+from _benchmark import generate_trials
 from network import Model
 import tools
 
@@ -48,7 +49,7 @@ def _compute_variance_bymodel(data_dir, model_dir, layer, data_type, networkAnal
     rules = [key for key in hp["rule_prob_map"].keys() if hp["rule_prob_map"][key] != 0]
 
     if len(rules) == 12:
-        ruleset = 'all'
+        ruleset = hp['ruleset']
     elif rules == ["DM", "EF", "RP", "WM"]:
         ruleset = 'fundamentals'
     else:
@@ -95,18 +96,27 @@ def _compute_variance_bymodel(data_dir, model_dir, layer, data_type, networkAnal
                 elif mode == 'test':
                     data = eval_data
 
-                # c_mask = None
-                # while c_mask == None:
-                x, y, y_loc, response = tools.load_trials(hp['rng'], task, mode, hp['batch_size'], data, False)
-                epochs = tools.find_epochs(x)
+                if hp['benchmark'] != True:
+                    x, y, y_loc, response = tools.load_trials(hp['rng'], task, mode, hp['batch_size'], eval_data,False)  # y_loc is participantResponse_perfEvalForm
 
-                c_mask = tools.create_cMask(y, response, hp, mode)
+                    epochs = tools.find_epochs(x)
+                    c_mask = tools.create_cMask(y, response, hp, mode)
 
-                # attention: hard-coded bug fix ************************************************************************
-                if c_mask is None:
-                    print(f"Skipping {task} in _compute_variance_bymodel: invalid c_mask (random bug - mainly on RP)")
-                    continue
-                # attention: hard-coded bug fix ************************************************************************
+                    # attention: hard-coded bug fix ************************************************************************
+                    if c_mask is None:
+                        print(
+                            f"Skipping {task} in _compute_variance_bymodel: invalid c_mask (random bug - mainly on RP)")
+                        continue
+                    # attention: hard-coded bug fix ************************************************************************
+
+                else:
+                    # benchmark training with simplified tasks (like Yang, Driscoll, Brenner)
+                    rule_train_now = task
+                    # Generate a random batch of trials
+                    # Each batch has the same trial length
+                    trial = generate_trials(rule_train_now, hp, 'random', batch_size=hp['batch_size'])
+
+                    x, y, y_loc, c_mask, epochs = trial.x, trial.y, trial.y_loc, trial.c_mask, trial.epochs
 
                 feed_dict = tools.gen_feed_dict(model, x, y, c_mask, hp)
 
@@ -208,6 +218,7 @@ def _compute_variance_bymodel(data_dir, model_dir, layer, data_type, networkAnal
                 print(f"Directory already exists: {fname}")
             else:
                 print(f"OS Error while saving file: {e}")
+
         except Exception as e:
             print(f"Failed to save variance file {fname}: {e}")
 
