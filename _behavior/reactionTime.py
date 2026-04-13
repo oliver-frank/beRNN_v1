@@ -6,15 +6,17 @@ import matplotlib.pyplot as plt
 from collections import defaultdict
 from scipy.stats import mannwhitneyu
 import matplotlib.colors as mcolors
+import json
 
 
 # Configuration
 participant_dir = r'W:\group_csp\analyses\oliver.frank\Data'
-# months = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12']
-months = ['4', '5', '6']
+months = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12']
+# months = ['4', '5', '6']
 strToSave = months[0] + '-' + months[-1]
-newParticpantList = ['beRNN_01', 'beRNN_02', 'beRNN_03', 'beRNN_04', 'beRNN_05']
-reactionTime_comparison, plot_radars = True, False
+# newParticpantList = ['beRNN_01', 'beRNN_02', 'beRNN_03', 'beRNN_04', 'beRNN_05']
+newParticpantList = ['beRNN_01']
+reactionTime_comparison, plot_radars, wholePeriodPlots = False, False, False
 
 paper_nomenclatur_dict = {
     'beRNN_03': 'HC1',
@@ -540,7 +542,7 @@ def plot_beRNN_radar_months(beRNN_name, data, filename_color_dict, months):
     fig.suptitle(paper_nomenclatur_dict[beRNN_name], fontsize=16)
     plt.tight_layout()
     # plt.show()
-    plt.savefig(os.path.join(r'C:\Users\oliver.frank\Desktop\PyProjects\beRNNmodels\__taskComplexities', f"{beRNN_name}_taskComplexity_month_4-6.png"),dpi=300)
+    plt.savefig(os.path.join(r'C:\Users\oliver.frank\Desktop\PyProjects\beRNNmodels\__taskComplexities', f"{beRNN_name}_taskComplexity_month_{strToSave}.png"),dpi=300)
 
 participants_dict_complexities = {
     participant: {month: {task: {} for task in task_keys} for month in months}
@@ -691,7 +693,6 @@ participants_dict_complexities = {
 #                     participants_dict_complexities[p_id][month_key][task_key] = month_values[t_idx]
 
 
-
 # # # info. Save dict for python
 # # import pickle
 # #
@@ -727,5 +728,88 @@ participants_dict_complexities = {
 #
 # # Speichert das gesamte participants_dict in eine Datei
 # savemat(r'W:\group_csp\analyses\oliver.frank\Data\participants_dict_reactionTime.mat', {"data": participants_dict})
+
+
+# info: ################################################################################################################
+# info: Create reaction time box plots for seperated errors and corrects or all trials
+# info: ################################################################################################################
+
+if reactionTime_comparison == True:
+
+    data = json.load(open(r'W:\group_csp\analyses\oliver.frank\Data\participants_dict_reactionTime.json'))
+
+    first_p = list(data.keys())[0]
+    first_m = list(data[first_p].keys())[0]
+    task_keys = sorted(data[first_p][first_m].keys())
+
+    # color mapping
+    cmap = plt.cm.viridis
+    colors = cmap(np.linspace(0, 1, len(task_keys)))
+    filename_color_dict = {
+        task: mcolors.to_hex(color)
+        for task, color in zip(task_keys, colors)
+    }
+
+    participants = list(data.keys())
+
+    for participant, months_data in data.items():
+        print()
+        plt.figure(figsize=(12, 7))
+
+        sorted_months_str = sorted(months_data.keys(), key=int)
+        months_numeric = [int(m) for m in sorted_months_str]
+
+        for task in task_keys:
+            means = []
+            stds = []
+            valid_months = []
+
+            for m_str in sorted_months_str:
+                if task in months_data[m_str]:
+                    trials = np.array(months_data[m_str][task])
+                    means.append(np.mean(trials))
+                    stds.append(np.std(trials))
+                    valid_months.append(int(m_str))
+
+            means = np.array(means)
+            stds = np.array(stds)
+            color = filename_color_dict[task]
+
+            plt.plot(valid_months, means, label=task, color=color,
+                     marker='o', markersize=6, linewidth=3, zorder=3)
+
+            # info: Margin for variances - RT and performance only
+            plt.fill_between(valid_months, means - stds, means + stds,
+                             color=color, alpha=0.1, zorder=2)
+
+        plt.ylim(400, 1000,1200)
+        plt.yticks([400, 600, 800, 1000, 1200])
+        plt.xlim(min(months_numeric), max(months_numeric))
+        plt.xticks(months_numeric)
+        # plt.xticks([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]) # info: for task complexity plots
+
+        # Graue gepunktete Linien entlang der Ticks
+        plt.grid(axis='y', linestyle='--', alpha=0.7)
+
+        plt.title(f"Reaction Time: {participant}", fontsize=14, pad=15)
+        plt.xlabel("Month", fontsize=12)
+        plt.ylabel("Reaction Time", fontsize=12)
+        plt.legend(bbox_to_anchor=(1.05, 1), loc='upper left', frameon=False)
+
+        plt.tight_layout()
+        plt.savefig(rf'W:\group_csp\analyses\oliver.frank\Data\reactionTime_{participant}_1-12.png', dpi=300, bbox_inches='tight')
+
+        plt.show()
+
+
+
+
+
+
+
+
+
+
+
 
 
