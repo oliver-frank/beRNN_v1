@@ -17,7 +17,13 @@ import warnings
 
 warnings.simplefilter(action='ignore', category=FutureWarning)
 
-import tensorflow as tf
+# import tensorflow as tf
+
+# attention. csp_frank_oliver_3 version ++++++++++++++++++++++++++++++++++++++++++++++
+import tensorflow.compat.v1 as tf
+tf.disable_v2_behavior()
+# attention. csp_frank_oliver_3 version ++++++++++++++++++++++++++++++++++++++++++++++
+
 from tensorflow.python.platform import tf_logging as logging
 from tensorflow.python.ops import variable_scope as vs
 from tensorflow.python.ops import array_ops
@@ -954,10 +960,14 @@ class Model(object):
                     sigma_rec=hp['sigma_rec'], activation=f_act, mask=hp['s_mask']) # fix: s_mask - outdated
 
             elif hp['rnn_type'] == 'LSTM':
-                cell = tf.contrib.rnn.LSTMCell(n_rnn, activation=f_act)
+                # cell = tf.contrib.rnn.LSTMCell(n_rnn, activation=f_act)
+                # info. alternative function for LSTM model after tf 2.x upgrade
+                cell = tf.compat.v1.nn.rnn_cell.LSTMCell(n_rnn, activation=f_act)
 
             elif hp['rnn_type'] == 'GRU':
-                cell = tf.contrib.rnn.GRUCell(n_rnn, activation=f_act, mask=hp['s_mask']) # fix: s_mask - outdated
+                # cell = tf.contrib.rnn.GRUCell(n_rnn, activation=f_act, mask=hp['s_mask']) # fix: s_mask - outdated
+                # info. alternative function for GRU model after tf 2.x upgrade
+                cell = tf.compat.v1.nn.rnn_cell.GRUCell(n_rnn, activation=f_act)
 
             else:
                 raise NotImplementedError("""rnn_type must be one of LeakyRNN,
@@ -990,7 +1000,8 @@ class Model(object):
             h_shaped = tf.reshape(self.h, (-1, n_rnn))
             y_shaped = tf.reshape(self.y, (-1, n_output))
             # y_hat_ shape (n_time*n_batch, n_unit)
-            y_hat_ = tf.matmul(h_shaped, w_out) + b_out
+            # y_hat_ = tf.matmul(h_shaped, w_out) + b_out
+            y_hat_ = tf.compat.v1.matmul(h_shaped, w_out) + b_out
 
         elif hp.get('multiLayer') == True:
             # Output
@@ -1011,7 +1022,8 @@ class Model(object):
             h_shaped = tf.reshape(self.h, (-1, hp['n_rnn_per_layer'][-1]))
             y_shaped = tf.reshape(self.y, (-1, n_output))
             # y_hat_ shape (n_time*n_batch, n_unit)
-            y_hat_ = tf.matmul(h_shaped, w_out) + b_out
+            # y_hat_ = tf.matmul(h_shaped, w_out) + b_out
+            y_hat_ = tf.compat.v1.matmul(h_shaped, w_out) + b_out
 
 
         if hp['loss_type'] == 'lsq':

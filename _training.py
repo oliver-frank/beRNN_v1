@@ -15,19 +15,30 @@ warnings.simplefilter(action='ignore', category=FutureWarning)
 
 import sys
 import time
+from pathlib import Path
 from collections import defaultdict
 
 import os
+import random
+os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
+
 import numpy as np
 # import matplotlib.pyplot as plt
-import tensorflow as tf
+# import tensorflow as tf
+
+# attention. csp_frank_oliver_3 version ++++++++++++++++++++++++++++++++++++++++++++++
+import tensorflow.compat.v1 as tf
+tf.disable_v2_behavior()
+import mlflow
+# attention. csp_frank_oliver_3 version ++++++++++++++++++++++++++++++++++++++++++++++
+
 import json
 # import random
 
 import networkx as nx
 from networkx.algorithms.community import greedy_modularity_communities, modularity
-from _analysis import variance
 
+from _analysis import variance
 from network import Model, get_perf, get_perf_lowDIM
 from _benchmark import generate_trials
 import tools
@@ -53,7 +64,8 @@ def apply_density_threshold(matrix, density=0.1):
     return thresholded
 
 
-def getAndSafeModValue(data_dir, model_dir, hp, model, sess, log):
+def getAndSafeModValue(data_dir, model_dir, hp, model, sess, log, step):
+    # info. saves modularity, but also clustering and participation
     fname, fname2, fname3 = variance.compute_variance(data_dir, model_dir, layer=1, mode='test',
                                                       monthsConsidered=hp['monthsConsidered'], data_type='rule',
                                                       networkAnalysis=False,
@@ -73,8 +85,7 @@ def getAndSafeModValue(data_dir, model_dir, hp, model, sess, log):
 
     numberOfHiddenUnits = hp['n_rnn']
 
-    if ind_active.shape[0] < h_corr_all_.shape[0] and ind_active.shape[0] < h_corr_all_.shape[1] and ind_active.shape[
-        0] > 1:
+    if ind_active.shape[0] < h_corr_all_.shape[0] and ind_active.shape[0] < h_corr_all_.shape[1] and ind_active.shape[0] > 1:
         h_corr_all_ = h_corr_all_[ind_active, :]
         h_corr_all = h_corr_all_[:, ind_active]
         # Apply threshold
@@ -89,17 +100,37 @@ def getAndSafeModValue(data_dir, model_dir, hp, model, sess, log):
 
     if G_sparse.number_of_edges() == 0 or G_sparse.number_of_nodes() < 2:
         print(f"Skipping modularity calculation for {model_dir} — graph has no edges.")
+        avg_clustering = 0
         mod_value_sparse = 0
+        avg_participation = 0
     else:
         try:
+            # clustering
+            clustering = nx.clustering(G_sparse)
+            avg_clustering = np.mean(list(clustering.values()))
+            # modularity
             communities_sparse = greedy_modularity_communities(G_sparse)
             mod_value_sparse = modularity(G_sparse, communities_sparse)
+            # participation
+            pc_dict = tools.participation_coefficient(G_sparse, communities_sparse)
+            avg_participation = np.mean(list(pc_dict.values()))
+
         except Exception as e:
             print(f"Greedy modularity failed for {model_dir}. Setting mod_value=0. ({e})")
+            avg_clustering = 0
             mod_value_sparse = 0
+            avg_participation = 0
 
-    # log['modularity_weighted'].append(mod_value_weighted)
+    # head. new mlflow logic ###########################################################################################
+    mlflow.log_metric("avg_clustering", avg_clustering, step=step)
+    mlflow.log_metric("modularity_sparse", mod_value_sparse, step=step)
+    mlflow.log_metric("avg_participation", avg_participation, step=step)
+    # head. new mlflow logic ###########################################################################################
+
+    log[('averageg_clustering')].append(avg_clustering)
     log['modularity_sparse'].append(mod_value_sparse)
+    log['average_participation'].append(avg_participation)
+
     tools.save_log(log)
 
 
@@ -118,7 +149,7 @@ def get_default_hp(ruleset):
     machine = 'local'  # 'local' 'pandora' 'hitkip'
     data = 'data_highDim_correctOnly'
     trainingBatch = '01'
-    trainingYear_Month = 'test'  # as short as possible to avoid too long paths for avoiding linux2windows transfer issues
+    trainingYear_Month = '_grid_bench_multi_beRNN_00_highDim_correctOnly_256'  # as short as possible to avoid too long paths for avoiding linux2windows transfer issues
 
     if 'highDim' in data:  # fix: lowDim_timeCompressed needs to be skipped here
         n_eachring = 32
@@ -159,8 +190,8 @@ def get_default_hp(ruleset):
         'machine': machine,
         # 'mask_threshold': .999,  # .999 or .975
         'max_lr': [15e-4],
-        'monthsConsidered': ['month_4', 'month_5', 'month_6'],
-        'monthsString': '4-6',  # monthsTaken
+        'monthsConsidered': ['month_3', 'month_4', 'month_5'],
+        'monthsString': '3-5',  # monthsTaken
         'multiLayer': False,  # only applicaple with LeakyRNN
         'n_eachring': n_eachring,  # number of units each ring
         'n_input': n_input,  # number of input units
@@ -205,7 +236,7 @@ def get_default_hp(ruleset):
     return hp
 
 
-def do_eval(sess, model, log, rule_train, eval_data):
+def do_eval(sess, model, log, rule_train, eval_data, step):
     """Do evaluation.
 
     Args:
@@ -216,6 +247,10 @@ def do_eval(sess, model, log, rule_train, eval_data):
     """
     hp = model.hp
     mode = 'test'
+
+    weight_norms = []
+    grad_norms = []
+
     if not hasattr(rule_train, '__iter__'):
         rule_name_print = rule_train
     else:
@@ -257,16 +292,31 @@ def do_eval(sess, model, log, rule_train, eval_data):
 
                 feed_dict = tools.gen_feed_dict(model, x, y, c_mask,
                                                 hp)  # y: participnt response, that gives the lable for what the network is trained for
-                # print('passed feed_dict Evaluation')
-                # print(feed_dict)
-                # print('x',type(x),x.shape)
-                # print('y',type(y),y.shape)
-                # print('y_loc',type(y_loc),y_loc.shape)
-                c_lsq, c_reg, y_hat_test = sess.run([model.cost_lsq, model.cost_reg, model.y_hat], feed_dict=feed_dict)
-                # print('passed sess.run')
-                # Cost is first summed over time,
-                # and averaged across batch and units
-                # We did the averaging over time through c_mask
+
+                # head. new logic ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+                fetches = [model.cost_lsq, model.cost_reg, model.y_hat, model.var_list]
+
+                has_grads = hasattr(model, 'grads_and_vars') and model.grads_and_vars is not None
+                if has_grads:
+                    # model.grads_and_vars is usually a list of (gradient, variable) tuples
+                    # We only want the gradient tensors (the first element [0])
+                    grad_tensors = [gv[0] for gv in model.grads_and_vars if gv is not None and gv[0] is not None]
+                    fetches.append(grad_tensors)
+
+                results = sess.run(fetches, feed_dict=feed_dict)
+
+                c_lsq, c_reg, y_hat_test, all_vars = results[0:4]
+
+                # Calculate Global Weight Norm (L2) for this specific run
+                current_w_norm = np.sqrt(np.sum([np.sum(np.square(v)) for v in all_vars]))
+                weight_norms.append(current_w_norm)
+
+                if has_grads:
+                    all_grads = results[4]
+                    # Calculate Global Gradient Norm (L2)
+                    current_g_norm = np.sqrt(np.sum([np.sum(np.square(g)) for g in all_grads]))
+                    grad_norms.append(current_g_norm)
+                # head. new logic ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
                 if 'lowDim' in hp['data'] and hp['benchmark'] != True:
                     perf_test = np.mean(get_perf_lowDIM(y_hat_test, y_loc))
@@ -369,6 +419,12 @@ def do_eval(sess, model, log, rule_train, eval_data):
             print(f"Skipping task {task} as no valid data was processed.")
             continue
 
+        # head. new mlflow logic ###########################################################################################
+        mlflow.log_metric(f"cost_leastSquareError_{task}", np.mean(clsq_tmp, dtype=np.float64), step=step)
+        mlflow.log_metric(f"cost_regularization_{task}", np.mean(creg_tmp, dtype=np.float64), step=step)
+        mlflow.log_metric(f"performance_test_{task}", np.mean(perf_tmp, dtype=np.float64), step=step)
+        # head. new mlflow logic ###########################################################################################
+
         log['cost_' + task].append(np.mean(clsq_tmp, dtype=np.float64))
         log['creg_' + task].append(np.mean(creg_tmp, dtype=np.float64))
         log['perf_' + task].append(np.mean(perf_tmp, dtype=np.float64))
@@ -390,6 +446,17 @@ def do_eval(sess, model, log, rule_train, eval_data):
         log['perf_avg'].append(perf_tests_mean)
         perf_tests_min = np.min([log['perf_' + r][-1] for r in rule_tmp])
         log['perf_min'].append(perf_tests_min)
+
+        log['global_weight_norm_avg'].append(np.mean(weight_norms, dtype=np.float64))
+        log['global_grad_norm_avg'].append(np.mean(grad_norms, dtype=np.float64))
+
+        # head. new mlflow logic ###########################################################################################
+        mlflow.log_metric(f"average_performance_test", perf_tests_mean, step=step)
+        mlflow.log_metric(f"minimum_performance_test", perf_tests_min, step=step)
+        mlflow.log_metric("global_weight_norm_avg", np.mean(weight_norms), step=step)
+        if grad_norms: mlflow.log_metric("global_grad_norm_avg", np.mean(grad_norms), step=step)
+        # head. new mlflow logic ###########################################################################################
+
     except KeyError as e:
         print(f"Warning: Could not compute final performance due to missing key {e}.")
         return log
@@ -404,7 +471,7 @@ def do_eval(sess, model, log, rule_train, eval_data):
     return log
 
 
-def train(data_dir, model_dir, train_data, eval_data, hp=None, max_steps=3e6, display_step=500,
+def train(data_dir, model_dir, train_data, eval_data, hp=None, max_steps=3e5, display_step=500,
           rule_trains=None, rule_prob_map=None, seed=0,
           load_dir=None, trainables=None, robustnessTest=True):
     """Train the network.
@@ -476,162 +543,216 @@ def train(data_dir, model_dir, train_data, eval_data, hp=None, max_steps=3e6, di
     # Count loaded trials/batches
     trialsLoaded = 0
 
-    with tf.Session() as sess:
-        if load_dir is not None:
-            model.restore(load_dir)  # complete restore
-            print('model restored')
-        else:
-            # Initialize variables from scratch
-            sess.run(tf.global_variables_initializer())
 
-        # Set trainable parameters
-        if trainables is None or trainables == 'all':
-            var_list = model.var_list  # train everything
-        elif trainables == 'input':
-            # train all nputs
-            var_list = [v for v in model.var_list if ('input' in v.name) and ('rnn' not in v.name)]
-        elif trainables == 'rule':
-            # train rule inputs only
-            var_list = [v for v in model.var_list if 'rule_input' in v.name]
-        else:
-            raise ValueError('Unknown trainables')
+    # head. new mlflow logic ###########################################################################################
+    if hp['machine'] == 'local':
+        db_path = Path(r"C:\Users\oliver.frank\Desktop\PyProjects\beRNNmodels\beRNN_main_mlflow.db").absolute()
+    else:
+        db_path = Path("/zi/home/oliver.frank/Desktop/beRNNmodels/beRNN_main_mlflow.db")
 
-        # Define variables to optimize
-        model.set_optimizer(var_list=var_list)
+    tracking_uri = f"sqlite:///{db_path}"
+    mlflow.set_tracking_uri(tracking_uri)
 
-        # penalty on deviation from initial weight
-        if hp['l2_weight_init'] > 0:
-            anchor_ws = sess.run(model.weight_list)
-            for w, w_val in zip(model.weight_list, anchor_ws):
-                model.cost_reg += (hp['l2_weight_init'] * tf.nn.l2_loss(w - w_val))
+    # 1. Schütze die DB-Initialisierung vor parallelen Zugriffen (Staggered Start)
+    task_id = int(os.environ.get('SLURM_ARRAY_TASK_ID', 0))
+    if hp['machine'] != 'local':
+        # Gib Task 1 (oder dem ersten Job) Zeit, das Schema exklusiv zu prüfen
+        if task_id > 1:
+            time.sleep(10 + (task_id % 20) * 2) # Gestaffeltes Warten (max ~50s bei vielen Jobs)
 
-            model.set_optimizer(var_list=var_list)
+    experiment_name = hp['trainingYear_Month']
 
-        # partial weight training
-        # Explanation: In summary, this code introduces a form of partial weight training by applying L2 regularization
-        # only to a subset of the weights. The subset is determined by random masking, controlled by the hyperparameter
-        # 'p_weight_train'. All weights below the p_weight_train threshold won't be trained in this iteration.
-        if ('p_weight_train' in hp and
-                (hp['p_weight_train'] is not None) and
-                hp['p_weight_train'] < 1.0):
-            for w in model.weight_list:
-                w_val = sess.run(w)
-                w_size = sess.run(tf.size(w))
-                w_mask_tmp = np.linspace(0, 1, w_size)
-                hp['rng'].shuffle(w_mask_tmp)
-                ind_fix = w_mask_tmp > hp['p_weight_train']
-                w_mask = np.zeros(w_size, dtype=np.float32)
-                w_mask[ind_fix] = hp['w_mask_value']  # 1e-1  # will be squared in l2_loss
-                w_mask = tf.constant(w_mask)
-                w_mask = tf.reshape(w_mask, w.shape)
-                model.cost_reg += tf.nn.l2_loss((w - w_val) * w_mask)
-            model.set_optimizer(var_list=var_list)
+    # 2. Experiment-Handling mit MlflowClient (stabiler bei SQLite)
+    client = mlflow.tracking.MlflowClient()
+    try:
+        # Erst prüfen, ob es existiert
+        exp = client.get_experiment_by_name(experiment_name)
+        if exp is None:
+            # Nur wenn es fehlt, erstellen
+            client.create_experiment(experiment_name)
+    except Exception as e:
+        # Falls ein paralleler Task es Millisekunden früher erstellt hat
+        pass
 
-        step = 0
-        while step * hp['batch_size'] <= max_steps:
-            try:
-                # Validation
-                if step % display_step == 0:  # III: Every 500 steps (20000 trials) do the evaluation
-                    log['trials'].append(step * hp['batch_size'])
-                    log['times'].append(time.time() - t_start)
-                    log = do_eval(sess, model, log, hp['rule_trains'], eval_data)
-                    elapsed_time = time.time() - t_start  # Calculate elapsed time
-                    print(f"Elapsed time after batch number {trialsLoaded}: {elapsed_time:.2f} seconds")
-                    # After training
-                    total_time = time.time() - t_start
-                    print(f"Total training time: {total_time:.2f} seconds")
-                    # if log['perf_avg'][-1] > model.hp['target_perf']:
-                    # check if minimum performance is above target
-                    if log['perf_min'][-1] > model.hp['target_perf']:
-                        print('Perf reached the target: {:0.2f}'.format(
-                            hp['target_perf']))
+    mlflow.set_experiment(experiment_name)
+
+    # 3. Start des Runs mit Fehlerbehandlung für 'Database is locked'
+    max_retries = 5
+    for attempt in range(max_retries):
+        with mlflow.start_run(run_name=os.path.basename(model_dir)) as run:
+            # Nur Strings/Zahlen loggen (keine Dicts/Listen)
+            clean_hp = {k: str(v) for k, v in hp.items() if not isinstance(v, (dict, list))}
+            mlflow.log_params(clean_hp)
+
+    # head. new mlflow logic ###########################################################################################
+
+            with tf.Session() as sess:
+                if load_dir is not None:
+                    model.restore(load_dir)  # complete restore
+                    print('model restored')
+                else:
+                    # Initialize variables from scratch
+                    sess.run(tf.global_variables_initializer())
+
+                # Set trainable parameters
+                if trainables is None or trainables == 'all':
+                    var_list = model.var_list  # train everything
+                elif trainables == 'input':
+                    # train all nputs
+                    var_list = [v for v in model.var_list if ('input' in v.name) and ('rnn' not in v.name)]
+                elif trainables == 'rule':
+                    # train rule inputs only
+                    var_list = [v for v in model.var_list if 'rule_input' in v.name]
+                else:
+                    raise ValueError('Unknown trainables')
+
+                # Define variables to optimize
+                model.set_optimizer(var_list=var_list)
+
+                # penalty on deviation from initial weight
+                if hp['l2_weight_init'] > 0:
+                    anchor_ws = sess.run(model.weight_list)
+                    for w, w_val in zip(model.weight_list, anchor_ws):
+                        model.cost_reg += (hp['l2_weight_init'] * tf.nn.l2_loss(w - w_val))
+
+                    model.set_optimizer(var_list=var_list)
+
+                # partial weight training
+                # Explanation: In summary, this code introduces a form of partial weight training by applying L2 regularization
+                # only to a subset of the weights. The subset is determined by random masking, controlled by the hyperparameter
+                # 'p_weight_train'. All weights below the p_weight_train threshold won't be trained in this iteration.
+                if ('p_weight_train' in hp and
+                        (hp['p_weight_train'] is not None) and
+                        hp['p_weight_train'] < 1.0):
+                    for w in model.weight_list:
+                        w_val = sess.run(w)
+                        w_size = sess.run(tf.size(w))
+                        w_mask_tmp = np.linspace(0, 1, w_size)
+                        hp['rng'].shuffle(w_mask_tmp)
+                        ind_fix = w_mask_tmp > hp['p_weight_train']
+                        w_mask = np.zeros(w_size, dtype=np.float32)
+                        w_mask[ind_fix] = hp['w_mask_value']  # 1e-1  # will be squared in l2_loss
+                        w_mask = tf.constant(w_mask)
+                        w_mask = tf.reshape(w_mask, w.shape)
+                        model.cost_reg += tf.nn.l2_loss((w - w_val) * w_mask)
+                    model.set_optimizer(var_list=var_list)
+
+                step = 0
+                # while step * hp['batch_size'] <= max_steps:
+                while step * 100 <= max_steps:
+                    try:
+                        # Validation
+                        if step % display_step == 0:  # III: Every 500 steps (20000 trials) do the evaluation
+                            log['trials'].append(step * hp['batch_size'])
+                            log['times'].append(time.time() - t_start)
+                            log = do_eval(sess, model, log, hp['rule_trains'], eval_data, step)
+                            elapsed_time = time.time() - t_start  # Calculate elapsed time
+                            print(f"Elapsed time after batch number {trialsLoaded}: {elapsed_time:.2f} seconds")
+                            # After training
+                            total_time = time.time() - t_start
+                            print(f"Total training time: {total_time:.2f} seconds")
+                            # if log['perf_avg'][-1] > model.hp['target_perf']:
+                            # check if minimum performance is above target
+                            if log['perf_min'][-1] > model.hp['target_perf']:
+                                print('Perf reached the target: {:0.2f}'.format(
+                                    hp['target_perf']))
+                                break
+
+                            # info: Add modularity value once each evaluation ##################################################
+                            if hp['multiLayer'] == False:
+                                getAndSafeModValue(data_dir, model_dir, hp, model, sess, log, step)
+
+                            # if rich_output:
+                            #     display_rich_output(model, sess, step, log, model_dir)
+
+                        # Training
+                        task = hp['rng'].choice(hp['rule_trains'], p=hp['rule_probs'])
+                        # Generate a random batch of trials; each batch has the same trial length
+                        mode = 'train'
+
+
+                        if hp['benchmark'] != True:
+                            x, y, y_loc, response = tools.load_trials(hp['rng'], task, mode, hp['batch_size'], eval_data,
+                                                                    False)  # y_loc is participantResponse_perfEvalForm
+
+                            c_mask = tools.create_cMask(y, response, hp, mode)
+
+                            # fix: for inconcruence between y and response dimension 1
+                            if c_mask.any() == None:
+                                continue
+
+                        else:
+                            # benchmark training with simplified tasks (like Yang, Driscoll, Brenner)
+                            rule_train_now = task
+
+                            # Generate a random batch of trials
+                            # Each batch has the same trial length
+                            trial = generate_trials(
+                                rule_train_now, hp, 'random',
+                                batch_size=hp['batch_size'])
+
+                            x, y, y_loc, c_mask = trial.x, trial.y, trial.y_loc, trial.c_mask
+
+                        # fix: for inconcruence between y and response on dimension 1 - probably preprocessing related
+                        # fix: for inconcruence between y and response on dimension 1 - probably preprocessing related
+                        if (c_mask is None or (isinstance(c_mask, np.ndarray) and (
+                                c_mask.size == 0 or np.all(c_mask == None) or np.any(c_mask == None)))):
+                            continue
+
+                        trialsLoaded += 1
+
+                        # Generating feed_dict.
+                        feed_dict = tools.gen_feed_dict(model, x, y, c_mask, hp)
+                        # print('passed feed_dict Training')
+                        # print(feed_dict)
+
+                        sess.run(model.train_step, feed_dict=feed_dict)  # info: Trainables are actualized - train_step should represent the step in training.py and the global_step in network.py
+
+                        # Get Training performance in a similiar fashion as in do_eval
+                        clsq_train_tmp = list()
+                        creg_train_tmp = list()
+                        perf_train_tmp = list()
+                        c_lsq_train, c_reg_train, y_hat_train = sess.run([model.cost_lsq, model.cost_reg, model.y_hat],
+                                                                        feed_dict=feed_dict)  # info: lsq+reg = total_loss - updates the network parameters
+
+                        if 'lowDim' in hp['data']:
+                            perf_train = np.round(np.mean(get_perf_lowDIM(y_hat_train, y_loc)),
+                                                3)  # info: y_loc is participant response as groundTruth
+                        else:
+                            perf_train = np.round(np.mean(get_perf(y_hat_train, y_loc)),
+                                                3)  # info: y_loc is participant response as groundTruth
+
+                        clsq_train_tmp.append(c_lsq_train)
+                        creg_train_tmp.append(c_reg_train)
+                        perf_train_tmp.append(perf_train)
+
+                        # head. new mlflow logic ###########################################################################################
+                        mlflow.log_metric(f"cost_leastSquareError_train_{task}", np.mean(clsq_train_tmp, dtype=np.float64), step=step)
+                        mlflow.log_metric(f"cost_regularization_train_{task}", np.mean(creg_train_tmp, dtype=np.float64), step=step)
+                        mlflow.log_metric(f"performance_train_{task}", np.mean(perf_train_tmp, dtype=np.float64), step=step)
+                        # Create avg perf train value over all tasks for each step
+                        current_tasks_perf = [log['perf_train_' + t][-1] for t in hp['rule_trains'] if log['perf_train_' + t]]
+                        if current_tasks_perf:
+                            train_perf_avg = np.mean(current_tasks_perf)
+                            mlflow.log_metric("performance_train_avg", train_perf_avg, step=step)
+                        # head. new mlflow logic ###########################################################################################
+
+                        log['cost_train_' + task].append(np.mean(clsq_train_tmp, dtype=np.float64))
+                        log['creg_train_' + task].append(np.mean(creg_train_tmp, dtype=np.float64))
+                        log['perf_train_' + task].append(np.mean(perf_train_tmp, dtype=np.float64))
+
+                        print('{:15s}'.format(task) +
+                            '| train cost {:0.6f}'.format(np.mean(clsq_train_tmp)) +
+                            '| train c_reg {:0.6f}'.format(np.mean(c_reg_train)) +
+                            '  | train perf {:0.2f}'.format(np.mean(perf_train)))
+
+                        step += 1
+
+                    except KeyboardInterrupt:
+                        print("Optimization interrupted by user")
                         break
 
-                    # info: Add modularity value once each evaluation ##################################################
-                    if hp['multiLayer'] == False:
-                        getAndSafeModValue(data_dir, model_dir, hp, model, sess, log)
-
-                    # if rich_output:
-                    #     display_rich_output(model, sess, step, log, model_dir)
-
-                # Training
-                task = hp['rng'].choice(hp['rule_trains'], p=hp['rule_probs'])
-                # Generate a random batch of trials; each batch has the same trial length
-                mode = 'train'
-
-
-                if hp['benchmark'] != True:
-                    x, y, y_loc, response = tools.load_trials(hp['rng'], task, mode, hp['batch_size'], eval_data,
-                                                              False)  # y_loc is participantResponse_perfEvalForm
-
-                    c_mask = tools.create_cMask(y, response, hp, mode)
-
-                    # fix: for inconcruence between y and response dimension 1
-                    if c_mask.any() == None:
-                        continue
-
-                else:
-                    # benchmark training with simplified tasks (like Yang, Driscoll, Brenner)
-                    rule_train_now = task
-
-                    # Generate a random batch of trials
-                    # Each batch has the same trial length
-                    trial = generate_trials(
-                        rule_train_now, hp, 'random',
-                        batch_size=hp['batch_size'])
-
-                    x, y, y_loc, c_mask = trial.x, trial.y, trial.y_loc, trial.c_mask
-
-                # fix: for inconcruence between y and response on dimension 1 - probably preprocessing related
-                # fix: for inconcruence between y and response on dimension 1 - probably preprocessing related
-                if (c_mask is None or (isinstance(c_mask, np.ndarray) and (
-                        c_mask.size == 0 or np.all(c_mask == None) or np.any(c_mask == None)))):
-                    continue
-
-                trialsLoaded += 1
-
-                # Generating feed_dict.
-                feed_dict = tools.gen_feed_dict(model, x, y, c_mask, hp)
-                # print('passed feed_dict Training')
-                # print(feed_dict)
-
-                sess.run(model.train_step,
-                         feed_dict=feed_dict)  # info: Trainables are actualized - train_step should represent the step in training.py and the global_step in network.py
-
-                # Get Training performance in a similiar fashion as in do_eval
-                clsq_train_tmp = list()
-                creg_train_tmp = list()
-                perf_train_tmp = list()
-                c_lsq_train, c_reg_train, y_hat_train = sess.run([model.cost_lsq, model.cost_reg, model.y_hat],
-                                                                 feed_dict=feed_dict)  # info: lsq+reg = total_loss - updates the network parameters
-
-                if 'lowDim' in hp['data']:
-                    perf_train = np.round(np.mean(get_perf_lowDIM(y_hat_train, y_loc)),
-                                          3)  # info: y_loc is participant response as groundTruth
-                else:
-                    perf_train = np.round(np.mean(get_perf(y_hat_train, y_loc)),
-                                          3)  # info: y_loc is participant response as groundTruth
-
-                clsq_train_tmp.append(c_lsq_train)
-                creg_train_tmp.append(c_reg_train)
-                perf_train_tmp.append(perf_train)
-
-                log['cost_train_' + task].append(np.mean(clsq_train_tmp, dtype=np.float64))
-                log['creg_train_' + task].append(np.mean(creg_train_tmp, dtype=np.float64))
-                log['perf_train_' + task].append(np.mean(perf_train_tmp, dtype=np.float64))
-
-                print('{:15s}'.format(task) +
-                      '| train cost {:0.6f}'.format(np.mean(clsq_train_tmp)) +
-                      '| train c_reg {:0.6f}'.format(np.mean(c_reg_train)) +
-                      '  | train perf {:0.2f}'.format(np.mean(perf_train)))
-
-                step += 1
-
-            except KeyboardInterrupt:
-                print("Optimization interrupted by user")
-                break
-
-        print("Optimization finished!")
+                print("Optimization finished!")
 
 
 ########################################################################################################################
@@ -648,68 +769,38 @@ if __name__ == '__main__':
         start_time = time.perf_counter()
         print(f'START TRAINING MODEL: {modelNumber}')
 
-        # attention: standard hp #############################################################################################
+        # if hp['machine'] == 'local':
+        # attention: local #############################################################################################
         # info: if used, comment out standard hp in train()
         hp = get_default_hp('all') # 'all_benchmark' - not important at this point as both sets have 12 tasks
-        # attention: standard hp #############################################################################################
+        # attention: local #############################################################################################
 
-        # # attention: hitkip cluster ##########################################################################################
-        # info: if used, comment out standard hp in train()
-        # import argparse
-        # import json
-        # parser = argparse.ArgumentParser()
-        # parser.add_argument("--adjParams", type=str, required=True)
-        # args = parser.parse_args()
+        if hp['machine'] == 'hitkip':
+            # attention: cluster ############################################################################################
+            # Convert the JSON string to a Python dictionary
+            robustnessTest_model = 'hp_9'
+            with open(
+                    f"/zi/home/oliver.frank/Desktop/RNN/multitask_BeRNN-main/_bestModels_scripts/best10_gridSearch_multiTask_beRNN_03_highDimCorrects_256/{robustnessTest_model}.json",
+                    "r") as f:
+                hp = json.load(f)
 
-        # # Convert the JSON string to a Python dictionary
-        # hp = json.loads(args.adjParams)
+            participant = hp['participant']
+            hp['participant'] = 'beRNN_04'
 
-        # hp['participant'] = 'beRNN_01'
-        # robustnessTest_model = 'hp2'
-        # hp['trainingYear_Month'] = f'_robustnessTest_multiTask_{hp['participant']}_highDimCorrects_256_{robustnessTest_model}'
-        # # attention: hitkip cluster ##########################################################################################
+            # dataType = 'data_highDim_correctOnly'
+            # hp['data'] = dataType
+            #
+            # n_rnn = 64
+            # hp['n_rnn'] = n_rnn
 
-        # # attention: hitkip robustness ############################################################################################
-        # # Convert the JSON string to a Python dictionary
-        # robustnessTest_model = 'hp_9'
-        # with open(
-        #         f"/zi/home/oliver.frank/Desktop/RNN/multitask_BeRNN-main/_bestModels_scripts/best10_gridSearch_multiTask_beRNN_03_highDimCorrects_256/{robustnessTest_model}.json",
-        #         "r") as f:
-        #     hp = json.load(f)
-        #
-        # hp['participant'] = 'beRNN_04'
-        # participant = hp['participant']
-        #
-        # monthstring = '6'
-        # hp['monthsString'] = monthstring
-        #
-        # hp['trainingBatch'] = monthstring
-        #
-        # month = [f'month_{monthstring}']
-        # hp['monthsConsidered'] = month
-        #
-        # hp['threshold'] = 0.1  # was added to default_hp after 26.02.26
-        #
-        # dataType = 'data_highDim_correctOnly'
-        # hp['data'] = dataType
-        #
-        # # hp['n_eachring'] = 10
-        # # hp['n_outputring'] = 2
-        # # hp['n_input'], hp['n_output'] = 1 + hp['num_ring'] * hp['n_eachring'] + hp['n_rule'], hp['n_outputring'] + 1
-        #
-        # # hp['rng'] = np.random.default_rng(42) # for reproducibility - only applied on splitting of data
-        # # hp['errorBalancingValue'] = 5.
-        # # hp['w_rec_init'] = 'brainStructure'
-        # hp['rule_prob_map'] = {"DM": 1, "DM_Anti": 0, "EF": 1, "EF_Anti": 0, "RP": 1, "RP_Anti": 0, "RP_Ctx1": 0,
-        #                        "RP_Ctx2": 0, "WM": 1, "WM_Anti": 0, "WM_Ctx1": 0, "WM_Ctx2": 0}
-        # hp['tasksString'] = 'fundamentals'
-        # # n_rnn = 64
-        # # hp['n_rnn'] = n_rnn
-        # hp['trainingYear_Month'] = f'_fs_mT_{participant}_highDimCorrects_256'
-        # folderName = hp['trainingYear_Month']
-        # hp[
-        #     'trainingYear_Month'] = f'{folderName}_{robustnessTest_model}'  # as short as possible to avoid linux2windows transfer issues
-        # attention: hitkip robustness #############################################################################################
+            # hp['n_eachring'] = 10
+            # hp['n_outputring'] = 2
+            # hp['n_input'], hp['n_output'] = 1 + hp['num_ring'] * hp['n_eachring'] + hp['n_rule'], hp['n_outputring'] + 1
+
+            folderName = f'_fs_mT_{participant}_highDimCorrects_256'
+            hp['trainingYear_Month'] = f'{folderName}_{robustnessTest_model}'  # as short as possible to avoid linux2windows transfer issues
+            # attention: cluster #############################################################################################
+
 
         load_dir = None
 
@@ -735,15 +826,15 @@ if __name__ == '__main__':
                     numberOfLayers = len(hp['n_rnn_per_layer'])
                     if numberOfLayers == 2:
                         model_dir = os.path.join(
-                            f"{path}\\beRNNmodels\\{hp['trainingYear_Month']}\\{hp['data'].split('data_')[-1]}\\{hp['participant']}\\{hp['trainingBatch']}\\{hp['participant']}_{hp['tasksString']}_{hp['monthsString']}_{hp['data'].split('data_')[-1]}_iter{modelNumber}_{hp['rnn_type']}_{hp['w_rec_init']}_{hp['n_rnn_per_layer'][0]}-{hp['n_rnn_per_layer'][1]}_{hp['activations_per_layer'][0][0]}-{hp['activations_per_layer'][1][0]}",
+                            f"{path}\\beRNNmodels\\{hp['trainingYear_Month']}\\{hp['data'].split('data_')[-1]}\\{hp['participant']}\\{hp['trainingBatch']}\\iter{modelNumber}_{hp['rnn_type']}_{hp['w_rec_init']}_{hp['n_rnn_per_layer'][0]}-{hp['n_rnn_per_layer'][1]}_{hp['activations_per_layer'][0][0]}-{hp['activations_per_layer'][1][0]}",
                             model_name)
                     else:
                         model_dir = os.path.join(
-                            f"{path}\\beRNNmodels\\{hp['trainingYear_Month']}\\{hp['data'].split('data_')[-1]}\\{hp['participant']}\\{hp['trainingBatch']}\\{hp['participant']}_{hp['tasksString']}_{hp['monthsString']}_{hp['data'].split('data_')[-1]}_iter{modelNumber}_{hp['rnn_type']}_{hp['w_rec_init']}_{hp['n_rnn_per_layer'][0]}-{hp['n_rnn_per_layer'][1]}-{hp['n_rnn_per_layer'][2]}_{hp['activations_per_layer'][0][0]}-{hp['activations_per_layer'][1][0]}-{hp['activations_per_layer'][2][0]}",
+                            f"{path}\\beRNNmodels\\{hp['trainingYear_Month']}\\{hp['data'].split('data_')[-1]}\\{hp['participant']}\\{hp['trainingBatch']}\\iter{modelNumber}_{hp['rnn_type']}_{hp['w_rec_init']}_{hp['n_rnn_per_layer'][0]}-{hp['n_rnn_per_layer'][1]}-{hp['n_rnn_per_layer'][2]}_{hp['activations_per_layer'][0][0]}-{hp['activations_per_layer'][1][0]}-{hp['activations_per_layer'][2][0]}",
                             model_name)
                 else:
                     model_dir = os.path.join(
-                        f"{path}\\beRNNmodels\\{hp['trainingYear_Month']}\\{hp['data'].split('data_')[-1]}\\{hp['participant']}\\{hp['trainingBatch']}\\{hp['participant']}_{hp['tasksString']}_{hp['monthsString']}_{hp['data'].split('data_')[-1]}_iter{modelNumber}_{hp['rnn_type']}_{hp['w_rec_init']}_{hp['n_rnn']}_{hp['activation']}",
+                        f"{path}\\beRNNmodels\\{hp['trainingYear_Month']}\\{hp['data'].split('data_')[-1]}\\{hp['participant']}\\{hp['trainingBatch']}\\iter{modelNumber}_{hp['rnn_type']}_{hp['w_rec_init']}_{hp['n_rnn']}_{hp['activation']}",
                         model_name)
 
             elif hp['machine'] == 'hitkip' or hp['machine'] == 'pandora':
@@ -752,15 +843,15 @@ if __name__ == '__main__':
                     numberOfLayers = len(hp['n_rnn_per_layer'])
                     if numberOfLayers == 2:
                         model_dir = os.path.join(
-                            f"{path}/beRNNmodels/{hp['trainingYear_Month']}/{hp['data'].split('data_')[-1]}/{hp['participant']}/{hp['trainingBatch']}/{hp['participant']}_{hp['tasksString']}_{hp['monthsString']}_{hp['data'].split('data_')[-1]}_iter{modelNumber}_{hp['rnn_type']}_{hp['w_rec_init']}_{hp['n_rnn_per_layer'][0]}-{hp['n_rnn_per_layer'][1]}_{hp['activations_per_layer'][0][0]}-{hp['activations_per_layer'][1][0]}",
+                            f"{path}/beRNNmodels/{hp['trainingYear_Month']}/{hp['data'].split('data_')[-1]}/{hp['participant']}/{hp['trainingBatch']}/iter{modelNumber}_{hp['rnn_type']}_{hp['w_rec_init']}_{hp['n_rnn_per_layer'][0]}-{hp['n_rnn_per_layer'][1]}_{hp['activations_per_layer'][0][0]}-{hp['activations_per_layer'][1][0]}",
                             model_name)
                     else:
                         model_dir = os.path.join(
-                            f"{path}/beRNNmodels/{hp['trainingYear_Month']}/{hp['data'].split('data_')[-1]}/{hp['participant']}/{hp['trainingBatch']}/{hp['participant']}_{hp['tasksString']}_{hp['monthsString']}_{hp['data'].split('data_')[-1]}_iter{modelNumber}_{hp['rnn_type']}_{hp['w_rec_init']}_{hp['n_rnn_per_layer'][0]}-{hp['n_rnn_per_layer'][1]}-{hp['n_rnn_per_layer'][2]}_{hp['activations_per_layer'][0][0]}-{hp['activations_per_layer'][1][0]}-{hp['activations_per_layer'][2][0]}",
+                            f"{path}/beRNNmodels/{hp['trainingYear_Month']}/{hp['data'].split('data_')[-1]}/{hp['participant']}/{hp['trainingBatch']}/iter{modelNumber}_{hp['rnn_type']}_{hp['w_rec_init']}_{hp['n_rnn_per_layer'][0]}-{hp['n_rnn_per_layer'][1]}-{hp['n_rnn_per_layer'][2]}_{hp['activations_per_layer'][0][0]}-{hp['activations_per_layer'][1][0]}-{hp['activations_per_layer'][2][0]}",
                             model_name)
                 else:
                     model_dir = os.path.join(
-                        f"{path}/beRNNmodels/{hp['trainingYear_Month']}/{hp['data'].split('data_')[-1]}/{hp['participant']}/{hp['trainingBatch']}/{hp['participant']}_{hp['tasksString']}_{hp['monthsString']}_{hp['data'].split('data_')[-1]}_iter{modelNumber}_{hp['rnn_type']}_{hp['w_rec_init']}_{hp['n_rnn']}_{hp['activation']}",
+                        f"{path}/beRNNmodels/{hp['trainingYear_Month']}/{hp['data'].split('data_')[-1]}/{hp['participant']}/{hp['trainingBatch']}/iter{modelNumber}_{hp['rnn_type']}_{hp['w_rec_init']}_{hp['n_rnn']}_{hp['activation']}",
                         model_name)
 
             if not os.path.exists(model_dir):
@@ -779,7 +870,7 @@ if __name__ == '__main__':
             # load_dir = 'C:\\Users\\oliver.frank\\Desktop\\PyProjects\\beRNNmodels\\2025_03\\sc_mask_final\\beRNN_03_All_3-5_data_highDim_correctOnly_iteration1_LeakyRNN_1000_relu\\model_month_3'
             # Start Training ---------------------------------------------------------------------------------------------------
             train(preprocessedData_path, model_dir=model_dir, train_data=train_data, eval_data=eval_data, hp=hp,
-                  load_dir=load_dir)
+                load_dir=load_dir)
 
             # info: If True previous model parameters will be taken to initialize consecutive model, creating sequential training
             if hp['sequenceMode'] == True:
@@ -801,7 +892,7 @@ if __name__ == '__main__':
 
     # Save training time total and list to folder as a text file
     file_path = os.path.join(path, 'beRNNmodels', hp['trainingYear_Month'], hp['data'].split('data_')[-1],
-                             hp['participant'], hp['trainingBatch'], 'times.txt')
+                            hp['participant'], hp['trainingBatch'], 'times.txt')
 
     with open(file_path, 'w') as f:
         f.write(f"training time total (hours): {trainingTimeTotal_hours}\n")

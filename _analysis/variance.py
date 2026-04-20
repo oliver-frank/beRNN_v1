@@ -14,7 +14,12 @@ import pickle
 from collections import OrderedDict
 # import matplotlib as mpl
 # import matplotlib.pyplot as plt
-import tensorflow as tf
+# import tensorflow as tf
+# attention. csp_frank_oliver_3 version ++++++++++++++++++++++++++++++++++++++++++++++
+import tensorflow.compat.v1 as tf
+tf.disable_v2_behavior()
+# import mlflow
+# attention. csp_frank_oliver_3 version ++++++++++++++++++++++++++++++++++++++++++++++
 # import random
 import errno
 
