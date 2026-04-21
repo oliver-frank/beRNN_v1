@@ -553,37 +553,32 @@ def train(data_dir, model_dir, train_data, eval_data, hp=None, max_steps=3e5, di
     tracking_uri = f"sqlite:///{db_path}"
     mlflow.set_tracking_uri(tracking_uri)
 
-    # 1. Schütze die DB-Initialisierung vor parallelen Zugriffen (Staggered Start)
+    # Protect database initialization for several simultaneous accessing
     task_id = int(os.environ.get('SLURM_ARRAY_TASK_ID', 0))
     if hp['machine'] != 'local':
-        # Gib Task 1 (oder dem ersten Job) Zeit, das Schema exklusiv zu prüfen
-        if task_id > 1:
-            time.sleep(10 + (task_id % 20) * 2) # Gestaffeltes Warten (max ~50s bei vielen Jobs)
+        time.sleep(10) # wait 10 seconds between each job start
 
     experiment_name = hp['trainingYear_Month']
 
-    # 2. Experiment-Handling mit MlflowClient (stabiler bei SQLite)
+    # Experiment-Handling with MlflowClient
     client = mlflow.tracking.MlflowClient()
     try:
-        # Erst prüfen, ob es existiert
+        # check if existent
         exp = client.get_experiment_by_name(experiment_name)
         if exp is None:
-            # Nur wenn es fehlt, erstellen
             client.create_experiment(experiment_name)
     except Exception as e:
-        # Falls ein paralleler Task es Millisekunden früher erstellt hat
         pass
 
     mlflow.set_experiment(experiment_name)
 
-    # 3. Start des Runs mit Fehlerbehandlung für 'Database is locked'
+    # Restart if database is currently blocked
     max_retries = 5
     for attempt in range(max_retries):
         with mlflow.start_run(run_name=os.path.basename(model_dir)) as run:
             # Nur Strings/Zahlen loggen (keine Dicts/Listen)
             clean_hp = {k: str(v) for k, v in hp.items() if not isinstance(v, (dict, list))}
             mlflow.log_params(clean_hp)
-
     # head. new mlflow logic ###########################################################################################
 
             with tf.Session() as sess:
