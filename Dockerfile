@@ -1,15 +1,13 @@
-# Das offizielle Image für TF 2.10 mit GPU-Support
 FROM tensorflow/tensorflow:2.10.0-gpu
 
 WORKDIR /app
 
-# Installiere System-Abhängigkeiten
+# install dependencies
 RUN apt-get update && apt-get install -y \
     sqlite3 \
     && rm -rf /var/lib/apt/lists/*
 
-# Wir installieren deine Abhängigkeiten direkt via Pip
-# Das entspricht exakt deiner .yml Liste
+# install directly via pip
 RUN pip install --no-cache-dir \
     "numpy<2.0" \
     pandas \
@@ -31,10 +29,9 @@ RUN pip install --no-cache-dir \
     mlflow \
     cryptography
 
-# Kopiere deinen Code in den Container
+# copy code into image
 COPY . .
 
-# Falls du ein spacy-Modell brauchst, lade es hier direkt herunter:
 RUN python3 -m spacy download en_core_web_sm
 
 CMD ["python3", "_hyperparameterTuning.py"]
