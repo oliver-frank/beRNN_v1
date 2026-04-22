@@ -16,4 +16,4 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           push: true
-          tags: oliverfrank92/beRNN_v1_image:latest
+          tags: oliverfrank92/bernn_v1_image:latest
