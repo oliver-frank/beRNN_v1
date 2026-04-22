@@ -20,6 +20,7 @@ from collections import defaultdict
 
 import os
 import random
+
 os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
 
 import numpy as np
@@ -28,6 +29,7 @@ import numpy as np
 
 # attention. csp_frank_oliver_3 version ++++++++++++++++++++++++++++++++++++++++++++++
 import tensorflow.compat.v1 as tf
+
 tf.disable_v2_behavior()
 import mlflow
 # attention. csp_frank_oliver_3 version ++++++++++++++++++++++++++++++++++++++++++++++
@@ -85,7 +87,8 @@ def getAndSafeModValue(data_dir, model_dir, hp, model, sess, log, step):
 
     numberOfHiddenUnits = hp['n_rnn']
 
-    if ind_active.shape[0] < h_corr_all_.shape[0] and ind_active.shape[0] < h_corr_all_.shape[1] and ind_active.shape[0] > 1:
+    if ind_active.shape[0] < h_corr_all_.shape[0] and ind_active.shape[0] < h_corr_all_.shape[1] and ind_active.shape[
+        0] > 1:
         h_corr_all_ = h_corr_all_[ind_active, :]
         h_corr_all = h_corr_all_[:, ind_active]
         # Apply threshold
@@ -146,7 +149,7 @@ def get_default_hp(ruleset):
     num_ring = tools.get_num_ring(ruleset)
     n_rule = tools.get_num_rule(ruleset)
 
-    machine = 'local'  # 'local' 'pandora' 'hitkip'
+    machine = 'hitkip'  # 'local' 'pandora' 'hitkip'
     data = 'data_highDim_correctOnly'
     trainingBatch = '01'
     trainingYear_Month = '_grid_bench_multi_beRNN_00_highDim_correctOnly_256'  # as short as possible to avoid too long paths for avoiding linux2windows transfer issues
@@ -173,7 +176,7 @@ def get_default_hp(ruleset):
         'data': data,
         'distanceOfEvaluationData': 0,
         'dt': 20,  # discretization time step (ms)
-        'errorBalancingValue': 1., # multiplier of error costs and influence on backprop contribution
+        'errorBalancingValue': 1.,  # multiplier of error costs and influence on backprop contribution
         'generalizationTest': False,  # month-wise distance between train and eval data for generalization testing
         'grad_clip': None,  # set None to disable
         'grad_clip_by': 'global_norm',  # or 'value'
@@ -184,7 +187,7 @@ def get_default_hp(ruleset):
         'l2_weight': 0,  # l2 regularization on weight
         'l2_weight_init': 0,  # l2 regularization on deviation from initialization
         'learning_rate': 0.0005,  # learning rate
-        'learning_rate_mode': 'exp_range', # None - 'triangular', 'triangular2', 'exp_range', 'decay'
+        'learning_rate_mode': 'exp_range',  # None - 'triangular', 'triangular2', 'exp_range', 'decay'
         'loss_type': 'lsq',  # # Type of loss functions - Cross-entropy loss
         # 'ksi_intsyn': 0,
         'machine': machine,
@@ -221,15 +224,17 @@ def get_default_hp(ruleset):
         'trainingYear_Month': trainingYear_Month,
         'use_separate_input': False,  # whether rule and stimulus inputs are represented separately
         'w_mask_value': 0.1,  # proportion of weights not to be regularized
-        'w_rec_init': 'randgauss', # diag, randortho, randgauss, brainStructure (only accessible with LeakyRNN : 32-256)
+        'w_rec_init': 'randgauss',
+        # diag, randortho, randgauss, brainStructure (only accessible with LeakyRNN : 32-256)
     }
 
     if hp['ruleset'] == 'all':
         hp['rule_prob_map'] = dict({"DM": 1, "DM_Anti": 1, "EF": 1, "EF_Anti": 1, "RP": 1, "RP_Anti": 1, "RP_Ctx1": 1,
-                          "RP_Ctx2": 1, "WM": 1, "WM_Anti": 1, "WM_Ctx1": 1, "WM_Ctx2": 1})
+                                    "RP_Ctx2": 1, "WM": 1, "WM_Anti": 1, "WM_Ctx1": 1, "WM_Ctx2": 1})
     elif hp['ruleset'] == 'all_benchmark':
-        hp['rule_prob_map'] = dict({"contextdm1": 1, "contextdm2": 1, "reactgo": 1, "reactanti": 1, "dmsgo": 1, "dmsnogo": 1,
-                      "dmcgo": 1, "dmcnogo": 1, "delaygo": 1, "delayanti": 1, "delaydm1": 1, "delaydm2": 1})
+        hp['rule_prob_map'] = dict(
+            {"contextdm1": 1, "contextdm2": 1, "reactgo": 1, "reactanti": 1, "dmsgo": 1, "dmsnogo": 1,
+             "dmcgo": 1, "dmcnogo": 1, "delaygo": 1, "delayanti": 1, "delaydm1": 1, "delaydm2": 1})
     else:
         raise ValueError('defined ruleset not recognized. Stopping process.')
 
@@ -271,7 +276,8 @@ def do_eval(sess, model, log, rule_train, eval_data, step):
             try:
 
                 if hp['benchmark'] != True:
-                    x, y, y_loc, response = tools.load_trials(hp['rng'], task, mode, hp['batch_size'], eval_data,False)  # y_loc is participantResponse_perfEvalForm
+                    x, y, y_loc, response = tools.load_trials(hp['rng'], task, mode, hp['batch_size'], eval_data,
+                                                              False)  # y_loc is participantResponse_perfEvalForm
 
                     c_mask = tools.create_cMask(y, response, hp, mode)
 
@@ -543,7 +549,6 @@ def train(data_dir, model_dir, train_data, eval_data, hp=None, max_steps=3e5, di
     # Count loaded trials/batches
     trialsLoaded = 0
 
-
     # head. new mlflow logic ###########################################################################################
     if hp['machine'] == 'local':
         db_path = Path(r"C:\Users\oliver.frank\Desktop\PyProjects\beRNNmodels\beRNN_main_mlflow.db").absolute()
@@ -556,7 +561,7 @@ def train(data_dir, model_dir, train_data, eval_data, hp=None, max_steps=3e5, di
     # Protect database initialization for several simultaneous accessing
     task_id = int(os.environ.get('SLURM_ARRAY_TASK_ID', 0))
     if hp['machine'] != 'local':
-        time.sleep(10) # wait 10 seconds between each job start
+        time.sleep(10)  # wait 10 seconds between each job start
 
     experiment_name = hp['trainingYear_Month']
 
@@ -579,7 +584,7 @@ def train(data_dir, model_dir, train_data, eval_data, hp=None, max_steps=3e5, di
             # Nur Strings/Zahlen loggen (keine Dicts/Listen)
             clean_hp = {k: str(v) for k, v in hp.items() if not isinstance(v, (dict, list))}
             mlflow.log_params(clean_hp)
-    # head. new mlflow logic ###########################################################################################
+            # head. new mlflow logic ###########################################################################################
 
             with tf.Session() as sess:
                 if load_dir is not None:
@@ -665,10 +670,10 @@ def train(data_dir, model_dir, train_data, eval_data, hp=None, max_steps=3e5, di
                         # Generate a random batch of trials; each batch has the same trial length
                         mode = 'train'
 
-
                         if hp['benchmark'] != True:
-                            x, y, y_loc, response = tools.load_trials(hp['rng'], task, mode, hp['batch_size'], eval_data,
-                                                                    False)  # y_loc is participantResponse_perfEvalForm
+                            x, y, y_loc, response = tools.load_trials(hp['rng'], task, mode, hp['batch_size'],
+                                                                      eval_data,
+                                                                      False)  # y_loc is participantResponse_perfEvalForm
 
                             c_mask = tools.create_cMask(y, response, hp, mode)
 
@@ -701,32 +706,37 @@ def train(data_dir, model_dir, train_data, eval_data, hp=None, max_steps=3e5, di
                         # print('passed feed_dict Training')
                         # print(feed_dict)
 
-                        sess.run(model.train_step, feed_dict=feed_dict)  # info: Trainables are actualized - train_step should represent the step in training.py and the global_step in network.py
+                        sess.run(model.train_step,
+                                 feed_dict=feed_dict)  # info: Trainables are actualized - train_step should represent the step in training.py and the global_step in network.py
 
                         # Get Training performance in a similiar fashion as in do_eval
                         clsq_train_tmp = list()
                         creg_train_tmp = list()
                         perf_train_tmp = list()
                         c_lsq_train, c_reg_train, y_hat_train = sess.run([model.cost_lsq, model.cost_reg, model.y_hat],
-                                                                        feed_dict=feed_dict)  # info: lsq+reg = total_loss - updates the network parameters
+                                                                         feed_dict=feed_dict)  # info: lsq+reg = total_loss - updates the network parameters
 
                         if 'lowDim' in hp['data']:
                             perf_train = np.round(np.mean(get_perf_lowDIM(y_hat_train, y_loc)),
-                                                3)  # info: y_loc is participant response as groundTruth
+                                                  3)  # info: y_loc is participant response as groundTruth
                         else:
                             perf_train = np.round(np.mean(get_perf(y_hat_train, y_loc)),
-                                                3)  # info: y_loc is participant response as groundTruth
+                                                  3)  # info: y_loc is participant response as groundTruth
 
                         clsq_train_tmp.append(c_lsq_train)
                         creg_train_tmp.append(c_reg_train)
                         perf_train_tmp.append(perf_train)
 
                         # head. new mlflow logic ###########################################################################################
-                        mlflow.log_metric(f"cost_leastSquareError_train_{task}", np.mean(clsq_train_tmp, dtype=np.float64), step=step)
-                        mlflow.log_metric(f"cost_regularization_train_{task}", np.mean(creg_train_tmp, dtype=np.float64), step=step)
-                        mlflow.log_metric(f"performance_train_{task}", np.mean(perf_train_tmp, dtype=np.float64), step=step)
+                        mlflow.log_metric(f"cost_leastSquareError_train_{task}",
+                                          np.mean(clsq_train_tmp, dtype=np.float64), step=step)
+                        mlflow.log_metric(f"cost_regularization_train_{task}",
+                                          np.mean(creg_train_tmp, dtype=np.float64), step=step)
+                        mlflow.log_metric(f"performance_train_{task}", np.mean(perf_train_tmp, dtype=np.float64),
+                                          step=step)
                         # Create avg perf train value over all tasks for each step
-                        current_tasks_perf = [log['perf_train_' + t][-1] for t in hp['rule_trains'] if log['perf_train_' + t]]
+                        current_tasks_perf = [log['perf_train_' + t][-1] for t in hp['rule_trains'] if
+                                              log['perf_train_' + t]]
                         if current_tasks_perf:
                             train_perf_avg = np.mean(current_tasks_perf)
                             mlflow.log_metric("performance_train_avg", train_perf_avg, step=step)
@@ -737,9 +747,9 @@ def train(data_dir, model_dir, train_data, eval_data, hp=None, max_steps=3e5, di
                         log['perf_train_' + task].append(np.mean(perf_train_tmp, dtype=np.float64))
 
                         print('{:15s}'.format(task) +
-                            '| train cost {:0.6f}'.format(np.mean(clsq_train_tmp)) +
-                            '| train c_reg {:0.6f}'.format(np.mean(c_reg_train)) +
-                            '  | train perf {:0.2f}'.format(np.mean(perf_train)))
+                              '| train cost {:0.6f}'.format(np.mean(clsq_train_tmp)) +
+                              '| train c_reg {:0.6f}'.format(np.mean(c_reg_train)) +
+                              '  | train perf {:0.2f}'.format(np.mean(perf_train)))
 
                         step += 1
 
@@ -756,7 +766,28 @@ def train(data_dir, model_dir, train_data, eval_data, hp=None, max_steps=3e5, di
 if __name__ == '__main__':
     # Initialize list for all training times for each model
     trainingTimeList = []
-    for modelNumber in range(1, 2):  # Define number of iterations and models to be created for every month, respectively
+
+    # if hp['machine'] == 'local':
+    # attention: local #############################################################################################
+    # info: if used, comment out standard hp in train()
+    hp = get_default_hp('all')  # 'all_benchmark' - not important at this point as both sets have 12 tasks
+    # attention: local #############################################################################################
+
+    # Define number of iterations for docker image on remote VM
+    if hp['machine'] == 'hitkip':  # docker image should always be build with hp['machine'] == 'hitkip'
+        config_path = os.getenv("CONFIG_PATH", "config.json")
+
+        with open(config_path, "r") as f:
+            config = json.safe_load(f)
+
+        n_iteration = config.get("n_iteration", 2)  # Default if not specified in config
+
+    # Define number of iterations for docker image on remote VM
+    else:
+        n_iteration = 2
+
+    for modelNumber in range(1,
+                             n_iteration):  # Define number of iterations and models to be created for every month, respectively
 
         # Measure time for every model, respectively
         trainingTimeTotal_hours = 0
@@ -764,38 +795,32 @@ if __name__ == '__main__':
         start_time = time.perf_counter()
         print(f'START TRAINING MODEL: {modelNumber}')
 
-        # if hp['machine'] == 'local':
-        # attention: local #############################################################################################
-        # info: if used, comment out standard hp in train()
-        hp = get_default_hp('all') # 'all_benchmark' - not important at this point as both sets have 12 tasks
-        # attention: local #############################################################################################
-
         if hp['machine'] == 'hitkip':
             # attention: cluster ############################################################################################
             # Convert the JSON string to a Python dictionary
-            robustnessTest_model = 'hp_9'
+            robustnessTest_model = config.get("robustnessTest_model", 'hp_1') # Default if not specified in config
+
             with open(
                     f"/zi/home/oliver.frank/Desktop/RNN/multitask_BeRNN-main/_bestModels_scripts/best10_gridSearch_multiTask_beRNN_03_highDimCorrects_256/{robustnessTest_model}.json",
                     "r") as f:
                 hp = json.load(f)
 
+            hp['participant'] = config.get("participant", 'beRNN_03') # Default if not specified in config
             participant = hp['participant']
-            hp['participant'] = 'beRNN_04'
 
-            # dataType = 'data_highDim_correctOnly'
-            # hp['data'] = dataType
-            #
-            # n_rnn = 64
-            # hp['n_rnn'] = n_rnn
+            hp['data'] = config.get("data", 'highDim_correctOnly') # Default if not specified in config
+            data = hp['data']
 
+            hp['n_rnn'] = config.get("n_rnn", 256) # Default if not specified in config
+            n_rnn = hp['n_rnn']
+
+            hp['trainingYear_Month'] = config.get("trainingYear_Month", f'_robust_multi_{participant}_{data}_{n_rnn}') # Default if not specified in config
+
+            # legacy low dimensional encoding of input layers - not important at this point
             # hp['n_eachring'] = 10
             # hp['n_outputring'] = 2
             # hp['n_input'], hp['n_output'] = 1 + hp['num_ring'] * hp['n_eachring'] + hp['n_rule'], hp['n_outputring'] + 1
-
-            folderName = f'_fs_mT_{participant}_highDimCorrects_256'
-            hp['trainingYear_Month'] = f'{folderName}_{robustnessTest_model}'  # as short as possible to avoid linux2windows transfer issues
             # attention: cluster #############################################################################################
-
 
         load_dir = None
 
@@ -865,7 +890,7 @@ if __name__ == '__main__':
             # load_dir = 'C:\\Users\\oliver.frank\\Desktop\\PyProjects\\beRNNmodels\\2025_03\\sc_mask_final\\beRNN_03_All_3-5_data_highDim_correctOnly_iteration1_LeakyRNN_1000_relu\\model_month_3'
             # Start Training ---------------------------------------------------------------------------------------------------
             train(preprocessedData_path, model_dir=model_dir, train_data=train_data, eval_data=eval_data, hp=hp,
-                load_dir=load_dir)
+                  load_dir=load_dir)
 
             # info: If True previous model parameters will be taken to initialize consecutive model, creating sequential training
             if hp['sequenceMode'] == True:
@@ -887,7 +912,7 @@ if __name__ == '__main__':
 
     # Save training time total and list to folder as a text file
     file_path = os.path.join(path, 'beRNNmodels', hp['trainingYear_Month'], hp['data'].split('data_')[-1],
-                            hp['participant'], hp['trainingBatch'], 'times.txt')
+                             hp['participant'], hp['trainingBatch'], 'times.txt')
 
     with open(file_path, 'w') as f:
         f.write(f"training time total (hours): {trainingTimeTotal_hours}\n")

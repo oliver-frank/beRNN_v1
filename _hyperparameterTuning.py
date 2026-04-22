@@ -96,6 +96,13 @@ def extract_hpSets_4robustnessTest(model_directory):
 cluster, hitkip_local = True, False
 
 if cluster:
+    # Load config file with environment variables defined for docker container
+    config_path = os.getenv("CONFIG_PATH", "config.json")
+
+    with open(config_path, "r") as f:
+        config = json.safe_load(f)
+
+    # Load hp defined within sbatch in sh. file
     parser = argparse.ArgumentParser()
     parser.add_argument("--adjParams", type=str, required=True)
     args = parser.parse_args()
@@ -199,7 +206,7 @@ else:
     # # Create one combination and repeat it according to defined number
     # sampled_combinations = create_repeated_param_combinations(adjParams, 5)
 
-# # info: Save paramCombinations for cluster training ####################################################################
+# # info: Save paramCombinations locally for cluster training ####################################################################
 # dir = fr'C:\Users\oliver.frank\Desktop\PyProjects\beRNN_v1\paramCombinations_{adjParams["trainingYear_Month"][0]}'
 # os.makedirs(dir, exist_ok=True)
 # os.chdir(dir)
@@ -210,9 +217,9 @@ else:
 #
 #     with open(f'sampled_combinations_beRNN_03_{paramBatch}.json', 'w') as f:
 #         json.dump(sampled_combinations, f, indent=4)
-# # info: Save paramCombinations for cluster training ####################################################################
+# # info: Save paramCombinations locally for cluster training ####################################################################
 # # ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-# # info: Adjust paramCombinations for cluster training ##################################################################
+# # info: Adjust paramCombinations locally for cluster training ##################################################################
 # participantList = ['beRNN_03']
 # for participant in participantList:
 #     for paramBatch in range(1, 17):
@@ -223,7 +230,7 @@ else:
 #         # info: Overwrite previous file
 #         with open(f'sampled_combinations_{participant}_{paramBatch}.json', 'w') as f:
 #             json.dump(sampled_combinations, f, indent=4)
-# # info: Adjust paramCombinations for cluster training ##################################################################
+# # info: Adjust paramCombinations locally for cluster training ##################################################################
 
 
 # Training #############################################################################################################
@@ -235,20 +242,27 @@ trainingTimeTotal_hours = 0
 for modelNumber, params in enumerate(sampled_combinations):
 
     # attention. Add post hoc variables for cluster training ************************************************************
-    params['n_rnn'] = 512
-    # params['participant'] = 'beRNN_01'
-    # params["activation"] = "linear"
-    # params["rnn_type"] = "NonRecurrent"
-    params['trainingYear_Month'] = 'grid_multi_beRNN_03_highDim_correctOnly_512'
+    # info. obligatory
+    params['participant'] = config.get("participant", 256)
+    participant = params['participant']
     params['data'] = 'data_highDim_correctOnly'
-    # params['ruleset'] = 'all_benchmark'
-    # params["benchmark"] = True
-    # params["tasksString"] = 'SingleTask'
-    # params['rule_prob_map'] = {"contextdm1": 1, "contextdm2": 1, "reactgo": 1, "reactanti": 1, "dmsgo": 1, "dmsnogo": 1,
-    #                            "dmcgo": 1, "dmcnogo": 1, "delaygo": 1, "delayanti": 1, "delaydm1": 1, "delaydm2": 1}
-    # params['rule_prob_map'] = dict({"DM": 1, "DM_Anti": 1, "EF": 1, "EF_Anti": 1, "RP": 1, "RP_Anti": 1, "RP_Ctx1": 1,
-    #                             "RP_Ctx2": 1, "WM": 1, "WM_Anti": 1, "WM_Ctx1": 1, "WM_Ctx2": 1})
-    # attention *********************************************************************************************************
+    data = params['data']
+    params['n_rnn'] = config.get("n_rnn", 256)
+    n_rnn = params['n_rnn']
+
+    params['trainingYear_Month'] = config.get("trainingYear_Month", f'_grid_multi_{participant}_{data}_{n_rnn}')
+
+    # info. optional
+    # params["activation"] = config.get("activation", "relu")
+    # params["rnn_type"] = config.get("rnn_type", "LeakyRNN")
+    # params["benchmark"] = config.get("rnn_type", "LeakyRNN")
+    # params['ruleset'] = config.get("ruleset", "all")
+    # params["tasksString"] = config.get("tasksString", "Alltask")
+    # params['rule_prob_map'] = config.get("rule_prob_map", dict({"contextdm1": 1, "contextdm2": 1, "reactgo": 1, "reactanti": 1, "dmsgo": 1, "dmsnogo": 1,
+    #                                                        "dmcgo": 1, "dmcnogo": 1, "delaygo": 1, "delayanti": 1, "delaydm1": 1, "delaydm2": 1}))
+    # params['rule_prob_map'] = config.get("rule_prob_map", dict({"DM": 1, "DM_Anti": 1, "EF": 1, "EF_Anti": 1, "RP": 1, "RP_Anti": 1, "RP_Ctx1": 1,
+    #                             "RP_Ctx2": 1, "WM": 1, "WM_Anti": 1, "WM_Ctx1": 1, "WM_Ctx2": 1}))
+    # attention. Add post hoc variables for cluster training ************************************************************
 
     # Start
     start_time = time.perf_counter()
