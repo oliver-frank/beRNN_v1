@@ -778,7 +778,7 @@ if __name__ == '__main__':
         config_path = os.getenv("CONFIG_PATH", "config.json")
 
         with open(config_path, "r") as f:
-            config = json.safe_load(f)
+            config = json.load(f)
 
         n_iteration = config.get("n_iteration", 2)  # Default if not specified in config
 
