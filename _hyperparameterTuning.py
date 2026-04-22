@@ -100,7 +100,7 @@ if cluster:
     config_path = os.getenv("CONFIG_PATH", "config.json")
 
     with open(config_path, "r") as f:
-        config = json.safe_load(f)
+        config = json.load(f)
 
     # Load hp defined within sbatch in sh. file
     parser = argparse.ArgumentParser()
@@ -243,9 +243,9 @@ for modelNumber, params in enumerate(sampled_combinations):
 
     # attention. Add post hoc variables for cluster training ************************************************************
     # info. obligatory
-    params['participant'] = config.get("participant", 256)
+    params['participant'] = config.get("participant", 'beRNN_03')
     participant = params['participant']
-    params['data'] = 'data_highDim_correctOnly'
+    params['data'] = config.get("data", 'data_highDim_correctOnly')
     data = params['data']
     params['n_rnn'] = config.get("n_rnn", 256)
     n_rnn = params['n_rnn']
