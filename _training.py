@@ -550,21 +550,20 @@ def train(data_dir, model_dir, train_data, eval_data, hp=None, max_steps=3e5, di
     trialsLoaded = 0
 
     # head. new mlflow logic ###########################################################################################
+    experiment_name = hp['trainingYear_Month']
     if hp['machine'] == 'local':
-        db_path = Path(r"C:\Users\oliver.frank\Desktop\PyProjects\beRNNmodels\beRNN_main_mlflow.db").absolute()
+        db_path = Path(rf"C:\Users\oliver.frank\Desktop\PyProjects\beRNNmodels\mlflow_{experiment_name}.db").absolute()
     else:
-        db_path = Path("/zi/home/oliver.frank/Desktop/beRNNmodels/beRNN_main_mlflow_docker.db")
+        db_path = Path(f"/zi/home/oliver.frank/Desktop/beRNNmodels/mlflow_{experiment_name}.db")
 
     tracking_uri = f"sqlite:///{db_path}"
     mlflow.set_tracking_uri(tracking_uri)
 
     # Protect database initialization for several simultaneous accessing
-    # task_id = int(os.environ.get('SLURM_ARRAY_TASK_ID', 0))
+    task_id = int(os.environ.get('SLURM_ARRAY_TASK_ID', 0))
     if hp['machine'] != 'local':
-        # wait_time = (task_id + 1) * 5
-        time.sleep(10)  # wait 10 seconds between each job start
-
-    experiment_name = hp['trainingYear_Month']
+        wait_time = (task_id + 1) * 5
+        time.sleep(wait_time)  # wait 10 seconds between each job start
 
     # Experiment-Handling with MlflowClient
     client = mlflow.tracking.MlflowClient()
