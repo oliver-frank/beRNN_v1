@@ -553,7 +553,7 @@ def train(data_dir, model_dir, train_data, eval_data, hp=None, max_steps=3e5, di
     if hp['machine'] == 'local':
         db_path = Path(r"C:\Users\oliver.frank\Desktop\PyProjects\beRNNmodels\beRNN_main_mlflow.db").absolute()
     else:
-        db_path = Path("/zi/home/oliver.frank/Desktop/beRNNmodels/beRNN_main_mlflow.db")
+        db_path = Path("/zi/home/oliver.frank/Desktop/beRNNmodels/beRNN_main_mlflow_docker.db")
 
     tracking_uri = f"sqlite:///{db_path}"
     mlflow.set_tracking_uri(tracking_uri)
@@ -832,6 +832,7 @@ if __name__ == '__main__':
         elif hp['machine'] == 'pandora':
             path = '/pandora/home/oliver.frank/01_Projects/RNN/multitask_BeRNN-main'
 
+        # Define data path
         # Define data path
         preprocessedData_path = os.path.join(path, 'Data', hp['participant'], hp['data'])
 
