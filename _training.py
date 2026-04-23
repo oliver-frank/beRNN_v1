@@ -562,8 +562,7 @@ def train(data_dir, model_dir, train_data, eval_data, hp=None, max_steps=3e5, di
 
     # Protect database initialization for several simultaneous accessing
     if hp['machine'] != 'local':
-        wait_time = (10)
-        time.sleep(wait_time)  # wait 10 seconds between each job start
+        time.sleep(1)  # wait 10 seconds between each job start .info for the current setup with task individual db unnecessary
 
     # Experiment-Handling with MlflowClient
     client = mlflow.tracking.MlflowClient()
