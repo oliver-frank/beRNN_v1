@@ -559,10 +559,10 @@ def train(data_dir, model_dir, train_data, eval_data, hp=None, max_steps=3e5, di
     mlflow.set_tracking_uri(tracking_uri)
 
     # Protect database initialization for several simultaneous accessing
-    task_id = int(os.environ.get('SLURM_ARRAY_TASK_ID', 0))
+    # task_id = int(os.environ.get('SLURM_ARRAY_TASK_ID', 0))
     if hp['machine'] != 'local':
-        wait_time = (task_id + 1) * 5
-        time.sleep(wait_time)  # wait 10 seconds between each job start
+        # wait_time = (task_id + 1) * 5
+        time.sleep(10)  # wait 10 seconds between each job start
 
     experiment_name = hp['trainingYear_Month']
 
