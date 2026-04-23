@@ -26,7 +26,7 @@ RUN pip install --no-cache-dir \
     bcrypt \
     spacy==3.7.5 \
     spacy-lookups-data \
-    mlflow \
+    mlflow==3.11.1 \
     cryptography
 
 # copy code into image
