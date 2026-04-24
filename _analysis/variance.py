@@ -101,6 +101,7 @@ def _compute_variance_bymodel(data_dir, model_dir, layer, data_type, networkAnal
                 elif mode == 'test':
                     data = eval_data
 
+                hp['benchmark'] = False # attention. comment out in the future
                 if hp['benchmark'] != True:
                     x, y, y_loc, response = tools.load_trials(hp['rng'], task, mode, hp['batch_size'], eval_data,False)  # y_loc is participantResponse_perfEvalForm
 

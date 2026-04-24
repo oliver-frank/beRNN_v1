@@ -19,23 +19,19 @@ from pathlib import Path
 from collections import defaultdict
 
 import os
+import json
 import random
 
 os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
 
 import numpy as np
 # import matplotlib.pyplot as plt
-# import tensorflow as tf
 
 # attention. csp_frank_oliver_3 version ++++++++++++++++++++++++++++++++++++++++++++++
 import tensorflow.compat.v1 as tf
-
 tf.disable_v2_behavior()
 import mlflow
 # attention. csp_frank_oliver_3 version ++++++++++++++++++++++++++++++++++++++++++++++
-
-import json
-# import random
 
 import networkx as nx
 from networkx.algorithms.community import greedy_modularity_communities, modularity

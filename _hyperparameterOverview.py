@@ -98,6 +98,7 @@ def compute_n_cluster(model_dirs, mode):
             print(f"An exception occurred in compute_n_cluster: {e}")
             # Overwrite existing log with fallback variables - never save_log without load_log as empirical data will be overwritten
             log = tools.load_log(model_dir)
+            log['model_dir'] = model_dir # info. important for overwriting directories of server trained models
             # log = tools.load_log(r'C:\Users\oliver.frank\Desktop\PyProjects\beRNNmodels\_gridSearch_domainTask-DM_beRNN_03_highDim_16\highDim\beRNN_03\3\beRNN_03_AllTask_4-6_data_highDim_trainingBatch3_iteration2_LeakyRNN_16_relu\model_month_6\log.json')
             # hp = tools.load_hp(model_dir)
 
@@ -165,7 +166,7 @@ def get_n_clusters(model_dirs, density):
             if 'fundamentals' in model_dir or 'fm' in model_dir:
                 pkl_beRNN3 = rf'{model_dir}\var_test_lay1_rule_fundamentals.pkl'
                 pkl_beRNN2 = rf'{model_dir}\corr_test_lay1_rule_fundamentals.pkl'
-            elif 'domainTask' in model_dir:
+            elif 'domainTask' or 'singleTask' in model_dir:
                 pkl_beRNN3 = rf'{model_dir}\var_test_lay1_rule_taskSubset.pkl'
                 pkl_beRNN2 = rf'{model_dir}\corr_test_lay1_rule_taskSubset.pkl'
             elif 'multiTask' in model_dir or 'AllTask' in model_dir:

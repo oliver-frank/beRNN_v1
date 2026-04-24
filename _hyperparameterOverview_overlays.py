@@ -623,12 +623,19 @@ HP_NAME = {'activation': 'Activation fun.',
 if __name__ == '__main__':
 
     # Definition of important variables
-    foldersToOverlay = ['_gridSearch_multiTask_beRNN_03_highDimCorrects_16',
-                        '_gridSearch_multiTask_beRNN_03_highDimCorrects_32',
-                        '_gridSearch_multiTask_beRNN_03_highDimCorrects_64',
-                        '_gridSearch_multiTask_beRNN_03_highDimCorrects_128',
-                        '_gridSearch_multiTask_beRNN_03_highDimCorrects_256',
-                        '_gridSearch_multiTask_beRNN_03_highDim_correctOnly_512']
+    # foldersToOverlay = ['_gridSearch_domainTask-DM_beRNN_03_highDim_correctOnly_16',
+    #                     '_gridSearch_domainTask-DM_beRNN_03_highDim_correctOnly_32',
+    #                     '_gridSearch_domainTask-DM_beRNN_03_highDim_correctOnly_64',
+    #                     '_gridSearch_domainTask-DM_beRNN_03_highDim_correctOnly_128',
+    #                     '_gridSearch_domainTask-DM_beRNN_03_highDim_correctOnly_256',
+    #                     '_gridSearch_domainTask_DM_beRNN_03_highDim_correctOnly_512']
+
+    foldersToOverlay = ['_gridSearch_DM_singleTask_beRNN_03_highDimCorrects_16',
+                        '_gridSearch_DM_singleTask_beRNN_03_highDimCorrects_32',
+                        '_gridSearch_DM_singleTask_beRNN_03_highDimCorrects_64',
+                        '_gridSearch_DM_singleTask_beRNN_03_highDimCorrects_128',
+                        '_gridSearch_DM_singleTask_beRNN_03_highDimCorrects_256',
+                        '_gridSearch_DM_singleTask_beRNN_03_highDimCorrects_512']
 
     paper_nomenclatur_dict = ['HC1', 'HC2', 'MDD', 'ASD', 'SCZ']
     participantList = ['beRNN_01', 'beRNN_02', 'beRNN_03', 'beRNN_04', 'beRNN_05']
@@ -677,7 +684,7 @@ if __name__ == '__main__':
         elif 'highDim' in folder:
             dataType = 'highDim'
 
-        directory = fr'C:\Users\oliver.frank\Desktop\PyProjects\beRNNmodels\{folder}\{dataType}\{participant}'
+        directory = fr'C:\Users\oliver.frank\Desktop\PyProjects\beRNNmodels\__legacy_month_4-6\{folder}\{dataType}\{participant}'
 
         if batchPlot == False:
             model_dir_batches = os.listdir(directory)
@@ -736,7 +743,7 @@ if __name__ == '__main__':
                                          cmap_name='viridis')
 
         # Visualize correlation between performance and topMarker of choice
-        visualize_topMarker_testPerf_corrlation(meta_perf_test_list, meta_modularity_list, 'modularity')
+        visualize_topMarker_testPerf_corrlation(meta_perf_test_list, meta_modularity_list, 'participation')
         # Optional for paper
         # visualize_simulatedTopMarkerNetworks()
 
