@@ -136,8 +136,7 @@ else:
 
     adjParams = {
         'activation': ['relu', 'softplus', 'tanh'],  # 'relu', 'elu', 'tanh', 'softplus'
-        'activations_per_layer': [['relu', 'relu', 'relu'], ['softplus', 'softplus', 'softplus'],
-                                  ['tanh', 'tanh', 'tanh']],
+        'activations_per_layer': [['relu', 'relu', 'relu'], ['softplus', 'softplus', 'softplus'], ['tanh', 'tanh', 'tanh']],
         'base_lr': [0.0005],
         'batch_size': [40, 80],
         'benchmark': [False],
@@ -205,6 +204,7 @@ else:
 
     # # Create one combination and repeat it according to defined number
     # sampled_combinations = create_repeated_param_combinations(adjParams, 5)
+
 
 # # info: Save paramCombinations locally for cluster training ####################################################################
 # dir = fr'C:\Users\oliver.frank\Desktop\PyProjects\beRNN_v1\paramCombinations_{adjParams["trainingYear_Month"][0]}'

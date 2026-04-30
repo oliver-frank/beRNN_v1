@@ -148,7 +148,8 @@ def get_default_hp(ruleset):
     machine = 'hitkip'  # 'local' 'pandora' 'hitkip'
     data = 'data_highDim_correctOnly'
     trainingBatch = '01'
-    trainingYear_Month = '_grid_bench_multi_beRNN_00_highDim_correctOnly_256'  # as short as possible to avoid too long paths for avoiding linux2windows transfer issues
+    trainingYear_Month = 'test_256_2400steps'  # as short as possible to avoid too long paths for avoiding linux2windows transfer issues
+    # trainingYear_Month = '_grid_bench_multi_beRNN_00_highDim_correctOnly_256'  # as short as possible to avoid too long paths for avoiding linux2windows transfer issues
 
     if 'highDim' in data:  # fix: lowDim_timeCompressed needs to be skipped here
         n_eachring = 32
@@ -166,7 +167,7 @@ def get_default_hp(ruleset):
         'batch_size': 80,  # 20/40/80/120/160
         # 'batch_size_test': 640, # batch_size for testing
         'base_lr': [5e-4],
-        'benchmark': True,
+        'benchmark': False,
         # 'c_intsyn': 0, # intelligent synapses parameters, tuple (c, ksi) -> Yang et al. only apply these in sequential training
         'c_mask_responseValue': 5.,
         'data': data,
@@ -204,7 +205,7 @@ def get_default_hp(ruleset):
         'p_weight_train': None,
         'rnn_type': 'LeakyRNN',  # Type of RNNs: NonRecurrent, LeakyRNN, LeakyGRU, EILeakyGRU | GRU, LSTM
         'rng': np.random.default_rng(),  # add seed here if you want to make it reproducible e.g. (42)
-        'ruleset': 'all_benchmark',  # all_benchmark
+        'ruleset': 'all',  # all_benchmark
         'rule_probs': None,  # Rule probabilities to be drawn
         'rule_start': 1 + num_ring * n_eachring,  # first input index for rule units
         'save_name': 'test',  # name to save
@@ -473,7 +474,7 @@ def do_eval(sess, model, log, rule_train, eval_data, step):
     return log
 
 
-def train(data_dir, model_dir, train_data, eval_data, hp=None, max_steps=3e5, display_step=500,
+def train(data_dir, model_dir, train_data, eval_data, hp=None, max_steps=2400, display_step=100,
           rule_trains=None, rule_prob_map=None, seed=0,
           load_dir=None, trainables=None, robustnessTest=True):
     """Train the network.
@@ -548,17 +549,19 @@ def train(data_dir, model_dir, train_data, eval_data, hp=None, max_steps=3e5, di
     # head. new mlflow logic ###########################################################################################
     task_id = int(os.environ.get('SLURM_ARRAY_TASK_ID', 0))
     experiment_name = hp['trainingYear_Month']
+
     if hp['machine'] == 'local':
         db_path = Path(rf"C:\Users\oliver.frank\Desktop\PyProjects\beRNNmodels\mlflow_{experiment_name}_{task_id}.db").absolute()
     else:
         db_path = Path(f"/zi/home/oliver.frank/Desktop/beRNNmodels/mlflow_{experiment_name}_{task_id}.db")
 
-    tracking_uri = f"sqlite:///{db_path}"
+    tracking_uri = f"sqlite:///{db_path.as_posix()}"
     mlflow.set_tracking_uri(tracking_uri)
+    # mlflow.set_experiment(experiment_name)
 
     # Protect database initialization for several simultaneous accessing
-    if hp['machine'] != 'local':
-        time.sleep(1)  # wait 10 seconds between each job start .info for the current setup with task individual db unnecessary
+    # if hp['machine'] != 'local':
+    #     time.sleep(1)  # wait 10 seconds between each job start .info for the current setup with task individual db unnecessary
 
     # Experiment-Handling with MlflowClient
     client = mlflow.tracking.MlflowClient()
@@ -568,194 +571,197 @@ def train(data_dir, model_dir, train_data, eval_data, hp=None, max_steps=3e5, di
         if exp is None:
             client.create_experiment(experiment_name)
     except Exception as e:
-        pass
+        print(f"MLflow Error: {e}")
 
     mlflow.set_experiment(experiment_name)
 
-    # Restart if database is currently blocked
-    max_retries = 5
-    for attempt in range(max_retries):
-        with mlflow.start_run(run_name=os.path.basename(model_dir)) as run:
-            # Nur Strings/Zahlen loggen (keine Dicts/Listen)
-            clean_hp = {k: str(v) for k, v in hp.items() if not isinstance(v, (dict, list))}
-            mlflow.log_params(clean_hp)
-            # head. new mlflow logic ###########################################################################################
+    # # Restart if database is currently blocked
+    # max_retries = 5
+    # for attempt in range(max_retries):
+    with mlflow.start_run(run_name=os.path.basename(model_dir)) as run:
+        # Nur Strings/Zahlen loggen (keine Dicts/Listen)
+        clean_hp = {k: str(v) for k, v in hp.items() if not isinstance(v, (dict, list))}
+        mlflow.log_params(clean_hp)
+        # head. new mlflow logic ###########################################################################################
 
-            with tf.Session() as sess:
-                if load_dir is not None:
-                    model.restore(load_dir)  # complete restore
-                    print('model restored')
-                else:
-                    # Initialize variables from scratch
-                    sess.run(tf.global_variables_initializer())
+        with tf.Session() as sess:
+            if load_dir is not None:
+                model.restore(load_dir)  # complete restore
+                print('model restored')
+            else:
+                # Initialize variables from scratch
+                sess.run(tf.global_variables_initializer())
 
-                # Set trainable parameters
-                if trainables is None or trainables == 'all':
-                    var_list = model.var_list  # train everything
-                elif trainables == 'input':
-                    # train all nputs
-                    var_list = [v for v in model.var_list if ('input' in v.name) and ('rnn' not in v.name)]
-                elif trainables == 'rule':
-                    # train rule inputs only
-                    var_list = [v for v in model.var_list if 'rule_input' in v.name]
-                else:
-                    raise ValueError('Unknown trainables')
+            # Set trainable parameters
+            if trainables is None or trainables == 'all':
+                var_list = model.var_list  # train everything
+            elif trainables == 'input':
+                # train all nputs
+                var_list = [v for v in model.var_list if ('input' in v.name) and ('rnn' not in v.name)]
+            elif trainables == 'rule':
+                # train rule inputs only
+                var_list = [v for v in model.var_list if 'rule_input' in v.name]
+            else:
+                raise ValueError('Unknown trainables')
 
-                # Define variables to optimize
+            # Define variables to optimize
+            model.set_optimizer(var_list=var_list)
+
+            # penalty on deviation from initial weight
+            if hp['l2_weight_init'] > 0:
+                anchor_ws = sess.run(model.weight_list)
+                for w, w_val in zip(model.weight_list, anchor_ws):
+                    model.cost_reg += (hp['l2_weight_init'] * tf.nn.l2_loss(w - w_val))
+
                 model.set_optimizer(var_list=var_list)
 
-                # penalty on deviation from initial weight
-                if hp['l2_weight_init'] > 0:
-                    anchor_ws = sess.run(model.weight_list)
-                    for w, w_val in zip(model.weight_list, anchor_ws):
-                        model.cost_reg += (hp['l2_weight_init'] * tf.nn.l2_loss(w - w_val))
+            # partial weight training
+            # Explanation: In summary, this code introduces a form of partial weight training by applying L2 regularization
+            # only to a subset of the weights. The subset is determined by random masking, controlled by the hyperparameter
+            # 'p_weight_train'. All weights below the p_weight_train threshold won't be trained in this iteration.
+            if ('p_weight_train' in hp and
+                    (hp['p_weight_train'] is not None) and
+                    hp['p_weight_train'] < 1.0):
+                for w in model.weight_list:
+                    w_val = sess.run(w)
+                    w_size = sess.run(tf.size(w))
+                    w_mask_tmp = np.linspace(0, 1, w_size)
+                    hp['rng'].shuffle(w_mask_tmp)
+                    ind_fix = w_mask_tmp > hp['p_weight_train']
+                    w_mask = np.zeros(w_size, dtype=np.float32)
+                    w_mask[ind_fix] = hp['w_mask_value']  # 1e-1  # will be squared in l2_loss
+                    w_mask = tf.constant(w_mask)
+                    w_mask = tf.reshape(w_mask, w.shape)
+                    model.cost_reg += tf.nn.l2_loss((w - w_val) * w_mask)
+                model.set_optimizer(var_list=var_list)
 
-                    model.set_optimizer(var_list=var_list)
+            step = 0
+            # while step * hp['batch_size'] <= max_steps:
+            while step <= max_steps:
+                try:
+                    # Validation
+                    if step % display_step == 0:  # III: Every 500 steps (20000 trials) do the evaluation
+                        log['trials'].append(step * hp['batch_size'])
+                        log['times'].append(time.time() - t_start)
+                        log = do_eval(sess, model, log, hp['rule_trains'], eval_data, step)
+                        elapsed_time = time.time() - t_start  # Calculate elapsed time
+                        print(f"Elapsed time after batch number {trialsLoaded}: {elapsed_time:.2f} seconds")
+                        # After training
+                        total_time = time.time() - t_start
+                        print(f"Total training time: {total_time:.2f} seconds")
+                        # if log['perf_avg'][-1] > model.hp['target_perf']:
+                        # check if minimum performance is above target
+                        if log['perf_min'][-1] > model.hp['target_perf']:
+                            print('Perf reached the target: {:0.2f}'.format(
+                                hp['target_perf']))
+                            break
 
-                # partial weight training
-                # Explanation: In summary, this code introduces a form of partial weight training by applying L2 regularization
-                # only to a subset of the weights. The subset is determined by random masking, controlled by the hyperparameter
-                # 'p_weight_train'. All weights below the p_weight_train threshold won't be trained in this iteration.
-                if ('p_weight_train' in hp and
-                        (hp['p_weight_train'] is not None) and
-                        hp['p_weight_train'] < 1.0):
-                    for w in model.weight_list:
-                        w_val = sess.run(w)
-                        w_size = sess.run(tf.size(w))
-                        w_mask_tmp = np.linspace(0, 1, w_size)
-                        hp['rng'].shuffle(w_mask_tmp)
-                        ind_fix = w_mask_tmp > hp['p_weight_train']
-                        w_mask = np.zeros(w_size, dtype=np.float32)
-                        w_mask[ind_fix] = hp['w_mask_value']  # 1e-1  # will be squared in l2_loss
-                        w_mask = tf.constant(w_mask)
-                        w_mask = tf.reshape(w_mask, w.shape)
-                        model.cost_reg += tf.nn.l2_loss((w - w_val) * w_mask)
-                    model.set_optimizer(var_list=var_list)
+                        # info: Add modularity value once each evaluation ##################################################
+                        if hp['multiLayer'] == False:
+                            getAndSafeModValue(data_dir, model_dir, hp, model, sess, log, step)
 
-                step = 0
-                # while step * hp['batch_size'] <= max_steps:
-                while step * 100 <= max_steps:
-                    try:
-                        # Validation
-                        if step % display_step == 0:  # III: Every 500 steps (20000 trials) do the evaluation
-                            log['trials'].append(step * hp['batch_size'])
-                            log['times'].append(time.time() - t_start)
-                            log = do_eval(sess, model, log, hp['rule_trains'], eval_data, step)
-                            elapsed_time = time.time() - t_start  # Calculate elapsed time
-                            print(f"Elapsed time after batch number {trialsLoaded}: {elapsed_time:.2f} seconds")
-                            # After training
-                            total_time = time.time() - t_start
-                            print(f"Total training time: {total_time:.2f} seconds")
-                            # if log['perf_avg'][-1] > model.hp['target_perf']:
-                            # check if minimum performance is above target
-                            if log['perf_min'][-1] > model.hp['target_perf']:
-                                print('Perf reached the target: {:0.2f}'.format(
-                                    hp['target_perf']))
-                                break
+                        # if rich_output:
+                        #     display_rich_output(model, sess, step, log, model_dir)
 
-                            # info: Add modularity value once each evaluation ##################################################
-                            if hp['multiLayer'] == False:
-                                getAndSafeModValue(data_dir, model_dir, hp, model, sess, log, step)
+                    # Training
+                    task = hp['rng'].choice(hp['rule_trains'], p=hp['rule_probs'])
+                    # Generate a random batch of trials; each batch has the same trial length
+                    mode = 'train'
 
-                            # if rich_output:
-                            #     display_rich_output(model, sess, step, log, model_dir)
+                    if hp['benchmark'] != True:
+                        x, y, y_loc, response = tools.load_trials(hp['rng'], task, mode, hp['batch_size'],
+                                                                  eval_data,
+                                                                  False)  # y_loc is participantResponse_perfEvalForm
 
-                        # Training
-                        task = hp['rng'].choice(hp['rule_trains'], p=hp['rule_probs'])
-                        # Generate a random batch of trials; each batch has the same trial length
-                        mode = 'train'
+                        c_mask = tools.create_cMask(y, response, hp, mode)
 
-                        if hp['benchmark'] != True:
-                            x, y, y_loc, response = tools.load_trials(hp['rng'], task, mode, hp['batch_size'],
-                                                                      eval_data,
-                                                                      False)  # y_loc is participantResponse_perfEvalForm
-
-                            c_mask = tools.create_cMask(y, response, hp, mode)
-
-                            # fix: for inconcruence between y and response dimension 1
-                            if c_mask.any() == None:
-                                continue
-
-                        else:
-                            # benchmark training with simplified tasks (like Yang, Driscoll, Brenner)
-                            rule_train_now = task
-
-                            # Generate a random batch of trials
-                            # Each batch has the same trial length
-                            trial = generate_trials(
-                                rule_train_now, hp, 'random',
-                                batch_size=hp['batch_size'])
-
-                            x, y, y_loc, c_mask = trial.x, trial.y, trial.y_loc, trial.c_mask
-
-                        # fix: for inconcruence between y and response on dimension 1 - probably preprocessing related
-                        # fix: for inconcruence between y and response on dimension 1 - probably preprocessing related
-                        if (c_mask is None or (isinstance(c_mask, np.ndarray) and (
-                                c_mask.size == 0 or np.all(c_mask == None) or np.any(c_mask == None)))):
+                        # fix: for inconcruence between y and response dimension 1
+                        if c_mask.any() == None:
                             continue
 
-                        trialsLoaded += 1
+                    else:
+                        # benchmark training with simplified tasks (like Yang, Driscoll, Brenner)
+                        rule_train_now = task
 
-                        # Generating feed_dict.
-                        feed_dict = tools.gen_feed_dict(model, x, y, c_mask, hp)
-                        # print('passed feed_dict Training')
-                        # print(feed_dict)
+                        # Generate a random batch of trials
+                        # Each batch has the same trial length
+                        trial = generate_trials(
+                            rule_train_now, hp, 'random',
+                            batch_size=hp['batch_size'])
 
-                        sess.run(model.train_step,
-                                 feed_dict=feed_dict)  # info: Trainables are actualized - train_step should represent the step in training.py and the global_step in network.py
+                        x, y, y_loc, c_mask = trial.x, trial.y, trial.y_loc, trial.c_mask
 
-                        # Get Training performance in a similiar fashion as in do_eval
-                        clsq_train_tmp = list()
-                        creg_train_tmp = list()
-                        perf_train_tmp = list()
-                        c_lsq_train, c_reg_train, y_hat_train = sess.run([model.cost_lsq, model.cost_reg, model.y_hat],
-                                                                         feed_dict=feed_dict)  # info: lsq+reg = total_loss - updates the network parameters
+                    # fix: for inconcruence between y and response on dimension 1 - probably preprocessing related
+                    # fix: for inconcruence between y and response on dimension 1 - probably preprocessing related
+                    if (c_mask is None or (isinstance(c_mask, np.ndarray) and (
+                            c_mask.size == 0 or np.all(c_mask == None) or np.any(c_mask == None)))):
+                        continue
 
-                        if 'lowDim' in hp['data']:
-                            perf_train = np.round(np.mean(get_perf_lowDIM(y_hat_train, y_loc)),
-                                                  3)  # info: y_loc is participant response as groundTruth
-                        else:
-                            perf_train = np.round(np.mean(get_perf(y_hat_train, y_loc)),
-                                                  3)  # info: y_loc is participant response as groundTruth
+                    trialsLoaded += 1
 
-                        clsq_train_tmp.append(c_lsq_train)
-                        creg_train_tmp.append(c_reg_train)
-                        perf_train_tmp.append(perf_train)
+                    # Generating feed_dict.
+                    feed_dict = tools.gen_feed_dict(model, x, y, c_mask, hp)
+                    # print('passed feed_dict Training')
+                    # print(feed_dict)
 
-                        # head. new mlflow logic ###########################################################################################
-                        mlflow.log_metric(f"cost_leastSquareError_train_{task}",
-                                          np.mean(clsq_train_tmp, dtype=np.float64), step=step)
-                        mlflow.log_metric(f"cost_regularization_train_{task}",
-                                          np.mean(creg_train_tmp, dtype=np.float64), step=step)
-                        mlflow.log_metric(f"performance_train_{task}", np.mean(perf_train_tmp, dtype=np.float64),
-                                          step=step)
-                        # Create avg perf train value over all tasks for each step
-                        current_tasks_perf = [log['perf_train_' + t][-1] for t in hp['rule_trains'] if
-                                              log['perf_train_' + t]]
-                        if current_tasks_perf:
-                            train_perf_avg = np.mean(current_tasks_perf)
-                            mlflow.log_metric("performance_train_avg", train_perf_avg, step=step)
-                        # head. new mlflow logic ###########################################################################################
+                    sess.run(model.train_step,
+                             feed_dict=feed_dict)  # info: Trainables are actualized - train_step should represent the step in training.py and the global_step in network.py
 
-                        log['cost_train_' + task].append(np.mean(clsq_train_tmp, dtype=np.float64))
-                        log['creg_train_' + task].append(np.mean(creg_train_tmp, dtype=np.float64))
-                        log['perf_train_' + task].append(np.mean(perf_train_tmp, dtype=np.float64))
+                    # Get Training performance in a similiar fashion as in do_eval
+                    clsq_train_tmp = list()
+                    creg_train_tmp = list()
+                    perf_train_tmp = list()
+                    c_lsq_train, c_reg_train, y_hat_train = sess.run([model.cost_lsq, model.cost_reg, model.y_hat],
+                                                                     feed_dict=feed_dict)  # info: lsq+reg = total_loss - updates the network parameters
 
-                        print('{:15s}'.format(task) +
-                              '| train cost {:0.6f}'.format(np.mean(clsq_train_tmp)) +
-                              '| train c_reg {:0.6f}'.format(np.mean(c_reg_train)) +
-                              '  | train perf {:0.2f}'.format(np.mean(perf_train)))
+                    if 'lowDim' in hp['data']:
+                        perf_train = np.round(np.mean(get_perf_lowDIM(y_hat_train, y_loc)),
+                                              3)  # info: y_loc is participant response as groundTruth
+                    else:
+                        perf_train = np.round(np.mean(get_perf(y_hat_train, y_loc)),
+                                              3)  # info: y_loc is participant response as groundTruth
 
-                        step += 1
+                    clsq_train_tmp.append(c_lsq_train)
+                    creg_train_tmp.append(c_reg_train)
+                    perf_train_tmp.append(perf_train)
 
-                    except KeyboardInterrupt:
-                        print("Optimization interrupted by user")
-                        break
+                    log['cost_train_' + task].append(np.mean(clsq_train_tmp, dtype=np.float64))
+                    log['creg_train_' + task].append(np.mean(creg_train_tmp, dtype=np.float64))
+                    log['perf_train_' + task].append(np.mean(perf_train_tmp, dtype=np.float64))
 
-                print("Optimization finished!")
+                    # head. new mlflow logic ###########################################################################################
+                    mlflow.log_metric(f"cost_leastSquareError_train_{task}",
+                                      np.mean(clsq_train_tmp, dtype=np.float64), step=step)
+                    mlflow.log_metric(f"cost_regularization_train_{task}",
+                                      np.mean(creg_train_tmp, dtype=np.float64), step=step)
+                    mlflow.log_metric(f"performance_train_{task}", np.mean(perf_train_tmp, dtype=np.float64),
+                                      step=step)
+
+                    # Create avg perf train value over all tasks for each step
+                    current_tasks_perf = [log['perf_train_' + t][-1] for t in hp['rule_trains'] if
+                                          log['perf_train_' + t]]
+                    if current_tasks_perf:
+                        train_perf_avg = np.mean(current_tasks_perf)
+                        mlflow.log_metric("performance_train_avg", train_perf_avg, step=step)
+                    # head. new mlflow logic ###########################################################################################
+
+                    print('{:15s}'.format(task) +
+                          '| train cost {:0.6f}'.format(np.mean(clsq_train_tmp)) +
+                          '| train c_reg {:0.6f}'.format(np.mean(c_reg_train)) +
+                          '  | train perf {:0.2f}'.format(np.mean(perf_train)))
+
+                    step += 1
+
+                except KeyboardInterrupt:
+                    print("Optimization interrupted by user")
+                    break
+
+            print("Optimization finished!")
 
 
-########################################################################################################################
+
+        ########################################################################################################################
+
 # Train model
 ########################################################################################################################
 if __name__ == '__main__':

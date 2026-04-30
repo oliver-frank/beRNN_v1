@@ -59,10 +59,16 @@ model_acc <- lmer(Accuracy ~ Month + Complexity + (1|Participant), data = df_fin
 # Ergebnisse prüfen RT
 summary(model_rt)
 anova(model_rt)
+ranova(model_rt)
 
 # Ergebnisse prüfen ACC
 summary(model_acc)
 anova(model_acc)
+ranova(model_acc)
+
+# Performance prüfen
+performance::r2(model_rt)
+performance::r2(model_acc)
 
 # Post-hoc-Tests (Tukey)
 # Vergleich der Monate
