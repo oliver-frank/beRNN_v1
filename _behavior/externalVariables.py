@@ -13,14 +13,34 @@ education = [0, 0, 1, 1, 0] # 0: high school ; 1: undergraduate ; 2: graduate ; 
 bcats_trail = [80, 37, 55, 101, 56]
 bcats_symbol = [61, 95, 100, 94, 90]
 bcats_animals = [35, 49, 27, 36, 25]
-# z_score_cognition_bcats = (value - np.mean(bcats_trail + bcats_symbol + bcats_animals)) / np.std(bcats_trail + bcats_symbol + bcats_animals)
+# z-score for each test
+z_trail = (bcats_trail[4] - np.mean(bcats_trail)) / np.std(bcats_trail)
+z_symbol = (bcats_symbol[4] - np.mean(bcats_symbol)) / np.std(bcats_symbol)
+z_animals = (bcats_animals[4] - np.mean(bcats_animals)) / np.std(bcats_animals)
+# more time means worse performance
+z_trail *= -1
+# final individual z-score
+z_score_cognition_bcats = np.mean([z_trail, z_symbol, z_animals])
+print(np.round(z_score_cognition_bcats, 3))
+
+# MDD: -0.838
+# ASD: 1.173
+# HC1: 0.159
+# HC2: -0.319
+# SCZ: -0.175
 
 # MRT
 nback = [58.33, 87.5, 87.5, 72.92, 43.75]
 reward = [6/20, 0/20, 8/20, 4/20, 4/20] # fix create accuracy with 20 max
 faces = [57/58, 57/58, 57/58, 56/58, 57/58]
 flanker = [109/145, 116/145, 114/145, 112/145, 114/145]
-# z_score_cognition_mrt = (value - np.mean(nback + reward + faces + flanker)) / np.std(nback + reward + faces + flanker)
+# z-score for each test
+z_nback = (nback - np.mean(nback)) / np.std(nback)
+z_reward = (reward - np.mean(reward)) / np.std(reward)
+z_faces = (faces - np.mean(faces)) / np.std(faces)
+z_flanker = (flanker - np.mean(flanker)) / np.std(flanker)
+# final individual z-score
+z_score_cognition_mrt = np.mean([z_nback[0], z_reward[0], z_faces[0], z_flanker[0]])
 
 
 # info: 2. assesment (01, 02, 03, 04, 05) ##############################################################################
@@ -29,7 +49,6 @@ nback = [95.83, 91.66, 87.5, 83.33, 83.33]
 reward = [4/20, 8/20, 6/20, 6/20, 8/20]
 faces = [1, 53/58, 1, 57/58, 1]
 flanker = [121/145, 114/145, 113/145, 113/145, 114/145]
-# z_score_cognition_mrt = (value - np.mean(nback + reward + faces + flanker)) / np.std(nback + reward + faces + flanker)
 
 
 # info: 3. assesment (01, 02, 03, 04, 05) ##############################################################################
@@ -38,7 +57,6 @@ nback = [97.92, 91.66, 89.58, 87.5, 68.75]
 reward = [10/20, 6/20, 10/20, 10/20, 4/20]
 faces = [1, 54/58, 57/58, 56/58, 57/58]
 flanker = [107/145, 115/145, 112/145, 111/145, 128/145]
-# z_score_cognition_mrt = (value - np.mean(nback + reward + faces + flanker)) / np.std(nback + reward + faces + flanker)
 
 
 # info: 4. assesment (01, 02, 03, 05) ##################################################################################
@@ -47,7 +65,6 @@ nback = [85.42, 97.92, 100, 87.5]
 reward = [8/20, 4/20, 10/20, 2/20]
 faces = [57/58, 53/58, 57/58, 1]
 flanker = [115/145, 116/145, 111/145, 115/145]
-# z_score_cognition_mrt = (value - np.mean(nback + reward + faces + flanker)) / np.std(nback + reward + faces + flanker)
 
 
 # info: 5. assesment (01, 02, 03, 05) ##################################################################################
@@ -55,13 +72,33 @@ flanker = [115/145, 116/145, 111/145, 115/145]
 bcats_trail = [72, 38, 39, 48]
 bcats_symbol = [76, 93, 93, 93]
 bcats_animals = [47, 36, 37, 32]
-# z_score_cognition_bcats = (value - np.mean(bcats_trail + bcats_symbol + bcats_animals)) / np.std(bcats_trail + bcats_symbol + bcats_animals)
+# z-score for each test
+z_trail = (bcats_trail[3] - np.mean(bcats_trail)) / np.std(bcats_trail)
+z_symbol = (bcats_symbol[3] - np.mean(bcats_symbol)) / np.std(bcats_symbol)
+z_animals = (bcats_animals[3] - np.mean(bcats_animals)) / np.std(bcats_animals)
+# more time means worse performance
+z_trail *= -1
+# final individual z-score
+z_score_cognition_bcats = np.mean([z_trail, z_symbol, z_animals])
+print(np.round(z_score_cognition_bcats, 3))
+
+# MDD: -0.588
+# ASD: 0.345
+# HC1: 0.381
+# HC2: NA
+# SCZ: -0.139
 
 # MRT
 nback = [79.17, 83.33, 97.92, 66.66]
 reward = [6/20, 2/20, 8/20, 8/20]
 faces = [34/58, 34/58, 1, 1]
 flanker = [83/145, 63/145, 113/145, 113/145]
-# z_score_cognition_mrt = (value - np.mean(nback + reward + faces + flanker)) / np.std(nback + reward + faces + flanker)
+# z-score for each test
+z_nback = (nback - np.mean(nback)) / np.std(nback)
+z_reward = (reward - np.mean(reward)) / np.std(reward)
+z_faces = (faces - np.mean(faces)) / np.std(faces)
+z_flanker = (flanker - np.mean(flanker)) / np.std(flanker)
+# final individual z-score
+z_score_cognition_mrt = np.mean([z_nback[0], z_reward[0], z_faces[0], z_flanker[0]])
 
 

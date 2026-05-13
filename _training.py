@@ -21,6 +21,7 @@ from collections import defaultdict
 import os
 import json
 import random
+import pickle
 
 os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
 
@@ -145,10 +146,10 @@ def get_default_hp(ruleset):
     num_ring = tools.get_num_ring(ruleset)
     n_rule = tools.get_num_rule(ruleset)
 
-    machine = 'hitkip'  # 'local' 'pandora' 'hitkip'
-    data = 'data_highDim_correctOnly'
+    machine = 'local'  # 'local' 'pandora' 'hitkip'
+    data = 'data_highDim_benchmark'
     trainingBatch = '01'
-    trainingYear_Month = 'test_256_2400steps'  # as short as possible to avoid too long paths for avoiding linux2windows transfer issues
+    trainingYear_Month = 'test_bench_4'  # as short as possible to avoid too long paths for avoiding linux2windows transfer issues
     # trainingYear_Month = '_grid_bench_multi_beRNN_00_highDim_correctOnly_256'  # as short as possible to avoid too long paths for avoiding linux2windows transfer issues
 
     if 'highDim' in data:  # fix: lowDim_timeCompressed needs to be skipped here
@@ -163,11 +164,11 @@ def get_default_hp(ruleset):
     hp = {
         'activation': 'relu',  # Type of activation runctions, relu, softplus, tanh, elu, linear
         'activations_per_layer': ['relu', 'tanh', 'linear'],
-        # 'alpha': 0.2, # (redundant) discretization time step/time constant - dt/tau = alpha - ratio decides on how much previous states are taken into account for current state - low alpha more memory, high alpha more forgetting - alpha * h(t-1)
+        'alpha': 0.2, # (redundant) discretization time step/time constant - dt/tau = alpha - ratio decides on how much previous states are taken into account for current state - low alpha more memory, high alpha more forgetting - alpha * h(t-1)
         'batch_size': 80,  # 20/40/80/120/160
         # 'batch_size_test': 640, # batch_size for testing
         'base_lr': [5e-4],
-        'benchmark': False,
+        'benchmark': True,
         # 'c_intsyn': 0, # intelligent synapses parameters, tuple (c, ksi) -> Yang et al. only apply these in sequential training
         'c_mask_responseValue': 5.,
         'data': data,
@@ -179,12 +180,12 @@ def get_default_hp(ruleset):
         'grad_clip_by': 'global_norm',  # or 'value'
         'in_type': 'normal',  # input type: normal, multi
         'l1_h': 1e-04,  # l1 lambda
-        'l1_weight': 0,  # l1 regularization on weight
+        'l1_weight': 1e-03,  # l1 regularization on weight
         'l2_h': 0,  # l2 lambda
-        'l2_weight': 0,  # l2 regularization on weight
+        'l2_weight': 1e-05,  # l2 regularization on weight
         'l2_weight_init': 0,  # l2 regularization on deviation from initialization
-        'learning_rate': 0.0005,  # learning rate
-        'learning_rate_mode': 'exp_range',  # None - 'triangular', 'triangular2', 'exp_range', 'decay'
+        'learning_rate': 0.001,  # learning rate
+        'learning_rate_mode': 'triangular2',  # None - 'triangular', 'triangular2', 'exp_range', 'decay'
         'loss_type': 'lsq',  # # Type of loss functions - Cross-entropy loss
         # 'ksi_intsyn': 0,
         'machine': machine,
@@ -201,11 +202,11 @@ def get_default_hp(ruleset):
         'n_rnn': 256,  # number of recurrent units for one hidden layer architecture
         'n_rnn_per_layer': [16, 16, 16],
         'optimizer': 'adam',  # 'adam', 'sgd'
-        'participant': 'beRNN_03',  # Participant to take
+        'participant': 'beRNN_00',  # Participant to take
         'p_weight_train': None,
         'rnn_type': 'LeakyRNN',  # Type of RNNs: NonRecurrent, LeakyRNN, LeakyGRU, EILeakyGRU | GRU, LSTM
         'rng': np.random.default_rng(),  # add seed here if you want to make it reproducible e.g. (42)
-        'ruleset': 'all',  # all_benchmark
+        'ruleset': 'all_benchmark',  # all_benchmark
         'rule_probs': None,  # Rule probabilities to be drawn
         'rule_start': 1 + num_ring * n_eachring,  # first input index for rule units
         'save_name': 'test',  # name to save
@@ -238,7 +239,7 @@ def get_default_hp(ruleset):
     return hp
 
 
-def do_eval(sess, model, log, rule_train, eval_data, step):
+def do_eval(sess, model, log, rule_train, eval_data, step, data_dir):
     """Do evaluation.
 
     Args:
@@ -283,14 +284,23 @@ def do_eval(sess, model, log, rule_train, eval_data, step):
                         continue
 
                 else:
+                    # attention: CHANGES ####################################################
                     # benchmark training with simplified tasks (like Yang, Driscoll, Brenner)
                     rule_train_now = task
                     # Generate a random batch of trials
-                    # Each batch has the same trial length
                     trial = generate_trials(
                         rule_train_now, hp, 'random',
                         batch_size=hp['batch_size'])
 
+                    # # info. Load the preprocessed trials
+                    # # Randomly draw batch in folder
+                    # batchNumber = hp['rng'].choice(np.arange(40, 50))
+                    # with open(os.path.join(data_dir, rule_train_now, f"{rule_train_now}_batch_{batchNumber}.pkl"),
+                    #           "rb") as f:
+                    #     trial = pickle.load(f)
+                    #
+                    # x, y, y_loc, c_mask = trial[0]['x'], trial[0]['y'], trial[0]['y_loc'], trial[0]['c_mask']
+                    # # attention: CHANGES ####################################################
                     x, y, y_loc, c_mask = trial.x, trial.y, trial.y_loc, trial.c_mask
 
                 feed_dict = tools.gen_feed_dict(model, x, y, c_mask,
@@ -636,14 +646,15 @@ def train(data_dir, model_dir, train_data, eval_data, hp=None, max_steps=2400, d
                 model.set_optimizer(var_list=var_list)
 
             step = 0
-            # while step * hp['batch_size'] <= max_steps:
-            while step <= max_steps:
+            log['trials'].append(0)
+            while log['trials'][-1] <= 192000:
+            # while step <= max_steps:
                 try:
                     # Validation
                     if step % display_step == 0:  # III: Every 500 steps (20000 trials) do the evaluation
                         log['trials'].append(step * hp['batch_size'])
                         log['times'].append(time.time() - t_start)
-                        log = do_eval(sess, model, log, hp['rule_trains'], eval_data, step)
+                        log = do_eval(sess, model, log, hp['rule_trains'], eval_data, step, data_dir)
                         elapsed_time = time.time() - t_start  # Calculate elapsed time
                         print(f"Elapsed time after batch number {trialsLoaded}: {elapsed_time:.2f} seconds")
                         # After training
@@ -684,10 +695,17 @@ def train(data_dir, model_dir, train_data, eval_data, hp=None, max_steps=2400, d
                         rule_train_now = task
 
                         # Generate a random batch of trials
-                        # Each batch has the same trial length
                         trial = generate_trials(
                             rule_train_now, hp, 'random',
                             batch_size=hp['batch_size'])
+
+                        # info. Load the preprocessed trials
+                        # Randomly draw batch in folder
+                        # batchNumber = hp['rng'].choice(np.arange(0, 40))
+                        # with open(os.path.join(data_dir, rule_train_now, f"{rule_train_now}_batch_{batchNumber}.pkl"), "rb") as f:
+                        #     trial = pickle.load(f)
+
+                        # x, y, y_loc, c_mask = trial[0]['x'], trial[0]['y'], trial[0]['y_loc'], trial[0]['c_mask']
 
                         x, y, y_loc, c_mask = trial.x, trial.y, trial.y_loc, trial.c_mask
 

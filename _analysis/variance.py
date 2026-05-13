@@ -55,10 +55,13 @@ def _compute_variance_bymodel(data_dir, model_dir, layer, data_type, networkAnal
 
     if len(rules) == 12:
         ruleset = hp['ruleset']
-    elif rules == ["DM", "EF", "RP", "WM"]:
-        ruleset = 'fundamentals'
+    elif len(rules) == 8:
+        ruleset = '8task'
+    elif len(rules) == 4:
+        ruleset = '4task'
     else:
-        ruleset = 'taskSubset'
+        ruleset = '1task'
+
     # attention: ###################################################################################################
 
     # print(rules)

@@ -11,12 +11,12 @@ import json
 
 # Configuration
 participant_dir = r'W:\group_csp\analyses\oliver.frank\Data'
-months = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12']
-# months = ['4', '5', '6']
+# months = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12']
+months = ['3', '4', '5']
 strToSave = months[0] + '-' + months[-1]
-# newParticpantList = ['beRNN_01', 'beRNN_02', 'beRNN_03', 'beRNN_04', 'beRNN_05']
-newParticpantList = ['beRNN_01']
-reactionTime_comparison, plot_radars, wholePeriodPlots = False, False, False
+newParticpantList = ['beRNN_03', 'beRNN_05']
+# newParticpantList = ['beRNN_04']
+reactionTime_comparison, plot_radars, wholePeriodPlots = True, False, False
 
 paper_nomenclatur_dict = {
     'beRNN_03': 'HC1',
@@ -306,7 +306,7 @@ if reactionTime_comparison == True:
 
         # ---------- Formatting ----------
         for ax in (ax_correct, ax_error, ax_all):
-            ax.set_ylim(400, 1000)
+            ax.set_ylim(400, 1200)
             ax.set_yticks(range(400, 1001, 200))
             ax.grid(axis='y', linestyle='--', alpha=0.7)
             ax.set_xticks(month_centers)
@@ -536,11 +536,12 @@ def plot_beRNN_radar_months(beRNN_name, data, filename_color_dict, months):
         ax.set_ylim(0, 6)
         # ax.set_yticks(range(1, 7))
         ax.set_yticklabels([])  # remove y-ticks
+        ax.set_xticklabels([])  # remove y-ticks
         # ax.set_yticklabels([str(i) for i in range(1, 7)], fontsize=8)
-        ax.set_title(f"Month {month}")
+        ax.set_title(f"Month {month}", fontsize=18, y=-0.2)
 
-    fig.suptitle(paper_nomenclatur_dict[beRNN_name], fontsize=16)
-    plt.tight_layout()
+    # fig.suptitle(paper_nomenclatur_dict[beRNN_name], fontsize=24)
+    # plt.tight_layout()
     # plt.show()
     plt.savefig(os.path.join(r'C:\Users\oliver.frank\Desktop\PyProjects\beRNNmodels\__taskComplexities', f"{beRNN_name}_taskComplexity_month_{strToSave}.png"),dpi=300)
 
@@ -549,111 +550,112 @@ participants_dict_complexities = {
     for participant in newParticpantList
 }
 
-# if plot_radars == True:
-    # # Manually standardized task complexity level for 12 tasks each month - fix: entry all months
-    # beRNN_01_month_1 = [4, 1, 2, 2, 2, 2 ,2 ,1 ,1, 1, 1, 1]
-    # beRNN_01_month_2 = [4, 1, 5, 5, 5, 5, 5, 1, 4 ,5, 1 ,4]
-    # beRNN_01_month_3 = [4, 1, 5, 5, 5, 5, 5, 1, 4, 5, 1, 4]
-    # beRNN_01_month_4 = [4,1,2,2,4,5,1,4,5,5,5,1]
-    # beRNN_01_month_5 = [4,1,4,4,4,5,1,4,5,5,5,1]
-    # beRNN_01_month_6 = [4,1,4,4,4,5,1,4,5,5,5,1]
-    # beRNN_01_month_7 = [4, 2, 6, 6, 5, 4, 5, 5, 4, 5, 1, 4]
-    # beRNN_01_month_8 = [4, 2, 6, 6, 4, 4, 5, 5, 5, 5, 1, 4]
-    # beRNN_01_month_9 = [4, 2, 6, 6, 4, 4, 5, 5, 4, 5, 2, 4]
-    # beRNN_01_month_10 = [4, 2, 6, 6, 4, 4, 4, 5, 4, 5, 2, 5]
-    # beRNN_01_month_11 = [4, 2, 6, 6, 4, 4, 5, 5, 4, 5, 2, 5]
-    # beRNN_01_month_12 = [4, 2, 6, 6, 5, 4, 5, 5, 4, 5, 2, 5]
+if plot_radars == True:
+    # Manually standardized task complexity level for 12 tasks each month - fix: entry all months
+    beRNN_01_month_1 = [4, 1, 2, 2, 2, 2 ,2 ,1 ,1, 1, 1, 1]
+    beRNN_01_month_2 = [4, 1, 5, 5, 5, 5, 5, 1, 4 ,5, 1 ,4]
+    beRNN_01_month_3 = [4, 1, 5, 5, 5, 5, 5, 1, 4, 5, 1, 4]
+    beRNN_01_month_4 = [4,1,2,2,4,5,1,4,5,5,5,1]
+    beRNN_01_month_5 = [4,1,4,4,4,5,1,4,5,5,5,1]
+    beRNN_01_month_6 = [4,1,4,4,4,5,1,4,5,5,5,1]
+    beRNN_01_month_7 = [4, 2, 6, 6, 5, 4, 5, 5, 4, 5, 1, 4]
+    beRNN_01_month_8 = [4, 2, 6, 6, 4, 4, 5, 5, 5, 5, 1, 4]
+    beRNN_01_month_9 = [4, 2, 6, 6, 4, 4, 5, 5, 4, 5, 2, 4]
+    beRNN_01_month_10 = [4, 2, 6, 6, 4, 4, 4, 5, 4, 5, 2, 5]
+    beRNN_01_month_11 = [4, 2, 6, 6, 4, 4, 5, 5, 4, 5, 2, 5]
+    beRNN_01_month_12 = [4, 2, 6, 6, 5, 4, 5, 5, 4, 5, 2, 5]
 
-    # beRNN_02_month_1 = [4, 1, 2, 2, 2, 2, 2, 2, 1, 2, 1, 1]
-    # beRNN_02_month_2 = [4, 1, 2, 5, 5, 5, 5, 2, 2, 2, 1, 1]
-    # beRNN_02_month_3 = [4, 4, 2, 6, 5, 5, 5, 2, 2, 2, 1, 1]
-    # beRNN_02_month_4 = [4,4,2,2,1,2,1,1,5,5,5,2]
-    # beRNN_02_month_5 = [4,4,4,4,2,2,1,1,5,5,5,2]
-    # beRNN_02_month_6 = [4,4,4,4,4,4,1,1,5,5,5,2]
-    # beRNN_02_month_7 = [4, 4, 6, 6, 4, 4, 5, 4, 4, 4, 4, 5]
-    # beRNN_02_month_8 = [4, 4, 6, 6, 4, 4, 6, 4, 4, 5, 5, 5]
-    # beRNN_02_month_9 = [5, 4, 6, 6, 4, 4, 6, 5, 4, 5, 5, 5]
-    # beRNN_02_month_10 = [5, 4, 6, 6, 4, 4, 6, 5, 4, 5, 5, 5]
-    # beRNN_02_month_11 = [5, 4, 6, 6, 4, 4, 6, 5, 4, 5, 5, 5]
-    # beRNN_02_month_12 = [5, 4, 6, 6, 4, 4, 6, 5, 4, 5, 5, 5]
+    beRNN_02_month_1 = [4, 1, 2, 2, 2, 2, 2, 2, 1, 2, 1, 1]
+    beRNN_02_month_2 = [4, 1, 2, 5, 5, 5, 5, 2, 2, 2, 1, 1]
+    beRNN_02_month_3 = [4, 4, 2, 6, 5, 5, 5, 2, 2, 2, 1, 1]
+    beRNN_02_month_4 = [4,4,2,2,1,2,1,1,5,5,5,2]
+    beRNN_02_month_5 = [4,4,4,4,2,2,1,1,5,5,5,2]
+    beRNN_02_month_6 = [4,4,4,4,4,4,1,1,5,5,5,2]
+    beRNN_02_month_7 = [4, 4, 6, 6, 4, 4, 5, 4, 4, 4, 4, 5]
+    beRNN_02_month_8 = [4, 4, 6, 6, 4, 4, 6, 4, 4, 5, 5, 5]
+    beRNN_02_month_9 = [5, 4, 6, 6, 4, 4, 6, 5, 4, 5, 5, 5]
+    beRNN_02_month_10 = [5, 4, 6, 6, 4, 4, 6, 5, 4, 5, 5, 5]
+    beRNN_02_month_11 = [5, 4, 6, 6, 4, 4, 6, 5, 4, 5, 5, 5]
+    beRNN_02_month_12 = [5, 4, 6, 6, 4, 4, 6, 5, 4, 5, 5, 5]
 
-    # beRNN_03_month_1 = [4, 1, 4, 2, 2, 2, 2, 2, 2, 1, 1, 1]
-    # beRNN_03_month_2 = [4, 1, 5, 5, 5, 5, 5, 5, 5, 4, 1, 2]
-    # beRNN_03_month_3 = [4, 1, 6, 6, 5, 6, 5, 5, 4, 4, 1, 2]
-    # beRNN_03_month_4 = [4,1,2,2,4,5,1,2,5,5,5,5]
-    # beRNN_03_month_5 = [4,1,4,4,4,5,1,2,5,5,5,5]
-    # beRNN_03_month_6 = [4,1,4,4,4,5,1,2,5,5,5,5]
-    # beRNN_03_month_7 = [4, 2, 6, 6, 4, 4, 5, 4, 4, 5, 5, 4]
-    # beRNN_03_month_8 = [4, 2, 6, 6, 4, 4, 5, 5, 4, 5, 5, 5]
-    # beRNN_03_month_9 = [4, 2, 6, 6, 4, 4, 5, 5, 4, 5, 4, 5]
-    # beRNN_03_month_10 = [4, 2, 6, 6, 4, 4, 5, 5, 4, 5, 4, 5]
-    # beRNN_03_month_11 = [4, 2, 6, 6, 4, 4, 6, 5, 4, 5, 4, 5]
-    # beRNN_03_month_12 = [4, 2, 6, 6, 4, 2, 6, 5, 4, 5, 4, 5]
+    beRNN_03_month_1 = [4, 1, 4, 2, 2, 2, 2, 2, 2, 1, 1, 1]
+    beRNN_03_month_2 = [4, 1, 5, 5, 5, 5, 5, 5, 5, 4, 1, 2]
+    beRNN_03_month_3 = [4, 1, 6, 6, 5, 6, 5, 5, 4, 4, 1, 2]
+    beRNN_03_month_4 = [4,1,2,2,4,5,1,2,5,5,5,5]
+    beRNN_03_month_5 = [4,1,4,4,4,5,1,2,5,5,5,5]
+    beRNN_03_month_6 = [4,1,4,4,4,5,1,2,5,5,5,5]
+    beRNN_03_month_7 = [4, 2, 6, 6, 4, 4, 5, 4, 4, 5, 5, 4]
+    beRNN_03_month_8 = [4, 2, 6, 6, 4, 4, 5, 5, 4, 5, 5, 5]
+    beRNN_03_month_9 = [4, 2, 6, 6, 4, 4, 5, 5, 4, 5, 4, 5]
+    beRNN_03_month_10 = [4, 2, 6, 6, 4, 4, 5, 5, 4, 5, 4, 5]
+    beRNN_03_month_11 = [4, 2, 6, 6, 4, 4, 6, 5, 4, 5, 4, 5]
+    beRNN_03_month_12 = [4, 2, 6, 6, 4, 2, 6, 5, 4, 5, 4, 5]
 
-    # beRNN_04_month_1 = [4, 1, 2, 2, 2, 2, 2, 2, 1, 2, 1, 1]
-    # beRNN_04_month_2 = [4, 1, 5, 2, 5, 4, 5, 5, 4, 4, 1, 2]
-    # beRNN_04_month_3 = [4, 1, 5, 2, 6, 4, 5, 5, 4, 4, 1, 2]
-    # beRNN_04_month_4 = [4,1,5,2,4,5,1,2,5,5,5,5]
-    # beRNN_04_month_5 = [4,1,5,2,4,5,1,2,5,5,5,5]
-    # beRNN_04_month_6 = [4,1,5,5,4,5,1,2,5,5,5,5]
-    # beRNN_04_month_7 = [4, 6, 5, 5, 5, 5, 5, 5, 4, 5, 1, 2]
-    # beRNN_04_month_8 = []
-    # beRNN_04_month_9 = []
-    # beRNN_04_month_10 = []
-    # beRNN_04_month_11 = []
-    # beRNN_04_month_12 = []
+    beRNN_04_month_1 = [4, 1, 2, 2, 2, 2, 2, 2, 1, 2, 1, 1]
+    beRNN_04_month_2 = [4, 1, 5, 2, 5, 4, 5, 5, 4, 4, 1, 2]
+    beRNN_04_month_3 = [4, 1, 5, 2, 6, 4, 5, 5, 4, 4, 1, 2]
+    beRNN_04_month_4 = [4,1,5,2,4,5,1,2,5,5,5,5]
+    beRNN_04_month_5 = [4,1,5,2,4,5,1,2,5,5,5,5]
+    beRNN_04_month_6 = [4,1,5,5,4,5,1,2,5,5,5,5]
+    beRNN_04_month_7 = [4, 6, 5, 5, 5, 5, 5, 5, 4, 5, 1, 2]
+    beRNN_04_month_8 = []
+    beRNN_04_month_9 = []
+    beRNN_04_month_10 = []
+    beRNN_04_month_11 = []
+    beRNN_04_month_12 = []
 
-    # beRNN_05_month_1 = [4, 1, 2, 2, 2, 1, 2, 1, 1, 2, 1, 1]
-    # beRNN_05_month_2 = [4, 1, 5, 2, 5, 2, 2, 2, 2, 2, 1, 1]
-    # beRNN_05_month_3 = [4, 1, 5, 2, 6, 2, 2, 2, 2, 2, 1, 2]
-    # beRNN_05_month_4 = [4,1,2,2,4,4,1,4,6,5,2,2]
-    # beRNN_05_month_5 = [4,2,4,4,4,4,1,4,5,5,2,2]
-    # beRNN_05_month_6 = [4,2,4,4,4,4,1,4,5,5,2,4]
-    # beRNN_05_month_7 = [5, 2, 6, 6, 5, 5, 5, 5, 4, 5, 1, 4]
-    # beRNN_05_month_8 = [5, 2, 6, 6, 4, 4, 5, 5, 5, 5, 4, 5]
-    # beRNN_05_month_9 = [5, 2, 6, 6, 4, 4, 6, 6, 5, 5, 4, 5]
-    # beRNN_05_month_10 = [5, 2, 6, 6, 4, 4, 6, 6, 5, 5, 5, 5]
-    # beRNN_05_month_11 = [5, 2, 6, 6, 4, 4, 6, 6, 5, 5, 5, 5]
-    # beRNN_05_month_12 = [5, 2, 6, 6, 4, 4, 6, 6, 5, 5, 5, 5]
+    beRNN_05_month_1 = [4, 1, 2, 2, 2, 1, 2, 1, 1, 2, 1, 1]
+    beRNN_05_month_2 = [4, 1, 5, 2, 5, 2, 2, 2, 2, 2, 1, 1]
+    beRNN_05_month_3 = [4, 1, 5, 2, 6, 2, 2, 2, 2, 2, 1, 2]
+    beRNN_05_month_4 = [4,1,2,2,4,4,1,4,6,5,2,2]
+    beRNN_05_month_5 = [4,2,4,4,4,4,1,4,5,5,2,2]
+    beRNN_05_month_6 = [4,2,4,4,4,4,1,4,5,5,2,4]
+    beRNN_05_month_7 = [5, 2, 6, 6, 5, 5, 5, 5, 4, 5, 1, 4]
+    beRNN_05_month_8 = [5, 2, 6, 6, 4, 4, 5, 5, 5, 5, 4, 5]
+    beRNN_05_month_9 = [5, 2, 6, 6, 4, 4, 6, 6, 5, 5, 4, 5]
+    beRNN_05_month_10 = [5, 2, 6, 6, 4, 4, 6, 6, 5, 5, 5, 5]
+    beRNN_05_month_11 = [5, 2, 6, 6, 4, 4, 6, 6, 5, 5, 5, 5]
+    beRNN_05_month_12 = [5, 2, 6, 6, 4, 4, 6, 6, 5, 5, 5, 5]
 
-    # beRNN_06_month_4 = [1,1,1,1,1,1,1,1,1,1,1,1]
-    # beRNN_06_month_5 = [6,6,6,6,6,6,6,6,6,6,6,6]
-    # beRNN_06_month_6 = [4,2,4,4,4,4,1,4,5,5,2,4]
+    beRNN_06_month_3 = [1,1,1,1,1,1,1,1,1,1,1,1]
+    beRNN_06_month_4 = [6,6,6,6,6,6,6,6,6,6,6,6]
+    beRNN_06_month_5 = [4,2,4,4,4,4,1,4,5,5,2,4]
 
-    # beRNN_data = {
-    #     "beRNN_01": {
-    #         "4": beRNN_01_month_4,
-    #         "5": beRNN_01_month_5,
-    #         "6": beRNN_01_month_6,
-    #     },
-    #     "beRNN_02": {
-    #         "4": beRNN_02_month_4,
-    #         "5": beRNN_02_month_5,
-    #         "6": beRNN_02_month_6,
-    #     },
-    #     "beRNN_03": {
-    #         "4": beRNN_03_month_4,
-    #         "5": beRNN_03_month_5,
-    #         "6": beRNN_03_month_6,
-    #     },
-    #     "beRNN_04": {
-    #         "4": beRNN_04_month_4,
-    #         "5": beRNN_04_month_5,
-    #         "6": beRNN_04_month_6,
-    #     },
-    #     "beRNN_05": {
-    #         "4": beRNN_05_month_4,
-    #         "5": beRNN_05_month_5,
-    #         "6": beRNN_05_month_6,
-    #     },
-    #     "beRNN_06": {
-    #         "4": beRNN_06_month_4,
-    #         "5": beRNN_06_month_5,
-    #         "6": beRNN_06_month_6,
-    #     },
-    # }
+    beRNN_data = {
+        "beRNN_01": {
+            "3": beRNN_01_month_3,
+            "4": beRNN_01_month_4,
+            "5": beRNN_01_month_5,
+        },
+        "beRNN_02": {
+            "3": beRNN_02_month_3,
+            "4": beRNN_02_month_4,
+            "5": beRNN_02_month_5,
+        },
+        "beRNN_03": {
+            "3": beRNN_03_month_3,
+            "4": beRNN_03_month_4,
+            "5": beRNN_03_month_5,
+        },
+        "beRNN_04": {
+            "3": beRNN_04_month_3,
+            "4": beRNN_04_month_4,
+            "5": beRNN_04_month_5,
+        },
+        "beRNN_05": {
+            "3": beRNN_05_month_3,
+            "4": beRNN_05_month_4,
+            "5": beRNN_05_month_5,
+        },
+        "beRNN_06": {
+            "3": beRNN_06_month_3,
+            "4": beRNN_06_month_4,
+            "5": beRNN_06_month_5,
+        },
+    }
 
-    # plot_beRNN_radar_months("beRNN_05", beRNN_data["beRNN_05"], filename_color_dict, months)
+    for participant in newParticpantList:
+        plot_beRNN_radar_months(participant, beRNN_data[participant], filename_color_dict, months)
 
 
 
@@ -734,72 +736,72 @@ participants_dict_complexities = {
 # info: Create reaction time box plots for seperated errors and corrects or all trials
 # info: ################################################################################################################
 
-if reactionTime_comparison == True:
-
-    data = json.load(open(r'W:\group_csp\analyses\oliver.frank\Data\participants_dict_reactionTime.json'))
-
-    first_p = list(data.keys())[0]
-    first_m = list(data[first_p].keys())[0]
-    task_keys = sorted(data[first_p][first_m].keys())
-
-    # color mapping
-    cmap = plt.cm.viridis
-    colors = cmap(np.linspace(0, 1, len(task_keys)))
-    filename_color_dict = {
-        task: mcolors.to_hex(color)
-        for task, color in zip(task_keys, colors)
-    }
-
-    participants = list(data.keys())
-
-    for participant, months_data in data.items():
-        print()
-        plt.figure(figsize=(12, 7))
-
-        sorted_months_str = sorted(months_data.keys(), key=int)
-        months_numeric = [int(m) for m in sorted_months_str]
-
-        for task in task_keys:
-            means = []
-            stds = []
-            valid_months = []
-
-            for m_str in sorted_months_str:
-                if task in months_data[m_str]:
-                    trials = np.array(months_data[m_str][task])
-                    means.append(np.mean(trials))
-                    stds.append(np.std(trials))
-                    valid_months.append(int(m_str))
-
-            means = np.array(means)
-            stds = np.array(stds)
-            color = filename_color_dict[task]
-
-            plt.plot(valid_months, means, label=task, color=color,
-                     marker='o', markersize=6, linewidth=3, zorder=3)
-
-            # info: Margin for variances - RT and performance only
-            plt.fill_between(valid_months, means - stds, means + stds,
-                             color=color, alpha=0.1, zorder=2)
-
-        plt.ylim(400, 1000,1200)
-        plt.yticks([400, 600, 800, 1000, 1200])
-        plt.xlim(min(months_numeric), max(months_numeric))
-        plt.xticks(months_numeric)
-        # plt.xticks([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]) # info: for task complexity plots
-
-        # Graue gepunktete Linien entlang der Ticks
-        plt.grid(axis='y', linestyle='--', alpha=0.7)
-
-        plt.title(f"Reaction Time: {participant}", fontsize=14, pad=15)
-        plt.xlabel("Month", fontsize=12)
-        plt.ylabel("Reaction Time", fontsize=12)
-        plt.legend(bbox_to_anchor=(1.05, 1), loc='upper left', frameon=False)
-
-        plt.tight_layout()
-        plt.savefig(rf'W:\group_csp\analyses\oliver.frank\Data\reactionTime_{participant}_1-12.png', dpi=300, bbox_inches='tight')
-
-        plt.show()
+# if reactionTime_comparison == True:
+#
+#     data = json.load(open(r'W:\group_csp\analyses\oliver.frank\Data\participants_dict_reactionTime.json'))
+#
+#     first_p = list(data.keys())[0]
+#     first_m = list(data[first_p].keys())[0]
+#     task_keys = sorted(data[first_p][first_m].keys())
+#
+#     # color mapping
+#     cmap = plt.cm.viridis
+#     colors = cmap(np.linspace(0, 1, len(task_keys)))
+#     filename_color_dict = {
+#         task: mcolors.to_hex(color)
+#         for task, color in zip(task_keys, colors)
+#     }
+#
+#     participants = list(data.keys())
+#
+#     for participant, months_data in data.items():
+#         print()
+#         plt.figure(figsize=(12, 7))
+#
+#         sorted_months_str = sorted(months_data.keys(), key=int)
+#         months_numeric = [int(m) for m in sorted_months_str]
+#
+#         for task in task_keys:
+#             means = []
+#             stds = []
+#             valid_months = []
+#
+#             for m_str in sorted_months_str:
+#                 if task in months_data[m_str]:
+#                     trials = np.array(months_data[m_str][task])
+#                     means.append(np.mean(trials))
+#                     stds.append(np.std(trials))
+#                     valid_months.append(int(m_str))
+#
+#             means = np.array(means)
+#             stds = np.array(stds)
+#             color = filename_color_dict[task]
+#
+#             plt.plot(valid_months, means, label=task, color=color,
+#                      marker='o', markersize=6, linewidth=3, zorder=3)
+#
+#             # info: Margin for variances - RT and performance only
+#             plt.fill_between(valid_months, means - stds, means + stds,
+#                              color=color, alpha=0.1, zorder=2)
+#
+#         plt.ylim(400, 1000,1200)
+#         plt.yticks([400, 600, 800, 1000, 1200])
+#         plt.xlim(min(months_numeric), max(months_numeric))
+#         plt.xticks(months_numeric)
+#         # plt.xticks([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]) # info: for task complexity plots
+#
+#         # Graue gepunktete Linien entlang der Ticks
+#         plt.grid(axis='y', linestyle='--', alpha=0.7)
+#
+#         plt.title(f"Reaction Time: {participant}", fontsize=14, pad=15)
+#         plt.xlabel("Month", fontsize=12)
+#         plt.ylabel("Reaction Time", fontsize=12)
+#         plt.legend(bbox_to_anchor=(1.05, 1), loc='upper left', frameon=False)
+#
+#         plt.tight_layout()
+#         plt.savefig(rf'W:\group_csp\analyses\oliver.frank\Data\reactionTime_{participant}_1-12.png', dpi=300, bbox_inches='tight')
+#
+#         plt.show()
 
 
 

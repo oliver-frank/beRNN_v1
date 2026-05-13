@@ -10,8 +10,8 @@ import tools
 # info: ################################################################################################################
 # List of the subdirectories
 path = 'C:\\Users\\oliver.frank\\Desktop\\PyProjects'
-preprocessedData_path = os.path.join(path, 'Data', 'beRNN_03', 'data_highDim_correctOnly')
-month = 'month_4'
+preprocessedData_path = os.path.join(path, 'Data', 'beRNN_03', 'data_highDim')
+month = 'month_5'
 
 subdirs = [os.path.join(preprocessedData_path, d) for d in os.listdir(preprocessedData_path) if os.path.isdir(os.path.join(preprocessedData_path, d))]
 
@@ -46,8 +46,8 @@ for taskList in data.keys():
     task = taskList.split('\\')[-1]
     print(task)
 
-    x_list = []
-    # y_list = []
+    # x_list = []
+    y_list = []
     for npyFileQuartett in data[taskList]:
 
         # Load the files
@@ -57,11 +57,11 @@ for taskList in data.keys():
         response = np.load(npyFileQuartett[3], allow_pickle=True)  # Objective Ground Truth - only needed for training if error balancing is applied
 
         # attention: create autocorrelation plot for either input or output information
-        x_list.append(x[-1,:,:])
-        # y_list.append(y[-1,:,:])
+        # x_list.append(x[-1,:,:])
+        y_list.append(y[-1,:,:])
 
-        dict_x[task] = x_list
-        # dict_y[task] = y_list
+        # dict_x[task] = x_list
+        dict_y[task] = y_list
 
 def seq_autocorr_matrix(sequence, max_lag=None, method="pearson"):
     """
@@ -153,9 +153,11 @@ def plot_sequence_autocorr_grid(data_dict, month, max_lag=100, figsize=(15, 12),
         ax.axvline(0.0, color='k', lw=0.5)
         ax.set_xlim(0, L)
         ax.set_ylim(-1.05, 1.05)
-        ax.set_title(f"{key} ({method})")
-        ax.set_xlabel('Lag (vectors)')
-        ax.set_ylabel(f'{method.capitalize()} corr across input features')
+        ax.set_title(f"{key}", fontsize=18)
+        ax.set_xlabel('Lag (vectors)', fontsize=16)
+        ax.set_ylabel(f'{method.capitalize()}', fontsize=16)
+
+        ax.tick_params(axis='both', which='major', labelsize=12)
 
     for j in range(n_keys, len(axes)):
         axes[j].axis('off')
@@ -163,11 +165,11 @@ def plot_sequence_autocorr_grid(data_dict, month, max_lag=100, figsize=(15, 12),
     np.save(rf'C:\Users\oliver.frank\Desktop\PyProjects\beRNN_v1\pngs\means_dict_{month}.npy' ,mean_corr_dict, allow_pickle=True)
 
     plt.tight_layout()
-    plt.savefig(rf'C:\Users\oliver.frank\Desktop\PyProjects\beRNN_v1\pngs\autoCorrelationTest_x_correctOnly_{month}_{method}.png')
+    plt.savefig(rf'C:\Users\oliver.frank\Desktop\PyProjects\beRNN_v1\pngs\autoCorrelationTest_x_{month}_{method}.png')
 
     # plt.show()
 
-plot_sequence_autocorr_grid(dict_x, month, method="pearson")  # default
+plot_sequence_autocorr_grid(dict_y, month, method="pearson")  # default
 
 
 

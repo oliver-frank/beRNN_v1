@@ -334,10 +334,10 @@ from tools import rule_name
 # info: Plot performance over defined period as boxplots
 # info: ###############################################################################################################
 participant_dir = r'W:\group_csp\analyses\oliver.frank\Data'
-# months = ['7', '8', '9', '10', '11', '12']
-months = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12']
+months = ['3', '4', '5']
+# months = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12']
 strToSave = months[0] + '-' + months[-1]
-newParticpantList = ['beRNN_01', 'beRNN_02', 'beRNN_03', 'beRNN_04', 'beRNN_05']
+newParticpantList = ['beRNN_04', 'beRNN_05']
 task_keys = [
     'DM', 'DM_Anti',
     'EF', 'EF_Anti',

@@ -1,6 +1,9 @@
 """Collections of tasks."""
 
 from __future__ import division
+
+import os
+
 import six
 import numpy as np
 from tools import rules_dict
@@ -1097,7 +1100,7 @@ def dmc_(config, mode, matchnogo, **kwargs):
         stim1_locs = rng.choice(np.array([0.1, 0.3, 0.5, 0.7, 0.9, 1.1, 1.3, 1.5, 1.7, 1.9])*np.pi,size=(batch_size,))
         stim2_locs = rng.choice(np.array([0.1, 0.3, 0.5, 0.7, 0.9, 1.1, 1.3, 1.5, 1.7, 1.9])*np.pi,size=(batch_size,))
 
-        # Time of stimuluss on/off
+        # Time of stimulus on/off
         stim1_ons  = int(rng.uniform(200,600)/dt)
         stim1_offs = stim1_ons + int(rng.uniform(200,600)/dt)
         stim2_ons  = stim1_offs + int(rng.uniform(200,1600)/dt)
@@ -1357,3 +1360,66 @@ def generate_trials(rule, hp, mode, noise_on=True, **kwargs):
         trial.add_x_noise()
 
     return trial
+
+
+
+if __name__ == '__main__':
+
+    # head. Create and save trials - only load them for benchmark training - control sample size
+    import tools
+    from _training import get_default_hp
+    numberOfBatches = 50
+
+    # attention: standard hp ##########################################################################################
+    hp = get_default_hp('all_benchmark')  # 'all_benchmark' - not important at this point as both sets have 12 tasks
+    # attention: standard hp ##########################################################################################
+
+    hp['rule_trains'] = tools.rules_dict[ruleset]
+    hp['rules'] = hp['rule_trains']
+    # Turn into rule_trains format
+    hp['rule_probs'] = None
+    if hasattr(hp['rule_trains'], '__iter__'):
+        # Set default as 1.
+        rule_prob = np.array([hp['rule_prob_map'].get(r, 1.) for r in hp['rule_trains']])
+        hp['rule_probs'] = list(rule_prob / np.sum(rule_prob))
+    hp['seed'] = 0  # Plug in seed into rng creation for reproducability - default: 0
+    hp['rng'] = np.random.default_rng()  # set rng_seed here for reproducability - default: not set
+
+    for task in ['contextdm1', 'contextdm2',  # s_DM_Ctx1, s_DM_Ctx2
+                 'reactgo', 'reactanti',  # s_EF_Pro, s_EF_Anti
+                 'dmsgo', 'dmsnogo',  # s_RP_Pro1, s_RP_Anti1
+                 'dmcgo', 'dmcnogo',  # s_RP_Pro2, s_RP_Anti2
+                 'delaygo', 'delayanti',  # s_WM_Pro, s_WM_Anti
+                 'delaydm1', 'delaydm2']:
+
+        directory = rf'C:\Users\oliver.frank\Desktop\PyProjects\Data\beRNN_00\data_highDim_benchmark\{task}'
+        if not os.path.exists(directory):
+            os.makedirs(directory)
+
+        for batch in range(0, numberOfBatches):
+            # benchmark training with simplified tasks (like Yang, Driscoll, Brenner)
+            rule_train_now = task
+            # Generate a random batch of trials
+            # Each batch has the same trial length
+            trial = generate_trials(
+                rule_train_now, hp, 'random',
+                batch_size=40)
+
+            # x, y, y_loc, c_mask = trial.x, trial.y, trial.y_loc, trial.c_mask
+
+
+            extracted_data = []
+            extracted_data.append({
+                'x': trial.x,
+                'y': trial.y,
+                'y_loc': trial.y_loc,  # Falls das ein Dict ist
+                'c_mask': trial.c_mask  # Als ndarray
+            })
+
+
+            import pickle
+            with open(os.path.join(directory, f"{rule_train_now}_batch_{batch}.pkl"), "wb") as f:
+                pickle.dump(extracted_data, f)
+                print(f'batch saved for {rule_train_now}')
+
+

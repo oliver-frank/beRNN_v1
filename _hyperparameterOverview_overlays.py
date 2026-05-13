@@ -183,7 +183,7 @@ def general_hp_plot_overlay_multiple(meta_n_clusters_list,
     axs[4].spines["top"].set_visible(False)
     axs[4].spines["right"].set_visible(False)
 
-    axs[0].legend(folder_labels, fontsize=8, loc='best', frameon=False)
+    # axs[0].legend(folder_labels, fontsize=8, loc='best', frameon=False)
 
     # HP overlay as dots
     axs[5].set_yticks(range(len(hp_plots)))
@@ -339,11 +339,11 @@ def general_hp_plot_overlay_multiple_robustnessTests(meta_n_clusters_list,
 
         total_models = max(total_models, len(x))
 
-        # Plot main metrics
-        if hp_list_sorted and hp_list_sorted[0].get('rnn_type') != 'MultiLayer':
-            axs[0].plot(x, clustering_sorted, '-', alpha=alpha, color=colors[s], label=folder_labels[s])
-        else:
-            axs[0].plot(x, silhouette_sorted, '-', alpha=alpha, color=colors[s], label=folder_labels[s]) # legacy
+        # # attention: legacy - Plot main metrics
+        # if hp_list_sorted and hp_list_sorted[0].get('rnn_type') != 'MultiLayer':
+        #     axs[0].plot(x, clustering_sorted, '-', alpha=alpha, color=colors[s], label=folder_labels[s])
+        # else:
+        #     axs[0].plot(x, silhouette_sorted, '-', alpha=alpha, color=colors[s], label=folder_labels[s])
 
         axs[1].plot(x, modularity_sorted, '-', alpha=alpha, color=colors[s])
         axs[2].plot(x, participation_sorted, '-', alpha=alpha, color=colors[s])
@@ -404,7 +404,7 @@ def general_hp_plot_overlay_multiple_robustnessTests(meta_n_clusters_list,
     axs[4].spines["top"].set_visible(False)
     axs[4].spines["right"].set_visible(False)
 
-    axs[0].legend(folder_labels, fontsize=8, loc='best', frameon=False)
+    # axs[0].legend(folder_labels, fontsize=8, loc='best', frameon=False)
 
     # Use same color cycle as used in the main plots
     line_colors = colors[:len(participants)]
@@ -463,7 +463,8 @@ def visualize_topMarker_testPerf_corrlation(meta_perf_test_list, meta_topMarker_
             avg_perf_test_list_all_,
             topMarker_list_all_):
 
-        if avg_perf >= 0.2 and topMarker != 0: # lowest random value among all task
+        # if avg_perf >= 0.2 and topMarker != 0: # lowest random value among all task
+        if topMarker > 0 and avg_perf > 0.2: # lowest random value among all task
             avg_perf_test_list_all.append(avg_perf)
             topMarker_list_all.append(topMarker)
 
@@ -505,17 +506,18 @@ def visualize_topMarker_testPerf_corrlation(meta_perf_test_list, meta_topMarker_
     # Correlation annotation (inside plot)
     textstr = f"$r = {r:.2f}$\n$p = {p:.3g}$"
     ax.text(
-        0.33, 0.95, textstr,
+        0.5, 0.05, textstr,  # x=0.5 (Mitte), y=0.05 (unten)
         transform=ax.transAxes,
-        fontsize=10,
-        verticalalignment="top",
+        fontsize=16,
+        verticalalignment="bottom",  # Text wächst nach oben
+        horizontalalignment="center",  # Text wird zentriert
         bbox=dict(boxstyle="round", facecolor="white", alpha=0.8)
     )
 
     # Layout and save
     fig.tight_layout()
     fig.savefig(
-        fr"{directory_metaOverlayVisual}\visuals_overlay\correlation_testPerformance_{topMarker_name}_{'_'.join(foldersToOverlay[-1].split('_')[:-1])}_connectedNetworksOnly.png",
+        fr"{directory_metaOverlayVisual}\visuals_overlay\correlation_testPerformance_{topMarker_name}_{'_'.join(foldersToOverlay[-1].split('_')[:-1])}.png",
         dpi=300,
         bbox_inches="tight"
     )
@@ -630,16 +632,16 @@ if __name__ == '__main__':
     #                     '_gridSearch_domainTask-DM_beRNN_03_highDim_correctOnly_256',
     #                     '_gridSearch_domainTask_DM_beRNN_03_highDim_correctOnly_512']
 
-    foldersToOverlay = ['_gridSearch_DM_singleTask_beRNN_03_highDimCorrects_16',
-                        '_gridSearch_DM_singleTask_beRNN_03_highDimCorrects_32',
-                        '_gridSearch_DM_singleTask_beRNN_03_highDimCorrects_64',
-                        '_gridSearch_DM_singleTask_beRNN_03_highDimCorrects_128',
-                        '_gridSearch_DM_singleTask_beRNN_03_highDimCorrects_256',
-                        '_gridSearch_DM_singleTask_beRNN_03_highDimCorrects_512']
+    foldersToOverlay = ['show-8task_multi_beRNN_03_highDim_correctOnly_16',
+                  'show-8task_multi_beRNN_03_highDim_correctOnly_32',
+                  'show-8task_multi_beRNN_03_highDim_correctOnly_64',
+                  'show-8task_multi_beRNN_03_highDim_correctOnly_128',
+                  'show-8task_multi_beRNN_03_highDim_correctOnly_256',
+                  'show-8task_multi_beRNN_03_highDim_correctOnly_512']
 
     paper_nomenclatur_dict = ['HC1', 'HC2', 'MDD', 'ASD', 'SCZ']
-    participantList = ['beRNN_01', 'beRNN_02', 'beRNN_03', 'beRNN_04', 'beRNN_05']
-    participantNumber = 2 # for standard visualization
+    participantList = ['beRNN_00', 'beRNN_01', 'beRNN_02', 'beRNN_03', 'beRNN_04', 'beRNN_05']
+    participantNumber = 3 # for standard visualization beRNN_03
     network_sizes = ['16', '32', '64', '128', '256', '512']  # for standard visualization
 
     mode = ['train', 'test'][1]
@@ -647,9 +649,9 @@ if __name__ == '__main__':
 
     overlay = ['standard', 'robustness'][0] # standard for one participant w. different network sizes - robustness for several participants w- one network size
     # batchPlot = True if participant == 'beRNN_03' else False
-    batchPlot = [True, False][1] # info: important for robustness overlay
+    batchPlot = [True, False][1] # info: true for robustness overlay
 
-    lastMonth = '6'
+    lastMonth = '5'
     density = 0.1
 
     # Start of actual visualization
@@ -679,12 +681,17 @@ if __name__ == '__main__':
                     participant = participant_
                     continue
 
-        if 'highDim_correctOnly' in folder or 'highDimCorrects' in folder:
+        if 'bench' in folder:
+            dataType = 'highDim_benchmark'
+        elif 'highDim_correctOnly' in folder or 'highDimCorrects' in folder:
             dataType = 'highDim_correctOnly'
-        elif 'highDim' in folder:
+        elif 'lowCognition' in folder:
+            dataType = 'highDim_lowCognition'
+        else:
             dataType = 'highDim'
 
-        directory = fr'C:\Users\oliver.frank\Desktop\PyProjects\beRNNmodels\__legacy_month_4-6\{folder}\{dataType}\{participant}'
+
+        directory = fr'C:\Users\oliver.frank\Desktop\PyProjects\beRNNmodels\{folder}\{dataType}\{participant}'
 
         if batchPlot == False:
             model_dir_batches = os.listdir(directory)
@@ -743,7 +750,9 @@ if __name__ == '__main__':
                                          cmap_name='viridis')
 
         # Visualize correlation between performance and topMarker of choice
-        visualize_topMarker_testPerf_corrlation(meta_perf_test_list, meta_modularity_list, 'participation')
+        visualize_topMarker_testPerf_corrlation(meta_perf_test_list, meta_clustering_list, 'clustering')
+        visualize_topMarker_testPerf_corrlation(meta_perf_test_list, meta_modularity_list, 'modularity')
+        visualize_topMarker_testPerf_corrlation(meta_perf_test_list, meta_participation_coefficient_list, 'participation')
         # Optional for paper
         # visualize_simulatedTopMarkerNetworks()
 

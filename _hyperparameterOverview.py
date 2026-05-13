@@ -46,6 +46,34 @@ def compute_n_cluster(model_dirs, mode):
             hp['activation'] = hp['activations_per_layer'][0] if hp.get('multiLayer') else hp['activation']
             tools.save_hp(hp, model_dir)
 
+
+            # Average performance for training at the last time point ##################################################
+            totalPerformanceTraining = 0
+            totalPerformanceTesting = 0
+            numberOfTasks = 0
+
+            tasksToTakeIntoAccount = [i for i in hp['rule_prob_map'] if hp['rule_prob_map'][i] > 0]
+
+            for key in log.keys():
+                if 'perf_train' in key and 'avg' not in key and any(task in key for task in
+                                                                    tasksToTakeIntoAccount):  # Only rule_prob_map > 0 are saved during training
+                    totalPerformanceTraining += log[key][-1]
+                    numberOfTasks += 1
+            averageTotalPerformanceTraining = totalPerformanceTraining / numberOfTasks
+
+            for key in log.keys():
+                if 'perf_' in key and 'avg' not in key and any(task for task in tasksToTakeIntoAccount if
+                                                               task == key.split('perf_')[
+                                                                   -1]):  # All tasks in rule_prob_map are saved during training
+                    totalPerformanceTesting += log[key][-1]
+            averageTotalPerformanceTesting = totalPerformanceTesting / numberOfTasks
+
+            log['avg_perf_train'] = averageTotalPerformanceTraining
+            log['avg_perf_test'] = averageTotalPerformanceTesting
+            # log['avg_perf_test'] = log['perf_avg'][-1]
+            # Average performance for training at the last time point ##################################################
+
+
             # Define right data
             data_dir = os.path.join('C:\\Users\\oliver.frank\\Desktop\\PyProjects\\Data', participant, dataFolder)
             rdm_metric = 'cosine'
@@ -54,27 +82,6 @@ def compute_n_cluster(model_dirs, mode):
             elif mode == 'train':
                 analysis = clustering.Analysis(data_dir, model_dir, layer, rdm_metric,'train', hp['monthsConsidered'], 'rule', True) # train performance
 
-            # Average performance for training at the last time point
-            totalPerformanceTraining = 0
-            totalPerformanceTesting = 0
-            numberOfTasks = 0
-
-            tasksToTakeIntoAccount = [i for i in hp['rule_prob_map'] if hp['rule_prob_map'][i] > 0]
-
-            for key in log.keys():
-                if 'perf_train' in key and 'avg' not in key and any(task in key for task in tasksToTakeIntoAccount): # Only rule_prob_map > 0 are saved during training
-                    totalPerformanceTraining += log[key][-1]
-                    numberOfTasks += 1
-            averageTotalPerformanceTraining = totalPerformanceTraining / numberOfTasks
-
-            for key in log.keys():
-                if 'perf_' in key and 'avg' not in key and any(task for task in tasksToTakeIntoAccount if task == key.split('perf_')[-1]): # All tasks in rule_prob_map are saved during training
-                    totalPerformanceTesting += log[key][-1]
-            averageTotalPerformanceTesting = totalPerformanceTesting / numberOfTasks
-
-            log['avg_perf_train'] = averageTotalPerformanceTraining
-            log['avg_perf_test'] = averageTotalPerformanceTesting
-            # log['avg_perf_test'] = log['perf_avg'][-1]
             log['n_cluster'] = 0  # Yang legacy - dummy value
             log['score'] = 0  # Yang legacy - dummy value
             # log['rdm'] = analysis.rdm.tolist() # not ideal for saving as json
@@ -117,8 +124,34 @@ def compute_n_cluster(model_dirs, mode):
             # Create other fallback variables
             log['n_cluster'] = 0 # Yang legacy
             log['score'] = 0 # Yang legacy
-            # log['avg_perf_train'] = 0
-            # log['avg_perf_test'] = 0
+
+
+            # Average performance for training at the last time point ##################################################
+            totalPerformanceTraining = 0
+            totalPerformanceTesting = 0
+            numberOfTasks = 0
+
+            tasksToTakeIntoAccount = [i for i in hp['rule_prob_map'] if hp['rule_prob_map'][i] > 0]
+
+            for key in log.keys():
+                if 'perf_train' in key and 'avg' not in key and any(task in key for task in
+                                                                    tasksToTakeIntoAccount):  # Only rule_prob_map > 0 are saved during training
+                    totalPerformanceTraining += log[key][-1]
+                    numberOfTasks += 1
+            averageTotalPerformanceTraining = totalPerformanceTraining / numberOfTasks
+
+            for key in log.keys():
+                if 'perf_' in key and 'avg' not in key and any(task for task in tasksToTakeIntoAccount if
+                                                               task == key.split('perf_')[
+                                                                   -1]):  # All tasks in rule_prob_map are saved during training
+                    totalPerformanceTesting += log[key][-1]
+            averageTotalPerformanceTesting = totalPerformanceTesting / numberOfTasks
+
+            log['avg_perf_train'] = averageTotalPerformanceTraining
+            log['avg_perf_test'] = averageTotalPerformanceTesting
+            # log['avg_perf_test'] = log['perf_avg'][-1]
+            # Average performance for training at the last time point ##################################################
+
 
             tools.save_log(log)
 
@@ -166,10 +199,22 @@ def get_n_clusters(model_dirs, density):
             if 'fundamentals' in model_dir or 'fm' in model_dir:
                 pkl_beRNN3 = rf'{model_dir}\var_test_lay1_rule_fundamentals.pkl'
                 pkl_beRNN2 = rf'{model_dir}\corr_test_lay1_rule_fundamentals.pkl'
-            elif 'domainTask' or 'singleTask' in model_dir:
-                pkl_beRNN3 = rf'{model_dir}\var_test_lay1_rule_taskSubset.pkl'
-                pkl_beRNN2 = rf'{model_dir}\corr_test_lay1_rule_taskSubset.pkl'
-            elif 'multiTask' in model_dir or 'AllTask' in model_dir:
+            # elif 'domainTask' in model_dir or 'singleTask' in model_dir:
+            #     pkl_beRNN3 = rf'{model_dir}\var_test_lay1_rule_taskSubset.pkl'
+            #     pkl_beRNN2 = rf'{model_dir}\corr_test_lay1_rule_taskSubset.pkl'
+            elif '1task' in model_dir:
+                pkl_beRNN3 = rf'{model_dir}\var_test_lay1_rule_1task.pkl'
+                pkl_beRNN2 = rf'{model_dir}\corr_test_lay1_rule_1task.pkl'
+            elif'4task' in model_dir:
+                pkl_beRNN3 = rf'{model_dir}\var_test_lay1_rule_4task.pkl'
+                pkl_beRNN2 = rf'{model_dir}\corr_test_lay1_rule_4task.pkl'
+            elif '8task' in model_dir:
+                pkl_beRNN3 = rf'{model_dir}\var_test_lay1_rule_8task.pkl'
+                pkl_beRNN2 = rf'{model_dir}\corr_test_lay1_rule_8task.pkl'
+            elif 'bench_multi' in model_dir:
+                pkl_beRNN3 = rf'{model_dir}\var_test_lay1_rule_all_benchmark.pkl'
+                pkl_beRNN2 = rf'{model_dir}\corr_test_lay1_rule_all_benchmark.pkl'
+            elif 'multiTask' in model_dir or 'AllTask' in model_dir or 'multi':
                 pkl_beRNN3 = rf'{model_dir}\var_test_lay1_rule_all.pkl'
                 pkl_beRNN2 = rf'{model_dir}\corr_test_lay1_rule_all.pkl'
             else:
@@ -369,6 +414,7 @@ def _get_hp_ranges():
     hp_ranges['l2_weight'] = [0, 1e-5, 1e-4, 1e-3]
     hp_ranges['learning_rate'] = [0.002, 0.0015, 0.001, 0.0005, 0.0001, 0.00005]
     hp_ranges['learning_rate_mode'] = ['constant', 'exp_range', 'triangular2']
+    hp_ranges['batch_size'] = [40, 80]
     # hp_ranges['errorBalancingValue'] = [1., 5.]
     return hp_ranges
 
@@ -687,7 +733,7 @@ def individual_hp_plot(n_clusters, silhouette_score, avg_perf_train_list, avg_pe
         n_clusters: list of cluster numbers
         hp_list: list of hp dictionary
     """
-    hp_plots = ['activation', 'n_rnn', 'w_rec_init', 'l1_h', 'l1_weight', 'l2_h', 'l2_weight', 'learning_rate', 'learning_rate_mode']
+    hp_plots = ['activation', 'n_rnn', 'w_rec_init', 'l1_h', 'l1_weight', 'l2_h', 'l2_weight', 'learning_rate', 'learning_rate_mode', 'batch_size']
     # hp_plots = ['activation', 'rnn_type', 'n_rnn', 'w_rec_init', 'l1_h', 'l1_weight', 'l2_h', 'l2_weight', 'learning_rate', 'learning_rate_mode', 'errorBalancingValue']
 
     for hp_plot in hp_plots:
@@ -704,18 +750,13 @@ HP_NAME = {'activation': 'Activation fun.',
            'l2_weight': 'L2 weight',
            'target_perf': 'Target perf.',
            'learning_rate': 'Learning rate',
-           'learning_rate_mode': 'Learning rate mode'}
+           'learning_rate_mode': 'Learning rate mode',
+           'batch_size': 'Batch size'}
            # 'errorBalancingValue': 'Error balancing value'}
 
 if __name__ == '__main__':
 
-    # folderList = ['_all_beRNNs_multiTask_beRNN_03_highDim_256_hp_9']
-
-    folderList = ['_fs_mT_beRNN_01_highDim_256_hp_9',
-                  '_fs_mT_beRNN_02_highDim_256_hp_9',
-                  '_fs_mT_beRNN_03_highDim_256_hp_9',
-                  '_fs_mT_beRNN_04_highDim_256_hp_9',
-                  '_fs_mT_beRNN_05_highDim_256_hp_9']
+    folderList = ['grid_multi_beRNN_03_highDim_256']
 
     # # evaluate metrics for finding best hp for paper
     # mean_clustering_list = []
@@ -729,15 +770,17 @@ if __name__ == '__main__':
     for folder in folderList:
         final_model_dirs = []
 
-        participantList = ['beRNN_01', 'beRNN_02', 'beRNN_03', 'beRNN_04', 'beRNN_05']
-        participant = [participant for participant in participantList if participant in folder][0]
-        # dataType = 'highDim_correctOnly' if 'highDim_correctOnly' in folder or 'highDimCorrects' in folder else 'highDim'
-        dataType = 'highDim'
+        # participantList = ['beRNN_01', 'beRNN_02', 'beRNN_03', 'beRNN_04', 'beRNN_05']
+        participantList = ['beRNN_03']
+        # participant = [participant for participant in participantList if participant in folder][0]
+        participant = participantList[0]
+        dataType = 'highDim_correctOnly' if 'highDim_correctOnly' in folder or 'highDimCorrects' in folder else 'highDim'
+        # dataType = 'highDim'
 
         mode = ['train', 'test'][1]
         sort_variable = ['clustering', 'performance', 'silhouette'][1]
         batchPlot = [True, False][0] # many batches of models or only one like in robustness tests
-        lastMonth = '6'
+        lastMonth = '5'
         density = 0.1
 
         directory = fr'C:\Users\oliver.frank\Desktop\PyProjects\beRNNmodels\{folder}\{dataType}\{participant}'

@@ -685,6 +685,7 @@ def preprocess_EF(opened_xlsxFile, questionnare_files, list_allSessions, sequenc
             for j in range(0, Input.shape[1]):
                 for k in range(0, Input.shape[2]):
                     Input[i][j][k] = np.float32(Input[i][j][k])
+
         # Also change dtype for entire array
         Input = Input.astype('float32')
 
@@ -929,7 +930,7 @@ def preprocess_RP(opened_xlsxFile, questionnare_files, list_allSessions, sequenc
                      'drugVectorValue': drugVectorValue}
         # Create one input file and one output file
         Input, Output = finalTrialsList_array, finalTrialsList_array
-        Input = np.delete(Input, [0, 1, 2, 3, 4, 5, 6, 8, 85,86,87], axis=2) # info: 77 statt 85 ????
+        Input = np.delete(Input, [0, 1, 2, 3, 4, 5, 6, 8, 85,86,87], axis=2)
         Output = np.delete(Output, np.s_[0, 1, 2, 4, 5, 6, 7,86,87], axis=2)
         Output = np.delete(Output, np.s_[34:78], axis=2)
         Input, Output = Input[:, sequence_on:sequence_off, :], Output[:, sequence_on:sequence_off, :]

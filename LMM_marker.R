@@ -39,8 +39,8 @@ parse_json_to_df <- function(file_path, group_label) {
 }
 
 for (density in densities) {
-  path_1 <- file.path(folder, paste0(modelsets[2], density, ".json"))
-  path_3 <- file.path(folder, paste0(modelsets[2], density, ".json"))
+  path_1 <- file.path(folder, paste0(modelsets[1], density, ".json"))
+  path_3 <- file.path(folder, paste0(modelsets[3], density, ".json"))
   
   if (!file.exists(path_1) || !file.exists(path_3)) next
   
