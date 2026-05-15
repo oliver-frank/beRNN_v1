@@ -469,7 +469,20 @@ def createSplittedDatasets(hp, preprocessedData_path, month):
                 # if any(exclude in file for exclude in ['Randomization', 'Segmentation', 'Mirrored', 'Rotation']):
                 #     continue
                 # Include only files that contain any of the months in monthsConsidered
-                if month not in file:  # Sort out months which should not be considered
+                # Merge month 3 to month 4 for beRNN_05 as there are only few month 4 files
+                if hp['participant'] == 'beRNN_05' and month == 'month_4':
+                    if 'month_4' not in file and 'month_3' not in file:
+                        continue
+                # Merge month 3 to month 4 for beRNN_02 as there are only few month 3 files
+                elif hp['participant'] == 'beRNN_04' and month == 'month_3':
+                    if 'month_3' not in file and 'month_4' not in file:
+                        continue
+                # Merge month 3 to month 4 for beRNN_02 as there are only few month 3 files
+                elif hp['participant'] == 'beRNN_02' and month == 'month_5':
+                    if 'month_5' not in file and 'month_4' not in file:
+                        continue
+                # Include only files that contain any of the months in monthsConsidered
+                elif month not in file:  # Sort out months which should not be considered
                     continue
                 # Add all necessary files to triplets
                 base_name = file.split('Input')[0]
@@ -486,6 +499,60 @@ def createSplittedDatasets(hp, preprocessedData_path, month):
         # Store the results in the dictionaries
         train_data[subdir] = train_files
         eval_data[subdir] = eval_files
+
+    return train_data, eval_data
+
+def createSplittedDatasets_beRNN_00(hp, preprocessedData_path, month):
+    # Split the data into training and test data -----------------------------------------------------------------------
+    participantList = ['beRNN_01', 'beRNN_02', 'beRNN_03', 'beRNN_04', 'beRNN_05']
+
+    # List of the subdirectories
+    subdirs = [os.path.join(preprocessedData_path, d) for d in os.listdir(preprocessedData_path) if
+               os.path.isdir(os.path.join(preprocessedData_path, d))]
+
+    # Initialize dictionaries to store training and evaluation data
+    train_data = {}
+    eval_data = {}
+
+    for subdir in subdirs:
+        # Collect all file triplets in the current subdirectory
+        file_quartett = []
+
+        for participant in participantList:
+            subdir_ = subdir.replace('beRNN_00', participant)
+            # Reinitialize count - save 5 files per participant and task
+            count = 0
+
+            for file in os.listdir(subdir_):
+                if file.endswith('Input.npy'):
+                    # If 5 were added for this task and participant - continue
+                    if count == 6:
+                        break
+                    # # III: Exclude files with specific substrings in their names
+                    # if any(exclude in file for exclude in ['Randomization', 'Segmentation', 'Mirrored', 'Rotation']):
+                    #     continue
+                    # Include only files that contain any of the months in monthsConsidered
+                    if month not in file:  # Sort out months which should not be considered
+                        continue
+                    else:
+                        count += 1
+
+                    # Add all necessary files to triplets
+                    base_name = file.split('Input')[0]
+                    input_file = os.path.join(subdir_, base_name + 'Input.npy')
+                    yloc_file = os.path.join(subdir_, base_name + 'yLoc.npy')
+                    output_file = os.path.join(subdir_, base_name + 'Output.npy')
+                    response_file = os.path.join(subdir_, base_name + 'Response.npy')
+
+                    file_quartett.append((input_file, yloc_file, output_file, response_file))
+
+
+            # Split the file triplets
+            train_files, eval_files = split_files(hp, file_quartett)
+
+            # Store the results in the dictionaries
+            train_data[subdir] = train_files
+            eval_data[subdir] = eval_files
 
     return train_data, eval_data
 

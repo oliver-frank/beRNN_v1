@@ -147,9 +147,9 @@ def get_default_hp(ruleset):
     n_rule = tools.get_num_rule(ruleset)
 
     machine = 'local'  # 'local' 'pandora' 'hitkip'
-    data = 'data_highDim_benchmark'
+    data = 'data_highDim_correctOnly'
     trainingBatch = '01'
-    trainingYear_Month = 'test_bench_4'  # as short as possible to avoid too long paths for avoiding linux2windows transfer issues
+    trainingYear_Month = 'test_XX'  # as short as possible to avoid too long paths for avoiding linux2windows transfer issues
     # trainingYear_Month = '_grid_bench_multi_beRNN_00_highDim_correctOnly_256'  # as short as possible to avoid too long paths for avoiding linux2windows transfer issues
 
     if 'highDim' in data:  # fix: lowDim_timeCompressed needs to be skipped here
@@ -168,7 +168,7 @@ def get_default_hp(ruleset):
         'batch_size': 80,  # 20/40/80/120/160
         # 'batch_size_test': 640, # batch_size for testing
         'base_lr': [5e-4],
-        'benchmark': True,
+        'benchmark': False,
         # 'c_intsyn': 0, # intelligent synapses parameters, tuple (c, ksi) -> Yang et al. only apply these in sequential training
         'c_mask_responseValue': 5.,
         'data': data,
@@ -202,11 +202,11 @@ def get_default_hp(ruleset):
         'n_rnn': 256,  # number of recurrent units for one hidden layer architecture
         'n_rnn_per_layer': [16, 16, 16],
         'optimizer': 'adam',  # 'adam', 'sgd'
-        'participant': 'beRNN_00',  # Participant to take
+        'participant': 'beRNN_02',  # Participant to take
         'p_weight_train': None,
         'rnn_type': 'LeakyRNN',  # Type of RNNs: NonRecurrent, LeakyRNN, LeakyGRU, EILeakyGRU | GRU, LSTM
         'rng': np.random.default_rng(),  # add seed here if you want to make it reproducible e.g. (42)
-        'ruleset': 'all_benchmark',  # all_benchmark
+        'ruleset': 'all',  # all_benchmark
         'rule_probs': None,  # Rule probabilities to be drawn
         'rule_start': 1 + num_ring * n_eachring,  # first input index for rule units
         'save_name': 'test',  # name to save
@@ -279,8 +279,8 @@ def do_eval(sess, model, log, rule_train, eval_data, step, data_dir):
 
                     c_mask = tools.create_cMask(y, response, hp, mode)
 
-                    # fix: for inconcruence between y and response dimension 1
-                    if c_mask.any() == None:
+                    # fix: for incongruence between y and response dimension 1
+                    if c_mask is None:
                         continue
 
                 else:
@@ -687,7 +687,7 @@ def train(data_dir, model_dir, train_data, eval_data, hp=None, max_steps=2400, d
                         c_mask = tools.create_cMask(y, response, hp, mode)
 
                         # fix: for inconcruence between y and response dimension 1
-                        if c_mask.any() == None:
+                        if c_mask is None:
                             continue
 
                     else:
@@ -900,8 +900,10 @@ if __name__ == '__main__':
             if hp['generalizationTest'] == True:
                 # Create train and eval data
                 train_data, eval_data = tools.createSplittedDatasets_generalizationTest(hp, preprocessedData_path,
-                                                                                        month,
-                                                                                        hp['distanceOfEvaluationData'])
+                                                                                        month, hp['distanceOfEvaluationData'])
+            elif hp['participant'] == 'beRNN_00':
+                train_data, eval_data = tools.createSplittedDatasets_beRNN_00(hp, preprocessedData_path, month)
+
             else:
                 # Create train and eval data
                 train_data, eval_data = tools.createSplittedDatasets(hp, preprocessedData_path, month)
