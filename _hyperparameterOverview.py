@@ -211,7 +211,7 @@ def get_n_clusters(model_dirs, density):
             elif '8task' in model_dir:
                 pkl_beRNN3 = rf'{model_dir}\var_test_lay1_rule_8task.pkl'
                 pkl_beRNN2 = rf'{model_dir}\corr_test_lay1_rule_8task.pkl'
-            elif 'bench_multi' in model_dir:
+            elif 'bench' in model_dir:
                 pkl_beRNN3 = rf'{model_dir}\var_test_lay1_rule_all_benchmark.pkl'
                 pkl_beRNN2 = rf'{model_dir}\corr_test_lay1_rule_all_benchmark.pkl'
             elif 'multiTask' in model_dir or 'AllTask' in model_dir or 'multi':
@@ -756,16 +756,25 @@ HP_NAME = {'activation': 'Activation fun.',
 
 if __name__ == '__main__':
 
-    folderList = ['grid_multi_beRNN_03_highDim_256']
+    folderList = ['robust_multi_beRNN_03_highDim_correctOnly_256_hp_1',
+                  'robust_multi_beRNN_03_highDim_correctOnly_256_hp_2',
+                  'robust_multi_beRNN_03_highDim_correctOnly_256_hp_3',
+                  'robust_multi_beRNN_03_highDim_correctOnly_256_hp_4',
+                  'robust_multi_beRNN_03_highDim_correctOnly_256_hp_5',
+                  'robust_multi_beRNN_03_highDim_correctOnly_256_hp_6',
+                  'robust_multi_beRNN_03_highDim_correctOnly_256_hp_7',
+                  'robust_multi_beRNN_03_highDim_correctOnly_256_hp_8',
+                  'robust_multi_beRNN_03_highDim_correctOnly_256_hp_9',
+                  'robust_multi_beRNN_03_highDim_correctOnly_256_hp_10']
 
     # # evaluate metrics for finding best hp for paper
-    # mean_clustering_list = []
-    # mean_modularity_list = []
-    # mean_participation_list = []
-    #
-    # std_clustering_list = []
-    # std_modularity_list = []
-    # std_participation_list = []
+    mean_clustering_list = []
+    mean_modularity_list = []
+    mean_participation_list = []
+
+    std_clustering_list = []
+    std_modularity_list = []
+    std_participation_list = []
 
     for folder in folderList:
         final_model_dirs = []
@@ -821,25 +830,37 @@ if __name__ == '__main__':
         general_hp_plot(n_clusters, silhouette_score, hp_list, avg_perf_train_list, avg_perf_test_list, avg_clustering_list, modularity_list_sparse, participation_coefficient_list, directory, sort_variable, mode, batchPlot, model_dir_batches)
 
 
-        # # evaluate metrics for finding best hp for paper
-        # mean_clustering = np.mean(avg_clustering_list)
-        # mean_clustering_list.append(mean_clustering)
-        # print(np.round(mean_clustering, 3))
-        # mean_modularity = np.mean(modularity_list_sparse)
-        # mean_modularity_list.append(mean_modularity)
-        # print(np.round(mean_modularity, 3))
-        # mean_participation = np.mean(participation_coefficient_list)
-        # mean_participation_list.append(mean_participation)
-        # print(np.round(mean_participation, 3))
-        #
-        # std_clustering = np.std(avg_clustering_list)
-        # std_clustering_list.append(std_clustering)
-        # print(np.round(std_clustering, 3))
-        # std_modularity = np.std(modularity_list_sparse)
-        # std_modularity_list.append(std_modularity)
-        # print(np.round(std_modularity, 3))
-        # std_participation = np.std(participation_coefficient_list)
-        # std_participation_list.append(std_participation)
-        # print(np.round(std_participation, 3))
+
+# head. evaluate metrics for finding best hp for paper *****************************************************************
+        mean_clustering = np.mean(avg_clustering_list)
+        mean_clustering_list.append(mean_clustering)
+        print(np.round(mean_clustering, 3))
+        mean_modularity = np.mean(modularity_list_sparse)
+        mean_modularity_list.append(mean_modularity)
+        print(np.round(mean_modularity, 3))
+        mean_participation = np.mean(participation_coefficient_list)
+        mean_participation_list.append(mean_participation)
+        print(np.round(mean_participation, 3))
+
+        std_clustering = np.std(avg_clustering_list)
+        std_clustering_list.append(std_clustering)
+        print(np.round(std_clustering, 3))
+        std_modularity = np.std(modularity_list_sparse)
+        std_modularity_list.append(std_modularity)
+        print(np.round(std_modularity, 3))
+        std_participation = np.std(participation_coefficient_list)
+        std_participation_list.append(std_participation)
+        print(np.round(std_participation, 3))
+
+
+# Evaluate the hp sets with smalles topological marker variance
+average_topMarker_value_list = []
+for indice in range(0,len(mean_clustering_list)):
+    average_topMarker_value = (mean_clustering_list[indice] + mean_modularity_list[indice] + mean_participation_list[indice]) / 3
+    average_topMarker_value_list.append(average_topMarker_value)
+
+# Get the order from low to high variance
+sorted_indices = sorted(range(len(average_topMarker_value_list)), key=lambda k: average_topMarker_value_list[k])
+# head. evaluate metrics for finding best hp for paper *****************************************************************
 
 
