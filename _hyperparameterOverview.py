@@ -756,18 +756,14 @@ HP_NAME = {'activation': 'Activation fun.',
 
 if __name__ == '__main__':
 
-    folderList = ['robust_multi_beRNN_03_highDim_correctOnly_256_hp_1',
-                  'robust_multi_beRNN_03_highDim_correctOnly_256_hp_2',
-                  'robust_multi_beRNN_03_highDim_correctOnly_256_hp_3',
-                  'robust_multi_beRNN_03_highDim_correctOnly_256_hp_4',
-                  'robust_multi_beRNN_03_highDim_correctOnly_256_hp_5',
-                  'robust_multi_beRNN_03_highDim_correctOnly_256_hp_6',
-                  'robust_multi_beRNN_03_highDim_correctOnly_256_hp_7',
-                  'robust_multi_beRNN_03_highDim_correctOnly_256_hp_8',
-                  'robust_multi_beRNN_03_highDim_correctOnly_256_hp_9',
-                  'robust_multi_beRNN_03_highDim_correctOnly_256_hp_10']
+    folderList = ['robust_multi_beRNN_05_highDim_correctOnly_256_hp_2',
+                  'robust_multi_beRNN_05_highDim_correctOnly_256_hp_3',
+                  'robust_multi_beRNN_05_highDim_correctOnly_256_hp_4',
+                  'robust_multi_beRNN_05_highDim_correctOnly_256_hp_8',
+                  'robust_multi_beRNN_05_highDim_correctOnly_256_hp_9'
+                  ]
 
-    # # evaluate metrics for finding best hp for paper
+    # evaluate metrics for finding best hp for paper
     mean_clustering_list = []
     mean_modularity_list = []
     mean_participation_list = []
@@ -779,10 +775,10 @@ if __name__ == '__main__':
     for folder in folderList:
         final_model_dirs = []
 
-        # participantList = ['beRNN_01', 'beRNN_02', 'beRNN_03', 'beRNN_04', 'beRNN_05']
-        participantList = ['beRNN_03']
-        # participant = [participant for participant in participantList if participant in folder][0]
-        participant = participantList[0]
+        participantList = ['beRNN_01', 'beRNN_02', 'beRNN_03', 'beRNN_04', 'beRNN_05']
+        # participantList = ['beRNN_03']
+        participant = [participant for participant in participantList if participant in folder][0]
+        # participant = participantList[2]
         dataType = 'highDim_correctOnly' if 'highDim_correctOnly' in folder or 'highDimCorrects' in folder else 'highDim'
         # dataType = 'highDim'
 
@@ -855,12 +851,10 @@ if __name__ == '__main__':
 
 # Evaluate the hp sets with smalles topological marker variance
 average_topMarker_value_list = []
-for indice in range(0,len(mean_clustering_list)):
-    average_topMarker_value = (mean_clustering_list[indice] + mean_modularity_list[indice] + mean_participation_list[indice]) / 3
+for indice in range(0,len(std_clustering_list)):
+    average_topMarker_value = (std_clustering_list[indice] + std_modularity_list[indice] + std_participation_list[indice]) / 3
     average_topMarker_value_list.append(average_topMarker_value)
 
 # Get the order from low to high variance
 sorted_indices = sorted(range(len(average_topMarker_value_list)), key=lambda k: average_topMarker_value_list[k])
 # head. evaluate metrics for finding best hp for paper *****************************************************************
-
-

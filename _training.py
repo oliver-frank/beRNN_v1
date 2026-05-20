@@ -191,7 +191,7 @@ def get_default_hp(ruleset):
         'machine': machine,
         # 'mask_threshold': .999,  # .999 or .975
         'max_lr': [15e-4],
-        'monthsConsidered': ['month_3', 'month_4', 'month_5'],
+        'monthsConsidered': ['month_10'],
         'monthsString': '3-5',  # monthsTaken
         'multiLayer': False,  # only applicaple with LeakyRNN
         'n_eachring': n_eachring,  # number of units each ring
@@ -654,7 +654,7 @@ def train(data_dir, model_dir, train_data, eval_data, hp=None, max_steps=2400, d
                     if step % display_step == 0:  # III: Every 500 steps (20000 trials) do the evaluation
                         log['trials'].append(step * hp['batch_size'])
                         log['times'].append(time.time() - t_start)
-                        log = do_eval(sess, model, log, hp['rule_trains'], eval_data, step, data_dir)
+                        log = do_eval(sess, model, log, hp['rule_trains'], train_data, step, data_dir)
                         elapsed_time = time.time() - t_start  # Calculate elapsed time
                         print(f"Elapsed time after batch number {trialsLoaded}: {elapsed_time:.2f} seconds")
                         # After training
@@ -681,7 +681,7 @@ def train(data_dir, model_dir, train_data, eval_data, hp=None, max_steps=2400, d
 
                     if hp['benchmark'] != True:
                         x, y, y_loc, response = tools.load_trials(hp['rng'], task, mode, hp['batch_size'],
-                                                                  eval_data,
+                                                                  train_data,
                                                                   False)  # y_loc is participantResponse_perfEvalForm
 
                         c_mask = tools.create_cMask(y, response, hp, mode)
