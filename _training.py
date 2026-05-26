@@ -647,7 +647,7 @@ def train(data_dir, model_dir, train_data, eval_data, hp=None, max_steps=2400, d
                 model.set_optimizer(var_list=var_list)
 
             step = 0
-            while log['trials'][-1] <= 8000:
+            while log['trials'][-1] <= 1e6:
             # while step <= max_steps:
                 try:
                     # Validation
