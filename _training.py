@@ -191,7 +191,7 @@ def get_default_hp(ruleset):
         'machine': machine,
         # 'mask_threshold': .999,  # .999 or .975
         'max_lr': [15e-4],
-        'monthsConsidered': ['month_10'],
+        'monthsConsidered': ['month_5'],
         'monthsString': '3-5',  # monthsTaken
         'multiLayer': False,  # only applicaple with LeakyRNN
         'n_eachring': n_eachring,  # number of units each ring
@@ -550,6 +550,7 @@ def train(data_dir, model_dir, train_data, eval_data, hp=None, max_steps=2400, d
     # Store results
     log = defaultdict(list)
     log['model_dir'] = model_dir
+    log['trials'].append(0)
 
     # Record time
     t_start = time.time()
@@ -646,8 +647,7 @@ def train(data_dir, model_dir, train_data, eval_data, hp=None, max_steps=2400, d
                 model.set_optimizer(var_list=var_list)
 
             step = 0
-            log['trials'].append(0)
-            while log['trials'][-1] <= 192000:
+            while log['trials'][-1] <= 8000:
             # while step <= max_steps:
                 try:
                     # Validation
