@@ -756,7 +756,7 @@ HP_NAME = {'activation': 'Activation fun.',
 
 if __name__ == '__main__':
 
-    folderList = ['grid_multi_beRNN_03_highDim_correctOnly_512']
+    folderList = ['__legacy_month_3-5\grid_multi_beRNN_03_highDim_correctOnly_512']
 
     # evaluate metrics for finding best hp for paper
     mean_clustering_list = []

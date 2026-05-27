@@ -632,12 +632,12 @@ if __name__ == '__main__':
     #                     '_gridSearch_domainTask-DM_beRNN_03_highDim_correctOnly_256',
     #                     '_gridSearch_domainTask_DM_beRNN_03_highDim_correctOnly_512']
 
-    foldersToOverlay = ['grid_multi_beRNN_03_highDim_correctOnly_16',
-                  'grid_multi_beRNN_03_highDim_correctOnly_32',
-                  'grid_multi_beRNN_03_highDim_correctOnly_64',
-                  'grid_multi_beRNN_03_highDim_correctOnly_128',
-                  'grid_multi_beRNN_03_highDim_correctOnly_256',
-                  'grid_multi_beRNN_03_highDim_correctOnly_512']
+    foldersToOverlay = ['__legacy_month_3-5\grid_multi_beRNN_03_highDim_correctOnly_16',
+                  '__legacy_month_3-5\grid_multi_beRNN_03_highDim_correctOnly_32',
+                  '__legacy_month_3-5\grid_multi_beRNN_03_highDim_correctOnly_64',
+                  '__legacy_month_3-5\grid_multi_beRNN_03_highDim_correctOnly_128',
+                  '__legacy_month_3-5\grid_multi_beRNN_03_highDim_correctOnly_256',
+                  '__legacy_month_3-5\grid_multi_beRNN_03_highDim_correctOnly_512']
 
     paper_nomenclatur_dict = ['HC1', 'HC2', 'MDD', 'ASD', 'SCZ']
     participantList = ['beRNN_00', 'beRNN_01', 'beRNN_02', 'beRNN_03', 'beRNN_04', 'beRNN_05']

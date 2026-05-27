@@ -114,7 +114,7 @@ class Analysis(object):
         # fname = os.path.join(model_dir, compVariance)
         # **************************************************************************************************************
 
-        fname, fname2, fname3 = variance.compute_variance(data_dir, model_dir, layer, mode, monthsConsidered, data_type, networkAnalysis)
+        fname, fname2, fname3, fname4 = variance.compute_variance(data_dir, model_dir, layer, mode, monthsConsidered, data_type, networkAnalysis)
 
         # fname = r'C:\Users\oliver.frank\Desktop\PyProjects\beRNNmodels\_gridSearch_domainTask-EF_beRNN_03_highDim_64\highDim\beRNN_03\1\beRNN_03_AllTask_4-6_data_highDim_trainingBatch1_iteration3_LeakyRNN_64_softplus\model_month_6\var_test_lay1_rule_taskSubset.pkl'
         # res = tools.load_pickle(fname)

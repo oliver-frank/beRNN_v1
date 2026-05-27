@@ -43,14 +43,15 @@ Both data modalities have to be preprocessed with:
 ########################################################################################################################
 setup = {
     'comparison': ['correlation', 'rsa', None][1],
-    'modalityWithin_comparison': ['brain', 'beRNN', 'standard'][1], # standard is beRNN brain comparison - 'brain': brain/brain - 'beRNN': beRNN/beRNN
-    'numberOfModels': [20, 20], # second value represents beRNN_04 - only defined for beRNNs - should be 3 if compared to brain in 'standard' - [5, 3] or [20, 20]
+    'modalityWithin_comparison': ['brain', 'beRNN', 'standard'][0], # standard is beRNN brain comparison - 'brain': brain/brain - 'beRNN': beRNN/beRNN
+    'numberOfModels': [5, 3], # second value represents beRNN_04 - only defined for beRNNs - should be 3 if compared to brain in 'standard' - [5, 3] or [20, 20]
     'threshold': 0.1,
     'participants_beRNN': ['beRNN_03', 'beRNN_04', 'beRNN_01', 'beRNN_02', 'beRNN_05'], # order for paper - with 'beRNN_06' for ALL comparison
-    'paper_nomenclatur': ['HC1', 'HC2', 'MDD', 'ASD', 'SCZ', 'ALL'], # nomenclatur for paper plots - only applied for RDA
+    'paper_nomenclatur': ['HC1', 'HC2', 'MDD', 'ASD', 'SCZ'], # nomenclatur for paper plots - only applied for RDA
+    # 'paper_nomenclatur': ['HC1', 'HC2', 'MDD', 'ASD', 'SCZ', 'ALL'], # nomenclatur for paper plots - only applied for RDA
     'participants': ['sub-6IECX', 'sub-DKHPB', 'sub-KPB84', 'sub-YL4AS', 'sub-96WID'], # nomenclatur for paper plots - only applied for RDA
     'participants_snip': ['sub-SNIP6IECX', 'sub-SNIPDKHPB', 'sub-SNIPKPB84', 'sub-SNIPYL4AS', 'sub-SNIP96WID'], # nomenclatur for paper plots - only applied for RDA
-    'folder_beRNN': fr'C:\Users\oliver.frank\Desktop\PyProjects\beRNNmodels\_robustness_multiTask_beRNN_01_highDim_256_hp_9',
+    'folder_beRNN': fr'C:\Users\oliver.frank\Desktop\PyProjects\beRNNmodels\__legacy_month_4-6\_robustness_multiTask_beRNN_01_highDim_256_hp_9',
     'folder_brain': r'W:\group_csp\analyses\oliver.frank\_brainModels',
     'folder_topologicalMarker_pValue_lists': r'C:\Users\oliver.frank\Desktop\PyProjects\beRNNmodels\__topologicalMarker_pValue_lists',
     # 'folder_brain_meanVecs': r'W:\group_csp\in_house_datasets\bernn\mri\derivatives\xcpd_0.11.1\sub-SNIP6IECX01\func',
@@ -130,19 +131,131 @@ def node_strength_vectors(fc_mats, absolute=False):
 ########################################################################################################################
 # head - Preprocessing brain rdm #######################################################################################
 ########################################################################################################################
+
 if setup['preprocess_fMRI2rdm'] == True:
     for participant in setup['participants_snip']:
-        if participant == 'sub-SNIPDKHPB': recordings = ['01', '02', '03']
-        else: recordings = ['01', '02', '03', '04', '05']
+        # Handle custom session/recording lengths for specific participants
+        if participant == 'sub-SNIPDKHPB':
+            recordings = ['01', '02', '03']
+        else:
+            recordings = ['01', '02', '03', '04', '05']
 
         for recording in recordings:
             averageVector_list = []
+            TR = 0.8  # RepetitionTime: duration of one full 3D volume acquisition
+
+            # Hemodynamic response latency shift to align fMRI signals with the RNN timelines
+            HRF_DELAY_SEC = 2.0
+
+            # THE WHITELIST: Explicitly define what counts as a valid stimulus trial for each task.
+            # Only trials matching these rules will be extracted and grouped into blocks.
+            STIMULUS_WHITELIST = {
+                'faces': lambda t: ('Form_' in t) or ('boy' in t) or ('girl' in t),
+                'flanker': lambda t: ('right' in t) or ('left' in t),
+                'nback': lambda t: 'num' in t,
+                'reward': lambda t: ('CS' in t)  # Captures wCSp, CSm, vCSp, lCSp
+            }
+
             for task in setup['tasks']:
-                # Call avg. functional correlation matrix
-                averageVector = pd.read_csv(os.path.join(rf'W:\group_csp\in_house_datasets\bernn\mri\derivatives\xcpd_0.11.1\{participant}{recording}\func', f'{participant}{recording}_task-{task}_space-MNI152NLin2009cAsym_seg-4S256Parcels_stat-mean_timeseries.tsv'), sep='\t')
-                np.nan_to_num(averageVector.values, copy=False, nan=0)
-                averageVector_list.append(averageVector.values.mean(axis=0))
+                # Define file path for the continuous fMRI time series (processed outputs)
+                timeseries_file_path = os.path.join(
+                    rf'W:\group_csp\in_house_datasets\bernn\mri\derivatives\xcpd_0.11.1\{participant}{recording}\func',
+                    f'{participant}{recording}_task-{task}_space-MNI152NLin2009cAsym_seg-4S256Parcels_stat-mean_timeseries.tsv'
+                )
+
+                # Define file path for the original task event logs (raw inputs)
+                events_file_path = os.path.join(
+                    rf'W:\group_csp\in_house_datasets\bernn\mri\rawdata\{participant}{recording}\func',
+                    f'{participant}{recording}_task-{task}_events.tsv'
+                )
+
+                # Skip to the next task if either the fMRI time series or the log file is missing
+                if not os.path.exists(timeseries_file_path) or not os.path.exists(events_file_path):
+                    print(f"Skipping {participant} R{recording} - Task: {task}: Files missing.")
+                    continue
+
+                # Load continuous fMRI matrix and clean missing values safely
+                timeseries_df = pd.read_csv(timeseries_file_path, sep='\t')
+                ts_data = np.nan_to_num(timeseries_df.values, nan=0)  # Shape: (Total_TRs, 256)
+
+                # Load raw event logs
+                events_df = pd.read_csv(events_file_path, sep='\t')
+
+                # Retrieve the specific whitelist filter function for the current task
+                is_valid_stimulus = STIMULUS_WHITELIST.get(task, lambda t: False)
+
+                # ----------------------------------------------------
+                # DYNAMIC BLOCK AGGREGATION LOGIC (WHITELIST DRIVEN)
+                # ----------------------------------------------------
+                # Find indices of rows containing whitelisted stimuli
+                valid_indices = events_df[events_df['trial_type'].apply(is_valid_stimulus)].index
+
+                if len(valid_indices) == 0:
+                    print(f"Warning: No whitelisted stimuli found for {participant} R{recording} - {task}")
+                    continue
+
+                # Group consecutive whitelisted trials into continuous blocks (vital for back-to-back nback trials)
+                blocks = []
+                current_block = [valid_indices[0]]
+
+                for idx in valid_indices[1:]:
+                    if idx == current_block[-1] + 1:
+                        current_block.append(idx)
+                    else:
+                        blocks.append(current_block)
+                        current_block = [idx]
+                blocks.append(current_block)  # Append the final block chunk
+
+                # ----------------------------------------------------
+                # BLOCK WINDOW EXTRACTION & TEMPORAL AVERAGING
+                # ----------------------------------------------------
+                block_vectors = []
+
+                for block in blocks:
+                    first_trial = events_df.loc[block[0]]
+                    last_trial = events_df.loc[block[-1]]
+
+                    # Compute the physical onset of the first trial and absolute offset of the last trial in the block
+                    block_onset = first_trial['onset']
+                    block_offset = last_trial['onset'] + last_trial['duration']
+
+                    # Apply your shifted epoch design logic (Onset to Offset + 2s blood delay)
+                    f_start_sec = block_onset + HRF_DELAY_SEC
+                    f_end_sec = block_offset + HRF_DELAY_SEC
+
+                    # Map seconds to specific matrix row indices (TRs)
+                    start_tr = int(np.round(f_start_sec / TR))
+                    end_tr = int(np.round(f_end_sec / TR))
+
+                    # Prevent empty frames if an experimental trial happens to be ultra-short
+                    if start_tr == end_tr:
+                        end_tr += 1
+
+                    # Extract the continuous slice and down-sample its time dimension immediately
+                    if end_tr <= ts_data.shape[0]:
+                        block_epoch = ts_data[start_tr:end_tr, :]  # Shape: (Variable_TRs, 256)
+
+                        # Collapse the time axis per block to standardize shape to (256,)
+                        block_vectors.append(block_epoch.mean(axis=0))
+
+                if len(block_vectors) == 0:
+                    continue
+
+                # Collapse across all blocks to get one highly stable spatial fingerprint for this task
+                final_task_vector = np.array(block_vectors).mean(axis=0)  # Shape: (256,)
+                averageVector_list.append(final_task_vector)
+
+            # ----------------------------------------------------
+            # STACK ALL VALID TASKS FOR THIS RUN
+            # ----------------------------------------------------
+            if len(averageVector_list) == len(setup['tasks']):
+                # Stack your 4 tasks together vertically along a new axis
+                # Final Matrix Shape for this run: (4, 256) -> Tasks x Brain Parcels
                 averageVector_list_stacked = np.stack(averageVector_list, axis=0)
+
+                # Ready for computing your fMRI RDM...
+            else:
+                print(f"Skipped stacking for {participant} R{recording}: incomplete task list.")
 
             # brain_vectors = node_strength_vectors(averageVector_list_stacked, absolute=True)
 
