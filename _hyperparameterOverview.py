@@ -756,7 +756,11 @@ HP_NAME = {'activation': 'Activation fun.',
 
 if __name__ == '__main__':
 
-    folderList = ['__legacy_month_3-5\grid_multi_beRNN_03_highDim_correctOnly_512']
+    folderList = ['robust_multi_beRNN_05_highDim_correctOnly_256_hp_1',
+                  'robust_multi_beRNN_05_highDim_correctOnly_256_hp_2',
+                  'robust_multi_beRNN_05_highDim_correctOnly_256_hp_7',
+                  'robust_multi_beRNN_05_highDim_correctOnly_256_hp_8',
+                  'robust_multi_beRNN_05_highDim_correctOnly_256_hp_10']
 
     # evaluate metrics for finding best hp for paper
     mean_clustering_list = []
@@ -822,34 +826,36 @@ if __name__ == '__main__':
 
 
 
-# # head. evaluate metrics for finding best hp for paper *****************************************************************
-#         mean_clustering = np.mean(avg_clustering_list)
-#         mean_clustering_list.append(mean_clustering)
-#         print(np.round(mean_clustering, 3))
-#         mean_modularity = np.mean(modularity_list_sparse)
-#         mean_modularity_list.append(mean_modularity)
-#         print(np.round(mean_modularity, 3))
-#         mean_participation = np.mean(participation_coefficient_list)
-#         mean_participation_list.append(mean_participation)
-#         print(np.round(mean_participation, 3))
-#
-#         std_clustering = np.std(avg_clustering_list)
-#         std_clustering_list.append(std_clustering)
-#         print(np.round(std_clustering, 3))
-#         std_modularity = np.std(modularity_list_sparse)
-#         std_modularity_list.append(std_modularity)
-#         print(np.round(std_modularity, 3))
-#         std_participation = np.std(participation_coefficient_list)
-#         std_participation_list.append(std_participation)
-#         print(np.round(std_participation, 3))
-#
-#
-# # Evaluate the hp sets with smalles topological marker variance
-# average_topMarker_value_list = []
-# for indice in range(0,len(std_clustering_list)):
-#     average_topMarker_value = (std_clustering_list[indice] + std_modularity_list[indice] + std_participation_list[indice]) / 3
-#     average_topMarker_value_list.append(average_topMarker_value)
-#
-# # Get the order from low to high variance
-# sorted_indices = sorted(range(len(average_topMarker_value_list)), key=lambda k: average_topMarker_value_list[k])
-# # head. evaluate metrics for finding best hp for paper *****************************************************************
+# head. evaluate metrics for finding best hp for paper *****************************************************************
+        mean_clustering = np.mean(avg_clustering_list)
+        mean_clustering_list.append(mean_clustering)
+        print(np.round(mean_clustering, 3))
+        mean_modularity = np.mean(modularity_list_sparse)
+        mean_modularity_list.append(mean_modularity)
+        print(np.round(mean_modularity, 3))
+        mean_participation = np.mean(participation_coefficient_list)
+        mean_participation_list.append(mean_participation)
+        print(np.round(mean_participation, 3))
+
+        std_clustering = np.std(avg_clustering_list)
+        std_clustering_list.append(std_clustering)
+        print(np.round(std_clustering, 3))
+        std_modularity = np.std(modularity_list_sparse)
+        std_modularity_list.append(std_modularity)
+        print(np.round(std_modularity, 3))
+        std_participation = np.std(participation_coefficient_list)
+        std_participation_list.append(std_participation)
+        print(np.round(std_participation, 3))
+
+
+# Evaluate the hp sets with smalles topological marker variance
+average_topMarker_value_list = []
+for indice in range(0,len(std_clustering_list)):
+    average_topMarker_value = (std_clustering_list[indice] + std_modularity_list[indice] + std_participation_list[indice]) / 3
+    average_topMarker_value_list.append(average_topMarker_value)
+
+# Get the order from low to high variance
+sorted_indices = sorted(range(len(average_topMarker_value_list)), key=lambda k: average_topMarker_value_list[k])
+# head. evaluate metrics for finding best hp for paper *****************************************************************
+
+

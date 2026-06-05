@@ -11,12 +11,13 @@ import json
 
 # Configuration
 participant_dir = r'W:\group_csp\analyses\oliver.frank\Data'
-# months = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12']
-months = ['3', '4', '5']
+months = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12']
+# months = ['1', '2', '3', '4', '5', '6', '7']
+# months = ['3', '4', '5']
 strToSave = months[0] + '-' + months[-1]
-newParticpantList = ['beRNN_03', 'beRNN_05']
+newParticpantList = ['beRNN_01']
 # newParticpantList = ['beRNN_04']
-reactionTime_comparison, plot_radars, wholePeriodPlots = True, False, False
+reactionTime_comparison, plot_radars, wholePeriodPlots = False, True, False
 
 paper_nomenclatur_dict = {
     'beRNN_03': 'HC1',
@@ -500,6 +501,11 @@ if reactionTime_comparison == True:
 # info: ################################################################################################################
 # info: Create task complexity radar plots
 # info: ################################################################################################################
+import os
+import matplotlib.pyplot as plt
+import numpy as np
+
+
 def plot_beRNN_radar_months(beRNN_name, data, filename_color_dict, months):
     tasks = list(filename_color_dict.keys())
     n_tasks = len(tasks)
@@ -508,26 +514,26 @@ def plot_beRNN_radar_months(beRNN_name, data, filename_color_dict, months):
     angles = np.linspace(0, 2 * np.pi, n_tasks, endpoint=False)
     angles = np.concatenate([angles, [angles[0]]])  # close the polygon
 
-    fig, axes = plt.subplots(
-        1, 3, figsize=(15, 5),
-        subplot_kw=dict(polar=True)
-    )
+    # Geändert zu 3 Zeilen und 4 Spalten. Figsize angepasst für quadratischere Subplots.
+    fig, axes = plt.subplots(3, 4, figsize=(20, 15), subplot_kw=dict(polar=True))
 
-    for ax, month in zip(axes, months):
+    # .flatten() macht aus der 3x4 Matrix ein 1D-Array mit 12 Elementen für das zip
+    for ax, month in zip(axes.flatten(), months):
         values = np.array(data[month])
         values = np.concatenate([values, [values[0]]])  # close polygon
 
         # Plot polygon
-        ax.plot(
-            angles, values, linewidth=2, color="black"
-        )
-        ax.fill(
-            angles, values, color="gray", alpha=0.2
-        )
+        ax.plot(angles, values, linewidth=2, color="black")
+        ax.fill(angles, values, color="gray", alpha=0.2)
 
         # Plot individual task points in viridis colors
         for angle, val, task in zip(angles[:-1], values[:-1], tasks):
-            ax.plot([angle, angle], [0, val], color=filename_color_dict[task], linewidth=4)
+            ax.plot(
+                [angle, angle],
+                [0, val],
+                color=filename_color_dict[task],
+                linewidth=4,
+            )
 
         # Formatting
         ax.set_theta_offset(np.pi / 2)
@@ -538,12 +544,25 @@ def plot_beRNN_radar_months(beRNN_name, data, filename_color_dict, months):
         ax.set_yticklabels([])  # remove y-ticks
         ax.set_xticklabels([])  # remove y-ticks
         # ax.set_yticklabels([str(i) for i in range(1, 7)], fontsize=8)
-        ax.set_title(f"Month {month}", fontsize=18, y=-0.2)
+        ax.set_title(f"Month {month}", fontsize=36, y=-0.1)
+
+    # Blendet ungenutzte Subplots aus, falls weniger als 12 Monate übergeben wurden
+    if len(months) < 12:
+        for ax in axes.flatten()[len(months) :]:
+            ax.axis("off")
 
     # fig.suptitle(paper_nomenclatur_dict[beRNN_name], fontsize=24)
-    # plt.tight_layout()
-    # plt.show()
-    plt.savefig(os.path.join(r'C:\Users\oliver.frank\Desktop\PyProjects\beRNNmodels\__taskComplexities', f"{beRNN_name}_taskComplexity_month_{strToSave}.png"),dpi=300)
+    plt.tight_layout()  # Aktiviert, um Überlappungen im Grid zu verhindern
+
+    # Hinweis: Stellen Sie sicher, dass 'strToSave' in Ihrer echten Funktion definiert ist
+    plt.savefig(
+        os.path.join(
+            r"C:\Users\oliver.frank\Desktop\PyProjects\beRNNmodels\__taskComplexities",
+            f"{beRNN_name}_taskComplexity_month_{strToSave}.png",
+        ),
+        dpi=300,
+    )
+
 
 participants_dict_complexities = {
     participant: {month: {task: {} for task in task_keys} for month in months}
@@ -623,35 +642,90 @@ if plot_radars == True:
 
     beRNN_data = {
         "beRNN_01": {
+            "1": beRNN_01_month_1,
+            "2": beRNN_01_month_2,
             "3": beRNN_01_month_3,
             "4": beRNN_01_month_4,
             "5": beRNN_01_month_5,
+            "6": beRNN_01_month_6,
+            "7": beRNN_01_month_7,
+            "8": beRNN_01_month_8,
+            "9": beRNN_01_month_9,
+            "10": beRNN_01_month_10,
+            "11": beRNN_01_month_11,
+            "12": beRNN_01_month_12,
         },
         "beRNN_02": {
+            "1": beRNN_02_month_1,
+            "2": beRNN_02_month_2,
             "3": beRNN_02_month_3,
             "4": beRNN_02_month_4,
             "5": beRNN_02_month_5,
+            "6": beRNN_02_month_6,
+            "7": beRNN_02_month_7,
+            "8": beRNN_02_month_8,
+            "9": beRNN_02_month_9,
+            "10": beRNN_02_month_10,
+            "11": beRNN_02_month_11,
+            "12": beRNN_02_month_12,
         },
         "beRNN_03": {
+            "1": beRNN_03_month_1,
+            "2": beRNN_03_month_2,
             "3": beRNN_03_month_3,
             "4": beRNN_03_month_4,
             "5": beRNN_03_month_5,
+            "6": beRNN_03_month_6,
+            "7": beRNN_03_month_7,
+            "8": beRNN_03_month_8,
+            "9": beRNN_03_month_9,
+            "10": beRNN_03_month_10,
+            "11": beRNN_03_month_11,
+            "12": beRNN_03_month_12,
         },
         "beRNN_04": {
+            "1": beRNN_04_month_1,
+            "2": beRNN_04_month_2,
             "3": beRNN_04_month_3,
             "4": beRNN_04_month_4,
             "5": beRNN_04_month_5,
+            "6": beRNN_04_month_6,
+            "7": beRNN_04_month_7,
+            "8": beRNN_04_month_8,
+            "9": beRNN_04_month_9,
+            "10": beRNN_04_month_10,
+            "11": beRNN_04_month_11,
+            "12": beRNN_04_month_12,
         },
         "beRNN_05": {
+            "1": beRNN_05_month_1,
+            "2": beRNN_05_month_2,
             "3": beRNN_05_month_3,
             "4": beRNN_05_month_4,
             "5": beRNN_05_month_5,
-        },
-        "beRNN_06": {
-            "3": beRNN_06_month_3,
-            "4": beRNN_06_month_4,
-            "5": beRNN_06_month_5,
-        },
+            "6": beRNN_05_month_6,
+            "7": beRNN_05_month_7,
+            "8": beRNN_05_month_8,
+            "9": beRNN_05_month_9,
+            "10": beRNN_05_month_10,
+            "11": beRNN_05_month_11,
+            "12": beRNN_05_month_12,
+        }
+        # ,
+        # "beRNN_06": {
+        #     "1": beRNN_01_month_1,
+        #     "2": beRNN_01_month_2,
+        #     "3": beRNN_01_month_3,
+        #     "4": beRNN_01_month_4,
+        #     "5": beRNN_01_month_5,
+        #     "6": beRNN_01_month_6,
+        #     "7": beRNN_01_month_7,
+        #     "8": beRNN_01_month_8,
+        #     "9": beRNN_01_month_9,
+        #     "10": beRNN_01_month_10,
+        #     "11": beRNN_01_month_11,
+        #     "12": beRNN_01_month_12,
+        # },
     }
 
     for participant in newParticpantList:

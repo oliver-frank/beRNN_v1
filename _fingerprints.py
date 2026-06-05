@@ -113,7 +113,7 @@ for participant in setup['participants_beRNN']:
 
 
 diagonal_off = True
-# info. comparing same network class to itself
+# attention. comparing same network class to itself
 # brain_correlationMatrix_list = beRNN_correlationMatrix_list
 beRNN_correlationMatrix_list = brain_correlationMatrix_list
 

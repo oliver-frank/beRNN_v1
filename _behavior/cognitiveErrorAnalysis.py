@@ -16,6 +16,7 @@ import numpy as np
 # import os
 import json
 import glob
+import pickle
 import itertools
 # import matplotlib.pyplot as plt
 # import seaborn as sns
@@ -25,9 +26,22 @@ import os
 import matplotlib.pyplot as plt
 plt.ioff() # prevents windows to pop up when figs and plots are created
 import seaborn as sns
+# from scipy.interpolate import make_interp_spline
+from scipy.stats import gaussian_kde
 
+def convert_numpy(obj):
+    """Konvertiert NumPy-Objekte in Standard-Python-Objekte."""
+    if isinstance(obj, np.ndarray):
+        return obj.tolist()  # Konvertiert Array zu Liste
+    if isinstance(
+        obj, (np.int64, np.int32, np.int16, np.int8)
+    ):  # Behebt auch Integer-Fehler
+        return int(obj)
+    if isinstance(obj, (np.float64, np.float32, np.float16)):
+        return float(obj)
+    raise TypeError(f"Object of type {type(obj).__name__} is not JSON serializable")
 
-def plot_errorDistribution_relative(errors_dict, directory, participant, task, granularity, titleAdd):
+def plot_errorDistribution_relative(errors_dict, directory, participant, task, granularity, titleAdd, ax=None):
     # Prepare data for plotting
     categories = list(errors_dict.keys())
     total_occurrences = sum(len(values) for values in errors_dict.values())
@@ -35,84 +49,79 @@ def plot_errorDistribution_relative(errors_dict, directory, participant, task, g
     # Calculate relative occurrences (percentages)
     occurrences = [(len(values) / total_occurrences) * 100 for values in errors_dict.values()]
 
-    # Filter out categories with no occurrences for labeling
-    labels = [cat if len(errors_dict[cat]) > 0 else '' for cat in categories]
-
-    # Set up the color palette
-    palette = sns.color_palette("coolwarm", len(categories))
-
-    # Create the bar chart
-    # fig, ax = plt.subplots(figsize=(12, len(categories) * 0.5))  # Adjust figure size as needed
-    fig, ax = plt.subplots(figsize=(4, 4))
-    # sns.barplot(y=categories, x=occurrences, palette=palette, ax=ax)
-
     # Reverse the order for a nicer top-down view
     categories = categories[::-1]
     occurrences = occurrences[::-1]
+
+    palette = sns.color_palette("coolwarm", len(categories))
     colors = palette[::-1]
-    if granularity == 'rough':
-        bar_thickness = 0.8  # Adjust this for finer/thicker bars (1.0 = full spacing)
+
+    # Enforce exact figure size
+    is_standalone = ax is None
+    if is_standalone:
+        fig, ax = plt.subplots(figsize=(2, 2))
+
+    if granularity == 'rough' and 'WM_Ctx' in task:
+        bar_thickness = 8.0
+    elif granularity == 'rough' and 'WM' in task:
+        bar_thickness = 4.0
+    elif granularity == 'rough':
+        bar_thickness = 1.0
     elif granularity == 'fine':
         bar_thickness = 20.0
 
-    # Draw horizontal bars manually
+    # Generate explicit numeric coordinates for the center of each bar
+    y_positions = np.arange(len(categories))
+
+    # Draw horizontal bars manually (added alpha for line contrast)
     for i, (cat, val, color) in enumerate(zip(categories, occurrences, colors)):
-        ax.barh(i, val, color=color, height=bar_thickness)
+        ax.barh(i, val, color=color, height=bar_thickness, alpha=0.5)
 
-    # Set y-ticks to match the categories
+    # --- NEW: Smooth, Comparable Density Trend Curve ---
+    # Recreate the underlying vertical data frequency to compute the true density
+    y_data_points = []
+    for i, cat in enumerate(categories):
+        y_data_points.extend([i] * len(errors_dict[cat]))
+
+    if len(y_data_points) > 1:
+        # 'bw_method' controls smoothing.
+        # Increase this number (e.g., 0.6 to 1.0) for a broader, smoother general trend.
+        kde = gaussian_kde(y_data_points, bw_method=0.7)
+
+        # Evaluate density smoothly across the vertical category axis
+        y_smooth = np.linspace(0, len(categories) - 1, 300)
+        density_values = kde(y_smooth)
+
+        # IMPORTANT FOR COMPARISON: Scale the raw density values to match your percentage axis.
+        # This keeps the curve height aligned and proportional to the max bar magnitude.
+        scaling_factor = max(occurrences) / max(density_values)
+        x_smooth = density_values * scaling_factor
+
+        # Plot directly on the primary percentage axis
+        ax.plot(x_smooth, y_smooth, color='black', linewidth=1.5, alpha=0.8)
+
+    # Completely remove category text labels and ticks
     ax.set_yticks([])
-    # ax.set_yticklabels(labels[::-1], fontsize=8)
+    ax.set_yticklabels([])
 
-    # Set labels and titles
-    ax.set_xlabel('Relative Occurrences (%)', fontsize=14, labelpad=10)
-    ax.tick_params(axis='x', labelsize=14)
-    ax.set_title(f'{participant} {task} {titleAdd}', fontsize=14, pad=20)
-
-    # # Keep the tick labels on the left
-    # ax.set_yticks(range(len(categories)))
-    # ax.set_yticklabels(labels, fontsize=12)
-
-    # Add gridlines for better readability
+    # Gridlines and X-axis limits
+    ax.set_xticks([0, 25, 50])
+    ax.tick_params(axis='x', labelsize=15)
     ax.grid(True, axis='x', linestyle='--', alpha=0.6)
+    ax.set_xlim([0, 50])
 
-    # Set x-axis limits based on granularity
+    if is_standalone:
+        save_path = os.path.join(directory.split('\\data')[0], 'ErrorGraphics', task,
+                                 f'errorDistribution_{participant}_{task}_{titleAdd}_relative.png')
+        os.makedirs(os.path.dirname(save_path), exist_ok=True)
+        plt.savefig(save_path, dpi=100, bbox_inches='tight')
+        plt.close()
+
+    # Return top categories for rough granularity
     if granularity == 'rough':
-        ax.set_xlim([0, 100])
-    elif granularity == 'fine':
-        ax.set_xlim([0, 100])
-
-    # Move the y-axis label to the right side
-    ax_right = ax.twinx()  # Create a twin Axes sharing the x-axis
-    ax_right.set_ylabel('Error Categories', fontsize=10, labelpad=10)
-    ax_right.yaxis.set_label_position("left")  # Move the label to the right
-    ax_right.yaxis.tick_right()  # Ensure ticks are not visible on the right
-    ax_right.yaxis.tick_left()  # Ensure ticks are not visible on the left
-
-    # Hide the tick marks and labels on the right y-axis
-    ax_right.set_yticks([])  # No ticks on the right
-    ax_right.set_yticklabels([])  # No labels on the right
-
-    # Improve layout and adjust spacing
-    plt.tight_layout()
-    plt.subplots_adjust(left=0.3, right=0.95, bottom=0.1, top=0.9)
-
-    # Save plot with bbox_inches='tight' to prevent label cutoff
-    save_path = os.path.join(directory.split('\\data')[0], 'ErrorGraphics', task, f'errorDistribution_{participant}_{task}_{titleAdd}_relative.png')
-    os.makedirs(os.path.dirname(save_path), exist_ok=True)
-    plt.savefig(save_path, dpi=100, bbox_inches='tight')
-
-    # Show plot
-    # plt.show()
-
-    # info: For fine granularity return the names of the categories with highest occurrences
-    if granularity == 'rough':
-        # Count occurrences per category
         category_counts = {cat: len(values) for cat, values in errors_dict.items()}
-        # Sort categories by count in descending order
         sorted_categories = sorted(category_counts.items(), key=lambda x: x[1], reverse=True)
-        # Extract top 3 category names
         top_four_categories = [cat for cat, count in sorted_categories[:4]]
-
         return top_four_categories
 
 def sort_rows_descending(array): # Higher value on 4th
@@ -319,12 +328,14 @@ def get_fine_grained_error(sortedResponse, errors_dict_fineGrained, task):
             errors_dict_fineGrained[currentChosenList].append(sortedResponse[:, i])
     return errors_dict_fineGrained
 
-participant = 'beRNN_05'
-# focusedMonths = ['month_1','month_2','month_3','month_4','month_5','month_6','month_7','month_8','month_9','month_10','month_11','month_12' ]
-focusedMonths = ['month_3','month_4','month_5']
+participant = 'beRNN_04'
+focusedMonths = ['month_1','month_2','month_3','month_4','month_5','month_6','month_7']
+# focusedMonths = ['month_1','month_2','month_3','month_4','month_5','month_6','month_7','month_8','month_9','month_10','month_11','month_12']
+# focusedMonths = ['month_3']
 directory = f'C:\\Users\\oliver.frank\\Desktop\\PyProjects\\Data\\{participant}\\data_highDim' # info: whole script made for original dataset only
+dict_directory = rf'C:\Users\oliver.frank\Desktop\PyProjects\Data\{participant}\ErrorGraphics'
 
-
+fig, axs = plt.subplots(12, 1, figsize=(2, 24))
 # info: ################################################################################################################
 # info: Decision Making
 # info: ################################################################################################################
@@ -379,28 +390,14 @@ for npy_file in selected_months_files:
     # Sort the 4th and 5th row, so that HIGHER value is on 4th row. Sort 2nd and 3rd accordingly
     sortedResponse = sort_rows_descending(Response)
     errors_dict_DM = get_errors_DM(sortedResponse, errors_dict_DM, distract_dict, opposite_dict, strength_dict)
-# Visualize results
-top_four_categories = plot_errorDistribution_relative(errors_dict_DM, participantDirectory, participant, 'DM', 'rough', titleAdd = 'all')
 
-# # DM - Fine Graining ---------------------------------------------------------------------------------------------------
-# list1 = ['distractLeft', 'distractRight', 'distractUp', 'distractDown']
-# list2 = ['Lowest', 'Low', 'Strong', 'Strongest']
-# list3 = ['correctLeft', 'correctRight', 'correctUp', 'correctDown']
-# list4 = ['Lowest', 'Low', 'Strong', 'Strongest']
-# list5 = ['responseNoResponse', 'responseNan', 'responseL', 'responseR', 'responseU', 'responseD']
-# # Generating all combinations of categorical names
-# categorical_names_fineGrained = ['_'.join(combination) for combination in itertools.product(list1, list2, list3, list4, list5)]
-# # Define the four error classes to plot in fine granularity
-# list_error_keys = [top_four_categories[0], top_four_categories[1], top_four_categories[2], top_four_categories[3]]
-#
-# for j in list_error_keys:
-#     error_key_values = errors_dict_DM[j]
-#     sortedResponse = sort_rows_descending(np.column_stack(error_key_values))
-#     # Creating dict with created names
-#     errors_dict_fineGrained = {name: [] for name in categorical_names_fineGrained}
-#     errors_dict_fineGrained = get_fine_grained_error(sortedResponse, errors_dict_fineGrained, 'DM')
-#     # Visualize results
-#     plot_errorDistribution_relative(errors_dict_fineGrained, participantDirectory, participant, 'DM', 'fine', titleAdd = j)
+# Save dict for other analysis
+with open(os.path.join(dict_directory, f'errors_dict_DM_{participant}.pkl'), 'wb') as f:
+    pickle.dump(errors_dict_DM, f)
+with open(os.path.join(dict_directory, f'errors_dict_DM_{participant}.json'), 'w', encoding='utf-8') as f:
+    json.dump(errors_dict_DM, f, ensure_ascii=False, indent=4, default=convert_numpy)
+# Visualize results
+top_four_categories = plot_errorDistribution_relative(errors_dict_DM, participantDirectory, participant, 'DM', 'rough', titleAdd = 'all', ax=axs[0])
 
 ########################################################################################################################
 # DM Anti --------------------------------------------------------------------------------------------------------------
@@ -415,29 +412,14 @@ for npy_file in selected_months_files:
     # Sort the 4th and 5th row, so that LOWER value is on 4th row. Sort 2nd and 3rd accordingly
     sortedResponse = sort_rows_ascending(Response)
     errors_dict_DM_Anti = get_errors_DM(sortedResponse, errors_dict_DM_Anti, distract_dict, opposite_dict, strength_dict)
+
+# Save dict for other analysis
+with open(os.path.join(dict_directory, f'errors_dict_DM_Anti_{participant}.pkl'), 'wb') as f:
+    pickle.dump(errors_dict_DM_Anti, f)
+with open(os.path.join(dict_directory, f'errors_dict_DM_Anti_{participant}.json'), 'w', encoding='utf-8') as f:
+    json.dump(errors_dict_DM_Anti, f, ensure_ascii=False, indent=4, default=convert_numpy)
 # Visualize results
-top_four_categories = plot_errorDistribution_relative(errors_dict_DM_Anti,participantDirectory, participant, 'DM_Anti', 'rough', titleAdd = 'all')
-
-# # DM Anti - Fine Graining ----------------------------------------------------------------------------------------------
-# list1 = ['distractLeft', 'distractRight', 'distractUp', 'distractDown']
-# list2 = ['Lowest', 'Low', 'Strong', 'Strongest']
-# list3 = ['correctLeft', 'correctRight', 'correctUp', 'correctDown']
-# list4 = ['Lowest', 'Low', 'Strong', 'Strongest']
-# list5 = ['responseNoResponse', 'responseNoresponse', 'responseNan', 'responseL', 'responseR', 'responseU', 'responseD']
-# # Generating all combinations of categorical names
-# categorical_names_fineGrained = ['_'.join(combination) for combination in itertools.product(list1, list2, list3, list4, list5)]
-# # Define the four error classes to plot in fine granularity
-# list_error_keys = [top_four_categories[0], top_four_categories[1], top_four_categories[2], top_four_categories[3]]
-#
-# for j in list_error_keys:
-#     error_key_values = errors_dict_DM_Anti[j]
-#     sortedResponse = sort_rows_ascending(np.column_stack(error_key_values))
-#     # Creating dict with created names
-#     errors_dict_fineGrained = {name: [] for name in categorical_names_fineGrained}
-#     errors_dict_fineGrained = get_fine_grained_error(sortedResponse, errors_dict_fineGrained, 'DM_Anti')
-#     # Visualize results
-#     plot_errorDistribution_relative(errors_dict_fineGrained, participantDirectory, participant, 'DM_Anti', 'fine', titleAdd=j)
-
+top_four_categories = plot_errorDistribution_relative(errors_dict_DM_Anti,participantDirectory, participant, 'DM_Anti', 'rough', titleAdd = 'all', ax=axs[1])
 
 # info: ################################################################################################################
 # info: Executive Functioning
@@ -498,28 +480,14 @@ for npy_file in selected_months_files:
     # Sort the 4th and 5th row, so that LOWER value is on 4th row. Sort 2nd and 3rd accordingly
     sortedResponse = sort_rows_ascending(Response)
     errors_dict_EF = get_errors_EF(sortedResponse, errors_dict_EF, distract_dict, opposite_dict)
-# Visualize results
-top_four_categories = plot_errorDistribution_relative(errors_dict_EF, participantDirectory, participant, 'EF', 'rough', titleAdd = 'all')
 
-# # EF - Fine Graining ---------------------------------------------------------------------------------------------------
-# list1 = ['distractX', 'distractLeft', 'distractRight', 'distractUp', 'distractDown']
-# list2 = ['Green', 'Red']
-# list3 = ['noResponse', 'correctLeft', 'correctRight', 'correctUp', 'correctDown']
-# list4 = ['Green', 'Red']
-# list5 = ['responsenoResponse', 'responsenan', 'responseL', 'responseR', 'responseU', 'responseD']
-# # Generating all combinations of categorical names
-# categorical_names_fineGrained = ['_'.join(combination) for combination in itertools.product(list1, list2, list3, list4, list5)]
-# # Define the four error classes to plot in fine granularity
-# list_error_keys = [top_four_categories[0], top_four_categories[1], top_four_categories[2], top_four_categories[3]]
-#
-# for j in list_error_keys:
-#     error_key_values = errors_dict_EF[j]
-#     sortedResponse = sort_rows_ascending(np.column_stack(error_key_values))
-#     # Creating dict with created names
-#     errors_dict_fineGrained = {name: [] for name in categorical_names_fineGrained}
-#     errors_dict_fineGrained = get_fine_grained_error(sortedResponse, errors_dict_fineGrained, 'EF')
-#     # Visualize results
-#     plot_errorDistribution_relative(errors_dict_fineGrained, participantDirectory, participant, 'EF', 'fine', titleAdd=j)
+# Save dict for other analysis
+with open(os.path.join(dict_directory, f'errors_dict_EF_{participant}.pkl'), 'wb') as f:
+    pickle.dump(errors_dict_EF, f)
+with open(os.path.join(dict_directory, f'errors_dict_EF_{participant}.json'), 'w', encoding='utf-8') as f:
+    json.dump(errors_dict_EF, f, ensure_ascii=False, indent=4, default=convert_numpy)
+# Visualize results
+top_four_categories = plot_errorDistribution_relative(errors_dict_EF, participantDirectory, participant, 'EF', 'rough', titleAdd = 'all', ax=axs[2])
 
 ########################################################################################################################
 # EF Anti --------------------------------------------------------------------------------------------------------------
@@ -535,29 +503,14 @@ for npy_file in selected_months_files:
     # Sort the 4th and 5th row, so that LOWER value is on 4th row. Sort 2nd and 3rd accordingly
     sortedResponse = sort_rows_ascending(Response)
     errors_dict_EF_Anti = get_errors_EF(Response, errors_dict_EF_Anti, distract_dict, opposite_dict)
+
+# Save dict for other analysis
+with open(os.path.join(dict_directory, f'errors_dict_EF_Anti_{participant}.pkl'), 'wb') as f:
+    pickle.dump(errors_dict_EF_Anti, f)
+with open(os.path.join(dict_directory, f'errors_dict_EF_Anti_{participant}.json'), 'w', encoding='utf-8') as f:
+    json.dump(errors_dict_EF_Anti, f, ensure_ascii=False, indent=4, default=convert_numpy)
 # Visualize results
-top_four_categories = plot_errorDistribution_relative(errors_dict_EF_Anti, participantDirectory, participant, 'EF_Anti', 'rough', titleAdd = 'all')
-
-# # EF Anti - Fine Graining ----------------------------------------------------------------------------------------------
-# list1 = ['distractX', 'distractLeft', 'distractRight', 'distractUp', 'distractDown']
-# list2 = ['Green', 'Red']
-# list3 = ['noResponse', 'correctLeft', 'correctRight', 'correctUp', 'correctDown']
-# list4 = ['Green', 'Red']
-# list5 = ['responsenoResponse', 'responsenan', 'responseL', 'responseR', 'responseU', 'responseD']
-# # Generating all combinations of categorical names
-# categorical_names_fineGrained = ['_'.join(combination) for combination in itertools.product(list1, list2, list3, list4, list5)]
-# # Define the four error classes to plot in fine granularity
-# list_error_keys = [top_four_categories[0], top_four_categories[1], top_four_categories[2], top_four_categories[3]]
-#
-# for j in list_error_keys:
-#     error_key_values = errors_dict_EF_Anti[j]
-#     sortedResponse = sort_rows_ascending(np.column_stack(error_key_values))
-#     # Creating dict with created names
-#     errors_dict_fineGrained = {name: [] for name in categorical_names_fineGrained}
-#     errors_dict_fineGrained = get_fine_grained_error(sortedResponse, errors_dict_fineGrained, 'EF_Anti')
-#     # Visualize results
-#     plot_errorDistribution_relative(errors_dict_fineGrained, participantDirectory, participant, 'EF_Anti', 'fine', titleAdd=j)
-
+top_four_categories = plot_errorDistribution_relative(errors_dict_EF_Anti, participantDirectory, participant, 'EF_Anti', 'rough', titleAdd = 'all', ax=axs[3])
 
 # info: ################################################################################################################
 # info: Relational Processing
@@ -620,27 +573,14 @@ for npy_file, meta_file in zip(selected_months_files, selected_meta_files):
     # Use the function
     Response = np.load(npy_file, allow_pickle=True)
     errors_dict_RP = get_errors_RP(Response, errors_dict_RP, opened_meta_file)
-# Visualize results
-top_four_categories = plot_errorDistribution_relative(errors_dict_RP,participantDirectory, participant, 'RP', 'rough', titleAdd = 'all')
 
-# # RP - Fine Graining ---------------------------------------------------------------------------------------------------
-# list1 = ['distractCircle', 'distractNonagon', 'distractHeptagon', 'distractPentagon', 'distractTriangle', 'distractNoResponse']
-# list2 = ['Amber', 'Blue', 'Green', 'Lime', 'Magenta', 'Moss', 'Orange', 'Purple', 'Red', 'Rust', 'Violet', 'Yellow']
-# list3 = ['correctCircle', 'correctNonagon', 'correctHeptagon', 'correctPentagon', 'correctTriangle']
-# list4 = ['Similiar', 'NonSimiliar']
-# # Generating all combinations of categorical names
-# categorical_names_fineGrained = ['_'.join(combination) for combination in itertools.product(list1, list2, list3, list4)]
-# # Define the four error classes to plot in fine granularity
-# list_error_keys = [top_four_categories[0], top_four_categories[1], top_four_categories[2], top_four_categories[3]]
-#
-# for j in list_error_keys:
-#     error_key_values = errors_dict_RP[j]
-#     sortedResponse = np.column_stack(error_key_values)
-#     # Creating dict with created names
-#     errors_dict_fineGrained = {name: [] for name in categorical_names_fineGrained}
-#     errors_dict_fineGrained = get_fine_grained_error(sortedResponse, errors_dict_fineGrained, 'RP')
-#     # Visualize results
-#     plot_errorDistribution_relative(errors_dict_fineGrained, participantDirectory, participant, 'RP', 'fine', titleAdd=j)
+# Save dict for other analysis
+with open(os.path.join(dict_directory, f'errors_dict_RP_{participant}.pkl'), 'wb') as f:
+    pickle.dump(errors_dict_RP, f)
+with open(os.path.join(dict_directory, f'errors_dict_RP_{participant}.json'), 'w', encoding='utf-8') as f:
+    json.dump(errors_dict_RP, f, ensure_ascii=False, indent=4, default=convert_numpy)
+# Visualize results
+top_four_categories = plot_errorDistribution_relative(errors_dict_RP,participantDirectory, participant, 'RP', 'rough', titleAdd = 'all', ax=axs[4])
 
 ########################################################################################################################
 # RP Anti --------------------------------------------------------------------------------------------------------------
@@ -659,27 +599,14 @@ for npy_file, meta_file in zip(selected_months_files, selected_meta_files):
     # Use the function
     Response = np.load(npy_file, allow_pickle=True)
     errors_dict_RP_Anti = get_errors_RP(Response, errors_dict_RP_Anti, opened_meta_file)
-# Visualize results
-top_four_categories = plot_errorDistribution_relative(errors_dict_RP_Anti,participantDirectory, participant, 'RP_Anti', 'rough', titleAdd = 'all')
 
-# # RP Anti - Fine Graining ----------------------------------------------------------------------------------------------
-# list1 = ['distractCircle', 'distractNonagon', 'distractHeptagon', 'distractPentagon', 'distractTriangle', 'distractNoResponse']
-# list2 = ['Amber', 'Blue', 'Green', 'Lime', 'Magenta', 'Moss', 'Orange', 'Purple', 'Red', 'Rust', 'Violet', 'Yellow']
-# list3 = ['correctCircle', 'correctNonagon', 'correctHeptagon', 'correctPentagon', 'correctTriangle']
-# list4 = ['Similiar', 'NonSimiliar']
-# # Generating all combinations of categorical names
-# categorical_names_fineGrained = ['_'.join(combination) for combination in itertools.product(list1, list2, list3, list4)]
-# # Define the four error classes to plot in fine granularity
-# list_error_keys = [top_four_categories[0], top_four_categories[1], top_four_categories[2], top_four_categories[3]]
-#
-# for j in list_error_keys:
-#     error_key_values = errors_dict_RP_Anti[j]
-#     sortedResponse = np.column_stack(error_key_values)
-#     # Creating dict with created names
-#     errors_dict_fineGrained = {name: [] for name in categorical_names_fineGrained}
-#     errors_dict_fineGrained = get_fine_grained_error(sortedResponse, errors_dict_fineGrained, 'RP_Anti')
-#     # Visualize results
-#     plot_errorDistribution_relative(errors_dict_fineGrained, participantDirectory, participant, 'RP_Anti', 'fine', titleAdd=j)
+# Save dict for other analysis
+with open(os.path.join(dict_directory, f'errors_dict_RP_Anti_{participant}.pkl'), 'wb') as f:
+    pickle.dump(errors_dict_RP_Anti, f)
+with open(os.path.join(dict_directory, f'errors_dict_RP_Anti_{participant}.json'), 'w', encoding='utf-8') as f:
+    json.dump(errors_dict_RP_Anti, f, ensure_ascii=False, indent=4, default=convert_numpy)
+# Visualize results
+top_four_categories = plot_errorDistribution_relative(errors_dict_RP_Anti,participantDirectory, participant, 'RP_Anti', 'rough', titleAdd = 'all', ax=axs[5])
 
 ########################################################################################################################
 # RP Ctx1 --------------------------------------------------------------------------------------------------------------
@@ -698,27 +625,14 @@ for npy_file, meta_file in zip(selected_months_files, selected_meta_files):
     # Use the function
     Response = np.load(npy_file, allow_pickle=True)
     errors_dict_RP_Ctx1 = get_errors_RP(Response, errors_dict_RP_Ctx1, opened_meta_file)
-# Visualize results
-top_four_categories = plot_errorDistribution_relative(errors_dict_RP_Ctx1,participantDirectory, participant, 'RP_Ctx1', 'rough', titleAdd = 'all')
 
-# # RP Ctx1 - Fine Graining ----------------------------------------------------------------------------------------------
-# list1 = ['distractCircle', 'distractNonagon', 'distractHeptagon', 'distractPentagon', 'distractTriangle', 'distractNoResponse']
-# list2 = ['Amber', 'Blue', 'Green', 'Lime', 'Magenta', 'Moss', 'Orange', 'Purple', 'Red', 'Rust', 'Violet', 'Yellow']
-# list3 = ['correctCircle', 'correctNonagon', 'correctHeptagon', 'correctPentagon', 'correctTriangle']
-# list4 = ['Similiar', 'NonSimiliar']
-# # Generating all combinations of categorical names
-# categorical_names_fineGrained = ['_'.join(combination) for combination in itertools.product(list1, list2, list3, list4)]
-# # Define the four error classes to plot in fine granularity
-# list_error_keys = [top_four_categories[0], top_four_categories[1], top_four_categories[2], top_four_categories[3]]
-#
-# for j in list_error_keys:
-#     error_key_values = errors_dict_RP_Ctx1[j]
-#     sortedResponse = np.column_stack(error_key_values)
-#     # Creating dict with created names
-#     errors_dict_fineGrained = {name: [] for name in categorical_names_fineGrained}
-#     errors_dict_fineGrained = get_fine_grained_error(sortedResponse, errors_dict_fineGrained, 'RP_Ctx1')
-#     # Visualize results
-#     plot_errorDistribution_relative(errors_dict_fineGrained, participantDirectory, participant, 'RP_Ctx1', 'fine', titleAdd=j)
+# Save dict for other analysis
+with open(os.path.join(dict_directory, f'errors_dict_RP_Ctx1_{participant}.pkl'), 'wb') as f:
+    pickle.dump(errors_dict_RP_Ctx1, f)
+with open(os.path.join(dict_directory, f'errors_dict_RP_Ctx1_{participant}.json'), 'w', encoding='utf-8') as f:
+    json.dump(errors_dict_RP_Ctx1, f, ensure_ascii=False, indent=4, default=convert_numpy)
+# Visualize results
+top_four_categories = plot_errorDistribution_relative(errors_dict_RP_Ctx1,participantDirectory, participant, 'RP_Ctx1', 'rough', titleAdd = 'all', ax=axs[6])
 
 ########################################################################################################################
 # RP Ctx2 --------------------------------------------------------------------------------------------------------------
@@ -737,28 +651,14 @@ for npy_file, meta_file in zip(selected_months_files, selected_meta_files):
     # Use the function
     Response = np.load(npy_file, allow_pickle=True)
     errors_dict_RP_Ctx2 = get_errors_RP(Response, errors_dict_RP_Ctx2, opened_meta_file)
+
+# Save dict for other analysis
+with open(os.path.join(dict_directory, f'errors_dict_RP_Ctx2_{participant}.pkl'), 'wb') as f:
+    pickle.dump(errors_dict_RP_Ctx2, f)
+with open(os.path.join(dict_directory, f'errors_dict_RP_Ctx2_{participant}.json'), 'w', encoding='utf-8') as f:
+    json.dump(errors_dict_RP_Ctx2, f, ensure_ascii=False, indent=4, default=convert_numpy)
 # Visualize results
-top_four_categories = plot_errorDistribution_relative(errors_dict_RP_Ctx2,participantDirectory, participant, 'RP_Ctx2', 'rough', titleAdd = 'all')
-
-# # RP Ctx2 - Fine Graining ----------------------------------------------------------------------------------------------
-# list1 = ['distractCircle', 'distractNonagon', 'distractHeptagon', 'distractPentagon', 'distractTriangle', 'distractNoResponse']
-# list2 = ['Amber', 'Blue', 'Green', 'Lime', 'Magenta', 'Moss', 'Orange', 'Purple', 'Red', 'Rust', 'Violet', 'Yellow']
-# list3 = ['correctCircle', 'correctNonagon', 'correctHeptagon', 'correctPentagon', 'correctTriangle']
-# list4 = ['Similiar', 'NonSimiliar']
-# # Generating all combinations of categorical names
-# categorical_names_fineGrained = ['_'.join(combination) for combination in itertools.product(list1, list2, list3, list4)]
-# # Define the four error classes to plot in fine granularity
-# list_error_keys = [top_four_categories[0], top_four_categories[1], top_four_categories[2], top_four_categories[3]]
-#
-# for j in list_error_keys:
-#     error_key_values = errors_dict_RP_Ctx2[j]
-#     sortedResponse = np.column_stack(error_key_values)
-#     # Creating dict with created names
-#     errors_dict_fineGrained = {name: [] for name in categorical_names_fineGrained}
-#     errors_dict_fineGrained = get_fine_grained_error(sortedResponse, errors_dict_fineGrained, 'RP_Ctx2')
-#     # Visualize results
-#     plot_errorDistribution_relative(errors_dict_fineGrained, participantDirectory, participant, 'RP_Ctx2', 'fine', titleAdd=j)
-
+top_four_categories = plot_errorDistribution_relative(errors_dict_RP_Ctx2,participantDirectory, participant, 'RP_Ctx2', 'rough', titleAdd = 'all', ax=axs[7])
 
 # info: ################################################################################################################
 # info: Working Memory
@@ -905,27 +805,14 @@ for npy_file, meta_file in zip(selected_npy_files, selected_meta_files):
     # Sort the correct stim on the 2nd row
     sortedResponse = sort_rows_correctOn2(Response)
     errors_dict_WM = get_errors_WM(sortedResponse, errors_dict_WM, opened_meta_file)
-# Visualize results
-top_four_categories = plot_errorDistribution_relative(errors_dict_WM,participantDirectory, participant, 'WM', 'rough', titleAdd = 'all')
 
-# # WM - Fine Graining ---------------------------------------------------------------------------------------------------
-# list1 = ['distract', 'noResponse']
-# list2 = ['Circle', 'Nonagon', 'Heptagon', 'Pentagon', 'Triangle']
-# list3 = ['ClassYellow', 'ClassGreen', 'ClassBlue', 'ClassRed']
-# list4 = ['_simColor_simForm', '_simColor_diffForm', '_diffColor_simForm', '_diffColor_diffForm']
-# # Generating all combinations of categorical names
-# categorical_names_fineGrained = [''.join(combination) for combination in itertools.product(list1, list2, list3, list4)]
-# # Define the four error classes to plot in fine granularity
-# list_error_keys = [top_four_categories[0], top_four_categories[1], top_four_categories[2], top_four_categories[3]]
-#
-# for j in list_error_keys:
-#     error_key_values = errors_dict_WM[j]
-#     sortedResponse = np.column_stack(error_key_values)
-#     # Creating dict with created names
-#     errors_dict_fineGrained = {name: [] for name in categorical_names_fineGrained}
-#     errors_dict_fineGrained = get_fine_grained_error(sortedResponse, errors_dict_fineGrained, 'WM')
-#     # Visualize results
-#     plot_errorDistribution_relative(errors_dict_fineGrained, participantDirectory, participant, 'WM', 'fine', titleAdd=j)
+# Save dict for other analysis
+with open(os.path.join(dict_directory, f'errors_dict_WM_{participant}.pkl'), 'wb') as f:
+    pickle.dump(errors_dict_WM, f)
+with open(os.path.join(dict_directory, f'errors_dict_WM_{participant}.json'), 'w', encoding='utf-8') as f:
+    json.dump(errors_dict_WM, f, ensure_ascii=False, indent=4, default=convert_numpy)
+# Visualize results
+top_four_categories = plot_errorDistribution_relative(errors_dict_WM,participantDirectory, participant, 'WM', 'rough', titleAdd = 'all', ax=axs[8])
 
 ########################################################################################################################
 # WM Anti --------------------------------------------------------------------------------------------------------------
@@ -945,27 +832,14 @@ for npy_file, meta_file in zip(selected_npy_files, selected_meta_files):
     # Sort the correct stim on the 2nd row
     sortedResponse = sort_rows_correctOn2(Response)
     errors_dict_WM_Anti = get_errors_WM(sortedResponse, errors_dict_WM_Anti, opened_meta_file)
-# Visualize results
-top_four_categories = plot_errorDistribution_relative(errors_dict_WM_Anti,participantDirectory, participant, 'WM_Anti', 'rough', titleAdd = 'all')
 
-# # WM Anti - Fine Graining ----------------------------------------------------------------------------------------------
-# list1 = ['distract', 'noResponse']
-# list2 = ['Circle', 'Nonagon', 'Heptagon', 'Pentagon', 'Triangle']
-# list3 = ['ClassYellow', 'ClassGreen', 'ClassBlue', 'ClassRed']
-# list4 = ['_simColor_simForm', '_simColor_diffForm', '_diffColor_simForm', '_diffColor_diffForm']
-# # Generating all combinations of categorical names
-# categorical_names_fineGrained = [''.join(combination) for combination in itertools.product(list1, list2, list3, list4)]
-# # Define the four error classes to plot in fine granularity
-# list_error_keys = [top_four_categories[0], top_four_categories[1], top_four_categories[2], top_four_categories[3]]
-#
-# for j in list_error_keys:
-#     error_key_values = errors_dict_WM_Anti[j]
-#     sortedResponse = np.column_stack(error_key_values)
-#     # Creating dict with created names
-#     errors_dict_fineGrained = {name: [] for name in categorical_names_fineGrained}
-#     errors_dict_fineGrained = get_fine_grained_error(sortedResponse, errors_dict_fineGrained, 'WM_Anti')
-#     # Visualize results
-#     plot_errorDistribution_relative(errors_dict_fineGrained, participantDirectory, participant, 'WM_Anti', 'fine', titleAdd=j)
+# Save dict for other analysis
+with open(os.path.join(dict_directory, f'errors_dict_WM_Anti_{participant}.pkl'), 'wb') as f:
+    pickle.dump(errors_dict_WM_Anti, f)
+with open(os.path.join(dict_directory, f'errors_dict_WM_Anti_{participant}.json'), 'w', encoding='utf-8') as f:
+    json.dump(errors_dict_WM_Anti, f, ensure_ascii=False, indent=4, default=convert_numpy)
+# Visualize results
+top_four_categories = plot_errorDistribution_relative(errors_dict_WM_Anti,participantDirectory, participant, 'WM_Anti', 'rough', titleAdd = 'all', ax=axs[9])
 
 #######################################################################################################################
 # WM Ctx1 --------------------------------------------------------------------------------------------------------------
@@ -983,31 +857,14 @@ for npy_file, meta_file in zip(selected_npy_files, selected_meta_files):
     # Use the function
     Response = np.load(npy_file, allow_pickle=True)
     errors_dict_WM_Ctx1 = get_errors_WM_Ctx(Response, errors_dict_WM_Ctx1, opened_meta_file)
-# Visualize results
-top_four_categories = plot_errorDistribution_relative(errors_dict_WM_Ctx1,participantDirectory, participant, 'WM_Ctx1', 'rough', titleAdd = 'all')
 
-# # WM Ctx1 - Fine Graining ----------------------------------------------------------------------------------------------
-# list1 = ['formClassCombi']
-# list2 = ['CircleCircle', 'PolygonPolygon', 'TriangleTriangle',\
-#          'CirclePolygon', 'CircleTriangle', 'PolygonTriangle']
-# list3 = ['colorClassCombi']
-# list4 = ['YellowYellow', 'GreenGreen', 'BlueBlue', 'RedRed', 'YellowGreen', 'YellowBlue', 'YellowRed',\
-#          'GreenBlue', 'GreenRed', 'BlueRed']
-# list5 = ['simColor_simForm', 'simColor_diffForm', 'diffColor_simForm', 'diffColor_diffForm']
-# list6 = ['responseMatch', 'responseMismatch', 'responseNoResponse']
-# # Generating all combinations of categorical names
-# categorical_names_fineGrained = ['_'.join(combination) for combination in itertools.product(list1, list2, list3, list4, list5, list6)]
-# # Define the four error classes to plot in fine granularity
-# list_error_keys = [top_four_categories[0], top_four_categories[1], top_four_categories[2], top_four_categories[3]]
-#
-# for j in list_error_keys:
-#     error_key_values = errors_dict_WM_Ctx1[j]
-#     sortedResponse = np.column_stack(error_key_values)
-#     # Creating dict with created names
-#     errors_dict_fineGrained = {name: [] for name in categorical_names_fineGrained}
-#     errors_dict_fineGrained = get_fine_grained_error(sortedResponse, errors_dict_fineGrained, 'WM_Ctx1')
-#     # plot_errorDistribution(errors_dict_fineGrained, participantDirectory, 'WM_Ctx1_fineGrained ' + j, 'fine')
-#     plot_errorDistribution_relative(errors_dict_fineGrained, participantDirectory, participant, 'WM_Ctx1', 'fine', titleAdd=j)
+# Save dict for other analysis
+with open(os.path.join(dict_directory, f'errors_dict_WM_Ctx1_{participant}.pkl'), 'wb') as f:
+    pickle.dump(errors_dict_WM_Ctx1, f)
+with open(os.path.join(dict_directory, f'errors_dict_WM_Ctx1_{participant}.json'), 'w', encoding='utf-8') as f:
+    json.dump(errors_dict_WM_Ctx1, f, ensure_ascii=False, indent=4, default=convert_numpy)
+# Visualize results
+top_four_categories = plot_errorDistribution_relative(errors_dict_WM_Ctx1,participantDirectory, participant, 'WM_Ctx1', 'rough', titleAdd = 'all', ax=axs[10])
 
 ########################################################################################################################
 # WM Ctx2 --------------------------------------------------------------------------------------------------------------
@@ -1025,31 +882,23 @@ for npy_file, meta_file in zip(selected_npy_files, selected_meta_files):
     # Use the function
     Response = np.load(npy_file, allow_pickle=True)
     errors_dict_WM_Ctx2 = get_errors_WM_Ctx(Response, errors_dict_WM_Ctx2, opened_meta_file)
-# Visualize results
-top_four_categories = plot_errorDistribution_relative(errors_dict_WM_Ctx2,participantDirectory, participant, 'WM_Ctx2', 'rough', titleAdd = 'all')
 
-# # WM Ctx2 - Fine Graining ----------------------------------------------------------------------------------------------
-# list1 = ['formClassCombi']
-# list2 = ['CircleCircle', 'PolygonPolygon', 'TriangleTriangle',\
-#          'CirclePolygon', 'CircleTriangle', 'PolygonTriangle']
-# list3 = ['colorClassCombi']
-# list4 = ['YellowYellow', 'GreenGreen', 'BlueBlue', 'RedRed', 'YellowGreen', 'YellowBlue', 'YellowRed',\
-#          'GreenBlue', 'GreenRed', 'BlueRed']
-# list5 = ['simColor_simForm', 'simColor_diffForm', 'diffColor_simForm', 'diffColor_diffForm']
-# list6 = ['responseMatch', 'responseMismatch', 'responseNoResponse']
-# # Generating all combinations of categorical names
-# categorical_names_fineGrained = ['_'.join(combination) for combination in itertools.product(list1, list2, list3, list4, list5, list6)]
-# # Define the four error classes to plot in fine granularity
-# list_error_keys = [top_four_categories[0], top_four_categories[1], top_four_categories[2], top_four_categories[3]]
-#
-# for j in list_error_keys:
-#     error_key_values = errors_dict_WM_Ctx2[j]
-#     sortedResponse = np.column_stack(error_key_values)
-#     # Creating dict with created names
-#     errors_dict_fineGrained = {name: [] for name in categorical_names_fineGrained}
-#     errors_dict_fineGrained = get_fine_grained_error(sortedResponse, errors_dict_fineGrained, 'WM_Ctx2')
-#     # Visualize results
-#     plot_errorDistribution_relative(errors_dict_fineGrained, participantDirectory, participant, 'WM_Ctx2', 'fine',titleAdd=j)
+# Save dict for other analysis
+with open(os.path.join(dict_directory, f'errors_dict_WM_Ctx2_{participant}.pkl'), 'wb') as f:
+    pickle.dump(errors_dict_WM_Ctx2, f)
+with open(os.path.join(dict_directory, f'errors_dict_WM_Ctx2_{participant}.json'), 'w', encoding='utf-8') as f:
+    json.dump(errors_dict_WM_Ctx2, f, ensure_ascii=False, indent=4, default=convert_numpy)
+# Visualize results
+top_four_categories = plot_errorDistribution_relative(errors_dict_WM_Ctx2,participantDirectory, participant, 'WM_Ctx2', 'rough', titleAdd = 'all', ax=axs[11])
+
+
+
+# Once all 12 are assigned, save the single master stacked image sheet
+plt.tight_layout()
+master_save_path = os.path.join(directory.split('\\data')[0], 'ErrorGraphics', f'all_12_tasks_{participant}.png')
+os.makedirs(os.path.dirname(master_save_path), exist_ok=True)
+plt.savefig(master_save_path, dpi=100, bbox_inches='tight')
+plt.close()
 
 
 
@@ -1282,5 +1131,166 @@ top_four_categories = plot_errorDistribution_relative(errors_dict_WM_Ctx2,partic
 # # Tasks to evaluate
 # tasks = ['DM', 'DM_Anti', 'EF', 'EF_Anti', 'RP', 'RP_Anti', 'RP_Ctx1', 'RP_Ctx2', 'WM', 'WM_Anti', 'WM_Ctx1', 'WM_Ctx2']
 # evaluate_model_responses(directory, dataDirectory, modelsList, tasks)
+
+
+
+
+
+# # head: ################################################################################################################
+# # head: task complexity x relative count plots
+# # head: ################################################################################################################
+import os
+import pickle
+import matplotlib.pyplot as plt
+import seaborn as sns
+from collections import defaultdict
+
+# 1. Definiere das Master-Grid (12 Zeilen untereinander, 1 Spalte breit)
+fig, axs = plt.subplots(12, 1, figsize=(3, 24))
+
+participantList = ['beRNN_01', 'beRNN_02', 'beRNN_03', 'beRNN_04', 'beRNN_05']
+tasks = ['DM', 'DM_Anti', 'EF', 'EF_Anti', 'RP', 'RP_Anti',
+         'RP_Ctx1', 'RP_Ctx2', 'WM', 'WM_Anti', 'WM_Ctx1', 'WM_Ctx2']
+
+for iteration, task in enumerate(tasks):
+    # Aktuelle Achse aus dem vordefinierten Grid auswählen
+    ax = axs[iteration]
+
+    # Master-Dictionary erstellen, um Fehlerzahlen über alle Teilnehmer zu addieren
+    combined_errors = defaultdict(int)
+
+    for participant in participantList:
+        dict_directory = rf'C:\Users\oliver.frank\Desktop\PyProjects\Data\{participant}\ErrorGraphics'
+
+        # Sicherstellen, dass die Datei existiert, um Abstürze zu vermeiden
+        file_path = os.path.join(dict_directory, f'errors_dict_{task}_{participant}.pkl')
+        if os.path.exists(file_path):
+            with open(file_path, 'rb') as f:
+                loaded_dict = pickle.load(f)
+
+            # Absolute Anzahl der Fehler pro Kategorie aufaddieren
+            for cat, values in loaded_dict.items():
+                combined_errors[cat] += len(values)
+
+    # Gesamtzahl aller Fehler über alle Teilnehmer hinweg berechnen
+    total_occurrences = sum(combined_errors.values())
+
+    # Listen für die addierten Prozentwerte der drei Gruppen vorbereiten
+    easy_pct = 0
+    medium_pct = 0
+    difficult_pct = 0
+
+    # Kategorien basierend auf Ihrer Logik zuordnen und Prozentwerte aufsummieren
+    for cat, count in combined_errors.items():
+        pct = (count / total_occurrences) * 100 if total_occurrences > 0 else 0
+
+        if 'DM' in task:
+            if 'strengthDiff0' in cat:
+                difficult_pct += pct
+            elif 'distractSame' in cat:
+                easy_pct += pct
+            else:
+                medium_pct += pct
+        elif 'EF' in task:
+            if 'colorsDiff' in cat:
+                difficult_pct += pct
+            elif 'distractSame' in cat and 'colorSame' in cat:
+                easy_pct += pct
+            else:
+                medium_pct += pct
+        elif 'RP' in task:
+            if 'Nonagon' in cat or 'Heptagon' in cat or 'Pentagon' in cat:
+                difficult_pct += pct
+            elif 'Triangle' in cat:
+                easy_pct += pct
+            elif 'Circle' in cat:
+                medium_pct += pct
+        elif 'WM' in task:
+            if 'simColor_simForm' in cat:
+                difficult_pct += pct
+            else:
+                medium_pct += pct
+
+    # Daten für das Plotten vorbereiten
+    difficulty_groups = ['easy', 'medium','difficult']
+    percentage_values = [easy_pct, medium_pct, difficult_pct]
+
+    # Balkendiagramm direkt auf die Zielachse zeichnen
+    sns.barplot(x=difficulty_groups, y=percentage_values, palette='coolwarm', ax=ax)
+
+    # Styling-Vorgaben für die Achsen anwenden
+    ax.set_ylim([0, 100])
+    ax.set_yticks([0, 50, 100])
+    ax.tick_params(axis='both', labelsize=12)
+    ax.grid(True, axis='y', linestyle='--', alpha=0.6)
+
+    # Task-Namen als Text im Inneren des Plots platzieren (verhindert Abschneiden am Rand)
+    # ax.text(0.1, 85, task, fontsize=10, fontweight='bold', va='top', ha='left')
+
+# Layout-Abstände anpassen
+plt.tight_layout()
+
+# Master-Speicherpfad (z.B. im Ordner des letzten Teilnehmers oder einem zentralen Pfad)
+master_save_path = r'C:\Users\oliver.frank\Desktop\PyProjects\Data\combined_tasks_difficulty.png'
+os.makedirs(os.path.dirname(master_save_path), exist_ok=True)
+plt.savefig(master_save_path, dpi=100, bbox_inches='tight')
+plt.close()
+
+
+
+
+
+import json
+import os
+import pandas as pd
+from collections import defaultdict
+
+# Creates a dictionary that automatically puts a new dict inside missing keys
+completedict = defaultdict(dict)
+participantList = ['beRNN_01', 'beRNN_02', 'beRNN_03', 'beRNN_04', 'beRNN_05']
+tasks = ['DM', 'DM_Anti', 'EF', 'EF_Anti', 'RP', 'RP_Anti', 'RP_Ctx1', 'RP_Ctx2', 'WM', 'WM_Anti', 'WM_Ctx1', 'WM_Ctx2']
+
+for task in tasks:
+    for participant in participantList:
+        path = rf'C:\Users\oliver.frank\Desktop\PyProjects\Data\{participant}\ErrorGraphics'
+        with open(os.path.join(path, f'errors_dict_{task}_{participant}.json'), 'r') as file:
+            currentDictonary = json.load(file)
+
+        completedict[task][participant] = currentDictonary
+
+rows = []
+
+# Iteriere durch die verschachtelte Struktur
+for task_name, participants in completedict.items():
+    for participant_id, categories in participants.items():
+        for category_name, trials in categories.items():
+
+            # Zähle die Anzahl der Fehler (Länge der Liste/des Arrays)
+            # Falls ein Key mal keine Liste sondern None/0 ist, fangen wir das ab
+            if isinstance(trials, (list, tuple)):
+                error_count = len(trials)
+            elif hasattr(trials, "shape"):  # Falls es ein NumPy-Array ist
+                error_count = trials.shape[0]
+            else:
+                error_count = 0
+
+            # Als flache Zeile abspeichern
+            rows.append(
+                {
+                    "task": task_name,
+                    "subject": participant_id,
+                    "error_category": category_name,
+                    "count": error_count,
+                }
+            )
+
+# In einen Pandas DataFrame umwandeln
+df_flat = pd.DataFrame(rows)
+
+# Speicherpfad definieren
+output_path = (
+    r"C:\Users\oliver.frank\Desktop\PyProjects\Data\all_tasks_flat_counts.csv"
+)
+df_flat.to_csv(output_path, index=False, encoding="utf-8")
 
 

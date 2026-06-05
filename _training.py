@@ -65,7 +65,7 @@ def apply_density_threshold(matrix, density=0.1):
 
 def getAndSafeModValue(data_dir, model_dir, hp, model, sess, log, step):
     # info. saves modularity, but also clustering and participation
-    fname, fname2, fname3 = variance.compute_variance(data_dir, model_dir, layer=1, mode='test',
+    fname, fname2, fname3, fname4 = variance.compute_variance(data_dir, model_dir, layer=1, mode='test',
                                                       monthsConsidered=hp['monthsConsidered'], data_type='rule',
                                                       networkAnalysis=False,
                                                       model=model, sess=sess)
@@ -147,7 +147,7 @@ def get_default_hp(ruleset):
     n_rule = tools.get_num_rule(ruleset)
 
     machine = 'local'  # 'local' 'pandora' 'hitkip'
-    data = 'data_highDim_correctOnly'
+    data = 'data_highDim'
     trainingBatch = '01'
     trainingYear_Month = 'test_XX'  # as short as possible to avoid too long paths for avoiding linux2windows transfer issues
     # trainingYear_Month = '_grid_bench_multi_beRNN_00_highDim_correctOnly_256'  # as short as possible to avoid too long paths for avoiding linux2windows transfer issues
@@ -191,7 +191,7 @@ def get_default_hp(ruleset):
         'machine': machine,
         # 'mask_threshold': .999,  # .999 or .975
         'max_lr': [15e-4],
-        'monthsConsidered': ['month_5'],
+        'monthsConsidered': ['month_3'],
         'monthsString': '3-5',  # monthsTaken
         'multiLayer': False,  # only applicaple with LeakyRNN
         'n_eachring': n_eachring,  # number of units each ring
@@ -202,7 +202,7 @@ def get_default_hp(ruleset):
         'n_rnn': 256,  # number of recurrent units for one hidden layer architecture
         'n_rnn_per_layer': [16, 16, 16],
         'optimizer': 'adam',  # 'adam', 'sgd'
-        'participant': 'beRNN_02',  # Participant to take
+        'participant': 'beRNN_00',  # Participant to take
         'p_weight_train': None,
         'rnn_type': 'LeakyRNN',  # Type of RNNs: NonRecurrent, LeakyRNN, LeakyGRU, EILeakyGRU | GRU, LSTM
         'rng': np.random.default_rng(),  # add seed here if you want to make it reproducible e.g. (42)
@@ -484,7 +484,7 @@ def do_eval(sess, model, log, rule_train, eval_data, step, data_dir):
     return log
 
 
-def train(data_dir, model_dir, train_data, eval_data, hp=None, max_steps=2400, display_step=100,
+def train(data_dir, model_dir, train_data, eval_data, hp=None, max_steps=4800, display_step=500,
           rule_trains=None, rule_prob_map=None, seed=0,
           load_dir=None, trainables=None, robustnessTest=True):
     """Train the network.
@@ -805,8 +805,7 @@ if __name__ == '__main__':
     else:
         n_iteration = 2
 
-    for modelNumber in range(1,
-                             n_iteration):  # Define number of iterations and models to be created for every month, respectively
+    for modelNumber in range(1, n_iteration):  # Define number of iterations and models to be created for every month, respectively
 
         # Measure time for every model, respectively
         trainingTimeTotal_hours = 0

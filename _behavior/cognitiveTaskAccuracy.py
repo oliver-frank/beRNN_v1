@@ -178,15 +178,17 @@ from tools import rule_name
 # acc_RP_Ctx2 = percentCorrect_RP_Ctx2/count_RP_Ctx2
 
 
+
 # # info: ###############################################################################################################
 # # info: Plot performance over defined period as standard plot
 # # info: ###############################################################################################################
 # # Participant list
-# participant_dir = r'C:\Users\oliver.frank\Desktop\PyProjects\Data'
+# # participant_dir = r'C:\Users\oliver.frank\Desktop\PyProjects\Data'
+# participant_dir = r'W:\group_csp\analyses\oliver.frank\Data'
 # # participantList = os.listdir(participant_dir)
 # # participant = participantList[0] # choose which particpant to analyze
-# # months = ['1','2','3','4','5','6','7','8','9','10','11','12'] # choose which month to analyze
-# months = ['4','5','6'] # choose which month to analyze
+# months = ['1','2','3','4','5','6','7','8','9','10','11','12'] # choose which month to analyze
+# # months = ['4','5','6'] # choose which month to analyze
 # strToSave = months[0] + '-' + months[-1]
 #
 # # newParticpantList = ['beRNN_01', 'beRNN_02', 'beRNN_03', 'beRNN_04', 'beRNN_05'] #
@@ -328,16 +330,143 @@ from tools import rule_name
 #
 #     plt.tight_layout()
 #     plt.show()
+#
+#
+#
+#
+#
+#
+# import os
+# import pandas as pd
+# import numpy as np
+# import matplotlib.pyplot as plt
+# import matplotlib.dates as mdates
+#
+# # Participant list
+# participant_dir = r'W:\group_csp\analyses\oliver.frank\Data'
+# # participant_dir = r'C:\Users\oliver.frank\Desktop\PyProjects\Data'
+# months = [str(i) for i in range(1, 13)]
+# strToSave = f"{months[0]}-{months[-1]}"
+# newParticpantList = ['beRNN_01']
+#
+# filename_color_dict = {
+#     'DM': '#0d0a29', 'DM_Anti': '#271258',
+#     'EF': '#491078', 'EF_Anti': '#671b80',
+#     'RP': '#862781', 'RP_Anti': '#a6317d', 'RP_Ctx1': '#c53c74', 'RP_Ctx2': '#e34e65',
+#     'WM': '#f66c5c', 'WM_Anti': '#fc9065', 'WM_Ctx1': '#feb67c', 'WM_Ctx2': '#fdda9c'
+# }
+#
+# for participant in newParticpantList:
+#     folder_paths = [os.path.join(participant_dir, participant, m) for m in months]
+#     all_files = []
+#     for folder in folder_paths:
+#         for root, dirs, files in os.walk(folder):
+#             for file in files:
+#                 if file.endswith(".xlsx"):
+#                     all_files.append(os.path.join(root, file))
+#
+#     # --- STRATEGISCH GRÖSSERER PLOT ---
+#     fig, ax = plt.subplots(figsize=(11, 6))
+#
+#     # Listen für globale X-Grenzen
+#     global_x_values = []
+#
+#     for task, color in filename_color_dict.items():
+#         ycolumn = 'Store: PercentCorrect' + ''.join(task.split('_'))
+#         task_x = []
+#         task_y = []
+#
+#         for filename in all_files:
+#             try:
+#                 df = pd.read_excel(filename, engine='openpyxl')
+#                 if not isinstance(df.iloc[0, 28], float) and df.iloc[0, 28].split('_trials_')[0] == task:
+#                     filtered_rows = df[df['Event Index'] == 125].copy()
+#                     if filtered_rows.empty:
+#                         continue
+#
+#                     filtered_rows['Local Date and Time'] = pd.to_datetime(filtered_rows['Local Date and Time'],
+#                                                                           errors='coerce')
+#                     dates = pd.to_datetime(filtered_rows['Local Date and Time'].dt.date)
+#
+#                     task_x.extend(dates)
+#                     task_y.extend(filtered_rows[ycolumn].tolist())
+#             except Exception as e:
+#                 print(f"Error processing {filename}: {e}")
+#
+#         if not task_x:
+#             continue
+#
+#         # --- DATEN SORTIEREN OHNE ZUORDNUNG ZU VERLIEREN ---
+#         sorted_pairs = sorted(zip(task_x, task_y))
+#         task_x, task_y = zip(*sorted_pairs)
+#         task_x = list(task_x)
+#         task_y = list(task_y)
+#
+#         global_x_values.extend(task_x)
+#
+#         # --- TRENDLINIE STATT HORIZONTALEM CHAOS ---
+#         # Eine leicht gleitende Linie (oder Plot) verbindet die Punkte chronologisch
+#         ax.plot(task_x, task_y, color=color, alpha=0.4, linewidth=1.5, zorder=1)
+#
+#         # Punkte setzen
+#         ax.scatter(task_x, task_y, color=color, alpha=0.8, edgecolors='none', s=35, zorder=2)
+#
+#         # --- SAUBERE LEGENDE ---
+#         # Durchschnitt im Label berechnen, aber keine störende Linie zeichnen
+#         avg_perf = np.mean(task_y)
+#         ax.plot([], [], color=color, label=f'{task} (Ø {avg_perf:.1f}%)', linestyle='-', marker='o')
+#
+#     if not global_x_values:
+#         print(f"No data found for participant {participant}")
+#         continue
+#
+#     # --- STYLING & ACHSEN ---
+#     ax.set_ylim(-5, 105)  # Leicht vergrößert, damit 0% und 100% nicht abgeschnitten werden
+#     ax.set_yticks(range(0, 101, 20))
+#     ax.set_yticklabels([f'{i}%' for i in range(0, 101, 20)], fontsize=10)
+#     ax.grid(axis='y', color='#e0e0e0', linestyle='--', linewidth=0.7)
+#
+#     # X-Achse auf monatliche Ticks einstellen basierend auf echten Daten
+#     ax.xaxis.set_major_locator(mdates.MonthLocator())
+#     ax.xaxis.set_major_formatter(mdates.DateFormatter('%b %Y'))  # Zeigt z.B. "Jan 2026"
+#
+#     # Grenzen der X-Achse dynamisch setzen
+#     min_date = min(global_x_values)
+#     max_date = max(global_x_values)
+#     ax.set_xlim(min_date - pd.Timedelta(days=5), max_date + pd.Timedelta(days=5))
+#
+#     # Details & Legende außerhalb platzieren
+#     ax.set_title(f"Performance Over Time — Participant: {participant}", fontsize=14, pad=15, weight='bold')
+#     ax.set_xlabel('Timeline', fontsize=11, labelpad=10)
+#     ax.set_ylabel('Accuracy', fontsize=11, labelpad=10)
+#
+#     # Legende rechts sauber anordnen
+#     ax.legend(loc='upper left', bbox_to_anchor=(1.02, 1), fontsize=10, frameon=False, ncol=1)
+#
+#     # Spines (Rahmen) verschönern
+#     ax.spines['top'].set_visible(False)
+#     ax.spines['right'].set_visible(False)
+#     ax.spines['left'].set_color('#cccccc')
+#     ax.spines['bottom'].set_color('#cccccc')
+#
+#     # Speichern und Anzeigen
+#     figure_path = os.path.join(participant_dir, participant, f"{participant}_{strToSave}_PerformanceOverTime.png")
+#     plt.savefig(figure_path, bbox_inches='tight', dpi=300)
+#     plt.show()
+
+
+
+
 
 
 # info: ###############################################################################################################
 # info: Plot performance over defined period as boxplots
 # info: ###############################################################################################################
 participant_dir = r'W:\group_csp\analyses\oliver.frank\Data'
-months = ['3', '4', '5']
-# months = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12']
+# months = ['3', '4', '5']
+months = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12']
 strToSave = months[0] + '-' + months[-1]
-newParticpantList = ['beRNN_04', 'beRNN_05']
+newParticpantList = ['beRNN_03']
 task_keys = [
     'DM', 'DM_Anti',
     'EF', 'EF_Anti',

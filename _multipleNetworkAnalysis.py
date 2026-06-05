@@ -60,7 +60,7 @@ setup = {
     'rsa_directory': r'C:\Users\oliver.frank\Desktop\PyProjects\beRNNmodels\__rsaVisuals',
     'directory_rdm': r'W:\group_csp\analyses\oliver.frank\_brainModels\functional_matrices_rdm',
     'tasks': ['reward', 'flanker', 'faces', 'nback'],
-    'preprocess_fMRI2rdm': False,
+    'preprocess_fMRI2rdm': True,
     "visualize_fMRI": False,
     "visualize_dti": False,
     "correlationOf_correlationMatices_fMRI": False, # outsourced to fingerprints.py
@@ -143,27 +143,26 @@ if setup['preprocess_fMRI2rdm'] == True:
         for recording in recordings:
             averageVector_list = []
             TR = 0.8  # RepetitionTime: duration of one full 3D volume acquisition
-
             # Hemodynamic response latency shift to align fMRI signals with the RNN timelines
-            HRF_DELAY_SEC = 2.0
+            HRF_DELAY_SEC = 6.0
 
-            # THE WHITELIST: Explicitly define what counts as a valid stimulus trial for each task.
+            # Explicitly define what counts as a valid stimulus trial for each task.
             # Only trials matching these rules will be extracted and grouped into blocks.
             STIMULUS_WHITELIST = {
                 'faces': lambda t: ('Form_' in t) or ('boy' in t) or ('girl' in t),
                 'flanker': lambda t: ('right' in t) or ('left' in t),
-                'nback': lambda t: 'num' in t,
+                'nback': lambda t: ('num' in t),
                 'reward': lambda t: ('CS' in t)  # Captures wCSp, CSm, vCSp, lCSp
             }
 
             for task in setup['tasks']:
-                # Define file path for the continuous fMRI time series (processed outputs)
+                # Define file path for the continuous fMRI time series
                 timeseries_file_path = os.path.join(
                     rf'W:\group_csp\in_house_datasets\bernn\mri\derivatives\xcpd_0.11.1\{participant}{recording}\func',
                     f'{participant}{recording}_task-{task}_space-MNI152NLin2009cAsym_seg-4S256Parcels_stat-mean_timeseries.tsv'
                 )
 
-                # Define file path for the original task event logs (raw inputs)
+                # Define file path for the original task event logs
                 events_file_path = os.path.join(
                     rf'W:\group_csp\in_house_datasets\bernn\mri\rawdata\{participant}{recording}\func',
                     f'{participant}{recording}_task-{task}_events.tsv'
@@ -178,15 +177,19 @@ if setup['preprocess_fMRI2rdm'] == True:
                 timeseries_df = pd.read_csv(timeseries_file_path, sep='\t')
                 ts_data = np.nan_to_num(timeseries_df.values, nan=0)  # Shape: (Total_TRs, 256)
 
+
+                # z-scoring
+                from scipy.stats import zscore
+
+                ts_data_z = zscore(ts_data, axis=0)
+                ts_data_z = np.nan_to_num(ts_data_z, nan=0)
+
+
                 # Load raw event logs
                 events_df = pd.read_csv(events_file_path, sep='\t')
-
                 # Retrieve the specific whitelist filter function for the current task
                 is_valid_stimulus = STIMULUS_WHITELIST.get(task, lambda t: False)
 
-                # ----------------------------------------------------
-                # DYNAMIC BLOCK AGGREGATION LOGIC (WHITELIST DRIVEN)
-                # ----------------------------------------------------
                 # Find indices of rows containing whitelisted stimuli
                 valid_indices = events_df[events_df['trial_type'].apply(is_valid_stimulus)].index
 
@@ -206,9 +209,7 @@ if setup['preprocess_fMRI2rdm'] == True:
                         current_block = [idx]
                 blocks.append(current_block)  # Append the final block chunk
 
-                # ----------------------------------------------------
-                # BLOCK WINDOW EXTRACTION & TEMPORAL AVERAGING
-                # ----------------------------------------------------
+                # block extraction and averaging
                 block_vectors = []
 
                 for block in blocks:
@@ -219,7 +220,7 @@ if setup['preprocess_fMRI2rdm'] == True:
                     block_onset = first_trial['onset']
                     block_offset = last_trial['onset'] + last_trial['duration']
 
-                    # Apply your shifted epoch design logic (Onset to Offset + 2s blood delay)
+                    # Apply shifted epoch design logic (Onset to Offset + 2s blood delay)
                     f_start_sec = block_onset + HRF_DELAY_SEC
                     f_end_sec = block_offset + HRF_DELAY_SEC
 
@@ -232,8 +233,8 @@ if setup['preprocess_fMRI2rdm'] == True:
                         end_tr += 1
 
                     # Extract the continuous slice and down-sample its time dimension immediately
-                    if end_tr <= ts_data.shape[0]:
-                        block_epoch = ts_data[start_tr:end_tr, :]  # Shape: (Variable_TRs, 256)
+                    if end_tr <= ts_data_z.shape[0]:
+                        block_epoch = ts_data_z[start_tr:end_tr, :]  # Shape: (Variable_TRs, 256)
 
                         # Collapse the time axis per block to standardize shape to (256,)
                         block_vectors.append(block_epoch.mean(axis=0))
@@ -245,15 +246,10 @@ if setup['preprocess_fMRI2rdm'] == True:
                 final_task_vector = np.array(block_vectors).mean(axis=0)  # Shape: (256,)
                 averageVector_list.append(final_task_vector)
 
-            # ----------------------------------------------------
-            # STACK ALL VALID TASKS FOR THIS RUN
-            # ----------------------------------------------------
+            # stack tasks for this run
             if len(averageVector_list) == len(setup['tasks']):
-                # Stack your 4 tasks together vertically along a new axis
-                # Final Matrix Shape for this run: (4, 256) -> Tasks x Brain Parcels
+                # Stack your 4 tasks together vertically along a new axis - Tasks x Brain Parcels
                 averageVector_list_stacked = np.stack(averageVector_list, axis=0)
-
-                # Ready for computing your fMRI RDM...
             else:
                 print(f"Skipped stacking for {participant} R{recording}: incomplete task list.")
 
@@ -263,6 +259,7 @@ if setup['preprocess_fMRI2rdm'] == True:
             rdm, rdm_vector = clustering.compute_rdm(averageVector_list_stacked.T, rdm_metric)
 
             np.save(os.path.join(setup['directory_rdm'], f'{participant}_ses-{recording}_rdm_{rdm_metric}.npy'), rdm)
+
 
 
 ########################################################################################################################
