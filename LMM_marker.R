@@ -1,5 +1,5 @@
 # ======================================================================================
-# Linear Mixed Model - FIXED VERSION
+# Linear Mixed Model
 # ======================================================================================
 if (!require("pacman")) install.packages("pacman")
 pacman::p_load(jsonlite, dplyr, tidyr, lme4, lmerTest, emmeans, ggplot2, performance, patchwork)
@@ -15,7 +15,6 @@ q1_results <- data.frame()
 q2_results <- data.frame()
 posthoc_results_q1 <- data.frame()
 
-# Hilfsfunktion
 parse_json_to_df <- function(file_path, group_label) {
   data <- fromJSON(file_path)
   rows <- list()

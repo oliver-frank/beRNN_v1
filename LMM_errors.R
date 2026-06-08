@@ -33,25 +33,19 @@ for (current_task in unique_tasks) {
 
 
 
-
-
-
-
-
-
 library(ggplot2)
 library(dplyr)
 library(viridis)
 library(scales)
 
-# 1. Daten vorbereiten und Prozentanteil berechnen
+# prepare data
 plot_data <- all_data %>%
   filter(task == "DM_Anti") %>% 
   mutate(
     percentage = (count / total_errors) * 100
   )
 
-# 2. Probanden umbenennen und Reihenfolge festlegen
+# change participant namin
 plot_data <- plot_data %>%
   mutate(
     subject = case_when(
@@ -65,7 +59,7 @@ plot_data <- plot_data %>%
     subject = factor(subject, levels = c("HC1", "HC2", "MDD", "ASD", "SCZ"))
   )
 
-# 3. Top 10 Fehlerkategorien ermitteln und filtern
+# Get error categories
 top_10_categories <- plot_data %>%
   group_by(error_category) %>%
   summarise(grand_total = sum(count)) %>%
@@ -76,7 +70,7 @@ top_10_categories <- plot_data %>%
 heatmap_data_top10 <- plot_data %>%
   filter(error_category %in% top_10_categories)
 
-# 4. Die optimierte Heatmap erstellen
+# create heatmap
 my_heatmap <- ggplot(heatmap_data_top10, aes(x = subject, y = error_category, fill = percentage)) +
   geom_tile(color = "white", linewidth = 0.5) + 
   scale_fill_viridis(
@@ -107,10 +101,7 @@ my_heatmap <- ggplot(heatmap_data_top10, aes(x = subject, y = error_category, fi
     legend.box.spacing = unit(0.1, "cm") # Rückt die Legende näher an den Plot
   )
 
-# 5. EXPORT MIT INTELLIGENTEN ABMESSUNGEN
-# Wir vergrößern das Bild minimal auf 5.5 x 5.0 Zoll. 
-# In Kombination mit der verkleinerten Legende oben im Code werden die Zellen jetzt 
-# deutlich dominanter und die Legende fügt sich dezent ein.
+# export
 ggsave(
   filename = "C:\\Users\\oliver.frank\\Desktop\\PyProjects\\Data\\heatmap_anti_top10.png",
   plot = my_heatmap,
@@ -121,24 +112,13 @@ ggsave(
 
 
 
-
-
-
-
-
-
-
-# ==============================================================================
-# MULTI-TASK HEATMAP MIT ORIGINAL MATPLOTLIB COOLWARM PALETTE & TEXT LABELS
-# ==============================================================================
-
 library(ggplot2)
 library(dplyr)
 library(viridis)
 library(scales)
 library(egg)
 
-# 1. Daten einlesen
+# read data
 data_path <- "C:\\Users\\oliver.frank\\Desktop\\PyProjects\\Data\\all_tasks_flat_counts.csv"
 all_data <- read.csv(data_path, stringsAsFactors = FALSE)
 
@@ -146,8 +126,7 @@ all_data <- all_data %>%
   group_by(task, subject) %>%
   mutate(total_errors = sum(count)) %>%
   ungroup()
-
-# 2. Reihenfolge und Struktur definieren
+# change naming
 task_order_vertical <- c(
   'DM',      'DM_Anti',
   'EF',      'EF_Anti',
@@ -156,7 +135,7 @@ task_order_vertical <- c(
   'WM',      'WM_Anti',
   'WM_Ctx1', 'WM_Ctx2'
 )
-
+# prepare data
 plot_data_all <- all_data %>%
   filter(task %in% task_order_vertical) %>%
   mutate(
@@ -175,7 +154,7 @@ plot_data_all <- all_data %>%
     subject = factor(subject, levels = c("HC1", "HC2", "MDD", "ASD", "SCZ"))
   )
 
-# 3. Top 5 Kategorien pro Task filtern
+# sort top categories
 heatmap_data_all_top5 <- plot_data_all %>%
   group_by(task, error_category) %>%
   summarise(grand_total = sum(count), .groups = "drop") %>%
@@ -185,24 +164,20 @@ heatmap_data_all_top5 <- plot_data_all %>%
   ungroup() %>%
   semi_join(plot_data_all, ., by = c("task", "error_category"))
 
-# 4. Den großen Gesamt-Plot erstellen
 big_heatmap <- ggplot(heatmap_data_all_top5, aes(x = subject, y = error_category, fill = percentage)) +
   geom_tile(color = "white", linewidth = 0.3) + 
-  
-  # JETZT NEU: Viel kleinere Zahlen ohne Prozentzeichen und Nachkommastellen
+
   geom_text(
     aes(
-      label = sprintf("%.0f", percentage), # Rundet auf ganze Zahlen ohne %-Zeichen
+      label = sprintf("%.0f", percentage),
       color = ifelse(percentage > 35 | percentage < 10, "white", "black")
     ),
-    size = 1.6,       # Deutlich kleinere Schriftgröße (vorher 2.2)
-    fontface = "plain" # "plain" statt "bold" spart zusätzlich horizontalen Platz
+    size = 1.6,
+    fontface = "plain"
   ) +
-  
-  # Steuerung der Textfarben für den Kontrast (wird nicht in der Legende angezeigt)
+
   scale_color_identity() +
-  
-  # HIER WIRD DAS ORIGINALE MATPLOTLIB "COOLWARM" REPRÄZENTIERT
+
   scale_fill_gradient2(
     low = "#3b4cc0",      
     mid = "#e2e2e2",      
@@ -238,3 +213,5 @@ big_heatmap <- ggplot(heatmap_data_all_top5, aes(x = subject, y = error_category
     panel.spacing = unit(0.4, "cm"),
     plot.margin = margin(t = 0.2, r = 0.5, b = 0.8, l = 0.2, unit = "cm")
   )
+
+

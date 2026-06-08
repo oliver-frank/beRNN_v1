@@ -469,19 +469,35 @@ def createSplittedDatasets(hp, preprocessedData_path, month):
                 # if any(exclude in file for exclude in ['Randomization', 'Segmentation', 'Mirrored', 'Rotation']):
                 #     continue
                 # Include only files that contain any of the months in monthsConsidered
-                # Merge month 3 to month 4 for beRNN_05 as there are only few month 4 files
-                if hp['participant'] == 'beRNN_05' and month == 'month_4':
-                    if 'month_4' not in file and 'month_3' not in file:
+                # Merge files for participants if committment was too low in specific months
+                # beRNN_05
+                if hp['participant'] == 'beRNN_05' and month == 'month_8':
+                    if 'month_8' not in file and 'month_7' not in file:
                         continue
-                # Merge month 3 to month 4 for beRNN_02 as there are only few month 3 files
+                # beRNN_04
                 elif hp['participant'] == 'beRNN_04' and month == 'month_3':
-                    if 'month_3' not in file and 'month_4' not in file:
+                    if 'month_2' not in file and 'month_3' not in file:
                         continue
-                # Merge month 3 to month 4 for beRNN_02 as there are only few month 3 files
-                elif hp['participant'] == 'beRNN_02' and month == 'month_5':
-                    if 'month_5' not in file and 'month_4' not in file:
+                elif hp['participant'] == 'beRNN_04' and month == 'month_6':
+                    if 'month_6' not in file and 'month_5' not in file:
                         continue
-                # Include only files that contain any of the months in monthsConsidered
+                elif hp['participant'] == 'beRNN_04' and month == 'month_7':
+                    if 'month_6' not in file and 'month_7' not in file:
+                        continue
+                # beRNN_02
+                elif hp['participant'] == 'beRNN_02' and month == 'month_12':
+                    if 'month_12' not in file and 'month_11' not in file and 'month_10' not in file:
+                        continue
+                elif hp['participant'] == 'beRNN_02' and month == 'month_11':
+                    if 'month_11' not in file and 'month_10' not in file:
+                        continue
+                elif hp['participant'] == 'beRNN_02' and month == 'month_8':
+                    if 'month_8' not in file and 'month_7' not in file:
+                        continue
+                # beRNN_01
+                elif hp['participant'] == 'beRNN_01' and month == 'month_12':
+                    if 'month_12' not in file and 'month_11' not in file:
+                        continue
                 elif month not in file:  # Sort out months which should not be considered
                     continue
                 # Add all necessary files to triplets

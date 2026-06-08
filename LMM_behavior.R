@@ -53,29 +53,28 @@ df_final <- df_final %>%
 # Calculate contrasts
 # ======================================================================================
 # create models with fixed and random effects 
-model_rt <- lmer(ReactionTime ~ Month + Complexity + (1|Participant), data = df_final)
-model_acc <- lmer(Accuracy ~ Month + Complexity + (1|Participant), data = df_final)
+model_rt <- lmer(ReactionTime ~ Month + Complexity + Task + (1|Participant), data = df_final)
+model_acc <- lmer(Accuracy ~ Month + Complexity + Task + (1|Participant), data = df_final)
 
-# Ergebnisse prüfen RT
+# check results RT
 summary(model_rt)
 anova(model_rt)
 ranova(model_rt)
 
-# Ergebnisse prüfen ACC
+# check results ACC
 summary(model_acc)
 anova(model_acc)
 ranova(model_acc)
 
-# Performance prüfen
+# check performance
 performance::r2(model_rt)
 performance::r2(model_acc)
 
 # Post-hoc-Tests (Tukey)
-# Vergleich der Monate
 posthoc_rt <- emmeans(model_rt, pairwise ~ Month, pbkrtest.limit = 5140)
 posthoc_acc <- emmeans(model_acc, pairwise ~ Month, pbkrtest.limit = 5140)
 
-# Ergebnisse anzeigen
+# show contrast results
 print(posthoc_rt$contrasts)
 print(posthoc_acc$contrasts)
 
@@ -85,42 +84,57 @@ print(posthoc_acc$contrasts)
 # Calculate emmeans and plot them over months and complexity levels for rt and acc
 # ======================================================================================
 # Estimated Marginal Means (acc) ###############################################
-emm_month <- emmeans(model_acc, "Month")
-emm_comp  <- emmeans(model_acc, "Complexity")
+emm_acc_month <- emmeans(model_acc, "Month")
+emm_acc_comp  <- emmeans(model_acc, "Complexity")
+emm_acc_task  <- emmeans(model_acc, "Task")
 
-pairs_month <- pwpm(emm_month) 
-pairs_comp  <- pwpm(emm_comp)
+pairs_month <- pwpm(emm_acc_month) 
+pairs_comp  <- pwpm(emm_acc_comp)
+pairs_task  <- pwpm(emm_acc_task)
 
-plot(emm_month, comparisons = TRUE) + 
+plot(emm_acc_month, comparisons = TRUE) + 
   theme_minimal() +
   labs(title = "Influence of months on acc (cleaned from complexity)",
        x = "Estimated mean (EMMean)",
        y = "Month")
 
-plot(emm_comp, comparisons = TRUE) + 
+plot(emm_acc_comp, comparisons = TRUE) + 
   theme_minimal() +
   labs(title = "Influence of complexity on acc (cleaned from months)",
        x = "EMMean",
        y = "Complexity level")
 
+plot(emm_acc_task, comparisons = TRUE) + 
+  theme_minimal() +
+  labs(title = "Influence of task on acc (cleaned from months)",
+       x = "EMMean",
+       y = "Complexity level")
 
 
 # Estimated Marginal Means (rt) ###############################################
-emm_month <- emmeans(model_rt, "Month")
-emm_comp  <- emmeans(model_rt, "Complexity")
+emm_rt_month <- emmeans(model_rt, "Month")
+emm_rt_comp  <- emmeans(model_rt, "Complexity")
+emm_rt_task  <- emmeans(model_rt, "Task")
 
-pairs_month <- pwpm(emm_month) 
-pairs_comp  <- pwpm(emm_comp)
+pairs_month <- pwpm(emm_rt_month) 
+pairs_comp  <- pwpm(emm_rt_comp)
+pairs_task  <- pwpm(emm_rt_task)
 
-plot(emm_month, comparisons = TRUE) + 
+plot(emm_rt_month, comparisons = TRUE) + 
   theme_minimal() +
   labs(title = "Influence of months on rt (cleaned from complexity)",
        x = "Estimated mean (EMMean)",
        y = "Month")
 
-plot(emm_comp, comparisons = TRUE) + 
+plot(emm_rt_comp, comparisons = TRUE) + 
   theme_minimal() +
   labs(title = "Influence of complexity on rt (cleaned from months)",
+       x = "EMMean",
+       y = "Complexity level")
+
+plot(emm_rt_task, comparisons = TRUE) + 
+  theme_minimal() +
+  labs(title = "Influence of task on rt (cleaned from months)",
        x = "EMMean",
        y = "Complexity level")
 
@@ -129,12 +143,11 @@ plot(emm_comp, comparisons = TRUE) +
 ################################################################################
 # Final Evaluation: Stability of RT, ACC, and Complexity (3-Month Window)
 ################################################################################
-# 1. Extract EMMeans
 # Ensure column names are standardized so 'emmean' exists
 emm_rt_df  <- as.data.frame(emmeans(model_rt, ~ Month))
 emm_acc_df <- as.data.frame(emmeans(model_acc, ~ Month))
 
-# 2. Descriptive Data (Complexity & Trials)
+# descriptive data
 comp_stability <- df_final %>%
   mutate(Comp_num = as.numeric(as.character(Complexity))) %>%
   group_by(Month) %>%
@@ -145,7 +158,7 @@ comp_stability <- df_final %>%
   ) %>%
   mutate(Month_num = as.numeric(as.character(Month))) # Ensure Month is numeric
 
-# 3. Preparation for the Loop
+# preparation for the Loop
 final_eval_results <- data.frame()
 # Use numeric values of months for the loop
 months_vec <- sort(unique(as.numeric(as.character(emm_rt_df$Month))))
@@ -172,7 +185,7 @@ for(i in 1:(length(months_vec) - 2)) {
   ))
 }
 
-# 4. Utility function for normalization (0 to 1 score)
+# utility function for normalization (0 to 1 score)
 rescale_utility <- function(x, direction = "high_is_better") {
   if(max(x) == min(x)) return(rep(1, length(x))) # Return 1 if all values are identical
   if(direction == "high_is_better") {
@@ -182,7 +195,7 @@ rescale_utility <- function(x, direction = "high_is_better") {
   }
 }
 
-# 5. Calculate Scoring
+# calculate Scoring
 final_eval_results <- final_eval_results %>%
   mutate(
     score_rt    = rescale_utility(RT_SD, "low_is_better"),
@@ -204,11 +217,13 @@ cat("\nThe objectively most stable window is:", final_eval_results$Gruppe[1],
 
 
 
+
+
+
 ################################################################################
 # Visualization of Design Stability (Complexity over Months)
 ################################################################################
-
-# 1. Enhance descriptive data with Standard Deviation (SD) for error bars
+# Enhance descriptive data with Standard Deviation (SD) for error bars
 comp_stability_plot <- df_final %>%
   mutate(Comp_num = as.numeric(as.character(Complexity))) %>%
   group_by(Month) %>%
@@ -218,7 +233,7 @@ comp_stability_plot <- df_final %>%
     .groups = 'drop'
   )
 
-# 2. Create plot analogous to the EMMeans style
+# Create plot analogous to the EMMeans style
 plot_comp_stability <- ggplot(comp_stability_plot, aes(x = mean_comp, y = Month)) +
   # Add Error Bars (Standard Deviation) to show distribution within months
   geom_errorbarh(aes(xmin = mean_comp - sd_comp, xmax = mean_comp + sd_comp), 
@@ -241,7 +256,7 @@ print(plot_comp_stability)
 ################################################################################
 # Visualization of counts over all participants 
 ################################################################################
-# 1. Count for Reaction Time (RT)
+# Count for Reaction Time (RT)
 # Filter NAs to ensure only actual measurements are counted
 df_count_rt <- df_final %>%
   filter(!is.na(ReactionTime)) %>%
@@ -254,7 +269,7 @@ plot_rt <- ggplot(df_count_rt, aes(x = Month, y = count)) +
   labs(title = "Number of Entries: Reaction Time", 
        x = "Month", y = "Count (N)")
 
-# 2. Count for Accuracy (acc)
+# Count for Accuracy (acc)
 df_count_acc <- df_final %>%
   filter(!is.na(Accuracy)) %>%
   group_by(Month) %>%
@@ -278,7 +293,7 @@ print(plot_acc)
 library(dplyr)
 library(ggplot2)
 
-# 1. Prepare data for RT (Count per Participant and Month)
+# Prepare data for RT (Count per Participant and Month)
 df_counts_rt <- df_final %>%
   filter(!is.na(ReactionTime)) %>%
   group_by(Participant, Month) %>%
@@ -293,7 +308,7 @@ plot_rt_facet <- ggplot(df_counts_rt, aes(x = Month, y = count, fill = Participa
        x = "Month", y = "N") +
   theme(legend.position = "none") # Remove legend as labels are on the left
 
-# 2. Prepare data for Accuracy (acc)
+# Prepare data for Accuracy (acc)
 df_counts_acc <- df_final %>%
   filter(!is.na(Accuracy)) %>%
   group_by(Participant, Month) %>%
