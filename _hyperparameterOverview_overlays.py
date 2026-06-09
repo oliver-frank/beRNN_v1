@@ -492,16 +492,17 @@ def visualize_topMarker_testPerf_corrlation(meta_perf_test_list, meta_topMarker_
     # Create figure and axis
     fig, ax = plt.subplots(figsize=(4, 4))
 
-    # Scatter plot
-    ax.scatter(x, y)
+    # Scatter plot with gradual blue coloring based on test performance (y)
+    scatter = ax.scatter(x, y, c=y, cmap='Blues', vmin=0, vmax=1, edgecolor='none')
+    # fig.colorbar(scatter, ax=ax, label="Test Performance Scale")
     ax.set_xlabel(marker)
     ax.set_ylabel("Test Performance")
     ax.set_xlim(0, 1)
     ax.set_ylim(0, 1)
 
-    # Regression line
-    m, b = np.polyfit(x, y, 1)
-    ax.plot(x, m * x + b)
+    # # Regression line
+    # m, b = np.polyfit(x, y, 1)
+    # ax.plot(x, m * x + b)
 
     # Correlation annotation (inside plot)
     textstr = f"$r = {r:.2f}$\n$p = {p:.3g}$"
@@ -604,6 +605,7 @@ def visualize_simulatedTopMarkerNetworks():
     plt.tight_layout()
     plt.show()
 
+
 ########################################################################################################################
 ########################################################################################################################
 
@@ -632,16 +634,16 @@ if __name__ == '__main__':
     #                     '_gridSearch_domainTask-DM_beRNN_03_highDim_correctOnly_256',
     #                     '_gridSearch_domainTask_DM_beRNN_03_highDim_correctOnly_512']
 
-    foldersToOverlay = ['show-grid_multi_beRNN_03_highDim_correctOnly_16',
-                  'show-grid_multi_beRNN_03_highDim_correctOnly_32',
-                  'show-grid_multi_beRNN_03_highDim_correctOnly_64',
-                  'show-grid_multi_beRNN_03_highDim_correctOnly_128',
-                  'show-grid_multi_beRNN_03_highDim_correctOnly_256',
-                  'show-grid_multi_beRNN_03_highDim_correctOnly_512']
+    foldersToOverlay = ['show_bench_multi_beRNN_00_highDim_benchmark_16',
+                  'show_bench_multi_beRNN_00_highDim_benchmark_32',
+                  'show_bench_multi_beRNN_00_highDim_benchmark_64',
+                  'show_bench_multi_beRNN_00_highDim_benchmark_128',
+                  'show_bench_multi_beRNN_00_highDim_benchmark_256',
+                  'show_bench_multi_beRNN_00_highDim_benchmark_512']
 
     paper_nomenclatur_dict = ['HC1', 'HC2', 'MDD', 'ASD', 'SCZ']
     participantList = ['beRNN_00', 'beRNN_01', 'beRNN_02', 'beRNN_03', 'beRNN_04', 'beRNN_05']
-    participantNumber = 3 # for standard visualization beRNN_03
+    participantNumber = 0 # for standard visualization beRNN_03
     network_sizes = ['16', '32', '64', '128', '256', '512']  # for standard visualization
 
     mode = ['train', 'test'][1]
@@ -774,5 +776,179 @@ if __name__ == '__main__':
                                          mode='test',
                                          alpha=0.6,
                                          cmap_name='viridis')
+
+
+
+# ########################################################################################################################
+# # head. Train performance over time for one model over 3 months ********************************************************
+# ########################################################################################################################
+# # Plot train and test performance over training steps for one particular model
+# import json
+# import os
+# import matplotlib.pyplot as plt
+# import numpy as np
+#
+# months = ['month_3', 'month_4', 'month_5']
+# base_dir = r'C:\Users\oliver.frank\Desktop\PyProjects\beRNNmodels\show-grid_multi_beRNN_03_highDim_256\highDim\beRNN_03\8\beRNN_03_AllTask_3-5_data_highDim_tB8_iter5_LeakyRNN_256_relu'
+# save_fig = r'C:\Users\oliver.frank\Desktop\PyProjects\beRNNmodels\show-grid_multi_beRNN_03_highDim_256\highDim\beRNN_03\visuals\performance_test\batchPlots\1\8'
+# os.makedirs(save_fig, exist_ok=True)
+#
+# perfList = [
+#     'perf_train_DM', 'perf_train_DM_Anti', 'perf_train_EF', 'perf_train_EF_Anti',
+#     'perf_train_RP', 'perf_train_RP_Anti', 'perf_train_RP_Ctx1', 'perf_train_RP_Ctx2',
+#     'perf_train_WM', 'perf_train_WM_Anti', 'perf_train_WM_Ctx1', 'perf_train_WM_Ctx2'
+# ]
+#
+# # Load data from all months into memory first
+# data_by_month = {}
+# for month in months:
+#     month_path = os.path.join(base_dir, f"model_{month}", 'log.json')
+#     if os.path.exists(month_path):
+#         with open(month_path, 'r') as f:
+#             data_by_month[month] = json.load(f)
+#     else:
+#         print(f"Warning: File not found: {month_path}")
+#         data_by_month[month] = {}
+#
+# # Setup the plot
+# fig, ax = plt.subplots(figsize=(8, 3))
+# colors = plt.cm.viridis(np.linspace(0, 1, len(perfList)))
+#
+# month_lengths = []
+#
+# # Process and plot each task as a single consecutive timeline
+# for i, perf in enumerate(perfList):
+#     stacked_y = []
+#
+#     # Concatenate the lists sequentially
+#     for month in months:
+#         if perf in data_by_month[month]:
+#             month_data = data_by_month[month][perf]
+#             stacked_y.extend(month_data)
+#
+#             # Save the length of data from month_3 and month_4 on the first loop iteration
+#             if i == 0:
+#                 month_lengths.append(len(month_data))
+#
+#     # Skip plotting if no data was found for this task across any month
+#     if not stacked_y:
+#         continue
+#
+#     # Downsample
+#     downsampled_y = stacked_y[::39]
+#     downsampled_x = list(range(0, len(stacked_y), 39))
+#
+#     label_name = perf.replace('perf_train_', '')
+#
+#     # Plot the full stitched trajectory
+#     ax.plot(downsampled_x, downsampled_y, label=label_name, color=colors[i], linewidth=2.5, alpha=0.8)
+#
+# # Add visual dividers
+# if month_lengths:
+#     current_boundary = 0
+#     for idx, length in enumerate(month_lengths[:-1]):  # No divider needed after the last month
+#         current_boundary += length
+#         ax.axvline(x=current_boundary, color='gray', linestyle='--', alpha=0.5, linewidth=1.5)
+#
+#         # Annotate labels above the dividers
+#         # ax.text(current_boundary, 1.01, f"End of {months[idx].replace('_', ' ').title()}",
+#         #         color='gray', fontsize=10, ha='center', fontweight='bold')
+#
+# # Plot styling
+# ax.set_title("Consecutive Train Performance across Months 3, 4, and 5", fontsize=14, fontweight='bold')
+# ax.set_xlabel("Steps", fontsize=12)
+# ax.set_ylabel("Performance", fontsize=12)
+# ax.set_ylim(0, 1.05)
+# ax.grid(True, linestyle=':', alpha=0.3)
+#
+# # Single elegant legend for tasks
+# ax.legend(bbox_to_anchor=(1.05, 1), loc='upper left', fontsize=10)
+#
+# plt.tight_layout()
+# plt.show()
+#
+# save_path = os.path.join(save_fig, 'perf_train_overTime.png')
+# fig.savefig(save_path, dpi=300, bbox_inches='tight')
+#
+#
+# ########################################################################################################################
+# # head. Test performance over time for one model over 3 months *********************************************************
+# ########################################################################################################################
+# perfList = [
+#     'perf_DM', 'perf_DM_Anti', 'perf_EF', 'perf_EF_Anti',
+#     'perf_RP', 'perf_RP_Anti', 'perf_RP_Ctx1', 'perf_RP_Ctx2',
+#     'perf_WM', 'perf_WM_Anti', 'perf_WM_Ctx1', 'perf_WM_Ctx2'
+# ]
+#
+# # Load data from all months into memory first
+# data_by_month = {}
+# for month in months:
+#     month_path = os.path.join(base_dir, f"model_{month}", 'log.json')
+#     if os.path.exists(month_path):
+#         with open(month_path, 'r') as f:
+#             data_by_month[month] = json.load(f)
+#     else:
+#         print(f"Warning: File not found: {month_path}")
+#         data_by_month[month] = {}
+#
+# # Setup the plot
+# fig, ax = plt.subplots(figsize=(8, 3))
+# colors = plt.cm.viridis(np.linspace(0, 1, len(perfList)))
+#
+# month_lengths = []
+#
+# # Process and plot each task as a single consecutive timeline
+# for i, perf in enumerate(perfList):
+#     stacked_y = []
+#
+#     # Concatenate the lists sequentially
+#     for month in months:
+#         if perf in data_by_month[month]:
+#             month_data = data_by_month[month][perf]
+#             stacked_y.extend(month_data)
+#
+#             # Save the length of data from month_3 and month_4 on the first loop iteration
+#             if i == 0:
+#                 month_lengths.append(len(month_data))
+#
+#     # Skip plotting if no data was found for this task across any month
+#     if not stacked_y:
+#         continue
+#
+#     # Downsample
+#     downsampled_y = stacked_y
+#     downsampled_x = list(range(0, len(stacked_y), 1))
+#
+#     label_name = perf.replace('perf_', '')
+#
+#     # Plot the full stitched trajectory
+#     ax.plot(downsampled_x, downsampled_y, label=label_name, color=colors[i], linewidth=2.5, alpha=0.8)
+#
+# # Add visual dividers
+# if month_lengths:
+#     current_boundary = 0
+#     for idx, length in enumerate(month_lengths[:-1]):  # No divider needed after the last month
+#         current_boundary += length
+#         ax.axvline(x=current_boundary, color='gray', linestyle='--', alpha=0.5, linewidth=1.5)
+#
+#         # Annotate labels above the dividers
+#         # ax.text(current_boundary, 1.01, f"End of {months[idx].replace('_', ' ').title()}",
+#         #         color='gray', fontsize=10, ha='center', fontweight='bold')
+#
+# # Plot styling
+# ax.set_title("Consecutive Test Performance across Months 3, 4, and 5", fontsize=14, fontweight='bold')
+# ax.set_xlabel("Steps", fontsize=12)
+# ax.set_ylabel("Performance", fontsize=12)
+# ax.set_ylim(0, 1.05)
+# ax.grid(True, linestyle=':', alpha=0.3)
+#
+# # Single elegant legend for tasks
+# ax.legend(bbox_to_anchor=(1.05, 1), loc='upper left', fontsize=10)
+#
+# plt.tight_layout()
+# plt.show()
+#
+# save_path = os.path.join(save_fig, 'perf_test_overTime.png')
+# fig.savefig(save_path, dpi=300, bbox_inches='tight')
 
 
