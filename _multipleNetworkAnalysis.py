@@ -43,7 +43,7 @@ Both data modalities have to be preprocessed with:
 ########################################################################################################################
 setup = {
     'comparison': ['correlation', 'rsa', None][1],
-    'modalityWithin_comparison': ['brain', 'beRNN', 'standard'][0], # standard is beRNN brain comparison - 'brain': brain/brain - 'beRNN': beRNN/beRNN
+    'modalityWithin_comparison': ['brain', 'beRNN', 'standard'][2], # standard is beRNN brain comparison - 'brain': brain/brain - 'beRNN': beRNN/beRNN
     'numberOfModels': [5, 3], # second value represents beRNN_04 - only defined for beRNNs - should be 3 if compared to brain in 'standard' - [5, 3] or [20, 20]
     'threshold': 0.1,
     'participants_beRNN': ['beRNN_03', 'beRNN_04', 'beRNN_01', 'beRNN_02', 'beRNN_05'], # order for paper - with 'beRNN_06' for ALL comparison
@@ -51,8 +51,10 @@ setup = {
     # 'paper_nomenclatur': ['HC1', 'HC2', 'MDD', 'ASD', 'SCZ', 'ALL'], # nomenclatur for paper plots - only applied for RDA
     'participants': ['sub-6IECX', 'sub-DKHPB', 'sub-KPB84', 'sub-YL4AS', 'sub-96WID'], # nomenclatur for paper plots - only applied for RDA
     'participants_snip': ['sub-SNIP6IECX', 'sub-SNIPDKHPB', 'sub-SNIPKPB84', 'sub-SNIPYL4AS', 'sub-SNIP96WID'], # nomenclatur for paper plots - only applied for RDA
-    'folder_beRNN': fr'C:\Users\oliver.frank\Desktop\PyProjects\beRNNmodels\__legacy_month_4-6\_robustness_multiTask_beRNN_01_highDim_256_hp_9',
+    'folder_beRNN': fr'C:\Users\oliver.frank\Desktop\PyProjects\beRNNmodels\compare_4task_beRNN_01_highDim_correctOnly_256_hp_8',
+    'robust_compare': False,
     'folder_brain': r'W:\group_csp\analyses\oliver.frank\_brainModels',
+    'subNetwork_string': 'Cont.', # 'cosine.': wholeBrain
     'folder_topologicalMarker_pValue_lists': r'C:\Users\oliver.frank\Desktop\PyProjects\beRNNmodels\__topologicalMarker_pValue_lists',
     # 'folder_brain_meanVecs': r'W:\group_csp\in_house_datasets\bernn\mri\derivatives\xcpd_0.11.1\sub-SNIP6IECX01\func',
     'dataType': None, # will be defined below
@@ -60,7 +62,8 @@ setup = {
     'rsa_directory': r'C:\Users\oliver.frank\Desktop\PyProjects\beRNNmodels\__rsaVisuals',
     'directory_rdm': r'W:\group_csp\analyses\oliver.frank\_brainModels\functional_matrices_rdm',
     'tasks': ['reward', 'flanker', 'faces', 'nback'],
-    'preprocess_fMRI2rdm': True,
+    'preprocess_fMRI2rdm_subnetwork': False, # subnetwork has to be manually defined in function
+    'preprocess_fMRI2rdm': False,
     "visualize_fMRI": False,
     "visualize_dti": False,
     "correlationOf_correlationMatices_fMRI": False, # outsourced to fingerprints.py
@@ -260,6 +263,151 @@ if setup['preprocess_fMRI2rdm'] == True:
 
             np.save(os.path.join(setup['directory_rdm'], f'{participant}_ses-{recording}_rdm_{rdm_metric}.npy'), rdm)
 
+
+if setup['preprocess_fMRI2rdm_subnetwork'] == True:
+    for participant in setup['participants_snip']:
+        # Handle custom session/recording lengths for specific participants
+        if participant == 'sub-SNIPDKHPB':
+            recordings = ['01', '02', '03']
+        else:
+            recordings = ['01', '02', '03', '04', '05']
+
+        for recording in recordings:
+            averageVector_list = []
+            TR = 0.8  # RepetitionTime: duration of one full 3D volume acquisition
+            # Hemodynamic response latency shift to align fMRI signals with the RNN timelines
+            HRF_DELAY_SEC = 6.0
+
+            # Explicitly define what counts as a valid stimulus trial for each task.
+            # Only trials matching these rules will be extracted and grouped into blocks.
+            STIMULUS_WHITELIST = {
+                'faces': lambda t: ('Form_' in t) or ('boy' in t) or ('girl' in t),
+                'flanker': lambda t: ('right' in t) or ('left' in t),
+                'nback': lambda t: ('num' in t),
+                'reward': lambda t: ('CS' in t)  # Captures wCSp, CSm, vCSp, lCSp
+            }
+
+            for task in setup['tasks']:
+                # Define file path for the continuous fMRI time series
+                timeseries_file_path = os.path.join(
+                    rf'W:\group_csp\in_house_datasets\bernn\mri\derivatives\xcpd_0.11.1\{participant}{recording}\func',
+                    f'{participant}{recording}_task-{task}_space-MNI152NLin2009cAsym_seg-4S1056Parcels_stat-mean_timeseries.tsv'
+                )
+
+                # Define file path for the original task event logs
+                events_file_path = os.path.join(
+                    rf'W:\group_csp\in_house_datasets\bernn\mri\rawdata\{participant}{recording}\func',
+                    f'{participant}{recording}_task-{task}_events.tsv'
+                )
+
+                # Skip to the next task if either the fMRI time series or the log file is missing
+                if not os.path.exists(timeseries_file_path) or not os.path.exists(events_file_path):
+                    print(f"Skipping {participant} R{recording} - Task: {task}: Files missing.")
+                    continue
+
+                # Load continuous fMRI matrix and clean missing values safely
+                timeseries_df = pd.read_csv(timeseries_file_path, sep='\t')
+
+                # info. Define the subnetwork **************************************************************************
+                # default subnetworks: Vis (120), SomMot(150), DorsAttn(114), SalVentAttn(130), Limbic(116), Cont(148), Default(222), 56 Subcorticals
+                sub_timeseries_df = timeseries_df.filter(like='_Vis_')
+                # sub_timeseries_df = timeseries_df.filter(like='_SomMot_')
+                # sub_timeseries_df = timeseries_df.filter(like='_DorsAttn_')
+                # sub_timeseries_df = timeseries_df.filter(like='_SalVentAttn_')
+                # sub_timeseries_df = timeseries_df.filter(like='_Limbic_')
+                # sub_timeseries_df = timeseries_df.filter(like='_Cont_')
+                # sub_timeseries_df = timeseries_df.filter(like='_Default_')
+                # sub_timeseries_df = timeseries_df.filter(regex='^(LH-|RH-)(Pu|Ca|NAC|EXA|GP|SN|RN|VeP|HN|HTH|MN|STH|Pulvinar|Anterior|Medio_Dorsal|Ventral|Central_Lateral)|Hippocampus|Amygdala|Cerebellar')
+                # Manually created subnetworks: Cont_DorsAttn(251)
+                # sub_timeseries_df = timeseries_df.filter(regex='_Cont_|_DorsAttn_')
+                # sub_timeseries_df = timeseries_df.filter(regex='_Cont_|_DorsAttn_|Pulvinar|Anterior|Medio_Dorsal|Ventral|Hippocampus|Amygdala|Cerebellar')
+
+                subNetwork_string = 'Vis'
+                # info. Define the subnetwork **************************************************************************
+
+                ts_data = np.nan_to_num(sub_timeseries_df.values, nan=0)  # Shape: (Total_TRs, 1056)
+
+                # z-scoring
+                from scipy.stats import zscore
+
+                ts_data_z = zscore(ts_data, axis=0)
+                ts_data_z = np.nan_to_num(ts_data_z, nan=0)
+
+
+                # Load raw event logs
+                events_df = pd.read_csv(events_file_path, sep='\t')
+                # Retrieve the specific whitelist filter function for the current task
+                is_valid_stimulus = STIMULUS_WHITELIST.get(task, lambda t: False)
+
+                # Find indices of rows containing whitelisted stimuli
+                valid_indices = events_df[events_df['trial_type'].apply(is_valid_stimulus)].index
+
+                if len(valid_indices) == 0:
+                    print(f"Warning: No whitelisted stimuli found for {participant} R{recording} - {task}")
+                    continue
+
+                # Group consecutive whitelisted trials into continuous blocks (vital for back-to-back nback trials)
+                blocks = []
+                current_block = [valid_indices[0]]
+
+                for idx in valid_indices[1:]:
+                    if idx == current_block[-1] + 1:
+                        current_block.append(idx)
+                    else:
+                        blocks.append(current_block)
+                        current_block = [idx]
+                blocks.append(current_block)  # Append the final block chunk
+
+                # block extraction and averaging
+                block_vectors = []
+
+                for block in blocks:
+                    first_trial = events_df.loc[block[0]]
+                    last_trial = events_df.loc[block[-1]]
+
+                    # Compute the physical onset of the first trial and absolute offset of the last trial in the block
+                    block_onset = first_trial['onset']
+                    block_offset = last_trial['onset'] + last_trial['duration']
+
+                    # Apply shifted epoch design logic (Onset to Offset + 2s blood delay)
+                    f_start_sec = block_onset + HRF_DELAY_SEC
+                    f_end_sec = block_offset + HRF_DELAY_SEC
+
+                    # Map seconds to specific matrix row indices (TRs)
+                    start_tr = int(np.round(f_start_sec / TR))
+                    end_tr = int(np.round(f_end_sec / TR))
+
+                    # Prevent empty frames if an experimental trial happens to be ultra-short
+                    if start_tr == end_tr:
+                        end_tr += 1
+
+                    # Extract the continuous slice and down-sample its time dimension immediately
+                    if end_tr <= ts_data_z.shape[0]:
+                        block_epoch = ts_data_z[start_tr:end_tr, :]  # Shape: (Variable_TRs, 256)
+
+                        # Collapse the time axis per block to standardize shape to (256,)
+                        block_vectors.append(block_epoch.mean(axis=0))
+
+                if len(block_vectors) == 0:
+                    continue
+
+                # Collapse across all blocks to get one highly stable spatial fingerprint for this task
+                final_task_vector = np.array(block_vectors).mean(axis=0)  # Shape: (256,)
+                averageVector_list.append(final_task_vector)
+
+            # stack tasks for this run
+            if len(averageVector_list) == len(setup['tasks']):
+                # Stack your 4 tasks together vertically along a new axis - Tasks x Brain Parcels
+                averageVector_list_stacked = np.stack(averageVector_list, axis=0)
+            else:
+                print(f"Skipped stacking for {participant} R{recording}: incomplete task list.")
+
+            # brain_vectors = node_strength_vectors(averageVector_list_stacked, absolute=True)
+
+            rdm_metric = 'cosine'
+            rdm, rdm_vector = clustering.compute_rdm(averageVector_list_stacked.T, rdm_metric)
+
+            np.save(os.path.join(setup['directory_rdm'], f'{participant}_ses-{recording}_rdm_{rdm_metric}_{subNetwork_string}.npy'), rdm)
 
 
 ########################################################################################################################
@@ -523,8 +671,9 @@ elif setup['comparison'] == 'rsa':
 
     rdm_dict_brain = {}
     for brain in setup['participants_snip']:
+
         # rdmFiles = [i for i in os.listdir(str(directory_).format(brain=brain)) if i.endswith('.npy')]
-        rdmFiles = [i for i in os.listdir(directory_brain) if brain in i and i.endswith('.npy')]
+        rdmFiles = [i for i in os.listdir(directory_brain) if brain in i and setup['subNetwork_string'] in i and i.endswith('.npy')]
         rdmFiles.sort(key=ascendingNumbers_brain)  # Sort list according to information chunk given in key function
         rdm_dict_brain[brain] = rdmFiles
 
@@ -576,16 +725,28 @@ elif setup['comparison'] == 'rsa':
             numberOfModels = setup['numberOfModels'][0]
 
         for modelNumber in range(0, numberOfModels):
-            model = os.listdir(model_folder)[modelNumber]
+            # info. 1,3,6,9,12 compare
+            if setup['robust_compare'] == False:
+                model = 'iter1_LeakyRNN_diag_256_relu'
+                modelList = os.listdir(os.path.join(model_folder, model))
+                if participant != 'beRNN_04':
+                    modelList[1], modelList[2], modelList[3], modelList[4] = modelList[2], modelList[3], modelList[4], modelList[1]
+                month = modelList[modelNumber]
+            else:
+                # info. robust compare
+                model = os.listdir(model_folder)[modelNumber]
+
             if model == 'times.txt':
                 continue
 
             if 'fundamentals' in model_folder or 'fs' in model_folder:
-                pkl_beRNN = rf'{model_folder}\{model}\mean_test_lay1_rule_fundamentals.pkl'
+                pkl_beRNN = rf'{model_folder}\{model}\{month}\mean_test_lay1_rule_fundamentals.pkl'
             elif 'domainTask' in model_folder:
-                pkl_beRNN = rf'{model_folder}\{model}\model_month_6\mean_test_lay1_rule_taskSubset.pkl'
-            elif 'multiTask' in model_folder or 'AllTask' in model_folder:
-                pkl_beRNN = rf'{model_folder}\{model}\model_month_6\mean_test_lay1_rule_all.pkl'
+                pkl_beRNN = rf'{model_folder}\{model}\{month}\mean_test_lay1_rule_taskSubset.pkl'
+            elif 'multi' in model_folder or 'AllTask' in model_folder:
+                pkl_beRNN = rf'{model_folder}\{model}\{month}\mean_test_lay1_rule_all.pkl'
+            elif '4task' in model_folder:
+                pkl_beRNN = rf'{model_folder}\{model}\{month}\mean_test_lay1_rule_4task.pkl'
             else:
                 print('No .pkl file found!')
 
@@ -729,15 +890,15 @@ elif setup['comparison'] == 'rsa':
         if setup['modalityWithin_comparison'] == 'brain':
             subject = beRNN_brain_snip_dict[subject]
 
-        if subject == 'beRNN_04' and (setup['modalityWithin_comparison'] != 'beRNN' or 'fs' in model_folder):
+        if subject == 'beRNN_04' and (setup['modalityWithin_comparison'] != 'beRNN' or 'compare' in model_folder):
             group_size = setup['numberOfModels'][1]
             tick_positions.append((g * group_size + group_size // 2) + 2.5)
             start = (g * group_size)+2
-        elif subject == 'beRNN_03' and (setup['modalityWithin_comparison'] != 'beRNN' or 'fs' in model_folder):
+        elif subject == 'beRNN_03' and (setup['modalityWithin_comparison'] != 'beRNN' or 'compare' in model_folder):
             group_size = setup['numberOfModels'][0]
             tick_positions.append((g * group_size + group_size // 2) + 0.5)
             start = g * group_size
-        elif setup['modalityWithin_comparison'] != 'beRNN' or 'fs' in model_folder:
+        elif setup['modalityWithin_comparison'] != 'beRNN' or 'compare' in model_folder:
             group_size = setup['numberOfModels'][0]
             tick_positions.append((g * group_size + group_size // 2) - 1.5)
             start = (g * group_size)-2
@@ -795,7 +956,7 @@ elif setup['comparison'] == 'rsa':
     )
 
     os.makedirs(setup['rsa_directory'], exist_ok=True)
-    plt.savefig(os.path.join(setup['rsa_directory'], rf'RDAmatrix-{os.path.basename(setup["folder_beRNN"])}-{setup["modalityWithin_comparison"]}.png'), bbox_inches='tight', dpi=300)
+    plt.savefig(os.path.join(setup['rsa_directory'], rf'RDAmatrix-{os.path.basename(setup["folder_beRNN"])}-{setup["modalityWithin_comparison"]}-{setup["subNetwork_string"]}.png'), bbox_inches='tight', dpi=300)
 
     plt.show()
 
@@ -1096,5 +1257,4 @@ if setup["plotTopMarkerOverDensities"] == True:
         plt.savefig(os.path.join(saveDirectory, f'topologicalMarker_density_{density}.png'))
 
         plt.show()
-
 

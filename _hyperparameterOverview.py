@@ -173,6 +173,14 @@ def get_n_clusters(model_dirs, density):
     modularity_list_sparse = list()
     participation_coefficient_list = list()
 
+    # info. add lists here for voxel analysis list *****************************************************************
+    n_modules_list = list()
+    global_efficiency_list = list()
+    node_degree_list = list()
+    betweenness_centrality_list = list()
+    eigenvector_centrality_list = list()
+    # info. add lists here for voxel analysis list *****************************************************************
+
     for i, model_dir in enumerate(model_dirs):
         if i % 50 == 0:
             print('Analyzing model {:d}/{:d}'.format(i, len(model_dirs)))
@@ -258,6 +266,15 @@ def get_n_clusters(model_dirs, density):
                 modularity_list_sparse.append(mod_value_sparse)
                 avg_pc = 0
                 participation_coefficient_list.append(avg_pc)
+
+                # info. add lists here for voxel analysis list *****************************************************************
+                n_modules_list.append(0)
+                global_efficiency_list.append(0)
+                node_degree_list.append(0)
+                betweenness_centrality_list.append(0)
+                eigenvector_centrality_list.append(0)
+                # info. add lists here for voxel analysis list *****************************************************************
+
             else:
                 try:
                     # clustering
@@ -273,6 +290,24 @@ def get_n_clusters(model_dirs, density):
                     avg_pc = np.mean(list(pc_dict.values()))
                     participation_coefficient_list.append(avg_pc)
 
+                    # info. add lists here for voxel analysis list *****************************************************************
+                    # number of modularity modules
+                    n_modules = len(communities_sparse)
+                    n_modules_list.append(n_modules)
+                    # global efficiency
+                    global_efficiency = nx.global_efficiency(G_sparse)
+                    global_efficiency_list.append(global_efficiency)
+                    # node degree
+                    node_degree = [d for n, d in G_sparse.degree()]
+                    node_degree_list.append(node_degree)
+                    # betweenness centrality
+                    betweenness_centrality = list(nx.betweenness_centrality(G_sparse).values())
+                    betweenness_centrality_list.append(betweenness_centrality)
+                    # eigenvector centrality
+                    eigenvector_centrality = list(nx.eigenvector_centrality(G_sparse, max_iter=1000).values())
+                    eigenvector_centrality_list.append(eigenvector_centrality)
+                    # info. add lists here for voxel analysis list *****************************************************************
+
                 except Exception as e:
                     print(f"Greedy modularity failed for {model_dir}. Setting mod_value = 0. ({e})")
                     avg_clustering = 0
@@ -281,6 +316,14 @@ def get_n_clusters(model_dirs, density):
                     modularity_list_sparse.append(mod_value_sparse)
                     avg_pc = 0
                     participation_coefficient_list.append(avg_pc)
+
+                    # info. add lists here for voxel analysis list *****************************************************************
+                    n_modules_list.append(0)
+                    global_efficiency_list.append(0)
+                    node_degree_list.append(0)
+                    betweenness_centrality_list.append(0)
+                    eigenvector_centrality_list.append(0)
+                    # info. add lists here for voxel analysis list *****************************************************************
 
             # # info: Alternatively take already calculatded mod value w. density threshold .1
             # try:
@@ -291,7 +334,7 @@ def get_n_clusters(model_dirs, density):
         else:
             modularity_list_sparse = []
 
-    return n_clusters, hp_list, silhouette_score, avg_perf_train_list, avg_perf_test_list, avg_clustering_list, modularity_list_sparse, participation_coefficient_list
+    return n_clusters, hp_list, silhouette_score, avg_perf_train_list, avg_perf_test_list, avg_clustering_list, modularity_list_sparse, participation_coefficient_list, n_modules_list, global_efficiency_list, node_degree_list, betweenness_centrality_list, eigenvector_centrality_list
 
 def plot_histogram():
     initdict = defaultdict(list)
@@ -599,7 +642,7 @@ def _individual_hp_plot(hp_plot, sort_variable, mode, directory, batchPlot, mode
         hp_list: list of hp dictionary
     """
     if hp_list is None: # attention: Maybe wrong fix here
-        n_clusters, hp_list, silhouette_score, avg_perf_train_list, avg_perf_test_list, avg_clustering_list, modularity_list_sparse, participation_coefficient_list = get_n_clusters(successful_model_dirs, density) # fix: variable still to deliver
+        n_clusters, hp_list, silhouette_score, avg_perf_train_list, avg_perf_test_list, avg_clustering_list, modularity_list_sparse, participation_coefficient_list, n_modules_list, global_efficiency_list, node_degree_list, betweenness_centrality_list, eigenvector_centrality_list = get_n_clusters(successful_model_dirs, density) # fix: variable still to deliver
 
     # Compare activation, ignore tanh that can not be trained with LeakyRNN
     # hp_plot = 'activation'
@@ -807,7 +850,7 @@ if __name__ == '__main__':
 
         # First compute n_clusters for each model then collect them in lists
         successful_model_dirs = compute_n_cluster(final_model_dirs, mode) # includes _analysis.clustering (w. n_cluster and rdm)
-        n_clusters, hp_list, silhouette_score, avg_perf_train_list, avg_perf_test_list, avg_clustering_list, modularity_list_sparse, participation_coefficient_list = get_n_clusters(successful_model_dirs, density)
+        n_clusters, hp_list, silhouette_score, avg_perf_train_list, avg_perf_test_list, avg_clustering_list, modularity_list_sparse, participation_coefficient_list, n_modules_list, global_efficiency_list, node_degree_list, betweenness_centrality_list, eigenvector_centrality_list = get_n_clusters(successful_model_dirs, density)
 
         # Create histogramms for each hyperparameter seperatly w.r.t. performance or clustering
         individual_hp_plot(n_clusters, silhouette_score, avg_perf_train_list, avg_perf_test_list, avg_clustering_list, modularity_list_sparse, participation_coefficient_list, directory, hp_list, sort_variable, mode, batchPlot, model_dir_batches, density)

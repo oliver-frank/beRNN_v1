@@ -177,7 +177,7 @@ def _compute_variance_bymodel(data_dir, model_dir, layer, data_type, networkAnal
                     h_var_all[:, i] = val.var(axis=1).mean(axis=0) # info: yang - task variance vectors
                     h_var_all = np.nan_to_num(h_var_all)
                     # reorder tensor - flatten across timesteps and trials - correlate all hidden unit vectors over flattened dimension
-                    h_corr_all_epoch[:, :, i] = np.corrcoef(val.transpose(2, 0, 1).reshape(val.shape[2], -1))  # info: frank - correlation matrices for topological markers
+                    h_corr_all_epoch[:, :, i] = np.corrcoef(val.transpose(2, 0, 1).reshape(val.shape[2], -1))  # info: frank - correlation matrices for topological markers - response epoch only
                     h_corr_all_epoch = np.nan_to_num(h_corr_all)  # replaces NaNs with 0
                     # Generate average activity representations for each hidden unit and each task individually
                     h_mean_all[:, i] = val.mean(axis=(0, 1)) # info: frank - mean matrices for RDA
@@ -186,7 +186,7 @@ def _compute_variance_bymodel(data_dir, model_dir, layer, data_type, networkAnal
                 # info: Take the original full sequence for each trial with fixation and response epoch - like in functional correlation matrices in fmriprep
                 for i, val in enumerate(h_complete.values()):
                     # reorder tensor - flatten across timesteps and trials - correlate all hidden unit vectors over flattened dimension
-                    h_corr_all[:, :, i] = np.corrcoef(val.transpose(2, 0, 1).reshape(val.shape[2], -1))  # info: frank - correlation matrices for topological markers
+                    h_corr_all[:, :, i] = np.corrcoef(val.transpose(2, 0, 1).reshape(val.shape[2], -1))  # info: frank - correlation matrices for topological markers - both epochs
                     h_corr_all = np.nan_to_num(h_corr_all)  # replaces NaNs with 0
 
                 result = {'h_var_all': h_var_all, 'keys': list(h_all.keys())}
