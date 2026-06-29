@@ -43,18 +43,21 @@ Both data modalities have to be preprocessed with:
 ########################################################################################################################
 setup = {
     'comparison': ['correlation', 'rsa', None][1],
-    'modalityWithin_comparison': ['brain', 'beRNN', 'standard'][2], # standard is beRNN brain comparison - 'brain': brain/brain - 'beRNN': beRNN/beRNN
-    'numberOfModels': [5, 3], # second value represents beRNN_04 - only defined for beRNNs - should be 3 if compared to brain in 'standard' - [5, 3] or [20, 20]
+    'modalityWithin_comparison': ['brain', 'beRNN', 'standard'][1], # standard is beRNN brain comparison - 'brain': brain/brain - 'beRNN': beRNN/beRNN
+    # 'numberOfModels': [5, 3], # second value represents beRNN_04 - only defined for beRNNs - should be 3 if compared to brain in 'standard' - [5, 3] or [20, 20]
+    'numberOfModels': [20, 20], # second value represents beRNN_04 - only defined for beRNNs - should be 3 if compared to brain in 'standard' - [5, 3] or [20, 20]
     'threshold': 0.1,
-    'participants_beRNN': ['beRNN_03', 'beRNN_04', 'beRNN_01', 'beRNN_02', 'beRNN_05'], # order for paper - with 'beRNN_06' for ALL comparison
-    'paper_nomenclatur': ['HC1', 'HC2', 'MDD', 'ASD', 'SCZ'], # nomenclatur for paper plots - only applied for RDA
+    # 'participants_beRNN': ['beRNN_03', 'beRNN_04', 'beRNN_01', 'beRNN_02', 'beRNN_05'], # order for paper - with 'beRNN_06' for ALL comparison
+    'participants_beRNN': ['beRNN_03', 'beRNN_00', 'beRNN_06', 'beRNN_07', 'beRNN_08'], # baseline comparison w. shared (00) and random (06)
+    # 'paper_nomenclatur': ['HC1', 'HC2', 'MDD', 'ASD', 'SCZ'], # nomenclatur for paper plots - only applied for RDA
+    'paper_nomenclatur': ['HC1', 'SHA', 'RND', 'LIN', 'NRE'], # nomenclatur for paper plots - only applied for RDA
     # 'paper_nomenclatur': ['HC1', 'HC2', 'MDD', 'ASD', 'SCZ', 'ALL'], # nomenclatur for paper plots - only applied for RDA
     'participants': ['sub-6IECX', 'sub-DKHPB', 'sub-KPB84', 'sub-YL4AS', 'sub-96WID'], # nomenclatur for paper plots - only applied for RDA
     'participants_snip': ['sub-SNIP6IECX', 'sub-SNIPDKHPB', 'sub-SNIPKPB84', 'sub-SNIPYL4AS', 'sub-SNIP96WID'], # nomenclatur for paper plots - only applied for RDA
-    'folder_beRNN': fr'C:\Users\oliver.frank\Desktop\PyProjects\beRNNmodels\compare_4task_beRNN_01_highDim_correctOnly_256_hp_8',
-    'robust_compare': False,
+    'folder_beRNN': fr'C:\Users\oliver.frank\Desktop\PyProjects\beRNNmodels\__baseline\robust_multi_beRNN_01_highDim_256_hp_8', # beRNN_01 is default
+    'robust_compare': True, # false if 1,3,6,9,12 comparison
     'folder_brain': r'W:\group_csp\analyses\oliver.frank\_brainModels',
-    'subNetwork_string': 'Cont.', # 'cosine.': wholeBrain
+    'subNetwork_string': 'Default_contrast',
     'folder_topologicalMarker_pValue_lists': r'C:\Users\oliver.frank\Desktop\PyProjects\beRNNmodels\__topologicalMarker_pValue_lists',
     # 'folder_brain_meanVecs': r'W:\group_csp\in_house_datasets\bernn\mri\derivatives\xcpd_0.11.1\sub-SNIP6IECX01\func',
     'dataType': None, # will be defined below
@@ -62,8 +65,8 @@ setup = {
     'rsa_directory': r'C:\Users\oliver.frank\Desktop\PyProjects\beRNNmodels\__rsaVisuals',
     'directory_rdm': r'W:\group_csp\analyses\oliver.frank\_brainModels\functional_matrices_rdm',
     'tasks': ['reward', 'flanker', 'faces', 'nback'],
-    'preprocess_fMRI2rdm_subnetwork': False, # subnetwork has to be manually defined in function
-    'preprocess_fMRI2rdm': False,
+    'preprocess_fMRI2rdm_subnetwork': False, # info. legacy see _brain/parcellation
+    'preprocess_fMRI2rdm': False, # info. legacy see _brain/parcellation
     "visualize_fMRI": False,
     "visualize_dti": False,
     "correlationOf_correlationMatices_fMRI": False, # outsourced to fingerprints.py
@@ -332,7 +335,6 @@ if setup['preprocess_fMRI2rdm_subnetwork'] == True:
 
                 ts_data_z = zscore(ts_data, axis=0)
                 ts_data_z = np.nan_to_num(ts_data_z, nan=0)
-
 
                 # Load raw event logs
                 events_df = pd.read_csv(events_file_path, sep='\t')
@@ -703,18 +705,18 @@ elif setup['comparison'] == 'rsa':
 
         folder_beRNN = setup["folder_beRNN"].replace("beRNN_01", participant, 1)
 
-        # info. for special comparison to models trained with all instead of individual data
-        if 'beRNN_06' in folder_beRNN:
-            folder_beRNN_ = setup["folder_beRNN"].replace("beRNN_01", "beRNN_03", 1)
-            folder_beRNN = folder_beRNN_ + "_ALL"
-            setup['dataType'] = "highDim_all_beRNNs"
-            participant = "beRNN_03"
-            batchNumber = os.listdir(rf'{folder_beRNN}\{setup["dataType"]}\{participant}')[0]
-            model_folder = rf'{folder_beRNN}\{setup["dataType"]}\{participant}\{batchNumber}'
-            participant = "beRNN_06"
-        else:
-            batchNumber = os.listdir(rf'{folder_beRNN}\{setup["dataType"]}\{participant}')[0]
-            model_folder = rf'{folder_beRNN}\{setup["dataType"]}\{participant}\{batchNumber}'
+        # # info. for special comparison to models trained with all instead of individual data
+        # if 'beRNN_06' in folder_beRNN:
+        #     folder_beRNN_ = setup["folder_beRNN"].replace("beRNN_01", "beRNN_00", 1)
+        #     # folder_beRNN = folder_beRNN_ + "_ALL"
+        #     setup['dataType'] = "highDim"
+        #     participant = "beRNN_00"
+        #     batchNumber = os.listdir(rf'{folder_beRNN}\{setup["dataType"]}\{participant}')[0]
+        #     model_folder = rf'{folder_beRNN}\{setup["dataType"]}\{participant}\{batchNumber}'
+        #     # participant = "beRNN_06"
+        # else:
+        batchNumber = os.listdir(rf'{folder_beRNN}\{setup["dataType"]}\{participant}')[0]
+        model_folder = rf'{folder_beRNN}\{setup["dataType"]}\{participant}\{batchNumber}'
 
         rdmList = []
 
@@ -727,7 +729,7 @@ elif setup['comparison'] == 'rsa':
         for modelNumber in range(0, numberOfModels):
             # info. 1,3,6,9,12 compare
             if setup['robust_compare'] == False:
-                model = 'iter1_LeakyRNN_diag_256_relu'
+                model = 'iter1_LeakyRNN_diag_128_relu' # attention. hard coded trash
                 modelList = os.listdir(os.path.join(model_folder, model))
                 if participant != 'beRNN_04':
                     modelList[1], modelList[2], modelList[3], modelList[4] = modelList[2], modelList[3], modelList[4], modelList[1]
@@ -735,6 +737,7 @@ elif setup['comparison'] == 'rsa':
             else:
                 # info. robust compare
                 model = os.listdir(model_folder)[modelNumber]
+                month = 'model_month_5' # attention. hard coded trash
 
             if model == 'times.txt':
                 continue
@@ -812,6 +815,7 @@ elif setup['comparison'] == 'rsa':
     z_within = np.arctanh(within_mean)  # Fisher z
     z_between = np.arctanh(between_mean)
 
+    # Does the mean difference between each subject deviate significantly from 0
     t, p = ttest_rel(z_within, z_between)  # H₀: means equal
     print(f'Within  mean ρ = {within_mean.mean():.3f}')
     print(f'Between mean ρ = {between_mean.mean():.3f}')
@@ -835,7 +839,7 @@ elif setup['comparison'] == 'rsa':
                 labels_brain.append(f"brain_{beRNN_brain_snip_dict[subj]}_M{i}")
             except:
                 labels_brain.append(f"beRNN_{subj}_M{i}") # brain conversion to beRNN labeling
-                
+
     # Third part of comparison variable definition
     if setup['modalityWithin_comparison'] == 'brain':
         all_vecs_beRNN = all_vecs_brain
@@ -872,10 +876,10 @@ elif setup['comparison'] == 'rsa':
         cbar_kws={
             'shrink': 0.5,
             'aspect': 10,
-            'label': 'RSA',
-            'ticks': np.linspace(0, 0.6, 4)
+            # 'label': 'RSA',
+            'ticks': np.linspace(0.0, 1.0, 2)
         },
-        vmin=0, vmax=0.6
+        vmin=0.0, vmax=1.0
     )
 
     # ----- SET CUSTOM TICKS -----
@@ -908,16 +912,16 @@ elif setup['comparison'] == 'rsa':
             start = g * group_size
 
 
-
         rect = patches.Rectangle(
             (start, start),  # (x, y) start position
             group_size,  # width
             group_size,  # height
             fill=False,  # no fill
-            edgecolor='lightsteelblue',  # border color
-            linewidth=3  # line thickness
+            edgecolor='white',  # border color
+            linewidth=8  # line thickness
         )
         ax.add_patch(rect)
+
 
     # Create text lines
     stats_text = (
@@ -931,18 +935,18 @@ elif setup['comparison'] == 'rsa':
 
     # Colorbar font sizes
     cbar = ax.collections[0].colorbar
-    cbar.ax.tick_params(labelsize=12)
-    cbar.set_label('RDA (1 - Spearman ρ)', fontsize=12)
+    cbar.ax.tick_params(labelsize=26)
+    # cbar.set_label('RDA (1 - Spearman ρ)', fontsize=16)
 
     # ax.set_xticklabels(subjects_beRNN, rotation=0, fontsize=12)
     # ax.set_yticklabels(subjects_brain, rotation=90, fontsize=12)
 
-    ax.set_xticklabels(setup['paper_nomenclatur'], rotation=0, fontsize=12)
-    ax.set_yticklabels(setup['paper_nomenclatur'], rotation=90, fontsize=12)
+    ax.set_xticklabels(setup['paper_nomenclatur'], rotation=0, fontsize=26)
+    ax.set_yticklabels(setup['paper_nomenclatur'], rotation=90, fontsize=26)
 
-    plt.title("RDA matrix", fontsize=20, fontweight='bold')
-    plt.xlabel("Participant", fontsize=16)
-    plt.ylabel("Participant", fontsize=16)
+    # plt.title("RDA matrix", fontsize=20, fontweight='bold')
+    # plt.xlabel("Participant", fontsize=16)
+    # plt.ylabel("Participant", fontsize=16)
     plt.tight_layout()
 
     plt.subplots_adjust(bottom=0.2)  # space for stats
@@ -951,7 +955,7 @@ elif setup['comparison'] == 'rsa':
         0.435, 0.15,
         stats_text,
         ha='center', va='top',
-        fontsize=14,
+        fontsize=26,
         linespacing=1.5
     )
 
@@ -1192,7 +1196,6 @@ if setup["plotTopMarkerOverDensities"] == True:
 
         df["Participant"] = pd.Categorical(df["Participant"],categories=setup['participants_beRNN'],ordered=True)
 
-        # Definition der Farben
         custom_colors = {
             "beRNN_03": "#1f77b4",  # Deep Blue
             "beRNN_04": "#a1c9ed",  # Light Blue
@@ -1204,7 +1207,6 @@ if setup["plotTopMarkerOverDensities"] == True:
         plt.figure(figsize=(5,7))
         sns.set_style("whitegrid")
 
-        # 1. Boxplot - Ohne 'width' für bessere Zentrierung
         sns.boxplot(
             data=df,
             x="Metric",
@@ -1219,7 +1221,6 @@ if setup["plotTopMarkerOverDensities"] == True:
             medianprops=dict(linewidth=0)
         )
 
-        # 2. Stripplot - Jitter=False zwingt die Punkte auf die Mittelachse
         sns.stripplot(
             data=df,
             x="Metric",

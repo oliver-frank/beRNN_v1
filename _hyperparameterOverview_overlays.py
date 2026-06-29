@@ -1,3 +1,4 @@
+#%%
 ########################################################################################################################
 # head: hp overview ####################################################################################################
 ########################################################################################################################
@@ -635,212 +636,218 @@ if __name__ == '__main__':
     #                     '_gridSearch_domainTask-DM_beRNN_03_highDim_correctOnly_256',
     #                     '_gridSearch_domainTask_DM_beRNN_03_highDim_correctOnly_512']
 
-    foldersToOverlay = ['compare_4task_beRNN_01_highDim_256_hp_8_m1',
-                  'compare_4task_beRNN_01_highDim_256_hp_8_m3',
-                  'compare_4task_beRNN_01_highDim_256_hp_8_m6',
-                  'compare_4task_beRNN_01_highDim_256_hp_8_m9',
-                  'compare_4task_beRNN_01_highDim_256_hp_8_m12']
+    foldersToOverlay = ['show-nonRec_multi_beRNN_03_highDim_correctOnly_16',
+                  'show-nonRec_multi_beRNN_03_highDim_correctOnly_32',
+                  'show-nonRec_multi_beRNN_03_highDim_correctOnly_64',
+                  'show-nonRec_multi_beRNN_03_highDim_correctOnly_128',
+                  'show-nonRec_multi_beRNN_03_highDim_correctOnly_256',
+                  'show-nonRec_multi_beRNN_03_highDim_correctOnly_512']
 
     paper_nomenclatur_dict = ['HC1', 'HC2', 'MDD', 'ASD', 'SCZ']
     participantList = ['beRNN_00', 'beRNN_01', 'beRNN_02', 'beRNN_03', 'beRNN_04', 'beRNN_05']
-    participantNumber = 2 # for standard visualization beRNN_03
+    participantNumber = 3 # for standard visualization beRNN_03
     network_sizes = ['16', '32', '64', '128', '256', '512']  # for standard visualization
 
     mode = ['train', 'test'][1]
     sort_variable = ['clustering', 'performance', 'silhouette'][1] # other stat. characteristics can be added
 
-    overlay = [None, 'standard', 'robustness'][0] # standard for one participant w. different network sizes - robustness for several participants w- one network size
+    overlay = [None, 'standard', 'robustness'][1] # standard for one participant w. different network sizes - robustness for several participants w- one network size
     # batchPlot = True if participant == 'beRNN_03' else False
     batchPlot = [True, False][1] # info: true for robustness overlay
 
-    lastMonth = '1'
+    models_over_wholeTimePeriod = False # info. Should be true if analysis is run over months 1, 3, 6, 9, 12
+    lastMonth = '5'
 
     # .info initialize a dict and start a density loop *****************************************************************
     meta_dict = defaultdict(OrderedDict)
-    densities = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0] # attention. for voxel based analysis lists
+    # densities = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0] # attention. for voxel based analysis lists
     # densities = [0.1] # attention. for overlays
 
-    # density = 0.1
-    for density in densities:
+    density = 0.1
+    # for density in densities:
 
-        # Start of actual visualization
-        directory_metaOverlayVisual = r'C:\Users\oliver.frank\Desktop\PyProjects\beRNNmodels\__metaOverlayVisual'
-        os.makedirs(directory_metaOverlayVisual, exist_ok=True)
+    # Start of actual visualization
+    directory_metaOverlayVisual = r'C:\Users\oliver.frank\Desktop\PyProjects\beRNNmodels\__metaOverlayVisual'
+    os.makedirs(directory_metaOverlayVisual, exist_ok=True)
 
-        meta_silhouette_score_list = list()
-        meta_n_clusters_list = list()
-        meta_perf_train_list = list()
-        meta_perf_test_list = list()
-        meta_hp_list = list()
-        meta_clustering_list = list()
-        meta_modularity_list = list()
-        meta_participation_coefficient_list = list()
+    meta_silhouette_score_list = list()
+    meta_n_clusters_list = list()
+    meta_perf_train_list = list()
+    meta_perf_test_list = list()
+    meta_hp_list = list()
+    meta_clustering_list = list()
+    meta_modularity_list = list()
+    meta_participation_coefficient_list = list()
 
-        # info. add lists here for voxel analysis list *****************************************************************
-        meta_n_modules_list = list()
-        meta_global_efficiency_score_list = list()
-        meta_node_degree_score_list = list()
-        meta_betweenness_centrality_score_list = list()
-        meta_eigenvector_centrality_score_list = list()
+    # # info. add lists here for voxel analysis list *****************************************************************
+    # meta_n_modules_list = list()
+    # meta_global_efficiency_score_list = list()
+    # meta_node_degree_score_list = list()
+    # meta_betweenness_centrality_score_list = list()
+    # meta_eigenvector_centrality_score_list = list()
+    #
+    # meta_func_corr_matrix_list = list()
+    # meta_func_corr_matrix_response_list = list()
+    # meta_func_mean_matrix_list = list()
+    # # info. add lists here for voxel analysis list *****************************************************************
 
-        meta_func_corr_matrix_list = list()
-        meta_func_corr_matrix_response_list = list()
-        meta_func_mean_matrix_list = list()
-        # info. add lists here for voxel analysis list *****************************************************************
+    for folder in foldersToOverlay:
+        final_model_dirs = []
 
-        for folder in foldersToOverlay:
-            final_model_dirs = []
-
-            # standard overlay ***************************************************
-            if overlay == 'standard':
-                participant = participantList[participantNumber] # order unnecessary
-
-            # robustness overlay *************************************************
-            if overlay == 'robustness'or overlay == None:
-                for participant_ in participantList:
-                    if participant_ in folder:
-                        participant = participant_
-                        continue
-
-            if 'bench' in folder:
-                dataType = 'highDim_benchmark'
-            elif 'highDim_correctOnly' in folder or 'highDimCorrects' in folder:
-                dataType = 'highDim_correctOnly'
-            elif 'lowCognition' in folder:
-                dataType = 'highDim_lowCognition'
-            else:
-                dataType = 'highDim'
-
-
-            directory = fr'C:\Users\oliver.frank\Desktop\PyProjects\beRNNmodels\{folder}\{dataType}\{participant}'
-
-            if batchPlot == False:
-                model_dir_batches = os.listdir(directory)
-            else:
-                model_dir_batches = [folder.split('_')[-1]]
-
-            # Create list of models to integrate in one hp overview plot
-            model_dir_batches = [batch for batch in model_dir_batches if batch != 'visuals']
-            for model_dir_batch in model_dir_batches:
-                model_dirs_ = os.listdir(os.path.join(directory, model_dir_batch))
-                model_dirs = [model_dir for model_dir in model_dirs_ if
-                              model_dir != 'overviews' and not model_dir.endswith('.txt')]
-                for model_dir in model_dirs:
-                    model_dir_lastMonth = os.listdir(os.path.join(directory, model_dir_batch, model_dir))
-                    # model_dir_lastMonth = [model_dir for model_dir in model_dir_lastMonth_ if lastMonth in model_dir] # for different months comment out
-                    # Concatenate all models in one list
-                    try:
-                        if 'model' in model_dir_lastMonth[0]:  # Be sure to add anything else but models
-                            final_model_dirs.append(os.path.join(directory, model_dir_batch, model_dir, model_dir_lastMonth[0]))
-
-                    except Exception as e:
-                        # if something goes wrong (e.g. index error), skip this model_dir
-                        print(f"Skipping {model_dir} due to error: {e}")
-                        continue
-
-            # First compute n_clusters for each model then collect them in lists
-            successful_model_dirs = compute_n_cluster(final_model_dirs, mode)
-            n_clusters, hp_list, silhouette_score, avg_perf_train_list, avg_perf_test_list, avg_clustering_list, modularity_list_sparse, participation_coefficient_list, n_modules_list, global_efficiency_list, node_degree_list, betweenness_centrality_list, eigenvector_centrality_list = get_n_clusters(successful_model_dirs, density)
-            # Store lists in meta lists for consecutive final visualization
-            meta_silhouette_score_list.append(silhouette_score)
-            meta_n_clusters_list.append(n_clusters)
-            meta_perf_train_list.append(avg_perf_train_list)
-            meta_perf_test_list.append(avg_perf_test_list)
-            meta_hp_list.append(hp_list)
-            meta_clustering_list.append(avg_clustering_list)
-            meta_modularity_list.append(modularity_list_sparse)
-            meta_participation_coefficient_list.append(participation_coefficient_list)
-
-            # info. add lists here for voxel analysis list *****************************************************************
-            meta_n_modules_list.append(n_modules_list)
-            meta_global_efficiency_score_list.append(global_efficiency_list)
-            meta_node_degree_score_list.append(node_degree_list)
-            meta_betweenness_centrality_score_list.append(betweenness_centrality_list)
-            meta_eigenvector_centrality_score_list.append(eigenvector_centrality_list)
-
-            with open(os.path.join(successful_model_dirs[0], 'corr_test_lay1_rule_4task.pkl'), 'rb') as file1:
-                func_corr_matrix = pickle.load(file1)
-            with open(os.path.join(successful_model_dirs[0], 'corr_epoch_test_lay1_rule_4task.pkl'), 'rb') as file2:
-                func_corr_matrix_response = pickle.load(file2)
-            with open(os.path.join(successful_model_dirs[0], 'mean_test_lay1_rule_4task.pkl'), 'rb') as file3:
-                func_mean_matrix = pickle.load(file3)
-
-            meta_func_corr_matrix_list.append(func_corr_matrix)
-            meta_func_corr_matrix_response_list.append(func_corr_matrix_response)
-            meta_func_mean_matrix_list.append(func_mean_matrix)
-            # info. add lists here for voxel analysis list *****************************************************************
-
-        # .info save lists to nested dict ******************************************************************************
-        meta_dict[str(density)]['avg_clustering_list'] = meta_clustering_list
-        meta_dict[str(density)]['modularity_list_sparse'] = meta_modularity_list
-        meta_dict[str(density)]['n_modules_list'] = meta_n_modules_list
-        meta_dict[str(density)]['participation_coefficient_list'] = meta_participation_coefficient_list
-        meta_dict[str(density)]['global_efficiency_list'] = meta_global_efficiency_score_list
-        meta_dict[str(density)]['node_degree_list'] = meta_node_degree_score_list
-        meta_dict[str(density)]['betweenness_centrality_list'] = meta_betweenness_centrality_score_list
-        meta_dict[str(density)]['eigenvector_centrality_list'] = meta_eigenvector_centrality_score_list
-
-        meta_dict[str(density)]['func_corr_matrix'] = meta_func_corr_matrix_list
-        meta_dict[str(density)]['func_corr_matrix_response'] = meta_func_corr_matrix_response_list
-        meta_dict[str(density)]['func_mean_matrix'] = meta_func_mean_matrix_list
-
-        print(f'density {density} done.')
-        # .info save lists to nested dict ******************************************************************************
-
-        # Visualize big overlay
+        # standard overlay ***************************************************
         if overlay == 'standard':
-            general_hp_plot_overlay_multiple(meta_n_clusters_list,
-                                             meta_silhouette_score_list,
-                                             meta_hp_list,
-                                             meta_perf_train_list,
-                                             meta_perf_test_list,
-                                             meta_clustering_list,
-                                             meta_modularity_list,
-                                             meta_participation_coefficient_list,
-                                             foldersToOverlay,
-                                             directory_metaOverlayVisual,
-                                             density,
-                                             network_sizes,
-                                             sort_variable='performance',
-                                             mode='test',
-                                             alpha=0.6,
-                                             cmap_name='viridis')
+            participant = participantList[participantNumber] # order unnecessary
 
-            # Visualize correlation between performance and topMarker of choice
-            visualize_topMarker_testPerf_corrlation(meta_perf_test_list, meta_clustering_list, 'clustering')
-            visualize_topMarker_testPerf_corrlation(meta_perf_test_list, meta_modularity_list, 'modularity')
-            visualize_topMarker_testPerf_corrlation(meta_perf_test_list, meta_participation_coefficient_list, 'participation')
-            # Optional for paper
-            # visualize_simulatedTopMarkerNetworks()
+        # robustness overlay *************************************************
+        if overlay == 'robustness'or overlay == None:
+            for participant_ in participantList:
+                if participant_ in folder:
+                    participant = participant_
+                    continue
 
-        if overlay == 'robustness':
-            participants = participantList # to overlay
-            general_hp_plot_overlay_multiple_robustnessTests(meta_n_clusters_list,
-                                             meta_silhouette_score_list,
-                                             meta_hp_list,
-                                             meta_perf_train_list,
-                                             meta_perf_test_list,
-                                             meta_clustering_list,
-                                             meta_modularity_list,
-                                             meta_participation_coefficient_list,
-                                             foldersToOverlay,
-                                             directory_metaOverlayVisual,
-                                             density,
-                                             participants,
-                                             sort_variable='performance',
-                                             mode='test',
-                                             alpha=0.6,
-                                             cmap_name='viridis')
+        if 'bench' in folder:
+            dataType = 'highDim_benchmark'
+        elif 'highDim_correctOnly' in folder or 'highDimCorrects' in folder:
+            dataType = 'highDim_correctOnly'
+        elif 'lowCognition' in folder:
+            dataType = 'highDim_lowCognition'
+        else:
+            dataType = 'highDim'
 
 
-    # info. save meta_dicts ********************************************************************************************
-    meta_dict_path = os.path.join(r"C:\Users\oliver.frank\Desktop\PyProjects\beRNNmodels\__meta_dicts", f"meta_dict_{participant}_4task_{dataType}.pickle")
+        directory = fr'C:\Users\oliver.frank\Desktop\PyProjects\beRNNmodels\{folder}\{dataType}\{participant}'
 
-    os.makedirs(os.path.dirname(meta_dict_path), exist_ok=True)
+        if batchPlot == False:
+            model_dir_batches = os.listdir(directory)
+        else:
+            model_dir_batches = [folder.split('_')[-1]]
 
-    with open(meta_dict_path, "wb") as f:
-        pickle.dump(meta_dict, f)
-    # info. save meta_dicts ********************************************************************************************
+        # Create list of models to integrate in one hp overview plot
+        model_dir_batches = [batch for batch in model_dir_batches if batch != 'visuals']
+        for model_dir_batch in model_dir_batches:
+            model_dirs_ = os.listdir(os.path.join(directory, model_dir_batch))
+            model_dirs = [model_dir for model_dir in model_dirs_ if
+                          model_dir != 'overviews' and not model_dir.endswith('.txt')]
+            for model_dir in model_dirs:
+                if models_over_wholeTimePeriod == True: # info. should be true if analysis for months 1, 3, 6, 9, 12 is created
+                    model_dir_lastMonth_ = os.listdir(os.path.join(directory, model_dir_batch, model_dir))
+                else:
+                    model_dir_lastMonth_ = os.listdir(os.path.join(directory, model_dir_batch, model_dir))
+                    model_dir_lastMonth = [model_dir for model_dir in model_dir_lastMonth_ if lastMonth in model_dir] # for different months comment out
+
+                # Concatenate all models in one list
+                try:
+                    if 'model' in model_dir_lastMonth[0]:  # Be sure to add anything else but models
+                        final_model_dirs.append(os.path.join(directory, model_dir_batch, model_dir, model_dir_lastMonth[0]))
+
+                except Exception as e:
+                    # if something goes wrong (e.g. index error), skip this model_dir
+                    print(f"Skipping {model_dir} due to error: {e}")
+                    continue
+
+        # First compute n_clusters for each model then collect them in lists
+        successful_model_dirs = compute_n_cluster(final_model_dirs, mode)
+        n_clusters, hp_list, silhouette_score, avg_perf_train_list, avg_perf_test_list, avg_clustering_list, modularity_list_sparse, participation_coefficient_list, n_modules_list, global_efficiency_list, node_degree_list, betweenness_centrality_list, eigenvector_centrality_list = get_n_clusters(successful_model_dirs, density)
+        # Store lists in meta lists for consecutive final visualization
+        meta_silhouette_score_list.append(silhouette_score)
+        meta_n_clusters_list.append(n_clusters)
+        meta_perf_train_list.append(avg_perf_train_list)
+        meta_perf_test_list.append(avg_perf_test_list)
+        meta_hp_list.append(hp_list)
+        meta_clustering_list.append(avg_clustering_list)
+        meta_modularity_list.append(modularity_list_sparse)
+        meta_participation_coefficient_list.append(participation_coefficient_list)
+
+        # # info. add lists here for voxel analysis list *****************************************************************
+        # meta_n_modules_list.append(n_modules_list)
+        # meta_global_efficiency_score_list.append(global_efficiency_list)
+        # meta_node_degree_score_list.append(node_degree_list)
+        # meta_betweenness_centrality_score_list.append(betweenness_centrality_list)
+        # meta_eigenvector_centrality_score_list.append(eigenvector_centrality_list)
+        #
+        # with open(os.path.join(successful_model_dirs[0], 'corr_test_lay1_rule_4task.pkl'), 'rb') as file1:
+        #     func_corr_matrix = pickle.load(file1)
+        # with open(os.path.join(successful_model_dirs[0], 'corr_epoch_test_lay1_rule_4task.pkl'), 'rb') as file2:
+        #     func_corr_matrix_response = pickle.load(file2)
+        # with open(os.path.join(successful_model_dirs[0], 'mean_test_lay1_rule_4task.pkl'), 'rb') as file3:
+        #     func_mean_matrix = pickle.load(file3)
+        #
+        # meta_func_corr_matrix_list.append(func_corr_matrix)
+        # meta_func_corr_matrix_response_list.append(func_corr_matrix_response)
+        # meta_func_mean_matrix_list.append(func_mean_matrix)
+        # # info. add lists here for voxel analysis list *****************************************************************
+
+        # # .info save lists to nested dict ******************************************************************************
+        # meta_dict[str(density)]['avg_clustering_list'] = meta_clustering_list
+        # meta_dict[str(density)]['modularity_list_sparse'] = meta_modularity_list
+        # meta_dict[str(density)]['n_modules_list'] = meta_n_modules_list
+        # meta_dict[str(density)]['participation_coefficient_list'] = meta_participation_coefficient_list
+        # meta_dict[str(density)]['global_efficiency_list'] = meta_global_efficiency_score_list
+        # meta_dict[str(density)]['node_degree_list'] = meta_node_degree_score_list
+        # meta_dict[str(density)]['betweenness_centrality_list'] = meta_betweenness_centrality_score_list
+        # meta_dict[str(density)]['eigenvector_centrality_list'] = meta_eigenvector_centrality_score_list
+        #
+        # meta_dict[str(density)]['func_corr_matrix'] = meta_func_corr_matrix_list
+        # meta_dict[str(density)]['func_corr_matrix_response'] = meta_func_corr_matrix_response_list
+        # meta_dict[str(density)]['func_mean_matrix'] = meta_func_mean_matrix_list
+        #
+        # print(f'density {density} done.')
+        # # .info save lists to nested dict ******************************************************************************
+
+    # Visualize big overlay
+    if overlay == 'standard':
+        general_hp_plot_overlay_multiple(meta_n_clusters_list,
+                                         meta_silhouette_score_list,
+                                         meta_hp_list,
+                                         meta_perf_train_list,
+                                         meta_perf_test_list,
+                                         meta_clustering_list,
+                                         meta_modularity_list,
+                                         meta_participation_coefficient_list,
+                                         foldersToOverlay,
+                                         directory_metaOverlayVisual,
+                                         density,
+                                         network_sizes,
+                                         sort_variable='performance',
+                                         mode='test',
+                                         alpha=0.6,
+                                         cmap_name='viridis')
+
+        # Visualize correlation between performance and topMarker of choice
+        visualize_topMarker_testPerf_corrlation(meta_perf_test_list, meta_clustering_list, 'clustering')
+        visualize_topMarker_testPerf_corrlation(meta_perf_test_list, meta_modularity_list, 'modularity')
+        visualize_topMarker_testPerf_corrlation(meta_perf_test_list, meta_participation_coefficient_list, 'participation')
+        # Optional for paper
+        # visualize_simulatedTopMarkerNetworks()
+
+    if overlay == 'robustness':
+        participants = participantList # to overlay
+        general_hp_plot_overlay_multiple_robustnessTests(meta_n_clusters_list,
+                                         meta_silhouette_score_list,
+                                         meta_hp_list,
+                                         meta_perf_train_list,
+                                         meta_perf_test_list,
+                                         meta_clustering_list,
+                                         meta_modularity_list,
+                                         meta_participation_coefficient_list,
+                                         foldersToOverlay,
+                                         directory_metaOverlayVisual,
+                                         density,
+                                         participants,
+                                         sort_variable='performance',
+                                         mode='test',
+                                         alpha=0.6,
+                                         cmap_name='viridis')
+
+
+    # # info. save meta_dicts ********************************************************************************************
+    # meta_dict_path = os.path.join(r"C:\Users\oliver.frank\Desktop\PyProjects\beRNNmodels\__meta_dicts", f"meta_dict_{participant}_4task_{dataType}.pickle")
+    #
+    # os.makedirs(os.path.dirname(meta_dict_path), exist_ok=True)
+    #
+    # with open(meta_dict_path, "wb") as f:
+    #     pickle.dump(meta_dict, f)
+    # # info. save meta_dicts ********************************************************************************************
 
     # test
     # with open(meta_dict_path, 'rb') as file:
