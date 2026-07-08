@@ -799,7 +799,7 @@ HP_NAME = {'activation': 'Activation fun.',
 
 if __name__ == '__main__':
 
-    folderList = ['show-grid_multi_beRNN_03_highDim_correctOnly_256']
+    folderList = ['show_bench_multi_beRNN_00_highDim_benchmark_64']
 
     # evaluate metrics for finding best hp for paper
     mean_clustering_list = []
@@ -813,12 +813,12 @@ if __name__ == '__main__':
     for folder in folderList:
         final_model_dirs = []
 
-        participantList = ['beRNN_01', 'beRNN_02', 'beRNN_03', 'beRNN_04', 'beRNN_05']
+        participantList = ['beRNN_00', 'beRNN_01', 'beRNN_02', 'beRNN_03', 'beRNN_04', 'beRNN_05']
         # participantList = ['beRNN_03']
         participant = [participant for participant in participantList if participant in folder][0]
         # participant = participantList[2]
-        dataType = 'highDim_correctOnly' if 'highDim_correctOnly' in folder or 'highDimCorrects' in folder else 'highDim'
-        # dataType = 'highDim'
+        # dataType = 'highDim_correctOnly' if 'highDim_correctOnly' in folder or 'highDimCorrects' in folder else 'highDim'
+        dataType = 'highDim_benchmark'
 
         mode = ['train', 'test'][1]
         sort_variable = ['clustering', 'performance', 'silhouette'][1]

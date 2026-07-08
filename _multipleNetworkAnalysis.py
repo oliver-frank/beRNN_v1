@@ -50,11 +50,11 @@ setup = {
     # 'participants_beRNN': ['beRNN_03', 'beRNN_04', 'beRNN_01', 'beRNN_02', 'beRNN_05'], # order for paper - with 'beRNN_06' for ALL comparison
     'participants_beRNN': ['beRNN_03', 'beRNN_00', 'beRNN_06', 'beRNN_07', 'beRNN_08'], # baseline comparison w. shared (00) and random (06)
     # 'paper_nomenclatur': ['HC1', 'HC2', 'MDD', 'ASD', 'SCZ'], # nomenclatur for paper plots - only applied for RDA
-    'paper_nomenclatur': ['HC1', 'SHA', 'RND', 'LIN', 'NRE'], # nomenclatur for paper plots - only applied for RDA
+    'paper_nomenclatur': ['HC1', 'POL', 'RND', 'LIN', 'NRE'], # nomenclatur for paper plots - only applied for RDA
     # 'paper_nomenclatur': ['HC1', 'HC2', 'MDD', 'ASD', 'SCZ', 'ALL'], # nomenclatur for paper plots - only applied for RDA
     'participants': ['sub-6IECX', 'sub-DKHPB', 'sub-KPB84', 'sub-YL4AS', 'sub-96WID'], # nomenclatur for paper plots - only applied for RDA
     'participants_snip': ['sub-SNIP6IECX', 'sub-SNIPDKHPB', 'sub-SNIPKPB84', 'sub-SNIPYL4AS', 'sub-SNIP96WID'], # nomenclatur for paper plots - only applied for RDA
-    'folder_beRNN': fr'C:\Users\oliver.frank\Desktop\PyProjects\beRNNmodels\__baseline\robust_multi_beRNN_01_highDim_256_hp_8', # beRNN_01 is default
+    'folder_beRNN': fr'C:\Users\oliver.frank\Desktop\PyProjects\beRNNmodels\__baseline\robust_multi_beRNN_01_highDim_correctOnly_256_hp_8', # beRNN_01 is default
     'robust_compare': True, # false if 1,3,6,9,12 comparison
     'folder_brain': r'W:\group_csp\analyses\oliver.frank\_brainModels',
     'subNetwork_string': 'Default_contrast',

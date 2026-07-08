@@ -902,235 +902,238 @@ plt.close()
 
 
 
-# # head: ################################################################################################################
-# # head: contingencyTable for each task individually
-# # head: ################################################################################################################
-# # Creates a contingency table that compares and classifies participant and model response as match (particpantResponse ==
-# # modelResponse) or mismatch (particpantResponse != modelResponse).
-# # The first word of the class represents the particpant's objective success in responding right or wrong to a trial and
-# # the second the model's success to reproduce this behavior.
-# ########################################################################################################################
-#
-# ########################################################################################################################
-# # Import necessary libraries and modules
-# ########################################################################################################################
-# import os
-# import numpy as np
-# # attention. csp_frank_oliver_3 version ++++++++++++++++++++++++++++++++++++++++++++++
-# import os
-# os.environ['KMP_DUPLICATE_LIB_OK'] = 'TRUE'
-# import tensorflow.compat.v1 as tf
-# tf.disable_v2_behavior()
-# # import mlflow
-# # attention. csp_frank_oliver_3 version ++++++++++++++++++++++++++++++++++++++++++++++
-# import matplotlib.pyplot as plt
-# import seaborn as sns
-# from mpl_toolkits.axes_grid1 import make_axes_locatable
-# from network import Model, get_perf
-# from tools import split_files
-# import tools
-# import glob
-#
-# ########################################################################################################################
-# # Functions
-# ########################################################################################################################
-# def evaluate_model_responses(directory, dataDirectory, models, tasks):
-#     accumulated_data_percentage = 0
-#     task_count = 0
-#     for i, task in enumerate(tasks):
-#         # modelDirectories
-#         figurePath = os.path.join(directory, 'contingencyTable')
-#         # Create directory for saving figures if it doesn't exist
-#         if not os.path.exists(figurePath):
-#             os.makedirs(figurePath)
-#
-#         # mode = 'Average' for the future
-#         mode = 'Average'
-#
-#         for model_dir in models:
-#             correct_match, error_match, correct_mismatch, error_mismatch, total_trials = evaluate_task(model_dir, task, i)
-#
-#             # Calculate percentages for the contingency table
-#             data_percentage = np.round(
-#                 np.array([[correct_match / total_trials * 100, correct_mismatch / total_trials * 100],
-#                           [error_match / total_trials * 100, error_mismatch / total_trials * 100]]), 2)
-#             # data_percentage = np.round(
-#             #     np.array([[(correct_match / total_trials * 100) - 5, (correct_mismatch / total_trials * 100) + 5],
-#             #               [(error_match / total_trials * 100) - 5, (error_mismatch / total_trials * 100) + 5]]), 2)
-#
-#             # Accumulate the percentages
-#             if accumulated_data_percentage is None:
-#                 accumulated_data_percentage = data_percentage
-#             else:
-#                 accumulated_data_percentage += data_percentage
-#
-#         task_count += 1
-#
-#     # Average the accumulated percentages
-#     average_data_percentage = accumulated_data_percentage / task_count
-#
-#     ratioCorrect = average_data_percentage[0][0] / average_data_percentage[0][1]
-#     ratioError = average_data_percentage[1][0] / average_data_percentage[1][1]
-#
-#     # Visualize the averaged contingency table
-#     visualize_contingency_table(average_data_percentage, task, figurePath, mode, model_dir=model_dir, ratio_correct=ratioCorrect, ratio_error=ratioError)
-#
-# def createSplittedDatasets(hp, preprocessedData_path, month):
-#     # Split the data into training and test data -----------------------------------------------------------------------
-#     # List of the subdirectories
-#     subdirs = [os.path.join(preprocessedData_path, d) for d in os.listdir(preprocessedData_path) if
-#                os.path.isdir(os.path.join(preprocessedData_path, d))]
-#
-#     # Initialize dictionaries to store training and evaluation data
-#     train_data = {}
-#     eval_data = {}
-#
-#     for subdir in subdirs:
-#         # Collect all file triplets in the current subdirectory
-#         file_quartett = []
-#         for file in os.listdir(subdir):
-#             if file.endswith('Input.npy'):
-#                 # # III: Exclude files with specific substrings in their names
-#                 # if any(exclude in file for exclude in ['Randomization', 'Segmentation', 'Mirrored', 'Rotation']):
-#                 #     continue
-#                 # Include only files that contain any of the months in monthsConsidered
-#                 if month not in file:  # Sort out months which should not be considered
-#                     continue
-#                 # Add all necessary files to triplets
-#                 base_name = file.split('Input')[0]
-#                 input_file = os.path.join(subdir, base_name + 'Input.npy')
-#                 yloc_file = os.path.join(subdir, base_name + 'yLoc.npy')
-#                 output_file = os.path.join(subdir, base_name + 'Output.npy')
-#                 response_file = os.path.join(subdir, base_name + 'Response.npy')
-#
-#                 file_quartett.append((input_file, yloc_file, output_file, response_file))
-#
-#         # Split the file triplets
-#         train_files, eval_files = split_files(hp, file_quartett)
-#
-#         # Store the results in the dictionaries
-#         train_data[subdir] = train_files
-#         eval_data[subdir] = eval_files
-#
-#     return train_data, eval_data
-#
-# def evaluate_task(model_dir, task, indice):
-#     error_match = 0
-#     error_mismatch = 0
-#     correct_match = 0
-#     correct_mismatch = 0
-#     total_trials = 0
-#
-#     # Prepare model restore
-#     hp = tools.load_hp(model_dir)
-#
-#     hp['rng'] = np.random.default_rng(42) # as for training
-#
-#     file_quartett = []
-#
-#     for month in hp['monthsConsidered']:
-#         train_data, eval_data = createSplittedDatasets(hp, dataDirectory, month)
-#         file_quartett_ = eval_data[list(eval_data)[indice]]
-#
-#         file_quartett.extend(file_quartett_)
-#
-#     hp['rng'] = np.random.default_rng() # as for training
-#     model = Model(model_dir, hp=hp)
-#
-#     with tf.Session() as sess:
-#         model.restore(model_dir)
-#
-#         for i in range(0, 20): # Info: Each iteration represents one batch - after the spliting most often you only have 4 batches for one month
-#
-#             x, y, y_loc, base_name = tools.load_trials(hp['rng'], task, 'test', 40, file_quartett, True)
-#             ground_truth = np.load(os.path.join(base_name + 'Response.npy'), allow_pickle=True)
-#
-#             print(base_name)
-#
-#             # Sort response data
-#             c_mask = np.zeros((y.shape[0] * y.shape[1], y.shape[2]), dtype='float32')
-#             # Generate model response for the current batch
-#             feed_dict = tools.gen_feed_dict(model, x, y, c_mask, hp)
-#             c_lsq, c_reg, modelResponse_machineForm = sess.run([model.cost_lsq, model.cost_reg, model.y_hat],feed_dict=feed_dict)
-#
-#             perf = get_perf(modelResponse_machineForm, y_loc)
-#
-#             for i in range(0,len(perf)):
-#                 if perf[i] == 1:  # Model response matches participant response
-#                     if ground_truth[0, i] == ground_truth[1, i]:
-#                         correct_match += 1
-#                     else:
-#                         error_match += 1
-#                 elif perf[i] == 0:  # Model response does not match participant response
-#                     if ground_truth[0, i] == ground_truth[1, i]:
-#                         correct_mismatch += 1
-#                     else:
-#                         error_mismatch += 1
-#             total_trials += len(perf)
-#
-#     return correct_match, error_match, correct_mismatch, error_mismatch, total_trials
-#
-# def visualize_contingency_table(data, task, figure_path, mode, model_dir, ratio_correct, ratio_error):
-#     # Define labels for the table
-#     row_labels = ['Participant Response Correct', 'Participant Response Incorrect']
-#     col_labels = ['Model Response Correct', 'Model Response Incorrect']
-#
-#     # Increase the figure size for better alignment and spacing
-#     fig, ax = plt.subplots(figsize=(12, 10))  # Increased size for the table
-#
-#     # Create a divider to manage the color bar size relative to the heatmap
-#     divider = make_axes_locatable(ax)
-#     cax = divider.append_axes("right", size="5%", pad=0.1)
-#
-#     # Plot the contingency table with clear annotations
-#     sns.heatmap(data, annot=True, fmt='.0f', cmap='Greys', cbar=True,
-#                 xticklabels=col_labels, yticklabels=row_labels, ax=ax,
-#                 linewidths=0, linecolor='black', annot_kws={"fontsize": 30, "color": "black"}, square=True,
-#                 cbar_ax=cax,
-#                 vmin=0, vmax=100)
-#
-#     # Set axis labels with adequate spacing and no rotation
-#     ax.set_xticklabels(col_labels, fontsize=16)
-#     ax.set_yticklabels(row_labels, fontsize=16, rotation=90)
-#
-#     # Configure the color bar
-#     cbar = ax.collections[0].colorbar
-#     cbar.ax.tick_params(labelsize=12)
-#
-#     # Add ratio text to the right of the heatmap, making it closer but avoiding overlap
-#     ax.text(2.3, 0.5, f'Ratio Correct: {ratio_correct:.2f}', va='center', fontsize=18, color='black',
-#             bbox=dict(facecolor='white', edgecolor='black', boxstyle='round,pad=0.5'))
-#     ax.text(2.3, 1.5, f'Ratio Error: {ratio_error:.2f}', va='center', fontsize=18, color='black',
-#             bbox=dict(facecolor='white', edgecolor='black', boxstyle='round,pad=0.5'))
-#
-#     # Add title directly above the heatmap in the center
-#     subject = '_'.join(model_dir.split('\\')[-2].split('_')[0:2])
-#     plt.suptitle(f'{subject}', fontsize=18, y=.95, x=.4)
-#
-#     # Adjust layout to fit all elements within the figure bounds
-#     plt.tight_layout(rect=[0, 0, .9, .95])  # Adjusted the layout to accommodate the title
-#
-#     # Save the plot ensuring all elements are included
-#
-#     save_path = os.path.join(figure_path, f'{mode}_Contingency_{subject}.png')
-#     os.makedirs(os.path.dirname(save_path), exist_ok=True)
-#     plt.savefig(save_path, format='png', dpi=300, bbox_inches='tight', pad_inches=0.2)
-#
-#     # Display the plot
-#     # plt.show()
-#
-# ########################################################################################################################
-# # Model evaluation for chosen tasks
-# ########################################################################################################################
-# # Directory has to point exactly on the model folder of interest
-# participant = 'beRNN_05'
-# directory = rf'C:\Users\oliver.frank\Desktop\PyProjects\beRNNmodels\grid_multi_beRNN_03_highDim_correctOnly_512\highDim_correctOnly\beRNN_03\16\beRNN_03_AllTask_3-5_data_highDim_correctOnly_tB16_iter0_LeakyRNN_512_softplus'
-# dataDirectory = f'C:\\Users\\oliver.frank\\Desktop\\PyProjects\\Data\\{participant}\\data_highDim_correctOnly' # add right participant and dataset
-# modelsList = [os.path.join(directory, item) for item in os.listdir(directory) if 'model_month_5' in item]
-#
-# # Tasks to evaluate
-# tasks = ['DM', 'DM_Anti', 'EF', 'EF_Anti', 'RP', 'RP_Anti', 'RP_Ctx1', 'RP_Ctx2', 'WM', 'WM_Anti', 'WM_Ctx1', 'WM_Ctx2']
-# evaluate_model_responses(directory, dataDirectory, modelsList, tasks)
+# head: ################################################################################################################
+# head: contingencyTable for each task individually
+# head: ################################################################################################################
+# Creates a contingency table that compares and classifies participant and model response as match (particpantResponse ==
+# modelResponse) or mismatch (particpantResponse != modelResponse).
+# The first word of the class represents the particpant's objective success in responding right or wrong to a trial and
+# the second the model's success to reproduce this behavior.
+########################################################################################################################
+
+########################################################################################################################
+# Import necessary libraries and modules
+########################################################################################################################
+import os
+import numpy as np
+# attention. csp_frank_oliver_3 version ++++++++++++++++++++++++++++++++++++++++++++++
+import os
+os.environ['KMP_DUPLICATE_LIB_OK'] = 'TRUE'
+import tensorflow.compat.v1 as tf
+tf.disable_v2_behavior()
+# import mlflow
+# attention. csp_frank_oliver_3 version ++++++++++++++++++++++++++++++++++++++++++++++
+import matplotlib.pyplot as plt
+import seaborn as sns
+from mpl_toolkits.axes_grid1 import make_axes_locatable
+from network import Model, get_perf
+from tools import split_files
+import tools
+import glob
+
+########################################################################################################################
+# Functions
+########################################################################################################################
+def evaluate_model_responses(directory, dataDirectory, models, tasks):
+    accumulated_data_percentage = 0
+    task_count = 0
+    for i, task in enumerate(tasks):
+        # modelDirectories
+        figurePath = os.path.join(directory, 'contingencyTable')
+        # Create directory for saving figures if it doesn't exist
+        if not os.path.exists(figurePath):
+            os.makedirs(figurePath)
+
+        # mode = 'Average' for the future
+        mode = 'Average'
+
+        for model_dir in models:
+            correct_match, error_match, correct_mismatch, error_mismatch, total_trials = evaluate_task(model_dir, task, i)
+
+            # Calculate percentages for the contingency table
+            data_percentage = np.round(
+                np.array([[correct_match / total_trials * 100, correct_mismatch / total_trials * 100],
+                          [error_match / total_trials * 100, error_mismatch / total_trials * 100]]), 2)
+            # data_percentage = np.round(
+            #     np.array([[(correct_match / total_trials * 100) - 5, (correct_mismatch / total_trials * 100) + 5],
+            #               [(error_match / total_trials * 100) - 5, (error_mismatch / total_trials * 100) + 5]]), 2)
+
+            # Accumulate the percentages
+            if accumulated_data_percentage is None:
+                accumulated_data_percentage = data_percentage
+            else:
+                accumulated_data_percentage += data_percentage
+
+        task_count += 1
+
+    # Average the accumulated percentages
+    average_data_percentage = accumulated_data_percentage / task_count
+
+    ratioCorrect = average_data_percentage[0][0] / average_data_percentage[0][1]
+    ratioError = average_data_percentage[1][0] / average_data_percentage[1][1]
+
+    print(ratioCorrect)
+    print(ratioError)
+
+    # Visualize the averaged contingency table
+    visualize_contingency_table(average_data_percentage, task, figurePath, mode, model_dir=model_dir, ratio_correct=ratioCorrect, ratio_error=ratioError)
+
+def createSplittedDatasets(hp, preprocessedData_path, month):
+    # Split the data into training and test data -----------------------------------------------------------------------
+    # List of the subdirectories
+    subdirs = [os.path.join(preprocessedData_path, d) for d in os.listdir(preprocessedData_path) if
+               os.path.isdir(os.path.join(preprocessedData_path, d))]
+
+    # Initialize dictionaries to store training and evaluation data
+    train_data = {}
+    eval_data = {}
+
+    for subdir in subdirs:
+        # Collect all file triplets in the current subdirectory
+        file_quartett = []
+        for file in os.listdir(subdir):
+            if file.endswith('Input.npy'):
+                # # III: Exclude files with specific substrings in their names
+                # if any(exclude in file for exclude in ['Randomization', 'Segmentation', 'Mirrored', 'Rotation']):
+                #     continue
+                # Include only files that contain any of the months in monthsConsidered
+                if month not in file:  # Sort out months which should not be considered
+                    continue
+                # Add all necessary files to triplets
+                base_name = file.split('Input')[0]
+                input_file = os.path.join(subdir, base_name + 'Input.npy')
+                yloc_file = os.path.join(subdir, base_name + 'yLoc.npy')
+                output_file = os.path.join(subdir, base_name + 'Output.npy')
+                response_file = os.path.join(subdir, base_name + 'Response.npy')
+
+                file_quartett.append((input_file, yloc_file, output_file, response_file))
+
+        # Split the file triplets
+        train_files, eval_files = split_files(hp, file_quartett)
+
+        # Store the results in the dictionaries
+        train_data[subdir] = train_files
+        eval_data[subdir] = eval_files
+
+    return train_data, eval_data
+
+def evaluate_task(model_dir, task, indice):
+    error_match = 0
+    error_mismatch = 0
+    correct_match = 0
+    correct_mismatch = 0
+    total_trials = 0
+
+    # Prepare model restore
+    hp = tools.load_hp(model_dir)
+
+    hp['rng'] = np.random.default_rng(42) # as for training
+
+    file_quartett = []
+
+    for month in hp['monthsConsidered']:
+        train_data, eval_data = createSplittedDatasets(hp, dataDirectory, month)
+        file_quartett_ = eval_data[list(eval_data)[indice]]
+
+        file_quartett.extend(file_quartett_)
+
+    hp['rng'] = np.random.default_rng() # as for training
+    model = Model(model_dir, hp=hp)
+
+    with tf.Session() as sess:
+        model.restore(model_dir)
+
+        for i in range(0, 20): # Info: Each iteration represents one batch - after the spliting most often you only have 4 batches for one month
+
+            x, y, y_loc, base_name = tools.load_trials(hp['rng'], task, 'test', 40, file_quartett, True)
+            ground_truth = np.load(os.path.join(base_name + 'Response.npy'), allow_pickle=True)
+
+            print(base_name)
+
+            # Sort response data
+            c_mask = np.zeros((y.shape[0] * y.shape[1], y.shape[2]), dtype='float32')
+            # Generate model response for the current batch
+            feed_dict = tools.gen_feed_dict(model, x, y, c_mask, hp)
+            c_lsq, c_reg, modelResponse_machineForm = sess.run([model.cost_lsq, model.cost_reg, model.y_hat],feed_dict=feed_dict)
+
+            perf = get_perf(modelResponse_machineForm, y_loc)
+
+            for i in range(0,len(perf)):
+                if perf[i] == 1:  # Model response matches participant response
+                    if ground_truth[0, i] == ground_truth[1, i]:
+                        correct_match += 1
+                    else:
+                        error_match += 1
+                elif perf[i] == 0:  # Model response does not match participant response
+                    if ground_truth[0, i] == ground_truth[1, i]:
+                        correct_mismatch += 1
+                    else:
+                        error_mismatch += 1
+            total_trials += len(perf)
+
+    return correct_match, error_match, correct_mismatch, error_mismatch, total_trials
+
+def visualize_contingency_table(data, task, figure_path, mode, model_dir, ratio_correct, ratio_error):
+    # Define labels for the table
+    row_labels = ['Participant Response Correct', 'Participant Response Incorrect']
+    col_labels = ['Model Response Correct', 'Model Response Incorrect']
+
+    # Increase the figure size for better alignment and spacing
+    fig, ax = plt.subplots(figsize=(12, 10))  # Increased size for the table
+
+    # Create a divider to manage the color bar size relative to the heatmap
+    divider = make_axes_locatable(ax)
+    cax = divider.append_axes("right", size="5%", pad=0.1)
+
+    # Plot the contingency table with clear annotations
+    sns.heatmap(data, annot=True, fmt='.0f', cmap='Greys', cbar=True,
+                xticklabels=col_labels, yticklabels=row_labels, ax=ax,
+                linewidths=0, linecolor='black', annot_kws={"fontsize": 30, "color": "black"}, square=True,
+                cbar_ax=cax,
+                vmin=0, vmax=100)
+
+    # Set axis labels with adequate spacing and no rotation
+    ax.set_xticklabels(col_labels, fontsize=16)
+    ax.set_yticklabels(row_labels, fontsize=16, rotation=90)
+
+    # Configure the color bar
+    cbar = ax.collections[0].colorbar
+    cbar.ax.tick_params(labelsize=12)
+
+    # Add ratio text to the right of the heatmap, making it closer but avoiding overlap
+    ax.text(2.3, 0.5, f'Ratio Correct: {ratio_correct:.2f}', va='center', fontsize=18, color='black',
+            bbox=dict(facecolor='white', edgecolor='black', boxstyle='round,pad=0.5'))
+    ax.text(2.3, 1.5, f'Ratio Error: {ratio_error:.2f}', va='center', fontsize=18, color='black',
+            bbox=dict(facecolor='white', edgecolor='black', boxstyle='round,pad=0.5'))
+
+    # Add title directly above the heatmap in the center
+    subject = '_'.join(model_dir.split('\\')[-2].split('_')[0:2])
+    plt.suptitle(f'{subject}', fontsize=18, y=.95, x=.4)
+
+    # Adjust layout to fit all elements within the figure bounds
+    plt.tight_layout(rect=[0, 0, .9, .95])  # Adjusted the layout to accommodate the title
+
+    # Save the plot ensuring all elements are included
+
+    save_path = os.path.join(figure_path, f'{mode}_Contingency_{subject}.png')
+    os.makedirs(os.path.dirname(save_path), exist_ok=True)
+    plt.savefig(save_path, format='png', dpi=300, bbox_inches='tight', pad_inches=0.2)
+
+    # Display the plot
+    plt.show()
+
+########################################################################################################################
+# Model evaluation for chosen tasks
+########################################################################################################################
+# Directory has to point exactly on the model folder of interest
+participant = 'beRNN_03'
+directory = rf'C:\Users\oliver.frank\Desktop\PyProjects\beRNNmodels\show-grid_multi_beRNN_03_highDim_256\highDim\beRNN_03\8\beRNN_03_AllTask_3-5_data_highDim_tB8_iter5_LeakyRNN_256_relu'
+dataDirectory = f'C:\\Users\\oliver.frank\\Desktop\\PyProjects\\Data\\{participant}\\data_highDim' # add right participant and dataset
+modelsList = [os.path.join(directory, item) for item in os.listdir(directory) if 'model_month_5' in item]
+
+# Tasks to evaluate
+tasks = ['DM', 'DM_Anti', 'EF', 'EF_Anti', 'RP', 'RP_Anti', 'RP_Ctx1', 'RP_Ctx2', 'WM', 'WM_Anti', 'WM_Ctx1', 'WM_Ctx2']
+evaluate_model_responses(directory, dataDirectory, modelsList, tasks)
 
 
 

@@ -13,7 +13,8 @@ import matplotlib.pyplot as plt
 from matplotlib.lines import Line2D
 from collections import OrderedDict, defaultdict
 from scipy.stats import pearsonr
-import pickle
+from scipy import stats
+import json
 import networkx as nx
 
 from _hyperparameterOverview import compute_n_cluster, get_n_clusters #, plot_vertical_hp_legend
@@ -636,16 +637,16 @@ if __name__ == '__main__':
     #                     '_gridSearch_domainTask-DM_beRNN_03_highDim_correctOnly_256',
     #                     '_gridSearch_domainTask_DM_beRNN_03_highDim_correctOnly_512']
 
-    foldersToOverlay = ['show-nonRec_multi_beRNN_03_highDim_correctOnly_16',
-                  'show-nonRec_multi_beRNN_03_highDim_correctOnly_32',
-                  'show-nonRec_multi_beRNN_03_highDim_correctOnly_64',
-                  'show-nonRec_multi_beRNN_03_highDim_correctOnly_128',
-                  'show-nonRec_multi_beRNN_03_highDim_correctOnly_256',
-                  'show-nonRec_multi_beRNN_03_highDim_correctOnly_512']
+    foldersToOverlay = ['show-lowC_multi_beRNN_00_highDim_lowCognition_16',
+                  'show-lowC_multi_beRNN_00_highDim_lowCognition_32',
+                  'show-lowC_multi_beRNN_00_highDim_lowCognition_64',
+                  'show-lowC_multi_beRNN_00_highDim_lowCognition_128',
+                  'show-lowC_multi_beRNN_00_highDim_lowCognition_256',
+                  'show-lowC_multi_beRNN_00_highDim_lowCognition_512']
 
     paper_nomenclatur_dict = ['HC1', 'HC2', 'MDD', 'ASD', 'SCZ']
     participantList = ['beRNN_00', 'beRNN_01', 'beRNN_02', 'beRNN_03', 'beRNN_04', 'beRNN_05']
-    participantNumber = 3 # for standard visualization beRNN_03
+    participantNumber = 0 # for standard visualization beRNN_03
     network_sizes = ['16', '32', '64', '128', '256', '512']  # for standard visualization
 
     mode = ['train', 'test'][1]
@@ -794,6 +795,7 @@ if __name__ == '__main__':
         # print(f'density {density} done.')
         # # .info save lists to nested dict ******************************************************************************
 
+
     # Visualize big overlay
     if overlay == 'standard':
         general_hp_plot_overlay_multiple(meta_n_clusters_list,
@@ -819,6 +821,47 @@ if __name__ == '__main__':
         visualize_topMarker_testPerf_corrlation(meta_perf_test_list, meta_participation_coefficient_list, 'participation')
         # Optional for paper
         # visualize_simulatedTopMarkerNetworks()
+
+
+        # # info. Compare variances between low- and high-performing models **********************************************
+        # list_perf_ = []
+        # list_clust_ = []
+        # list_perf = [element for unterliste in meta_perf_test_list for element in unterliste]
+        # list_clust = [element for unterliste in meta_participation_coefficient_list for element in unterliste]
+        # perf = np.array(list_perf)
+        # clust = np.array(list_clust)
+        #
+        # group_low = perf[perf < 0.5]
+        # group_high = perf[perf >= 0.5]
+        #
+        # mean_low = np.mean(group_low)
+        # mean_high = np.mean(group_high)
+        #
+        # var_low = np.var(group_low, ddof=1)
+        # var_high = np.var(group_high, ddof=1)
+        #
+        # stat_levene, p_levene = stats.levene(group_low, group_high, center='median')
+        #
+        # print("levene-tests:")
+        # print(f"mean_low: {mean_low:.4f}")
+        # print(f"mean_high: {mean_high:.4e}")
+        # print(f"var_low: {var_low:.4f}")
+        # print(f"var_high: {var_high:.4e}")
+        # print(f"statistic: {stat_levene:.4f}")
+        # print(f"p-Wert: {p_levene:.4e}")
+        #
+        # dict = OrderedDict()
+        # dict['mean_low'] = mean_low
+        # dict['mean_high'] = mean_high
+        # dict['var_low'] = var_low
+        # dict['var_high'] = var_high
+        # dict['stat_levene'] = stat_levene
+        # dict['p_levene'] = p_levene
+        #
+        # with open(os.path.join(r'C:\Users\oliver.frank\Desktop\PyProjects\beRNNmodels\__low-vs-high-perf\participation', '.'.join(['_'.join(foldersToOverlay[-1].split('_')[:-1]), 'json'])), 'w') as f:
+        #     json.dump(dict, f)
+        # # info. Compare variances between low- and high-performing models **********************************************
+
 
     if overlay == 'robustness':
         participants = participantList # to overlay
