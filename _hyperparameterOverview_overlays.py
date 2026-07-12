@@ -510,12 +510,12 @@ def visualize_topMarker_testPerf_corrlation(meta_perf_test_list, meta_topMarker_
     # Correlation annotation (inside plot)
     textstr = f"$r = {r:.2f}$\n$p = {p:.3g}$"
     ax.text(
-        0.5, 0.05, textstr,  # x=0.5 (Mitte), y=0.05 (unten)
+        0.5, 0.05, textstr,
         transform=ax.transAxes,
         fontsize=16,
-        verticalalignment="bottom",  # Text wächst nach oben
-        horizontalalignment="center",  # Text wird zentriert
-        bbox=dict(boxstyle="round", facecolor="white", alpha=0.8)
+        verticalalignment="bottom",
+        horizontalalignment="center",
+        bbox={"boxstyle": "round", "facecolor": "white", "alpha": 0.8}
     )
 
     # Layout and save
@@ -637,16 +637,16 @@ if __name__ == '__main__':
     #                     '_gridSearch_domainTask-DM_beRNN_03_highDim_correctOnly_256',
     #                     '_gridSearch_domainTask_DM_beRNN_03_highDim_correctOnly_512']
 
-    foldersToOverlay = ['show-lowC_multi_beRNN_00_highDim_lowCognition_16',
-                  'show-lowC_multi_beRNN_00_highDim_lowCognition_32',
-                  'show-lowC_multi_beRNN_00_highDim_lowCognition_64',
-                  'show-lowC_multi_beRNN_00_highDim_lowCognition_128',
-                  'show-lowC_multi_beRNN_00_highDim_lowCognition_256',
-                  'show-lowC_multi_beRNN_00_highDim_lowCognition_512']
+    foldersToOverlay = ['show-grid_multi_beRNN_03_highDim_correctOnly_16',
+                  'show-grid_multi_beRNN_03_highDim_correctOnly_32',
+                  'show-grid_multi_beRNN_03_highDim_correctOnly_64',
+                  'show-grid_multi_beRNN_03_highDim_correctOnly_128',
+                  'show-grid_multi_beRNN_03_highDim_correctOnly_256',
+                  'show-grid_multi_beRNN_03_highDim_correctOnly_512']
 
     paper_nomenclatur_dict = ['HC1', 'HC2', 'MDD', 'ASD', 'SCZ']
     participantList = ['beRNN_00', 'beRNN_01', 'beRNN_02', 'beRNN_03', 'beRNN_04', 'beRNN_05']
-    participantNumber = 0 # for standard visualization beRNN_03
+    participantNumber = 3 # for standard visualization beRNN_03
     network_sizes = ['16', '32', '64', '128', '256', '512']  # for standard visualization
 
     mode = ['train', 'test'][1]
@@ -823,47 +823,88 @@ if __name__ == '__main__':
         # visualize_simulatedTopMarkerNetworks()
 
 
-        # # info. Compare variances between low- and high-performing models **********************************************
-        # list_perf_ = []
-        # list_clust_ = []
-        # list_perf = [element for unterliste in meta_perf_test_list for element in unterliste]
-        # list_clust = [element for unterliste in meta_participation_coefficient_list for element in unterliste]
-        # perf = np.array(list_perf)
-        # clust = np.array(list_clust)
-        #
-        # group_low = perf[perf < 0.5]
-        # group_high = perf[perf >= 0.5]
-        #
-        # mean_low = np.mean(group_low)
-        # mean_high = np.mean(group_high)
-        #
-        # var_low = np.var(group_low, ddof=1)
-        # var_high = np.var(group_high, ddof=1)
-        #
-        # stat_levene, p_levene = stats.levene(group_low, group_high, center='median')
-        #
-        # print("levene-tests:")
-        # print(f"mean_low: {mean_low:.4f}")
-        # print(f"mean_high: {mean_high:.4e}")
-        # print(f"var_low: {var_low:.4f}")
-        # print(f"var_high: {var_high:.4e}")
-        # print(f"statistic: {stat_levene:.4f}")
-        # print(f"p-Wert: {p_levene:.4e}")
-        #
-        # dict = OrderedDict()
-        # dict['mean_low'] = mean_low
-        # dict['mean_high'] = mean_high
-        # dict['var_low'] = var_low
-        # dict['var_high'] = var_high
-        # dict['stat_levene'] = stat_levene
-        # dict['p_levene'] = p_levene
-        #
-        # with open(os.path.join(r'C:\Users\oliver.frank\Desktop\PyProjects\beRNNmodels\__low-vs-high-perf\participation', '.'.join(['_'.join(foldersToOverlay[-1].split('_')[:-1]), 'json'])), 'w') as f:
-        #     json.dump(dict, f)
-        # # info. Compare variances between low- and high-performing models **********************************************
+        # info. Compare variances and means between low- and high-performing models **********************************************
+        list_perf = [element for unterliste in meta_perf_test_list for element in unterliste[:128]]
+        list_clust = [element for unterliste in meta_clustering_list for element in unterliste[:128]]
+        perf = np.array(list_perf)
+        clust = np.array(list_clust)
+
+        chance_level = 0.2
+        valid_indices = perf > chance_level
+
+        perf_valid = perf[valid_indices]
+        clust_valid = clust[valid_indices]
+
+        split_threshold = np.mean(perf_valid)
+
+        group_low = clust_valid[perf_valid <= split_threshold]
+        group_high = clust_valid[perf_valid > split_threshold]
+
+        mean_low = np.mean(group_low)
+        mean_high = np.mean(group_high)
+        mean_total = np.mean(np.concatenate([group_low, group_high]))
+
+        std_low = np.sqrt(np.var(group_low, ddof=1))
+        std_high = np.sqrt(np.var(group_high, ddof=1))
+        std_high_total = np.sqrt(np.var(np.concatenate([group_low, group_high]), ddof=1))
+
+        n_low, n_high = len(group_low), len(group_high)
+
+        # 1. Levene-Test (Varianzvergleich)
+        stat_levene, p_levene = stats.levene(group_low, group_high, center='median')
+
+        abs_dev_low = np.abs(group_low - np.median(group_low))
+        abs_dev_high = np.abs(group_high - np.median(group_high))
+
+        mean_dev_low = np.mean(abs_dev_low)
+        mean_dev_high = np.mean(abs_dev_high)
+        mean_dev_total = np.mean(np.concatenate([abs_dev_low, abs_dev_high]))
+
+        ss_between = n_low * (mean_dev_low - mean_dev_total) ** 2 + n_high * (mean_dev_high - mean_dev_total) ** 2
+        ss_total = np.sum((abs_dev_low - mean_dev_total) ** 2) + np.sum((abs_dev_high - mean_dev_total) ** 2)
+        eta_squared_levene = ss_between / ss_total if ss_total > 0 else 0.0
+
+        # 2. Welch-t-Test (Mittelwertsvergleich für ungleiche Gruppengrößen & Varianzen)
+        stat_ttest, p_ttest = stats.ttest_ind(group_low, group_high, equal_var=False)
+
+        # 3. Effektstärke für t-Test berechnen (Cohen's d für ungleiche Gruppengrößen)
+        pooled_std = np.sqrt(((n_low - 1) * (std_low ** 2) + (n_high - 1) * (std_high ** 2)) / (n_low + n_high - 2))
+        cohens_d = (mean_low - mean_high) / pooled_std if pooled_std > 0 else 0.0
+
+        print("Statistical Tests:")
+        print(f"n_low: {n_low}, n_high: {n_high}")
+        print(f"mean_low: {mean_low:.4f} | mean_high: {mean_high:.4e}")
+        print(f"std_low: {std_low:.4f} | std_high: {std_high:.4e}")
+        print("-" * 30)
+        print(f"Levene-Test: W={stat_levene:.4f}, p={p_levene:.4e}, Eta2={eta_squared_levene:.4f}")
+        print(f"Welch-t-Test: t={stat_ttest:.4f}, p={p_ttest:.4e}, Cohen's d={cohens_d:.4f}")
+
+        # WICHTIG: Variable NICHT 'dict' nennen, um Built-In-Konflikte zu vermeiden
+        results_output = OrderedDict()
+        results_output['n_low'] = n_low
+        results_output['n_high'] = n_high
+        results_output['mean_low'] = mean_low
+        results_output['mean_high'] = mean_high
+        results_output['mean_total'] = mean_total
+        results_output['std_low'] = std_low
+        results_output['std_high'] = std_high
+        results_output['std_high_total'] = std_high_total
+        results_output['stat_levene'] = stat_levene
+        results_output['eta_squared_levene'] = eta_squared_levene
+        results_output['p_levene'] = p_levene
+        results_output['stat_ttest'] = stat_ttest
+        results_output['p_ttest'] = p_ttest
+        results_output['cohens_d'] = cohens_d
+
+        file_path = os.path.join(
+            r'C:\Users\oliver.frank\Desktop\PyProjects\beRNNmodels\__low-vs-high-perf\clustering',
+            '.'.join(['_'.join(foldersToOverlay[-1].split('_')[:-1]) + '_clustering', 'json']))
+        with open(file_path, 'w') as f:
+            json.dump(results_output, f)
+        # info. Compare variances and means between low- and high-performing models **********************************************
 
 
-    if overlay == 'robustness':
+if overlay == 'robustness':
         participants = participantList # to overlay
         general_hp_plot_overlay_multiple_robustnessTests(meta_n_clusters_list,
                                          meta_silhouette_score_list,

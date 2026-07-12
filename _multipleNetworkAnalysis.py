@@ -42,19 +42,21 @@ Both data modalities have to be preprocessed with:
 # head - Variables and functions #######################################################################################
 ########################################################################################################################
 setup = {
-    'comparison': ['correlation', 'rsa', None][1],
+    'comparison': ['correlation', 'rsa', None][2],
     'modalityWithin_comparison': ['brain', 'beRNN', 'standard'][1], # standard is beRNN brain comparison - 'brain': brain/brain - 'beRNN': beRNN/beRNN
     # 'numberOfModels': [5, 3], # second value represents beRNN_04 - only defined for beRNNs - should be 3 if compared to brain in 'standard' - [5, 3] or [20, 20]
     'numberOfModels': [20, 20], # second value represents beRNN_04 - only defined for beRNNs - should be 3 if compared to brain in 'standard' - [5, 3] or [20, 20]
     'threshold': 0.1,
-    # 'participants_beRNN': ['beRNN_03', 'beRNN_04', 'beRNN_01', 'beRNN_02', 'beRNN_05'], # order for paper - with 'beRNN_06' for ALL comparison
-    'participants_beRNN': ['beRNN_03', 'beRNN_00', 'beRNN_06', 'beRNN_07', 'beRNN_08'], # baseline comparison w. shared (00) and random (06)
-    # 'paper_nomenclatur': ['HC1', 'HC2', 'MDD', 'ASD', 'SCZ'], # nomenclatur for paper plots - only applied for RDA
-    'paper_nomenclatur': ['HC1', 'POL', 'RND', 'LIN', 'NRE'], # nomenclatur for paper plots - only applied for RDA
+    'participants_beRNN': ['beRNN_03', 'beRNN_04', 'beRNN_01', 'beRNN_02', 'beRNN_05'], # order for paper - with 'beRNN_06' for ALL comparison
+    # 'participants_beRNN': ['beRNN_03', 'beRNN_08'], # baseline comparison w. shared (00) and random (06)
+    # 'participants_beRNN': ['beRNN_03', 'beRNN_00', 'beRNN_06', 'beRNN_07', 'beRNN_08'], # baseline comparison w. shared (00) and random (06)
+    'paper_nomenclatur': ['HC1', 'HC2', 'MDD', 'ASD', 'SCZ'], # nomenclatur for paper plots - only applied for RDA
+    # 'paper_nomenclatur': ['HC1', 'NRE'], # nomenclatur for paper plots - only applied for RDA
+    # 'paper_nomenclatur': ['HC1', 'POL', 'RND', 'LIN', 'NRE'], # nomenclatur for paper plots - only applied for RDA
     # 'paper_nomenclatur': ['HC1', 'HC2', 'MDD', 'ASD', 'SCZ', 'ALL'], # nomenclatur for paper plots - only applied for RDA
     'participants': ['sub-6IECX', 'sub-DKHPB', 'sub-KPB84', 'sub-YL4AS', 'sub-96WID'], # nomenclatur for paper plots - only applied for RDA
     'participants_snip': ['sub-SNIP6IECX', 'sub-SNIPDKHPB', 'sub-SNIPKPB84', 'sub-SNIPYL4AS', 'sub-SNIP96WID'], # nomenclatur for paper plots - only applied for RDA
-    'folder_beRNN': fr'C:\Users\oliver.frank\Desktop\PyProjects\beRNNmodels\__baseline\robust_multi_beRNN_01_highDim_correctOnly_256_hp_8', # beRNN_01 is default
+    'folder_beRNN': fr'C:\Users\oliver.frank\Desktop\PyProjects\beRNNmodels\__baseline\compare_4task_beRNN_01_highDim_128_hp8', # beRNN_01 is default
     'robust_compare': True, # false if 1,3,6,9,12 comparison
     'folder_brain': r'W:\group_csp\analyses\oliver.frank\_brainModels',
     'subNetwork_string': 'Default_contrast',
@@ -882,7 +884,6 @@ elif setup['comparison'] == 'rsa':
         vmin=0.0, vmax=1.0
     )
 
-    # ----- SET CUSTOM TICKS -----
     n_groups = len(subjects_beRNN)
     # group_size = 20  # number of models per participant
     # tick_positions = [i * group_size + group_size // 2 for i in range(n_groups)]
@@ -1004,15 +1005,17 @@ if setup["visualize_fMRI"] == True:
 
 
 if setup["correlationOf_correlationMatices_fMRI"] == True:
-    # Functional correlation matrices - Pearson Correlation
-
     correlationMatrices = []
-    for participant in setup["participants"]:
+    participant_mapping = []  # Tracken, zu welchem Probanden jede Aufnahme gehört
+    recordings_per_participant = []  # Speichert die echten Blockgrößen für die Patches
 
+    for participant in setup["participants"]:
         if participant == 'sub-DKHPB':
             recordings = ['01', '02', '03']
         else:
             recordings = ['01', '02', '03', '04', '05']
+
+        recordings_per_participant.append(len(recordings))  # Blockgröße merken (3 oder 5)
 
         for recording in recordings:
             print(participant, recording)
@@ -1020,86 +1023,278 @@ if setup["correlationOf_correlationMatices_fMRI"] == True:
             path = os.path.join(setup["folder_brain"], 'functional_matrices', f'{participant}_ses-{recording}-avg.npy')
             correlationMatrix = np.load(path)
             correlationMatrices.append(correlationMatrix)
+            participant_mapping.append(participant)
+
 
     # Function to extract upper triangle (excluding diagonal)
     def upper_triangle(matrix):
         return matrix[np.triu_indices_from(matrix, k=1)]
 
+
     # Extract flattened upper triangles
     flattened_correlationMatrices = [upper_triangle(mat) for mat in correlationMatrices]
 
     # Compute pairwise correlations
-    # n = len(recordings)
     n = 23
     corr_matrix_of_corrs = np.zeros((n, n))
 
-    for (i, vec1), (j, vec2) in itertools.combinations(enumerate(flattened_correlationMatrices), 2):
-        corr, _ = pearsonr(vec1, vec2)
-        corr_matrix_of_corrs[i, j] = corr
-        corr_matrix_of_corrs[j, i] = corr  # symmetric
+    within_corr = {s: [] for s in setup["participants"]}
+    between_corr = {s: [] for s in setup["participants"]}
 
-    np.fill_diagonal(corr_matrix_of_corrs, 1)  # self-correlation
+    # Loop over all pairs of the 23 recordings
+    for i, v1 in enumerate(flattened_correlationMatrices):
+        for j, v2 in enumerate(flattened_correlationMatrices):
+            if i == j:
+                continue
 
-    plt.figure()
-    plt.imshow(corr_matrix_of_corrs, cmap="viridis", vmin=0, vmax=1)
-    plt.colorbar(label="Correlation")
-    plt.title(f"Pearson Similarity")
-    plt.xlabel("model")
-    plt.ylabel("model")
+            corr, _ = pearsonr(v1, v2)
+            corr_matrix_of_corrs[i, j] = corr
+
+            p1 = participant_mapping[i]
+            p2 = participant_mapping[j]
+
+            if p1 == p2:
+                within_corr[p1].append(corr)
+            else:
+                between_corr[p1].append(corr)
+
+    np.fill_diagonal(corr_matrix_of_corrs, 1)  # Selbstkorrelation auf 1 setzen
+
+    # Create dict for each comparison's mean value
+    within_mean = np.array([np.mean(within_corr[s]) for s in setup["participants"]])
+    between_mean = np.array([np.mean(between_corr[s]) for s in setup["participants"]])
+
+    # T-Test berechnen
+    t, p = ttest_rel(within_mean, between_mean)
+
+    # ==========================================
+    # PLOTTING START (Vollständig korrigiert)
+    # ==========================================
+    plt.figure(figsize=(10, 10))
+
+    # Heatmap zeichnen (ohne xticklabels/yticklabels hier zu übergeben, da wir sie unten via Ticks setzen)
+    ax = sns.heatmap(
+        corr_matrix_of_corrs,
+        cmap="gist_gray",
+        square=True,
+        linewidths=0,
+        cbar_kws={
+            'shrink': 0.5,
+            'aspect': 10,
+            'ticks': np.linspace(0.0, 1.0, 2)
+        },
+        vmin=0.0, vmax=1.0
+    )
+
+    tick_positions = []
+    current_start = 0
+
+    # Draw rectangles dynamically based on REAL fMRI block sizes
+    for group_size in recordings_per_participant:
+        # Berechne die Mitte des Blocks für das Label
+        tick_positions.append(current_start + group_size / 2)
+
+        # Weißes Quadrat um den aktuellen Probanden-Block zeichnen
+        rect = patches.Rectangle(
+            (current_start, current_start),  # Startpunkt (X, Y)
+            group_size,  # Breite
+            group_size,  # Höhe
+            fill=False,  # Nicht ausfüllen
+            edgecolor='white',  # Rahmenfarbe
+            linewidth=5  # Liniendicke
+        )
+        ax.add_patch(rect)
+
+        # Startpunkt für den nächsten Probanden-Block verschieben
+        current_start += group_size
+
+    # Setze Ticks exakt in die Mitte der echten Blöcke
+    ax.set_xticks(tick_positions)
+    ax.set_yticks(tick_positions)
+
+    # Setze die Label-Texte und Schriftgrößen
+    ax.set_xticklabels(setup['paper_nomenclatur'], rotation=0, fontsize=26)
+    ax.set_yticklabels(setup['paper_nomenclatur'], rotation=90, fontsize=26)
+
+    # Colorbar font sizes
+    cbar = ax.collections[0].colorbar
+    cbar.ax.tick_params(labelsize=26)
+
+    # Statistiken als Textblock formatieren
+    stats_text = (
+        f"Within mean ρ = {within_mean.mean():.3f}\n"
+        f"Between mean ρ = {between_mean.mean():.3f}\n"
+        f"Paired t(4) = {t:.2f}, p = {p:.4f}"
+    )
+
+    plt.tight_layout()
+    plt.subplots_adjust(bottom=0.25)  # Platz nach unten schaffen für den Text
+
+    # Statistiken mittig unter dem Plot platzieren
+    plt.figtext(
+        0.45, 0.12,
+        stats_text,
+        ha='center', va='top',
+        fontsize=26,
+        linespacing=1.5
+    )
+
+    plt.savefig(
+        r'C:\Users\oliver.frank\Desktop\PyProjects\beRNNmodels\__correlationPlots\correlation_plot_BNN.png',
+        bbox_inches='tight',
+        dpi=300
+    )
+
     plt.show()
 
 
 if setup["correlationOf_correlationMatices_beRNN"] == True:
-    # Functional correlation matrices - Pearson Correlation
-
     correlationMatrices = []
+    participant_mapping = []
+    recordings_per_participant = []
+
     for participant in setup["participants_beRNN"]:
-        folder_beRNN = setup["folder_beRNN"].replace("beRNN_01", participant, 1)
-        modelPath = os.path.join(folder_beRNN, setup["dataType"], participant, folder_beRNN.split("_")[-1])
+        # DYNAMISCHER PFAD: Ersetzt das feste beRNN_03 durch den aktuellen Schleifen-Probanden
+        modelPath = rf'C:\Users\oliver.frank\Desktop\PyProjects\beRNNmodels\compare_4task_{participant}_highDim_128_hp8\highDim\{participant}\14\iter1_LeakyRNN_diag_128_relu'
+
+        # Sicherheits-Check falls ein Ordner fehlt
+        if not os.path.exists(modelPath):
+            print(f"WARNUNG: Pfad existiert nicht: {modelPath}")
+            continue
+
         modelList = os.listdir(modelPath)
 
-        # if participant == 'beRNN_04':
-        #     numberOfModels = 3
-        # else:
-        numberOfModels = 5
+        if participant == 'beRNN_04':
+            numberOfModels = 3
+        else:
+            numberOfModels = 5
+
+        recordings_per_participant.append(numberOfModels)
 
         for modelNumber in range(0, numberOfModels):
             # Load correlation matrices
-            if 'fundamentals' in modelPath or 'fm' in modelPath:
-                correlationMatrix_ = load_pickle(rf'{modelPath}\{modelList[modelNumber]}\model_month_6\corr_test_lay1_rule_fundamentals.pkl')
-            elif 'multiTask' in modelPath or 'AllTask' in modelPath:
-                correlationMatrix_ = load_pickle(rf'{modelPath}\{modelList[modelNumber]}\model_month_6\corr_test_lay1_rule_all.pkl')
-            else:
-                correlationMatrix_ = load_pickle(rf'{modelPath}\{modelList[modelNumber]}\model_month_6\corr_test_lay1_rule_taskSubset.pkl')
+            path_to_pickle = os.path.join(modelPath, modelList[modelNumber], 'corr_test_lay1_rule_4task.pkl')
+            correlationMatrix_ = load_pickle(path_to_pickle)
 
             correlationMatrix = correlationMatrix_['h_corr_all'].mean(axis=2)
             correlationMatrices.append(correlationMatrix)
+            participant_mapping.append(participant)
+
 
     # Function to extract upper triangle (excluding diagonal)
     def upper_triangle(matrix):
         return matrix[np.triu_indices_from(matrix, k=1)]
 
+
     # Extract flattened upper triangles
     flattened_correlationMatrices = [upper_triangle(mat) for mat in correlationMatrices]
 
-    # Compute pairwise correlations
-    # n = len(recordings)
-    n = 25
+    # COMPUTE MATRIX DIMENSION DYNAMICALLY (Verhindert Dimensionsfehler bei n=23)
+    n = len(flattened_correlationMatrices)
     corr_matrix_of_corrs = np.zeros((n, n))
 
-    for (i, vec1), (j, vec2) in itertools.combinations(enumerate(flattened_correlationMatrices), 2):
-        corr, _ = pearsonr(vec1, vec2)
-        corr_matrix_of_corrs[i, j] = corr
-        corr_matrix_of_corrs[j, i] = corr  # symmetric
+    within_corr = {s: [] for s in setup["participants_beRNN"]}
+    between_corr = {s: [] for s in setup["participants_beRNN"]}
 
-    np.fill_diagonal(corr_matrix_of_corrs, 1)  # self-correlation
+    # Loop over all pairs
+    for i, v1 in enumerate(flattened_correlationMatrices):
+        for j, v2 in enumerate(flattened_correlationMatrices):
+            if i == j:
+                continue
 
-    plt.figure()
-    plt.imshow(corr_matrix_of_corrs, cmap="vlag", vmin=-1, vmax=1)
-    plt.colorbar(label="Correlation")
-    plt.title(f"Correlation Matrix")
-    plt.xlabel("model")
-    plt.ylabel("model")
+            corr, _ = pearsonr(v1, v2)
+            corr_matrix_of_corrs[i, j] = corr
+
+            p1 = participant_mapping[i]
+            p2 = participant_mapping[j]
+
+            if p1 == p2:
+                within_corr[p1].append(corr)
+            else:
+                between_corr[p1].append(corr)
+
+    np.fill_diagonal(corr_matrix_of_corrs, 1)  # Selbstkorrelation auf 1 setzen
+
+    # Create dict for each comparison's mean value
+    within_mean = np.array([np.mean(within_corr[s]) for s in setup["participants_beRNN"] if len(within_corr[s]) > 0])
+    between_mean = np.array([np.mean(between_corr[s]) for s in setup["participants_beRNN"] if len(between_corr[s]) > 0])
+
+    # T-Test berechnen
+    t, p = ttest_rel(within_mean, between_mean)
+
+    # ==========================================
+    # PLOTTING START (Mit dynamischen Achsen)
+    # ==========================================
+    fig = plt.figure(figsize=(10, 10))  # Höher für den Text unten
+
+    ax = sns.heatmap(
+        corr_matrix_of_corrs,
+        cmap="gist_gray",
+        square=True,
+        linewidths=0,
+        cbar_kws={
+            'shrink': 0.5,
+            'aspect': 10,
+            'ticks': np.linspace(0.0, 1.0, 2)
+        },
+        vmin=0.0, vmax=1.0
+    )
+
+    tick_positions = []
+    current_start = 0
+
+    # Draw rectangles dynamically
+    for group_size in recordings_per_participant:
+        tick_positions.append(current_start + group_size / 2)
+
+        rect = patches.Rectangle(
+            (current_start, current_start),
+            group_size,
+            group_size,
+            fill=False,
+            edgecolor='white',
+            linewidth=5
+        )
+        ax.add_patch(rect)
+        current_start += group_size
+
+    # Setze Ticks exakt in die Mitte der echten Blöcke
+    ax.set_xticks(tick_positions)
+    ax.set_yticks(tick_positions)
+
+    # Setze die Label-Texte und Schriftgrößen
+    ax.set_xticklabels(setup['paper_nomenclatur'], rotation=0, fontsize=26)
+    ax.set_yticklabels(setup['paper_nomenclatur'], rotation=90, fontsize=26)
+
+    # Colorbar font sizes
+    cbar = ax.collections[0].colorbar
+    cbar.ax.tick_params(labelsize=26)
+
+    # Statistiken als Textblock formatieren
+    stats_text = (
+        f"Within mean ρ = {within_mean.mean():.3f}\n"
+        f"Between mean ρ = {between_mean.mean():.3f}\n"
+        f"Paired t(4) = {t:.2f}, p = {p:.4f}"
+    )
+
+    plt.tight_layout()
+    plt.subplots_adjust(bottom=0.25)  # Platz nach unten schaffen für den Text
+
+    # Statistiken mittig unter dem Plot platzieren
+    plt.figtext(
+        0.45, 0.12,
+        stats_text,
+        ha='center', va='top',
+        fontsize=26,
+        linespacing=1.5
+    )
+
+    plt.savefig(
+        r'C:\Users\oliver.frank\Desktop\PyProjects\beRNNmodels\__correlationPlots\correlation_plot_RNN.png',
+        bbox_inches='tight',
+        dpi=300
+    )
+
     plt.show()
 
 

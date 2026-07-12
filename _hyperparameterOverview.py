@@ -447,7 +447,7 @@ def plot_histogram():
 def _get_hp_ranges():
     """Get ranges of hp."""
     hp_ranges = OrderedDict()
-    hp_ranges['activation'] = ['softplus', 'relu', 'tanh']
+    hp_ranges['activation'] = ['softplus', 'relu', 'tanh', 'linear']
     # hp_ranges['rnn_type'] = ['LeakyRNN', 'LeakyGRU', 'MultiLayer']
     hp_ranges['n_rnn'] = [8, 16, 32, 64, 128, 156, 256, 512]
     hp_ranges['w_rec_init'] = ['randortho', 'randgauss', 'diag', 'brainStructure']
@@ -799,7 +799,7 @@ HP_NAME = {'activation': 'Activation fun.',
 
 if __name__ == '__main__':
 
-    folderList = ['show_bench_multi_beRNN_00_highDim_benchmark_64']
+    folderList = ['show-8task_multi_beRNN_03_highDim_correctOnly_128']
 
     # evaluate metrics for finding best hp for paper
     mean_clustering_list = []
@@ -817,8 +817,8 @@ if __name__ == '__main__':
         # participantList = ['beRNN_03']
         participant = [participant for participant in participantList if participant in folder][0]
         # participant = participantList[2]
-        # dataType = 'highDim_correctOnly' if 'highDim_correctOnly' in folder or 'highDimCorrects' in folder else 'highDim'
-        dataType = 'highDim_benchmark'
+        dataType = 'highDim_correctOnly' if 'highDim_correctOnly' in folder or 'highDimCorrects' in folder else 'highDim'
+        # dataType = 'highDim_benchmark'
 
         mode = ['train', 'test'][1]
         sort_variable = ['clustering', 'performance', 'silhouette'][1]
