@@ -1148,7 +1148,6 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 from collections import defaultdict
 
-# 1. Definiere das Master-Grid (12 Zeilen untereinander, 1 Spalte breit)
 fig, axs = plt.subplots(12, 1, figsize=(3, 24))
 
 participantList = ['beRNN_01', 'beRNN_02', 'beRNN_03', 'beRNN_04', 'beRNN_05']
@@ -1156,34 +1155,27 @@ tasks = ['DM', 'DM_Anti', 'EF', 'EF_Anti', 'RP', 'RP_Anti',
          'RP_Ctx1', 'RP_Ctx2', 'WM', 'WM_Anti', 'WM_Ctx1', 'WM_Ctx2']
 
 for iteration, task in enumerate(tasks):
-    # Aktuelle Achse aus dem vordefinierten Grid auswählen
     ax = axs[iteration]
 
-    # Master-Dictionary erstellen, um Fehlerzahlen über alle Teilnehmer zu addieren
     combined_errors = defaultdict(int)
 
     for participant in participantList:
         dict_directory = rf'C:\Users\oliver.frank\Desktop\PyProjects\Data\{participant}\ErrorGraphics'
 
-        # Sicherstellen, dass die Datei existiert, um Abstürze zu vermeiden
         file_path = os.path.join(dict_directory, f'errors_dict_{task}_{participant}.pkl')
         if os.path.exists(file_path):
             with open(file_path, 'rb') as f:
                 loaded_dict = pickle.load(f)
 
-            # Absolute Anzahl der Fehler pro Kategorie aufaddieren
             for cat, values in loaded_dict.items():
                 combined_errors[cat] += len(values)
 
-    # Gesamtzahl aller Fehler über alle Teilnehmer hinweg berechnen
     total_occurrences = sum(combined_errors.values())
 
-    # Listen für die addierten Prozentwerte der drei Gruppen vorbereiten
     easy_pct = 0
     medium_pct = 0
     difficult_pct = 0
 
-    # Kategorien basierend auf Ihrer Logik zuordnen und Prozentwerte aufsummieren
     for cat, count in combined_errors.items():
         pct = (count / total_occurrences) * 100 if total_occurrences > 0 else 0
 
@@ -1214,11 +1206,9 @@ for iteration, task in enumerate(tasks):
             else:
                 medium_pct += pct
 
-    # Daten für das Plotten vorbereiten
     difficulty_groups = ['easy', 'medium','difficult']
     percentage_values = [easy_pct, medium_pct, difficult_pct]
 
-    # Balkendiagramm direkt auf die Zielachse zeichnen
     sns.barplot(x=difficulty_groups, y=percentage_values, palette='coolwarm', ax=ax)
 
     # Styling-Vorgaben für die Achsen anwenden
@@ -1227,13 +1217,8 @@ for iteration, task in enumerate(tasks):
     ax.tick_params(axis='both', labelsize=12)
     ax.grid(True, axis='y', linestyle='--', alpha=0.6)
 
-    # Task-Namen als Text im Inneren des Plots platzieren (verhindert Abschneiden am Rand)
-    # ax.text(0.1, 85, task, fontsize=10, fontweight='bold', va='top', ha='left')
-
-# Layout-Abstände anpassen
 plt.tight_layout()
 
-# Master-Speicherpfad (z.B. im Ordner des letzten Teilnehmers oder einem zentralen Pfad)
 master_save_path = r'C:\Users\oliver.frank\Desktop\PyProjects\Data\combined_tasks_difficulty.png'
 os.makedirs(os.path.dirname(master_save_path), exist_ok=True)
 plt.savefig(master_save_path, dpi=100, bbox_inches='tight')
@@ -1263,21 +1248,17 @@ for task in tasks:
 
 rows = []
 
-# Iteriere durch die verschachtelte Struktur
 for task_name, participants in completedict.items():
     for participant_id, categories in participants.items():
         for category_name, trials in categories.items():
 
-            # Zähle die Anzahl der Fehler (Länge der Liste/des Arrays)
-            # Falls ein Key mal keine Liste sondern None/0 ist, fangen wir das ab
             if isinstance(trials, (list, tuple)):
                 error_count = len(trials)
-            elif hasattr(trials, "shape"):  # Falls es ein NumPy-Array ist
+            elif hasattr(trials, "shape"):
                 error_count = trials.shape[0]
             else:
                 error_count = 0
 
-            # Als flache Zeile abspeichern
             rows.append(
                 {
                     "task": task_name,
@@ -1287,10 +1268,8 @@ for task_name, participants in completedict.items():
                 }
             )
 
-# In einen Pandas DataFrame umwandeln
 df_flat = pd.DataFrame(rows)
 
-# Speicherpfad definieren
 output_path = (
     r"C:\Users\oliver.frank\Desktop\PyProjects\Data\all_tasks_flat_counts.csv"
 )
