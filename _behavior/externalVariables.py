@@ -99,6 +99,100 @@ z_reward = (reward - np.mean(reward)) / np.std(reward)
 z_faces = (faces - np.mean(faces)) / np.std(faces)
 z_flanker = (flanker - np.mean(flanker)) / np.std(flanker)
 # final individual z-score
-z_score_cognition_mrt = np.mean([z_nback[0], z_reward[0], z_faces[0], z_flanker[0]])
+z_score_cognition_mrt = np.mean([z_nback[3], z_reward[3], z_faces[3], z_flanker[3]])
+
+
+# **********************************************************************************************************************
+# info: HITOP scores ***************************************************************************************************
+# **********************************************************************************************************************
+import json
+import os
+import pickle
+from scipy import stats
+
+hitop_general_end = [0.5, 0.395, 0.076, 0.192]
+hitop_official_end = [0.574, 0.553, 0.191, 0.447]
+
+age = [22, 23, 21, 33]
+
+z_score_cognition_mrt = [-0.588, 0.345, 0.381, -0.139]
+z_score_cognition_bcats = [-0.426, -0.977, 1.052, 0.351]
+
+predictors = {
+    "HiTOP General": hitop_general_end,
+    "HiTOP Official": hitop_official_end,
+    "Age": age,
+    "Z-Score Cognition MRT": z_score_cognition_mrt,
+    "Z-Score Cognition BCATS": z_score_cognition_bcats,
+}
+
+participants = ["beRNN_01", "beRNN_02", "beRNN_03", "beRNN_05"]
+tasks = "12task"
+dataType = "highDim_correctOnly"
+density_tresholds = ["0.1","0.2","0.3","0.4","0.5","0.6","0.7","0.8","0.9","1.0"]
+
+# Initialize a dictionary to store all json data
+json_output_data = {}
+
+for density_treshold in density_tresholds:
+
+    clustering_list = []
+    modularity_list = []
+    n_modules_list = []
+    participation_list = []
+    efficiency_list = []
+
+    for participant in participants:
+        meta_dict_path = os.path.join(
+            r"W:\AG_CSP\Projekte\BeRNN\__meta_dicts",
+            f"meta_dict_{participant}_{tasks}_{dataType}.pickle",
+        )
+
+        with open(meta_dict_path, "rb") as f:
+            meta_dict = pickle.load(f)
+
+        clustering_list.append(meta_dict[density_treshold]["avg_clustering_list"][-1][0])
+        modularity_list.append(meta_dict[density_treshold]["modularity_list_sparse"][-1][0])
+        n_modules_list.append(meta_dict[density_treshold]["n_modules_list"][-1][0])
+        participation_list.append(meta_dict[density_treshold]["participation_coefficient_list"][-1][0])
+        efficiency_list.append(meta_dict[density_treshold]["global_efficiency_list"][-1][0])
+
+    print("****************************************************")
+    print("Explorative correlations for density threshold: ", density_treshold)
+    print("****************************************************")
+
+    graph_metrics = {
+        "Clustering": clustering_list,
+        "Modularity": modularity_list,
+        "N-Modules": n_modules_list,
+        "Participation": participation_list,
+        "Efficiency": efficiency_list,
+    }
+
+    # Initialize sub-dictionary for the current density threshold
+    json_output_data[density_treshold] = {}
+
+    for metric_name, metric_values in graph_metrics.items():
+        print(f"\n--- Metrik: {metric_name} ---")
+
+        # Initialize sub-dictionary for the current graph metric
+        json_output_data[density_treshold][metric_name] = {}
+
+        for pred_name, pred_values in predictors.items():
+            r_val, p_val = stats.pearsonr(metric_values, pred_values)
+            print(f"  vs {pred_name:25} -> r = {r_val:6.3f}, p = {p_val:5.3f}")
+
+            # Save data points (converted to standard float for JSON serialization)
+            json_output_data[density_treshold][metric_name][pred_name] = {
+                "r": float(r_val),
+                "p": float(p_val),
+            }
+
+# save everything to json file
+output_json_path = "correlation_results_12tasks_correctOnly.json"
+with open(output_json_path, "w", encoding="utf-8") as json_file:
+    json.dump(json_output_data, json_file, indent=4)
+
+print(f"\n[SUCCESS] All correlation data saved to: {output_json_path}")
 
 
