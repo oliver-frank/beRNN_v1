@@ -8,7 +8,8 @@ import matplotlib.pyplot as plt
 from collections import OrderedDict, defaultdict
 import numpy as np
 
-participantList = ['beRNN_01','beRNN_02','beRNN_03','beRNN_04','beRNN_05']
+participantList = ['beRNN_05']
+# participantList = ['beRNN_01','beRNN_02','beRNN_03','beRNN_04','beRNN_05']
 
 for participant in participantList:
     # Calculate one plot for each participant with all three top markers as mean and variance over time
@@ -42,7 +43,7 @@ for participant in participantList:
                 data_by_month_and_model[month][modelNumber] = {}
 
     # Setup the plot
-    fig, ax = plt.subplots(figsize=(8, 3))
+    fig, ax = plt.subplots(figsize=(5, 3))
     colors = plt.cm.viridis(np.linspace(0, 1, len(topMarkerList)))
 
     stacked_y = defaultdict(OrderedDict)
@@ -64,7 +65,7 @@ for participant in participantList:
             if not stacked_y:
                 continue
 
-    plt.figure(figsize=(18, 6))
+    plt.figure(figsize=(9, 4))
     colors = ["#1f77b4", "#ff7f0e", "#2ca02c"]
     total_points = len(months) * 27
     x_axis = np.arange(total_points)
@@ -103,20 +104,20 @@ for participant in participantList:
 
         plt.axvline(x=separator, color="gray", linestyle="--", alpha=0.3)
 
-        plt.text(separator - 13.5, 1.02, f"Month {month}",
+        plt.text(separator - 13.5, 1.02, f"M{month}",
                  color='gray', fontsize=14, ha='center', fontweight='bold',
                  transform=plt.gca().get_xaxis_transform())
 
-    plt.text(total_points - 13.5, 1.02, f"Month {len(months)}",
+    plt.text(total_points - 13.5, 1.02, f"M{len(months)}",
              color='gray', fontsize=14, ha='center', fontweight='bold',
              transform=plt.gca().get_xaxis_transform())
 
-    plt.title(f"{participant}", fontsize=20, y=1.1)
-    plt.xlabel("Validation steps", fontsize=20)
-    plt.ylabel("Marker values", fontsize=20)
-    plt.ylim(0, 0.6)
-    plt.xticks(fontsize=20)
-    plt.yticks(fontsize=20)
+    plt.title(f"{participant}", fontsize=16, y=1.1)
+    plt.xlabel("Validation steps", fontsize=16)
+    plt.ylabel("Marker values", fontsize=16)
+    plt.ylim(0.1, 0.55)
+    plt.xticks(fontsize=16)
+    plt.yticks(fontsize=16)
     plt.xlim(0, 323)
     plt.grid(True, axis="y", linestyle=":", alpha=0.6)
 
@@ -136,3 +137,68 @@ for participant in participantList:
     plt.savefig(save_path, dpi=300, bbox_inches='tight')
 
     plt.show()
+
+
+# info. Check for standard deviations in topological markers over complete training procedure **************************
+import itertools
+clusteringList = list(itertools.chain.from_iterable(list(itertools.chain.from_iterable(
+        [stacked_y['averageg_clustering'][markerLists] for markerLists in stacked_y['averageg_clustering']]))))
+print('Clustering std: ', np.std(clusteringList))
+
+modularity_sparse = list(itertools.chain.from_iterable(list(itertools.chain.from_iterable(
+        [stacked_y['modularity_sparse'][markerLists] for markerLists in stacked_y['modularity_sparse']]))))
+print('Modularity std: ', np.std(modularity_sparse))
+
+average_participation = list(itertools.chain.from_iterable(list(itertools.chain.from_iterable(
+        [stacked_y['average_participation'][markerLists] for markerLists in stacked_y['average_participation']]))))
+print('Particpation std: ', np.std(average_participation))
+
+performance = list(itertools.chain.from_iterable(
+    [data_by_month_and_model[month_key][model]['perf_avg'] for month_key in data_by_month_and_model
+     for model in data_by_month_and_model[month_key]]))
+print('Performance std: ', np.std(performance))
+print('Performance mean: ', np.mean(performance))
+
+
+# info. Create structure for the LMM analysis **************************************************************************
+import pandas as pd
+
+list_clust = [stacked_y['averageg_clustering'][markerLists] for markerLists in stacked_y['averageg_clustering']]
+list_modularity = [stacked_y['modularity_sparse'][markerLists] for markerLists in stacked_y['modularity_sparse']]
+list_participation = [stacked_y['average_participation'][markerLists] for markerLists in stacked_y['average_participation']]
+
+if participant == 'beRNN_04':
+    months = [f"Month_{i}" for i in range(1, 8)]  # 1 to 7
+else:
+    months = [f"Month_{i}" for i in range(1, 13)]  # 1 to 12
+
+rows = []
+
+for m_idx, month_name in enumerate(months):
+    for model_idx in range(20): # number of models
+        unique_model_id = f"{participant}_{month_name}_Model_{model_idx + 1}"
+
+        for step_idx in range(27): # number of validation steps per month
+            m1_val = list_clust[m_idx][model_idx][step_idx]
+            m2_val = list_modularity[m_idx][model_idx][step_idx]
+            m3_val = list_participation[m_idx][model_idx][step_idx]
+
+            # Append a flat row
+            rows.append({
+                "Subject": participant,
+                "Month": month_name,
+                "Model_ID": unique_model_id,
+                "Validation_Step": step_idx + 1,  # 1-indexed step tracking
+                "Marker_1": m1_val,
+                "Marker_2": m2_val,
+                "Marker_3": m3_val
+            })
+
+
+subj_df = pd.DataFrame(rows)
+
+file_name = f"trajectory_data_{participant}_{data}.csv"
+subj_df.to_csv(file_name, index=False)
+print(f"Saved: {file_name}")
+
+

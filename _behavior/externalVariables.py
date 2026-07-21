@@ -189,7 +189,7 @@ for density_treshold in density_tresholds:
             }
 
 # save everything to json file
-output_json_path = "correlation_results_12tasks_correctOnly.json"
+output_json_path = "../data/correlation_results_12tasks_correctOnly.json"
 with open(output_json_path, "w", encoding="utf-8") as json_file:
     json.dump(json_output_data, json_file, indent=4)
 
